@@ -1,6 +1,6 @@
 # GORGONA delegation between businesses — technical acceptance, 2026-10-04
 
-The stage-1 increment of [ADR-0016](../../../adr/0016-limited-cross-business-delegation.md) is implemented on branch `claude/keen-mayer-lg9ift`, built on `codex/universal-business-foundation` at `eaa62339cf82ea69b96f2e8ec346ede585729f02`, in repository `alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new`. The results below were produced in a Linux cloud container on the final tree before commit. The GitHub CI run for the exact published SHA is recorded separately in the [implementation registry](../../GORGONA_IMPLEMENTATION_STATUS.md); it is the authoritative run for container gates and the pinned browser build.
+The stage-1 increment of [ADR-0016](../../../adr/0016-limited-cross-business-delegation.md) is implemented on branch `claude/keen-mayer-lg9ift`, built on `codex/universal-business-foundation` at `eaa62339cf82ea69b96f2e8ec346ede585729f02`, in repository `alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new`. The results below were produced in a Linux cloud container on the final tree before commit. The application change was published as `bd1a138a11ebbe506010c243a5a02d9989bc1b52`; its GitHub CI run is the authoritative result for container gates and the pinned browser build. Later documentation commits do not extend this acceptance to changed application code.
 
 An owner business can grant another, independent business time-limited access to its operational booking work, optionally for one location. The serving business designates its own employees. A designated employee books for the owner inside the grant; the rows stay in the owner's tenant and every delegated request is audited there. Revocation, expiry and changes on either side apply to the next request. Groups, departments, offline synchronization and transport workflows are outside this increment.
 
@@ -8,6 +8,7 @@ An owner business can grant another, independent business time-limited access to
 
 | Check | Exact outcome |
 |---|---|
+| GitHub push CI, exact commit `bd1a138a11ebbe506010c243a5a02d9989bc1b52` | **PASS**: [run 37212099717](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37212099717), job `111465192442`: **474 passed, 1 skipped, 118.32 s**, with required PostgreSQL, browser and container gates. The skip is the optional external tenant-site gate |
 | Baseline, unchanged tree `eaa6233`, same environment | **410 passed, 4 skipped, 75.11 s, exit 0** |
 | Full API suite, final tree, PostgreSQL 18.4, browsers required | **471 passed, 4 skipped, 112.25 s, exit 0** |
 | Skips | Three container gates (`GBA_REQUIRE_CONTAINER=1`; this container has no Docker daemon) and the optional external tenant-site gate. Skips are not passes |
