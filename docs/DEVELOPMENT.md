@@ -90,6 +90,22 @@ production migrations or deployment.
 
 ## Deployment readiness (M4)
 
+### Legal-entity drafts (stage 1)
+
+[ADR-0015](adr/0015-tenant-owned-legal-entity-drafts.md) adds owner-provided legal-entity drafts inside an existing business. Migration 0010 creates identities and immutable versions; no existing migration or tenant data is rewritten. The runtime requires all 19 approved scope-policy definitions before reporting readiness.
+
+| Route | Behavior |
+|---|---|
+| `GET /v1/businesses/{id}/legal-entities?limit=50&after=REF` | Bounded current drafts; response provides `next_cursor` or null |
+| `GET /v1/businesses/{id}/legal-entities/{entity_id}?revision=1` | Current or explicitly selected saved version; unknown version returns 404 |
+| `PUT /v1/businesses/{id}/legal-entities/{entity_id}` | Client-generated UUID identity, `schema_version: 1`, `expected_revision`, `code`, `legal_name` and required `Idempotency-Key`; returns saved draft |
+
+The internal code is immutable and unique per company; names alone never merge records. A new record uses expected revision 0. Company-wide owners/managers may save; other permitted company members may read. Branch-limited members are denied. A repeated body/key returns its original saved version; a changed command/key identity returns 422; a stale revision or duplicate reference returns 409. The existing business profile API is unchanged.
+
+The legal-entity section on `/business/` creates/edits real drafts and views saved history. It keeps the same entity ID and command after an uncertain response. No country, tax ID, currency, registration confirmation or branch assignment is silently populated, and saving does not activate finance or a delegated relationship.
+
+Focused acceptance uses `tests/unit/test_legal_entity_contracts.py` and `tests/integration/test_legal_entities.py` against disposable PostgreSQL. The existing management browser harness now checks legal entities on desktop/mobile and verifies their saved versions through SQL. The broken-boundary test restores the two 0010 policies after its test-only cascade.
+
 **Embedding allowlist.** The customer web may be framed only by origins the owner approves per tenant (migration 0007, audited, FORCE RLS). Every HTML response carries `Content-Security-Policy: frame-ancestors 'self' <approved>`; API responses carry `frame-ancestors 'none'`. With no approved origin, `X-Frame-Options: SAMEORIGIN` is added too. Plain `http://` origins are accepted only for loopback, and only in `local`/`test`/`ci`.
 
 ```bash

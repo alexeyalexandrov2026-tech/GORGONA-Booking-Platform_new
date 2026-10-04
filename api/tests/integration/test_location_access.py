@@ -369,6 +369,10 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
     finally:
         if damage == "missing_boundary":
             owner_conn.execute(boundary.encode("utf-8"))
+            entity_scope = next(m.sql for m in load_migrations() if m.version == 10).partition(
+                "-- Legal-entity branch scope:"
+            )[2]
+            owner_conn.execute(entity_scope[entity_scope.index("\n") :].encode("utf-8"))
         elif damage == "weakened_function":
             definition = boundary.partition("create policy locations_location_scope")[0]
             owner_conn.execute(

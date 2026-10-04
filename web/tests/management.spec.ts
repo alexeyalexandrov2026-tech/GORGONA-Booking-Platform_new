@@ -140,6 +140,128 @@ test("business profile persists, retries uncertain saves and recovers from confl
   });
 });
 
+test("legal entities persist, replay a lost response, preserve history and detect stale edits", async ({
+  page,
+}, testInfo) => {
+  await signIn(page);
+  await page
+    .getByRole("link", { name: "Business profile", exact: true })
+    .click();
+  const section = page.getByRole("region", { name: "Legal entities" });
+  await expect(
+    section.getByRole("button", { name: "New legal entity", exact: true }),
+  ).toBeVisible();
+  await section
+    .getByLabel("Internal reference")
+    .fill(`FAKE_${testInfo.project.name.toUpperCase()}`);
+  await section
+    .getByLabel("Legal name", { exact: true })
+    .fill("FAKE Browser Company LLC");
+  const attempts: string[] = [];
+  const ids: string[] = [];
+  let loseResponse = true;
+  await page.route("**/v1/businesses/*/legal-entities/*", async (route) => {
+    if (route.request().method() !== "PUT") return route.continue();
+    attempts.push(route.request().headers()["idempotency-key"]!);
+    ids.push(route.request().url());
+    if (loseResponse) {
+      loseResponse = false;
+      await route.fetch(); // Real persistence; the client loses only the response.
+      await route.abort("failed");
+    } else await route.continue();
+  });
+  await section
+    .getByRole("button", { name: "Save legal entity", exact: true })
+    .click();
+  await expect(
+    section.getByRole("button", { name: "Retry same entity save" }),
+  ).toBeVisible();
+  const requestPromise = page.waitForRequest(
+    (request) =>
+      request.method() === "PUT" && request.url().includes("/legal-entities/"),
+  );
+  await section.getByRole("button", { name: "Retry same entity save" }).click();
+  const request = await requestPromise;
+  await expect(section.getByRole("status")).toHaveText(
+    "Legal entity saved. Draft version 1.",
+  );
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0]).toBe(attempts[1]);
+  expect(ids[0]).toBe(ids[1]);
+  await page.unroute("**/v1/businesses/*/legal-entities/*");
+  await section
+    .getByLabel("Legal name", { exact: true })
+    .fill("FAKE Browser Updated LLC");
+  await section
+    .getByRole("button", { name: "Save legal entity", exact: true })
+    .click();
+  await expect(section.getByRole("status")).toHaveText(
+    "Legal entity saved. Draft version 2.",
+  );
+  await section
+    .getByRole("button", { name: "View previous entity version" })
+    .click();
+  await expect(section.getByRole("note")).toContainText(
+    "Previous entity version 1: FAKE Browser Company LLC",
+  );
+  const competitor = await page.request.put(request.url(), {
+    headers: {
+      authorization: request.headers()["authorization"]!,
+      "Idempotency-Key": crypto.randomUUID(),
+    },
+    data: {
+      expected_revision: 2,
+      code: `FAKE_${testInfo.project.name.toUpperCase()}`,
+      legal_name: "FAKE Concurrent LLC",
+    },
+  });
+  expect(competitor.status()).toBe(200);
+  await section
+    .getByLabel("Legal name", { exact: true })
+    .fill("FAKE Stale Edit LLC");
+  await section
+    .getByRole("button", { name: "Save legal entity", exact: true })
+    .click();
+  await expect(section.getByRole("alert")).toContainText(
+    "legal entity changed",
+  );
+  await expect(
+    section.getByRole("button", { name: "Save legal entity", exact: true }),
+  ).toBeDisabled();
+  await expect(section.getByLabel("Legal name", { exact: true })).toHaveValue(
+    "FAKE Stale Edit LLC",
+  );
+  await section.getByRole("button", { name: "Reload selected entity" }).click();
+  await expect(section.getByLabel("Legal name", { exact: true })).toHaveValue(
+    "FAKE Concurrent LLC",
+  );
+  await expect(
+    section.getByRole("button", { name: "Save legal entity", exact: true }),
+  ).toBeEnabled();
+  await section
+    .getByLabel("Legal name", { exact: true })
+    .fill("FAKE Final Browser LLC");
+  await section
+    .getByRole("button", { name: "Save legal entity", exact: true })
+    .click();
+  await expect(section.getByRole("status")).toHaveText(
+    "Legal entity saved. Draft version 4.",
+  );
+  expect(
+    (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
+      .violations,
+  ).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `test-results/legal-entities-${page.viewportSize()?.width}.png`,
+    fullPage: true,
+  });
+});
+
 test("existing staff appointment uses local time through creation, transfer and cancellation", async ({
   page,
 }, testInfo) => {

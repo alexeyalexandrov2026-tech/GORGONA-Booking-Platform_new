@@ -55,6 +55,24 @@
   margin-bottom: 0;
 }
 
+.legal-entities {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.legal-entity-list {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+.legal-entity-list button {
+  width: 100%;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 :root {
   --ink: #28221e;
   --ivory: #faf7f2;

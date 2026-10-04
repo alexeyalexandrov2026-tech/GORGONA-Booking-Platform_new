@@ -52,6 +52,8 @@ _DEFINITIONS = [
             "salon_fact_confirmations",
             "tenant_embed_origins",
             "invitations",
+            "legal_entities",
+            "legal_entity_versions",
         )
     ],
 ]

@@ -5,6 +5,10 @@ import {
   businessProfileSchema,
   industryCatalogSchema,
 } from "./business-contracts";
+import {
+  legalEntityListSchema,
+  legalEntitySchema,
+} from "./legal-entity-contracts";
 const id = z.uuid();
 const instant = z.iso.datetime({ offset: true });
 const count = z.number().int().nonnegative();
@@ -164,6 +168,13 @@ export function managementResponseSchema(
       return industryCatalogSchema;
     if (business[1] === "/profile" && method === "PUT")
       return businessProfileSchema;
+    if (business[1] === "/legal-entities" && method === "GET")
+      return legalEntityListSchema;
+    if (
+      /^\/legal-entities\/[0-9a-f-]{36}$/i.test(business[1] ?? "") &&
+      (method === "GET" || method === "PUT")
+    )
+      return legalEntitySchema;
     throw new Error("Unrecognized business response contract");
   }
   const suffix = clean.replace(/^\/v1\/salons\/[0-9a-f-]{36}/i, "");

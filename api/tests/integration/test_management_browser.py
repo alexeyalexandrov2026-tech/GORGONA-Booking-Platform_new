@@ -292,6 +292,17 @@ def test_real_management_browser_oidc_pkce_and_database(
         count = owner_conn.execute("select count(*) from gba.bookings").fetchone()
     assert count is not None
     assert count[0] == 0
+    if not location_limited:
+        with owner_tenant_transaction(owner_conn, world.a.tenant_id):
+            entities = owner_conn.execute(
+                "select e.code, max(v.revision), count(*) "
+                "from gba.legal_entities e join gba.legal_entity_versions v "
+                "on v.tenant_id = e.tenant_id and v.legal_entity_id = e.id "
+                "group by e.code order by e.code"
+            ).fetchall()
+        assert entities == [("FAKE_DESKTOP", 4, 4), ("FAKE_MOBILE", 4, 4)]
+        with owner_tenant_transaction(owner_conn, world.b.tenant_id):
+            assert owner_conn.execute("select count(*) from gba.legal_entities").fetchone() == (0,)
     if location_limited:
         with owner_tenant_transaction(owner_conn, world.a.tenant_id):
             private_state = owner_conn.execute(

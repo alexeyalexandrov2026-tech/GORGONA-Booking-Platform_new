@@ -1,6 +1,13 @@
 import { accessToken } from "./auth";
 import { managementResponseSchema } from "./management-contracts";
 import { availabilitySchema, Availability } from "./contracts";
+import {
+  legalEntityListSchema,
+  legalEntitySchema,
+  type LegalEntity,
+  type LegalEntityInput,
+  type LegalEntityPage,
+} from "./legal-entity-contracts";
 import type {
   Business,
   BusinessProfile,
@@ -172,6 +179,79 @@ export interface Workspace {
 
 export function fetchWorkspace(salonId: string): Promise<Workspace> {
   return managementFetch<Workspace>(`/v1/salons/${salonId}/workspace`);
+}
+
+export async function fetchLegalEntities(
+  businessId: string,
+  after?: string,
+): Promise<LegalEntityPage> {
+  const query = after ? `?after=${encodeURIComponent(after)}` : "";
+  const result = legalEntityListSchema.parse(
+    await managementFetch(
+      `/v1/businesses/${businessId}/legal-entities${query}`,
+    ),
+  );
+  if (result.business_id !== businessId)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load these records safely.",
+    );
+  return result;
+}
+
+export async function fetchLegalEntity(
+  businessId: string,
+  entityId: string,
+  revision?: number,
+): Promise<LegalEntity> {
+  const query = revision === undefined ? "" : `?revision=${revision}`;
+  const result = checkedLegalEntity(
+    await managementFetch(
+      `/v1/businesses/${businessId}/legal-entities/${entityId}${query}`,
+    ),
+    businessId,
+    entityId,
+  );
+  if (revision !== undefined && result.revision !== revision)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load this saved version safely.",
+    );
+  return result;
+}
+
+export async function saveLegalEntity(
+  businessId: string,
+  entityId: string,
+  body: LegalEntityInput,
+  key: string,
+): Promise<LegalEntity> {
+  return checkedLegalEntity(
+    await managementFetch(
+      `/v1/businesses/${businessId}/legal-entities/${entityId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(body),
+        headers: { "Idempotency-Key": key },
+      },
+    ),
+    businessId,
+    entityId,
+  );
+}
+
+function checkedLegalEntity(
+  value: unknown,
+  businessId: string,
+  entityId: string,
+): LegalEntity {
+  const result = legalEntitySchema.parse(value);
+  if (result.business_id !== businessId || result.legal_entity_id !== entityId)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load this record safely.",
+    );
+  return result;
 }
 
 export interface MeView {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ManagementLayout } from "../../components/management-layout";
+import { LegalEntities } from "../../components/legal-entities";
 import type {
   Business,
   BusinessFormat,
@@ -305,6 +306,7 @@ function BusinessContent({
                 </button>
               )}
             </form>
+            <LegalEntities businessId={businessId} canManage={canManage} />
           </>
         )
       )}
