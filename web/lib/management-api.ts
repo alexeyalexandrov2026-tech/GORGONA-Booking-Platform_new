@@ -15,6 +15,15 @@ import {
   type DepartmentInput,
   type DepartmentPage,
 } from "./department-contracts";
+import {
+  delegationListSchema,
+  delegationSchema,
+  type DelegatedBusiness,
+  type Delegation,
+  type DelegationDecision,
+  type DelegationIssue,
+  type DelegationPage,
+} from "./delegation-contracts";
 import type {
   Business,
   BusinessProfile,
@@ -172,6 +181,17 @@ export interface SalonSettings {
 export interface MembershipView {
   salon_id: string;
   salon_name: string | null;
+  role: string;
+  status: string;
+  location_id: string | null;
+  /** Present only for a business served under another company's active grant. */
+  delegation?: DelegatedBusiness;
+}
+
+export interface MemberView {
+  membership_id: string;
+  user_id: string;
+  display_name: string | null;
   role: string;
   status: string;
   location_id: string | null;
@@ -335,11 +355,95 @@ function checkedDepartment(
   return result;
 }
 
+export async function fetchDelegations(
+  businessId: string,
+  after?: string,
+): Promise<DelegationPage> {
+  const query = after ? `?after=${encodeURIComponent(after)}` : "";
+  const result = delegationListSchema.parse(
+    await managementFetch(`/v1/businesses/${businessId}/delegations${query}`),
+  );
+  if (result.business_id !== businessId)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load these records safely.",
+    );
+  return result;
+}
+
+export async function issueDelegation(
+  businessId: string,
+  grantId: string,
+  body: DelegationIssue,
+  key: string,
+): Promise<Delegation> {
+  const result = checkedDelegation(
+    await managementFetch(
+      `/v1/businesses/${businessId}/delegations/${grantId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(body),
+        headers: { "Idempotency-Key": key },
+      },
+    ),
+    businessId,
+    grantId,
+  );
+  if (result.owner_business_id !== businessId)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load this record safely.",
+    );
+  return result;
+}
+
+export async function decideDelegation(
+  businessId: string,
+  grantId: string,
+  action: "accept" | "decline" | "revoke" | "delegates",
+  body: DelegationDecision,
+  key: string,
+): Promise<Delegation> {
+  const path = `/v1/businesses/${businessId}/delegations/${grantId}/${action}`;
+  return checkedDelegation(
+    await managementFetch(path, {
+      method: action === "delegates" ? "PUT" : "POST",
+      body: JSON.stringify(body),
+      headers: { "Idempotency-Key": key },
+    }),
+    businessId,
+    grantId,
+  );
+}
+
+function checkedDelegation(
+  value: unknown,
+  businessId: string,
+  grantId: string,
+): Delegation {
+  const result = delegationSchema.parse(value);
+  if (
+    result.grant_id !== grantId ||
+    (result.owner_business_id !== businessId &&
+      result.servicer_business_id !== businessId)
+  )
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load this record safely.",
+    );
+  return result;
+}
+
+export async function fetchMembers(salonId: string): Promise<MemberView[]> {
+  return managementFetch<MemberView[]>(`/v1/salons/${salonId}/members`);
+}
+
 export interface MeView {
   user_id: string;
   display_name: string;
   platform_roles: string[];
   memberships: MembershipView[];
+  delegations: DelegatedBusiness[];
 }
 
 export class ManagementApiError extends Error {

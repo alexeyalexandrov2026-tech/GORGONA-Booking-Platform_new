@@ -56,6 +56,8 @@ _DEFINITIONS = [
             "legal_entity_versions",
             "departments",
             "department_versions",
+            "delegation_grants",
+            "delegation_grant_members",
         )
     ],
 ]

@@ -10,6 +10,11 @@ import {
   legalEntitySchema,
 } from "./legal-entity-contracts";
 import { departmentListSchema, departmentSchema } from "./department-contracts";
+import {
+  delegatedBusinessSchema,
+  delegationListSchema,
+  delegationSchema,
+} from "./delegation-contracts";
 const id = z.uuid();
 const instant = z.iso.datetime({ offset: true });
 const count = z.number().int().nonnegative();
@@ -97,6 +102,15 @@ const me = z.object({
       location_id: id.nullable(),
     }),
   ),
+  delegations: z.array(delegatedBusinessSchema),
+});
+const member = z.strictObject({
+  membership_id: id,
+  user_id: id,
+  display_name: z.string().nullable(),
+  role: z.string(),
+  status: z.string(),
+  location_id: id.nullable(),
 });
 const overview = z.object({
   salon_id: id,
@@ -183,6 +197,19 @@ export function managementResponseSchema(
       (method === "GET" || method === "PUT")
     )
       return departmentSchema;
+    if (business[1] === "/delegations" && method === "GET")
+      return delegationListSchema;
+    const grant =
+      /^\/delegations\/[0-9a-f-]{36}(\/(accept|decline|revoke|delegates))?$/i.exec(
+        business[1] ?? "",
+      );
+    if (
+      grant &&
+      ((!grant[1] && (method === "GET" || method === "PUT")) ||
+        (grant[2] === "delegates" && method === "PUT") ||
+        (grant[2] && grant[2] !== "delegates" && method === "POST"))
+    )
+      return delegationSchema;
     throw new Error("Unrecognized business response contract");
   }
   const suffix = clean.replace(/^\/v1\/salons\/[0-9a-f-]{36}/i, "");
@@ -207,6 +234,7 @@ export function managementResponseSchema(
   if (suffix === "/services")
     return method === "GET" ? z.array(service) : service;
   if (/^\/services\//.test(suffix)) return service;
+  if (suffix === "/members" && method === "GET") return z.array(member);
   if (suffix === "/staff") return method === "GET" ? z.array(staff) : staff;
   if (/^\/staff\/[^/]+\/(schedule|services)$/.test(suffix)) return schedule;
   if (/^\/staff\//.test(suffix)) return staff;

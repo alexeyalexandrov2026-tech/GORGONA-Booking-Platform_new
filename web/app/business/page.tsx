@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ManagementLayout } from "../../components/management-layout";
+import { Delegations } from "../../components/delegations";
 import { Departments } from "../../components/departments";
 import { LegalEntities } from "../../components/legal-entities";
 import type {
@@ -38,6 +39,12 @@ export default function BusinessPage() {
               m.location_id === null &&
               ["owner", "manager"].includes(m.role),
           )}
+          canIssue={me.memberships.some(
+            (m) =>
+              m.salon_id === salonId &&
+              m.location_id === null &&
+              m.role === "owner",
+          )}
         />
       )}
     </ManagementLayout>
@@ -47,9 +54,11 @@ export default function BusinessPage() {
 function BusinessContent({
   businessId,
   canManage,
+  canIssue,
 }: {
   businessId: string;
   canManage: boolean;
+  canIssue: boolean;
 }) {
   const [business, setBusiness] = useState<Business | null>(null);
   const [catalog, setCatalog] = useState<IndustryCatalog | null>(null);
@@ -313,6 +322,14 @@ function BusinessContent({
               canManage={canManage}
               locations={business.locations}
             />
+            {canManage && (
+              <Delegations
+                businessId={businessId}
+                canIssue={canIssue}
+                canManage={canManage}
+                locations={business.locations}
+              />
+            )}
           </>
         )
       )}

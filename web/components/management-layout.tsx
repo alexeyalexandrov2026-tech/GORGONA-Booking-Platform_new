@@ -8,6 +8,7 @@ import {
   fetchMe,
   getActiveSalonId,
   setActiveSalonId,
+  MembershipView,
   MeView,
 } from "../lib/management-api";
 
@@ -40,12 +41,18 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
   const [authBusy, setAuthBusy] = useState(false);
   const membership = me?.memberships.find((item) => item.salon_id === salonId);
   const locationLimited = membership?.location_id != null;
-  const navItems = locationLimited
-    ? NAV_ITEMS.filter(
-        (item) =>
-          !["/business/", "/settings/", "/services/"].includes(item.href),
+  const delegation = membership?.delegation;
+  // Delegated work is limited to bookings; company areas stay with the owner business.
+  const navItems = delegation
+    ? NAV_ITEMS.filter((item) =>
+        ["/overview/", "/calendar/", "/bookings/"].includes(item.href),
       )
-    : NAV_ITEMS;
+    : locationLimited
+      ? NAV_ITEMS.filter(
+          (item) =>
+            !["/business/", "/settings/", "/services/"].includes(item.href),
+        )
+      : NAV_ITEMS;
   const refresh = useCallback(() => {
     setLoading(true);
     setError(null);
@@ -71,7 +78,18 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       }
       const data = await fetchMe();
       if (!active) return;
-      const memberships = data.memberships.filter((m) => m.status === "active");
+      const own = data.memberships.filter((m) => m.status === "active");
+      const delegated: MembershipView[] = data.delegations
+        .filter((d) => !own.some((m) => m.salon_id === d.business_id))
+        .map((d) => ({
+          salon_id: d.business_id,
+          salon_name: d.business_name,
+          role: "delegated",
+          status: "active",
+          location_id: d.location_id,
+          delegation: d,
+        }));
+      const memberships = [...own, ...delegated];
       const selected =
         memberships.find((m) => m.salon_id === getActiveSalonId()) ??
         memberships[0];
@@ -192,7 +210,15 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         </ul>
       </nav>
       <main className="mgmt-main" id="main-content">
-        {locationLimited && (
+        {delegation && (
+          <p className="hold-note" role="note">
+            You are serving {delegation.business_name} through access granted to{" "}
+            {delegation.servicer_name ?? "your business"} until{" "}
+            {new Date(delegation.expires_at).toLocaleDateString()}. Only
+            bookings are available, and access ends at once if it is revoked.
+          </p>
+        )}
+        {locationLimited && !delegation && (
           <p className="hold-note">
             You have access to your assigned location. Company settings are
             managed by the business owner.

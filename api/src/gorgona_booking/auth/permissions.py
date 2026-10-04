@@ -5,7 +5,7 @@ Roles come from server-side memberships and platform roles, never from token cla
 
 from enum import StrEnum
 
-PERMISSIONS_VERSION = 2
+PERMISSIONS_VERSION = 3
 
 
 class Permission(StrEnum):
@@ -52,6 +52,17 @@ ROLE_PERMISSIONS: dict[str, frozenset[Permission]] = {
 }
 
 ADMIN_ROLES = frozenset({"owner", "manager"})
+
+# What an owner business may delegate to a servicing business (ADR-0017): booking work
+# only. Settings, members, structure and organization records are never delegated.
+DELEGABLE_PERMISSIONS = frozenset(
+    {
+        Permission.BOOKING_READ,
+        Permission.BOOKING_WRITE,
+        Permission.CATALOG_READ,
+        Permission.STAFF_READ,
+    }
+)
 
 # What a platform admin may do inside a salon it is not a member of: read-only support.
 PLATFORM_SUPPORT_PERMISSIONS = frozenset(

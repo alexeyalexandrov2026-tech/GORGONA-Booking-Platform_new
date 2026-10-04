@@ -122,6 +122,23 @@ The department section on `/business/` creates/edits real drafts, links a parent
 
 Focused acceptance uses `tests/unit/test_department_contracts.py` and `tests/integration/test_departments.py` against disposable PostgreSQL. The management browser harness checks departments on desktop/mobile and verifies their versions through SQL. The broken-boundary test restores the 0010 and 0011 scope policies after its test-only cascade.
 
+### Cross-company delegation (stage 1)
+
+[ADR-0017](adr/0017-cross-company-delegation.md) lets an owner business grant an independent servicing business limited, expiring booking access. Migration 0012 adds grants and delegate history; the runtime requires 23 approved scope-policy definitions.
+
+| Route | Behavior |
+|---|---|
+| `GET /v1/businesses/{id}/delegations?limit=50&after=UUID` | Grants where the business is owner or servicer (`members.manage`) |
+| `GET /v1/businesses/{id}/delegations/{grant_id}` | One grant of a party; 404 otherwise |
+| `PUT /v1/businesses/{id}/delegations/{grant_id}` | Owner-only offer: `servicer_business_id`, `permissions` (subset of booking.read, booking.write, catalog.read, staff.read), `location_id` or null, `expires_at` (≤366 days); `Idempotency-Key` required |
+| `POST …/{grant_id}/accept` | Servicer: `expected_revision`, `delegate_user_ids` (active company-wide members) |
+| `POST …/{grant_id}/decline`, `POST …/{grant_id}/revoke` | `expected_revision`; owner may revoke pending/active, servicer may end active |
+| `PUT …/{grant_id}/delegates` | Servicer replaces the delegate set of an active grant |
+
+Delegated employees use the existing `/v1/salons/{owner_id}/…` booking workspace (eleven opted-in handlers). Effective permission is grant ∩ servicer role, and grant location becomes the location RLS scope. Each request writes `delegation.access` to the owner's audit. `/v1/me` returns `delegations` separately from `memberships`. Revocation, removal, expiry and owner-side suspension refuse the next request, including an old receipt replay.
+
+Focused acceptance: `tests/unit/test_delegation_contracts.py`, `tests/integration/test_delegations.py`, and `test_real_delegation_browser_oidc_pkce_and_database` running `npm run test:management:delegation`. The broken-boundary test restores the 0010–0012 scope policies.
+
 **Embedding allowlist.** The customer web may be framed only by origins the owner approves per tenant (migration 0007, audited, FORCE RLS). Every HTML response carries `Content-Security-Policy: frame-ancestors 'self' <approved>`; API responses carry `frame-ancestors 'none'`. With no approved origin, `X-Frame-Options: SAMEORIGIN` is added too. Plain `http://` origins are accepted only for loopback, and only in `local`/`test`/`ci`.
 
 ```bash

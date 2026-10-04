@@ -70,11 +70,25 @@ class MembershipView(BaseModel):
     location_id: UUID | None = None
 
 
+class DelegatedBusinessView(BaseModel):
+    """A business the user may serve under an active grant; never a membership."""
+
+    business_id: UUID
+    business_name: str
+    grant_id: UUID
+    servicer_business_id: UUID
+    servicer_name: str | None
+    permissions: list[str]
+    location_id: UUID | None
+    expires_at: datetime
+
+
 class MeView(BaseModel):
     user_id: UUID
     display_name: str
     platform_roles: list[str]
     memberships: list[MembershipView]
+    delegations: list[DelegatedBusinessView] = []
 
 
 class ServiceCreate(Strict):
@@ -377,6 +391,22 @@ async def me(request: Request, principal: CurrentPrincipal) -> MeView:
                 (principal.user_id,),
             )
         ).fetchall()
+        # Only grants this user may currently use: a named delegate of an active, unexpired
+        # grant who is still an active company-wide member of the servicing business.
+        grants = await (
+            await conn.execute(
+                "select g.owner_tenant_id, g.owner_display_name, g.id, g.servicer_tenant_id, "
+                "g.servicer_display_name, g.permissions, g.location_id, g.expires_at "
+                "from gba.delegation_grants g join gba.delegation_grant_members d "
+                "on d.owner_tenant_id = g.owner_tenant_id and d.grant_id = g.id "
+                "join gba.memberships s on s.tenant_id = g.servicer_tenant_id "
+                "and s.user_id = d.user_id and s.status = 'active' and s.location_id is null "
+                "where d.user_id = %s and d.removed_at is null and g.status = 'active' "
+                "and g.expires_at > pg_catalog.statement_timestamp() "
+                "order by g.owner_display_name, g.id",
+                (principal.user_id,),
+            )
+        ).fetchall()
     return MeView(
         user_id=principal.user_id,
         display_name=principal.display_name,
@@ -384,6 +414,19 @@ async def me(request: Request, principal: CurrentPrincipal) -> MeView:
         memberships=[
             MembershipView(salon_id=r[0], salon_name=r[1], role=r[2], status=r[3], location_id=r[4])
             for r in rows
+        ],
+        delegations=[
+            DelegatedBusinessView(
+                business_id=g[0],
+                business_name=g[1],
+                grant_id=g[2],
+                servicer_business_id=g[3],
+                servicer_name=g[4],
+                permissions=sorted(g[5]),
+                location_id=g[6],
+                expires_at=g[7],
+            )
+            for g in grants
         ],
     )
 
@@ -401,6 +444,7 @@ async def workspace(salon_id: UUID, request: Request, principal: CurrentPrincipa
         Permission.STAFF_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         locations = await (
             await access.conn.execute("select id, name, timezone from gba.locations order by name")
@@ -435,6 +479,7 @@ async def salon_overview(
         Permission.BOOKING_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         conn = access.conn
         tenant_row = await (
@@ -626,6 +671,7 @@ async def management_availability(
         Permission.BOOKING_WRITE,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         access.require_location(body.location_id)
         quote = None
@@ -682,6 +728,7 @@ async def list_bookings(
         Permission.BOOKING_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         if location_id is not None:
             access.require_location(location_id)
@@ -737,6 +784,7 @@ async def create_staff_booking(
         Permission.BOOKING_WRITE,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         access.require_location(body.location_id)
         conn = access.conn
@@ -835,6 +883,7 @@ async def reschedule_booking(
         Permission.BOOKING_WRITE,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         conn = access.conn
         scope, replay = await _claim_mutation(
@@ -973,6 +1022,7 @@ async def cancel_booking(
         Permission.BOOKING_WRITE,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         conn = access.conn
         scope, replay = await _claim_mutation(
@@ -1096,6 +1146,7 @@ async def list_services(
         Permission.CATALOG_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         rows = await (
             await access.conn.execute(
@@ -1277,6 +1328,7 @@ async def list_staff(
         Permission.STAFF_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         rows = await (
             await access.conn.execute(
@@ -1363,6 +1415,7 @@ async def get_staff_schedule(
         Permission.STAFF_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         conn = access.conn
         staff = await (
@@ -1676,6 +1729,7 @@ async def get_booking(
         Permission.BOOKING_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         booking = await load_booking(access.conn, booking_id)
     return BookingView(
