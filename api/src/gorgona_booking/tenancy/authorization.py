@@ -242,6 +242,7 @@ async def _delegated_access(
     owner_status: str,
     *,
     allow_location_scope: bool,
+    serving_business_id: UUID | None = None,
 ) -> TenantAccess | None:
     """None when the caller holds no current designation for this owner business."""
     suspended = await (
@@ -255,6 +256,8 @@ async def _delegated_access(
         # The owner suspended this person; another company cannot restore their access.
         raise TenantAccessDeniedError(_DENIED)
     rows = await (await conn.execute(_CANDIDATES, (owner_id, principal.user_id))).fetchall()
+    if serving_business_id is not None:
+        rows = [row for row in rows if row[0] == serving_business_id]
     if not rows:
         return None
     granting = [row for row in rows if str(permission) in row[4]]
@@ -281,6 +284,63 @@ async def _delegated_access(
         if access is not None:
             return access
     raise TenantAccessDeniedError(_DENIED)
+
+
+async def group_report_delegation(
+    conn: RuntimeConnection, principal: Principal, owner_id: UUID, operator_id: UUID
+) -> TenantAccess | None:
+    """Force a current grant to this operator on the report's existing transaction.
+
+    The caller already authorized the operator, locked the invitation and checked
+    the participant's consent. Direct membership and platform support cannot substitute
+    for a designated employee's report permission. Restore scopes after each participant.
+    """
+    await set_tenant_context(conn, owner_id)
+    try:
+        tenant = await (
+            await conn.execute("select status from gba.tenants where id = %s", (owner_id,))
+        ).fetchone()
+        if tenant is None:
+            return None
+        try:
+            access = await _delegated_access(
+                conn,
+                principal,
+                owner_id,
+                Permission.REPORT_BOOKING_READ,
+                str(tenant[0]),
+                allow_location_scope=True,
+                serving_business_id=operator_id,
+            )
+        except TenantAccessDeniedError, PermissionDeniedError, TenantSuspendedError:
+            return None
+        if access is not None:
+            await conn.execute(
+                "select set_config('gba.location_id', %s, true), "
+                "set_config('gba.delegation_grant_id', %s, true), "
+                "set_config('gba.actor', %s, true)",
+                (
+                    str(access.location_id) if access.location_id else "",
+                    str(access.delegation.grant_id) if access.delegation else "",
+                    access.actor,
+                ),
+            )
+        return access
+    except BaseException:
+        await clear_group_report_context(conn, principal, operator_id)
+        raise
+
+
+async def clear_group_report_context(
+    conn: RuntimeConnection, principal: Principal, operator_id: UUID
+) -> None:
+    await conn.execute(
+        "select set_config('gba.location_id', '', true), "
+        "set_config('gba.delegation_grant_id', '', true), "
+        "set_config('gba.actor', %s, true)",
+        (principal.actor,),
+    )
+    await set_tenant_context(conn, operator_id)
 
 
 async def _confirm_delegation(

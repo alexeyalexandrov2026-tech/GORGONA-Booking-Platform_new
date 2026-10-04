@@ -12,6 +12,7 @@ import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid7
+from zoneinfo import ZoneInfo
 
 import httpx
 import psycopg
@@ -36,7 +37,7 @@ GUEST = "FAKE Delegated Browser Guest"
 WRITE = ["booking.read", "booking.write", "catalog.read", "staff.read"]
 
 
-@pytest.mark.parametrize("scenario", ["management", "workspace"])
+@pytest.mark.parametrize("scenario", ["management", "workspace", "groups"])
 def test_real_delegation_browser_flows(
     world: BookingWorld,
     owner_conn: psycopg.Connection,
@@ -56,16 +57,18 @@ def test_real_delegation_browser_flows(
     add_membership(owner_conn, tenant_id=world.a.tenant_id, user_id=owner_a.user_id, role="owner")
     owner_b = (
         owner_a
-        if scenario == "management"
+        if scenario in ("management", "groups")
         else seed_user(owner_conn, f"browser-serving-owner-{uuid7()}", issuer=issuer)
     )
-    add_membership(owner_conn, tenant_id=world.b.tenant_id, user_id=owner_b.user_id, role="owner")
+    owner_b_membership = add_membership(
+        owner_conn, tenant_id=world.b.tenant_id, user_id=owner_b.user_id, role="owner"
+    )
     label = f"browser-dispatcher-{uuid7()}"
     delegate = seed_user(owner_conn, label, issuer=issuer)
     delegate_membership = add_membership(
         owner_conn, tenant_id=world.b.tenant_id, user_id=delegate.user_id, role="front_desk"
     )
-    user = owner_a if scenario == "management" else delegate
+    user = owner_a if scenario in ("management", "groups") else delegate
     idp = FakeIdp()
     provider, verifier = _provider(issuer, app_origin, idp, user)
     app = create_app(
@@ -107,6 +110,45 @@ def test_real_delegation_browser_flows(
     owner_headers = idp.bearer(owner_a.subject, email=owner_a.email, iss=issuer)
     grant_id = uuid7()
     with live_server(provider, idp_port), live_server(app, app_port):
+        if scenario == "groups":
+            granted = httpx.put(
+                f"{app_origin}/v1/businesses/{world.a.tenant_id}/delegations/{grant_id}",
+                headers={**owner_headers, "Idempotency-Key": str(uuid7())},
+                json={
+                    "expected_revision": 0,
+                    "grantee_business_id": str(world.b.tenant_id),
+                    "purpose": "FAKE browser group report",
+                    "permissions": ["report.booking.read"],
+                    "valid_from": (now - timedelta(hours=1)).isoformat(),
+                    "valid_until": (now + timedelta(days=7)).isoformat(),
+                },
+                timeout=10,
+            )
+            assert granted.status_code == 200, granted.text
+            designated = httpx.put(
+                f"{app_origin}/v1/businesses/{world.b.tenant_id}/incoming-delegations/{grant_id}/delegates/{owner_b_membership}",
+                headers={**owner_headers, "Idempotency-Key": str(uuid7())},
+                timeout=10,
+            )
+            assert designated.status_code == 200, designated.text
+            starts = datetime.fromisoformat(f"{customer_day()}T11:00:00").replace(
+                tzinfo=ZoneInfo("America/New_York")
+            )
+            created = httpx.post(
+                f"{app_origin}/v1/salons/{world.a.tenant_id}/bookings",
+                headers={**owner_headers, "Idempotency-Key": str(uuid7())},
+                json={
+                    "location_id": str(world.a.location_id),
+                    "resource_id": str(world.artist_a1),
+                    "variant_id": str(world.catalog_a.base_variant_id),
+                    "starts_at": starts.isoformat(),
+                    "customer_name": "FAKE group browser guest",
+                    "customer_email": "group@example.test",
+                    "customer_phone": "+15551234561",
+                },
+                timeout=10,
+            )
+            assert created.status_code == 201, created.text
         if scenario == "workspace":
             granted = httpx.put(
                 f"{app_origin}/v1/businesses/{world.a.tenant_id}/delegations/{grant_id}",
@@ -133,7 +175,7 @@ def test_real_delegation_browser_flows(
             )
             assert designated.status_code == 200, designated.text
         result = subprocess.run(  # noqa: S603 - fixed repository script and located npm executable
-            [npm, "run", f"test:delegation:{scenario}"],
+            [npm, "run", "test:groups" if scenario == "groups" else f"test:delegation:{scenario}"],
             cwd=web,
             env=env,
             capture_output=True,
@@ -158,6 +200,24 @@ def test_real_delegation_browser_flows(
             )
             assert after.status_code == 403, after.text
 
+    if scenario == "groups":
+        with owner_tenant_transaction(owner_conn, world.b.tenant_id):
+            assert owner_conn.execute(
+                "select count(*) from gba.company_groups where tenant_id = %s", (world.b.tenant_id,)
+            ).fetchone() == (2,)
+            assert owner_conn.execute(
+                "select count(*) from gba.company_group_versions where tenant_id = %s",
+                (world.b.tenant_id,),
+            ).fetchone() == (4,)
+            assert owner_conn.execute(
+                "select count(*) from gba.bookings where tenant_id = %s", (world.b.tenant_id,)
+            ).fetchone() == (0,)
+        with owner_tenant_transaction(owner_conn, world.a.tenant_id):
+            assert owner_conn.execute(
+                "select count(*) from gba.company_group_consents where tenant_id = %s",
+                (world.a.tenant_id,),
+            ).fetchone() == (4,)
+        return
     if scenario == "management":
         with owner_tenant_transaction(owner_conn, world.a.tenant_id):
             grants = owner_conn.execute(

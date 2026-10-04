@@ -97,12 +97,13 @@ def test_revocation_requires_the_revision_being_revoked(changes: dict[str, objec
 
 
 def test_only_operational_permissions_can_be_delegated() -> None:
-    assert PERMISSIONS_VERSION == 3
+    assert PERMISSIONS_VERSION == 4
     assert {
         Permission.BOOKING_READ,
         Permission.BOOKING_WRITE,
         Permission.CATALOG_READ,
         Permission.STAFF_READ,
+        Permission.REPORT_BOOKING_READ,
     } == DELEGABLE_PERMISSIONS
     never = {
         Permission.BUSINESS_READ,
@@ -112,6 +113,7 @@ def test_only_operational_permissions_can_be_delegated() -> None:
         Permission.MEMBERS_MANAGE,
         Permission.MEMBERS_MANAGE_ADMINS,
         Permission.DELEGATION_MANAGE,
+        Permission.GROUP_MANAGE,
         Permission.SETTINGS_MANAGE,
         Permission.READINESS_READ,
         *(PLATFORM_ADMIN_PERMISSIONS - PLATFORM_SUPPORT_PERMISSIONS),

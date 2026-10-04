@@ -74,6 +74,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
           label: `${m.salon_name ?? "Salon"} (${m.role})`,
         })),
         ...me.delegations
+          .filter((d) => d.permissions.some((p) => p !== "report.booking.read"))
           .filter(
             (d, index, all) =>
               all.findIndex((other) => other.business_id === d.business_id) ===
@@ -114,7 +115,9 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       const memberships = data.memberships.filter((m) => m.status === "active");
       const available = [
         ...memberships.map((m) => m.salon_id),
-        ...data.delegations.map((d) => d.business_id),
+        ...data.delegations
+          .filter((d) => d.permissions.some((p) => p !== "report.booking.read"))
+          .map((d) => d.business_id),
       ];
       const remembered = getActiveSalonId();
       const selected =

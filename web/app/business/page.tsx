@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ManagementLayout } from "../../components/management-layout";
 import { LegalEntities } from "../../components/legal-entities";
+import { CompanyGroups } from "../../components/company-groups";
 import { Departments } from "../../components/departments";
 import { Delegations } from "../../components/delegations";
 import type {
@@ -324,10 +325,13 @@ function BusinessContent({
               locations={business.locations}
             />
             {isOwner && (
-              <Delegations
-                businessId={businessId}
-                locations={business.locations}
-              />
+              <>
+                <CompanyGroups key={businessId} businessId={businessId} />
+                <Delegations
+                  businessId={businessId}
+                  locations={business.locations}
+                />
+              </>
             )}
           </>
         )

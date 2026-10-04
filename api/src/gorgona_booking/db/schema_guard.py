@@ -17,6 +17,13 @@ _DELEGATION_SOURCE = (
 )
 
 # Tables whose complete policy set is fixed: no other policy may widen them.
+GROUP_TABLES = (
+    "company_groups",
+    "company_group_versions",
+    "company_group_invitations",
+    "company_group_consents",
+)
+
 DELEGATION_TABLES = ("delegation_grants", "delegation_grant_versions", "delegation_designations")
 
 
@@ -94,6 +101,7 @@ _COMPANY_RECORDS = (
     "legal_entity_versions",
     "departments",
     "department_versions",
+    *GROUP_TABLES,
 )
 
 DEFINITIONS: tuple[PolicyDefinition, ...] = (
@@ -138,7 +146,28 @@ DEFINITIONS: tuple[PolicyDefinition, ...] = (
         "audit_events", "audit_events_delegation_read", _NO_DELEGATION, None, command="r"
     ),
     # ADR-0016: the only cross-tenant views of delegation records.
-    *[_isolation(table) for table in DELEGATION_TABLES],
+    *[_isolation(table) for table in (*DELEGATION_TABLES, *GROUP_TABLES)],
+    _read(
+        "company_group_invitations",
+        "company_group_invitations_recipient_read",
+        "(participant_business_id = gba.current_tenant_id())",
+    ),
+    _read(
+        "company_group_consents",
+        "company_group_consents_operator_read",
+        "(operator_business_id = gba.current_tenant_id())",
+    ),
+    *[
+        _read(
+            table,
+            f"{table}_recipient_read",
+            "(EXISTS ( SELECT 1 FROM gba.company_group_invitations i "  # noqa: S608 - comparison data
+            f"WHERE ((i.tenant_id = {table}.tenant_id) "
+            f"AND (i.group_id = {table}.{reference}) "
+            "AND (i.participant_business_id = gba.current_tenant_id()))))",
+        )
+        for table, reference in (("company_groups", "id"), ("company_group_versions", "group_id"))
+    ],
     _read(
         "delegation_grants",
         "delegation_grants_grantee_read",
@@ -211,7 +240,7 @@ async def assert_access_boundaries_ready(conn: RuntimeConnection) -> None:
     parameters: list[object] = [
         value for definition in DEFINITIONS for value in definition.parameters()
     ]
-    parameters.extend([_LOCATION_SOURCE, _DELEGATION_SOURCE, list(DELEGATION_TABLES)])
+    parameters.extend([_LOCATION_SOURCE, _DELEGATION_SOURCE, [*DELEGATION_TABLES, *GROUP_TABLES]])
     row = await (await conn.execute(_ACCESS_BOUNDARY, parameters)).fetchone()
     if row is None or row[0] is not True:
         raise DatabaseUnavailableError("Required database access controls are not ready")
