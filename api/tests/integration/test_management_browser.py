@@ -8,6 +8,7 @@ No login callback, token or management API response is mocked in the browser.
 import base64
 import hashlib
 import hmac
+import json
 import os
 import secrets
 import shutil
@@ -496,3 +497,102 @@ def test_real_group_browser_oidc_pkce_and_database(
         ("business_group.removed",),
         ("business_group.left",),
     ]
+
+
+def test_real_configuration_browser_oidc_pkce_and_database(
+    world: BookingWorld,
+    owner_conn: psycopg.Connection,
+    test_database: ProvisionedDatabase,
+) -> None:
+    """The owner turns booking off and on again through published configuration versions."""
+    if os.environ.get("GBA_REQUIRE_BROWSER") != "1":
+        pytest.skip("BLOCKED: management browser verification requires GBA_REQUIRE_BROWSER=1")
+    web = Path(__file__).resolve().parents[3] / "web"
+    assert (web / "out" / "auth" / "callback" / "index.html").exists(), "build web first"
+    npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
+    assert npm is not None
+    seed_customer_setup(owner_conn, world)
+    app_port, idp_port = free_port(), free_port()
+    app_origin, issuer = f"http://127.0.0.1:{app_port}", f"http://127.0.0.1:{idp_port}"
+    owner = seed_user(owner_conn, f"browser-configuration-owner-{uuid7()}", issuer=issuer)
+    add_membership(owner_conn, tenant_id=world.a.tenant_id, user_id=owner.user_id, role="owner")
+    idp = FakeIdp()
+    provider, verifier = _provider(issuer, app_origin, idp, owner)
+    app = _management_app(test_database, verifier, issuer, web)
+
+    def booking(hour: int) -> dict[str, str]:
+        start = datetime.fromisoformat(f"{customer_day()}T{hour:02d}:00:00")
+        return {
+            "location_id": str(world.a.location_id),
+            "resource_id": str(world.artist_a1),
+            "variant_id": str(world.catalog_a.base_variant_id),
+            "starts_at": start.replace(tzinfo=ZoneInfo("America/New_York")).isoformat(),
+            "customer_name": "FAKE Configuration Guest",
+            "customer_email": "configuration-guest@example.test",
+            "customer_phone": "+15551234572",
+        }
+
+    env = _browser_env(app_origin, issuer)
+    env.update(
+        GBA_CONFIG_BUSINESS=str(world.a.tenant_id),
+        GBA_CONFIG_BOOKING=json.dumps(booking(13)),
+    )
+    with live_server(provider, idp_port), live_server(app, app_port):
+        headers = idp.bearer(owner.subject, email=owner.email, iss=issuer)
+        for method, url, body in (
+            (
+                "PUT",
+                f"{app_origin}/v1/businesses/{world.a.tenant_id}/profile",
+                {"expected_revision": 0, "industry_ids": [1]},
+            ),
+            ("POST", f"{app_origin}/v1/salons/{world.a.tenant_id}/bookings", booking(11)),
+        ):
+            seeded = httpx.request(
+                method,
+                url,
+                headers={**headers, "Idempotency-Key": str(uuid7())},
+                json=body,
+                timeout=10,
+            )
+            assert seeded.status_code in (200, 201), seeded.text
+        result = subprocess.run(  # noqa: S603 - fixed repository script and located npm executable
+            [npm, "run", "test:management:configuration"],
+            cwd=web,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=180,
+            check=False,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        print(result.stdout)  # noqa: T201 - surface browser evidence under pytest -s
+    with owner_tenant_transaction(owner_conn, world.a.tenant_id):
+        versions = owner_conn.execute(
+            "select v.version, v.state, v.revision, v.superseded_by_version, "
+            "array(select m.module_id from gba.business_configuration_modules m "
+            "where m.tenant_id = v.tenant_id and m.version = v.version) "
+            "from gba.business_configuration_versions v order by v.version"
+        ).fetchall()
+        state = owner_conn.execute(
+            "select enabled, configuration_version from gba.business_module_states "
+            "where module_id = 'booking_resources'"
+        ).fetchone()
+        audit = owner_conn.execute(
+            "select action from gba.audit_events where target_type = %s order by occurred_at",
+            ("business_configuration",),
+        ).fetchall()
+        bookings = owner_conn.execute(
+            "select status from gba.bookings order by created_at"
+        ).fetchall()
+    # Published once despite the lost response, then replaced by a version with booking.
+    assert versions == [
+        (1, "superseded", 4, 2, []),
+        (2, "published", 3, None, ["booking_resources"]),
+    ]
+    assert state == (True, 2)
+    assert audit == [
+        (f"business_configuration.{action}",)
+        for action in ("drafted", "validated", "published") * 2
+    ]
+    # The refused request created nothing; the earlier appointment stayed readable.
+    assert bookings == [("CONFIRMED",)]

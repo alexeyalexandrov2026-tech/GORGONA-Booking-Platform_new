@@ -19,6 +19,14 @@ import {
   businessGroupListSchema,
   businessGroupSchema,
 } from "./group-contracts";
+import {
+  configurationPreviewSchema,
+  configurationSchema,
+  configurationVersionListSchema,
+  configurationVersionSchema,
+  moduleCatalogSchema,
+  readinessRegistrySchema,
+} from "./configuration-contracts";
 const id = z.uuid();
 const instant = z.iso.datetime({ offset: true });
 const count = z.number().int().nonnegative();
@@ -228,6 +236,30 @@ export function managementResponseSchema(
           (group[3] ? method === "POST" : method === "PUT")))
     )
       return businessGroupSchema;
+    if (method === "GET") {
+      if (business[1] === "/module-catalog") return moduleCatalogSchema;
+      if (business[1] === "/readiness-registry") return readinessRegistrySchema;
+      if (business[1] === "/configuration") return configurationSchema;
+      if (business[1] === "/configuration/versions")
+        return configurationVersionListSchema;
+      if (/^\/configuration\/versions\/[1-9]\d{0,9}$/.test(business[1] ?? ""))
+        return configurationVersionSchema;
+      if (
+        /^\/configuration\/versions\/[1-9]\d{0,9}\/preview$/.test(
+          business[1] ?? "",
+        )
+      )
+        return configurationPreviewSchema;
+    }
+    if (business[1] === "/configuration/draft" && method === "PUT")
+      return configurationVersionSchema;
+    if (
+      /^\/configuration\/versions\/[1-9]\d{0,9}\/(validate|publish)$/.test(
+        business[1] ?? "",
+      ) &&
+      method === "POST"
+    )
+      return configurationVersionSchema;
     throw new Error("Unrecognized business response contract");
   }
   const suffix = clean.replace(/^\/v1\/salons\/[0-9a-f-]{36}/i, "");
@@ -240,6 +272,7 @@ export function managementResponseSchema(
         z.object({ id, name: z.string(), timezone: z.string() }),
       ),
       business_hours: z.array(hours.extend({ location_id: id })),
+      booking_enabled: z.boolean(),
     });
   if (suffix === "/overview") return overview;
   if (suffix === "/settings") return settings;

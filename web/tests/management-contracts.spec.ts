@@ -355,3 +355,109 @@ test("unknown group operations still fail closed", () => {
       "Unrecognized business response contract",
     );
 });
+
+const configurationPath = `/v1/businesses/${businessId}/configuration`;
+const version = {
+  schema_version: 1,
+  business_id: businessId,
+  version: 2,
+  state: "published",
+  revision: 3,
+  profile_revision: 1,
+  registry_version: 1,
+  module_ids: ["booking_resources"],
+  created_at: "2026-10-04T12:00:00Z",
+  validation: { registry_version: 1, problems: [], warnings: [] },
+  validated_at: "2026-10-04T12:01:00Z",
+  published_at: "2026-10-04T12:02:00Z",
+  superseded_at: null,
+  superseded_by_version: null,
+};
+
+test("configuration views keep the published version consistent", () => {
+  const schema = managementResponseSchema(configurationPath, "GET");
+  const view = {
+    schema_version: 1,
+    business_id: businessId,
+    registry_version: 1,
+    baseline: false,
+    published: version,
+    latest: version,
+    effective_module_ids: ["organization", "users_access", "booking_resources"],
+  };
+  expect(schema.parse(view)).toEqual(view);
+  for (const broken of [
+    { ...view, baseline: true },
+    { ...view, published: { ...version, state: "draft" } },
+    { ...view, latest: { ...version, business_id: servicerId } },
+    { ...view, enabled_for: ["all"] },
+  ])
+    expect(schema.safeParse(broken).success).toBe(false);
+});
+
+for (const [suffix, method] of [
+  ["/draft", "PUT"],
+  ["/versions/2", "GET"],
+  ["/versions/2/validate", "POST"],
+  ["/versions/2/publish", "POST"],
+]) {
+  test(`management boundary recognizes configuration ${method}${suffix}`, () => {
+    const schema = managementResponseSchema(
+      `${configurationPath}${suffix}`,
+      method!,
+    );
+    expect(schema.parse(version)).toEqual(version);
+    expect(
+      schema.safeParse({ ...version, permissions: ["business.manage"] })
+        .success,
+    ).toBe(false);
+    expect(schema.safeParse({ ...version, state: "active" }).success).toBe(
+      false,
+    );
+  });
+}
+
+test("module catalog never offers a core module as a choice", () => {
+  const schema = managementResponseSchema(
+    `/v1/businesses/${businessId}/module-catalog`,
+    "GET",
+  );
+  const core = {
+    id: "organization",
+    name: "Organization and structure",
+    kind: "core",
+    depends_on: [],
+    readiness: "technically_verified",
+    enableable: false,
+    limits: "FAKE limits",
+    stops: "Always on.",
+  };
+  const catalog = {
+    schema_version: 1,
+    registry_version: 1,
+    minimum_readiness: "technically_verified",
+    modules: [core],
+  };
+  expect(schema.parse(catalog)).toEqual(catalog);
+  expect(
+    schema.safeParse({ ...catalog, modules: [{ ...core, enableable: true }] })
+      .success,
+  ).toBe(false);
+  expect(schema.safeParse({ ...catalog, modules: [core, core] }).success).toBe(
+    false,
+  );
+});
+
+test("unknown configuration operations still fail closed", () => {
+  for (const [path, method] of [
+    [`${configurationPath}`, "PUT"],
+    [`${configurationPath}/versions/2`, "DELETE"],
+    [`${configurationPath}/versions/0/publish`, "POST"],
+    [`${configurationPath}/versions/2/publish`, "PUT"],
+    [`${configurationPath}/versions/2/rollback`, "POST"],
+    [`${configurationPath}/draft`, "POST"],
+  ])
+    expect(() => managementResponseSchema(path!, method!)).toThrow(
+      "Unrecognized business response contract",
+    );
+});

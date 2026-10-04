@@ -13,6 +13,19 @@ class Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
+class Versioned(Strict):
+    """A command body whose schema version must be a real integer."""
+
+    schema_version: Literal[1] = 1
+
+    @field_validator("schema_version", mode="before")
+    @classmethod
+    def integer_version(cls, value: object) -> object:
+        if type(value) is not int:
+            raise ValueError("Version must be an integer")
+        return value
+
+
 class ProfileInput(Strict):
     schema_version: Literal[1] = 1
     catalog_version: Literal[1] = CATALOG_VERSION

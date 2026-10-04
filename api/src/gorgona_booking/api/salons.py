@@ -22,6 +22,8 @@ from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.metrics import CurrencyAmount, confirmed_booking_value
 from gorgona_booking.booking.models import IdempotencyKeyReusedError, booking_interval
 from gorgona_booking.booking.repository import load_booking
+from gorgona_booking.business.configurations import module_enabled
+from gorgona_booking.business.modules import BOOKING_MODULE
 from gorgona_booking.catalog.models import Quote, QuoteLine
 from gorgona_booking.catalog.quote import ServiceNotBookableError
 from gorgona_booking.customer import queries
@@ -291,6 +293,8 @@ class WorkspaceView(BaseModel):
     location_id: UUID | None
     locations: list[LocationItemView]
     business_hours: list[BusinessHoursItemView]
+    # False once a published configuration disables booking (ADR-0019).
+    booking_enabled: bool
 
 
 class SalonFactItemView(BaseModel):
@@ -465,6 +469,7 @@ async def workspace(salon_id: UUID, request: Request, principal: CurrentPrincipa
                 )
                 for r in hours
             ],
+            booking_enabled=await module_enabled(access.conn, salon_id, BOOKING_MODULE),
         )
 
 

@@ -1,7 +1,8 @@
 """Stable industry identities from the owner's 39-sector master plan.
 
-Catalog revision is separate from workflow acceptance. The NAICS sector mapping
-is a discovery aid, not a company's legal registration or regulatory approval.
+Catalog revision is separate from workflow acceptance: `workflow_readiness` is read
+from the readiness registry (ADR-0019). The NAICS sector mapping is a discovery aid,
+not a company's legal registration or regulatory approval.
 """
 
 from enum import StrEnum
@@ -9,15 +10,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from gorgona_booking.business.readiness_registry import PROFILE_READINESS, Readiness
+
 CATALOG_VERSION: Literal[1] = 1
-
-
-class Readiness(StrEnum):
-    PLANNED = "planned"
-    IMPLEMENTED = "implemented"
-    TECHNICALLY_VERIFIED = "technically_verified"
-    PILOT_ACCEPTED = "pilot_accepted"
-    PRODUCTION_APPROVED = "production_approved"
 
 
 class BusinessFormat(StrEnum):
@@ -137,7 +132,14 @@ _EXAMPLES = (
 )
 
 INDUSTRIES = tuple(
-    Industry(id=number, code=code, name=name, examples=examples, naics_sectors=sectors)
+    Industry(
+        id=number,
+        code=code,
+        name=name,
+        examples=examples,
+        naics_sectors=sectors,
+        workflow_readiness=PROFILE_READINESS[number],
+    )
     for (number, code, name, sectors), examples in zip(_IDENTITIES, _EXAMPLES, strict=True)
 )
 INDUSTRY_IDS = frozenset(industry.id for industry in INDUSTRIES)

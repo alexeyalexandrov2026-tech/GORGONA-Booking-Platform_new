@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Header, Request, Response
 
 from gorgona_booking.api.holds import get_tenant_id
 from gorgona_booking.api.request_id import get_request_id
+from gorgona_booking.business.configurations import require_booking_enabled
 from gorgona_booking.customer import queries
 from gorgona_booking.customer.contracts import (
     AvailabilityQuery,
@@ -49,6 +50,7 @@ async def availability(
 ) -> AvailabilityView:
     response.headers["Cache-Control"] = "no-store"
     async with tenant_transaction(pool_for(request), tenant_id) as conn:
+        await require_booking_enabled(conn, tenant_id)
         return await queries.availability(conn, body)
 
 

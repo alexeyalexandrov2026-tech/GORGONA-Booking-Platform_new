@@ -48,6 +48,8 @@ function CalendarContent({
 }) {
   const [selectedDate, setSelectedDate] = useState("");
   const [locations, setLocations] = useState<SalonSettings["locations"]>([]);
+  // A published configuration can turn booking off (ADR-0019).
+  const [bookingEnabled, setBookingEnabled] = useState<boolean | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const [selectedStaffFilter, setSelectedStaffFilter] = useState("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
@@ -128,6 +130,7 @@ function CalendarContent({
       .then(({ bList, sList, vList, settings, location, day }) => {
         if (!isSubscribed) return;
         setLocations(settings.locations);
+        setBookingEnabled(settings.booking_enabled);
         setSelectedLocationId(location.id);
         setSelectedDate(day);
         setNewBookingDate(
@@ -320,17 +323,25 @@ function CalendarContent({
             Live appointment schedule and capacity management
           </p>
         </div>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => {
-            setNewBookingDate(selectedDate);
-            setShowNewBookingModal(true);
-          }}
-        >
-          + Book Appointment
-        </button>
+        {bookingEnabled === true && (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              setNewBookingDate(selectedDate);
+              setShowNewBookingModal(true);
+            }}
+          >
+            + Book Appointment
+          </button>
+        )}
       </div>
+      {bookingEnabled === false && (
+        <p role="status" className="mgmt-module-off">
+          Booking is turned off in this business&apos;s published configuration.
+          Existing appointments can still be viewed and cancelled.
+        </p>
+      )}
 
       <div className="mgmt-filter-bar">
         <LocationFilter
@@ -480,13 +491,15 @@ function CalendarContent({
                       </button>
                       {b.status !== "CANCELLED" && (
                         <>
-                          <button
-                            type="button"
-                            className="secondary mgmt-btn-small"
-                            onClick={() => handleOpenReschedule(b)}
-                          >
-                            Reschedule
-                          </button>
+                          {bookingEnabled === true && (
+                            <button
+                              type="button"
+                              className="secondary mgmt-btn-small"
+                              onClick={() => handleOpenReschedule(b)}
+                            >
+                              Reschedule
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="secondary mgmt-btn-small"
@@ -572,17 +585,19 @@ function CalendarContent({
             <div className="mgmt-form-actions">
               {inspectBooking.status !== "CANCELLED" && (
                 <>
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => {
-                      const target = inspectBooking;
-                      setInspectBooking(null);
-                      handleOpenReschedule(target);
-                    }}
-                  >
-                    Reschedule
-                  </button>
+                  {bookingEnabled === true && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => {
+                        const target = inspectBooking;
+                        setInspectBooking(null);
+                        handleOpenReschedule(target);
+                      }}
+                    >
+                      Reschedule
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="secondary"

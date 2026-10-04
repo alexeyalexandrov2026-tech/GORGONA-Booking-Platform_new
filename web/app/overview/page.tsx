@@ -101,6 +101,10 @@ function OverviewContent({
         fetchServices(salonId),
         fetchWorkspace(salonId),
       ]);
+      if (!settings.booking_enabled)
+        throw new Error(
+          "Booking is turned off in this business's published configuration.",
+        );
       const activeStaff = staff.filter((item) => item.is_active);
       const chosenStaff =
         activeStaff.find((item) => item.id === selectedStaffId) ??

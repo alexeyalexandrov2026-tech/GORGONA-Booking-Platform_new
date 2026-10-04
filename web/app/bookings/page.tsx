@@ -49,6 +49,9 @@ function BookingsContent({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [locations, setLocations] = useState<SalonSettings["locations"]>([]);
+  // A published configuration can turn booking off (ADR-0019): history and
+  // cancellations remain, new appointments and reschedules do not.
+  const [bookingEnabled, setBookingEnabled] = useState<boolean | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const [selectedStaffFilter, setSelectedStaffFilter] = useState("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("all");
@@ -136,6 +139,7 @@ function BookingsContent({
         ({ bList, sList, vList, settings, location, firstDay, lastDay }) => {
           if (!isSubscribed) return;
           setLocations(settings.locations);
+          setBookingEnabled(settings.booking_enabled);
           setSelectedLocationId(location.id);
           setStartDate(firstDay);
           setEndDate(lastDay);
@@ -361,15 +365,23 @@ function BookingsContent({
           >
             {loading ? "Refreshing..." : "Refresh"}
           </button>
-          <button
-            type="button"
-            className="mgmt-action-btn"
-            onClick={handleOpenNewBooking}
-          >
-            + New Appointment
-          </button>
+          {bookingEnabled === true && (
+            <button
+              type="button"
+              className="mgmt-action-btn"
+              onClick={handleOpenNewBooking}
+            >
+              + New Appointment
+            </button>
+          )}
         </div>
       </div>
+      {bookingEnabled === false && (
+        <p role="status" className="mgmt-module-off">
+          Booking is turned off in this business&apos;s published configuration.
+          Existing appointments can still be viewed and cancelled.
+        </p>
+      )}
 
       {/* Filter Bar */}
       <div className="mgmt-filter-bar">
@@ -473,14 +485,16 @@ function BookingsContent({
             Try adjusting your date range or filters, or create a new
             appointment.
           </p>
-          <button
-            type="button"
-            className="mgmt-action-btn"
-            onClick={handleOpenNewBooking}
-            style={{ marginTop: "16px" }}
-          >
-            + New Appointment
-          </button>
+          {bookingEnabled === true && (
+            <button
+              type="button"
+              className="mgmt-action-btn"
+              onClick={handleOpenNewBooking}
+              style={{ marginTop: "16px" }}
+            >
+              + New Appointment
+            </button>
+          )}
         </div>
       )}
 
@@ -555,13 +569,15 @@ function BookingsContent({
                       </button>
                       {b.status === "CONFIRMED" && (
                         <>
-                          <button
-                            type="button"
-                            className="secondary mgmt-btn-small"
-                            onClick={() => handleOpenReschedule(b)}
-                          >
-                            Reschedule
-                          </button>
+                          {bookingEnabled === true && (
+                            <button
+                              type="button"
+                              className="secondary mgmt-btn-small"
+                              onClick={() => handleOpenReschedule(b)}
+                            >
+                              Reschedule
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="secondary mgmt-btn-small"

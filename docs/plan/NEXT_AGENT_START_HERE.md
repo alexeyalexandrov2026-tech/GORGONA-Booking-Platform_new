@@ -16,6 +16,7 @@
 | CORE-03 A — подразделения | [0016](../adr/0016-tenant-owned-departments.md) | 0011 | CI PASS `5b3c00b`, [приемка](evidence/2026-10-04-departments/ACCEPTANCE.md) |
 | CORE-03 B — межкомпанейское делегирование | [0017](../adr/0017-cross-company-delegation.md) | 0012 | CI PASS `ed370c6`, [приемка](evidence/2026-10-04-delegation/ACCEPTANCE.md) |
 | CORE-03 C — группы компаний | [0018](../adr/0018-company-groups.md) | 0013 | CI PASS `6a81dfd`, [приемка](evidence/2026-10-04-groups/ACCEPTANCE.md). CI на `c9193b2` был FAIL: гонка remove→accept (404 вместо 409), исправлена с red→green тестом |
+| D — публикация конфигурации (CORE-02) | [0019](../adr/0019-configuration-publication-and-modules.md) | 0014 | Реализовано; локально полная suite 527 passed / 4 skipped, браузеры PASS; CI и приемка — см. реестр |
 
 Подробные результаты каждого шага: [реестр реализации](GORGONA_IMPLEMENTATION_STATUS.md). Состояние всех 28 критериев: [аудит](GORGONA_PLAN_AUDIT_2026-10-04.md). Технические маршруты и поведение API: [DEVELOPMENT](../DEVELOPMENT.md).
 
@@ -27,21 +28,21 @@
 
 - Самостоятельная универсальная GORGONA; KA Nails — отдельный проект вне работы и приемки. 39 отраслей и 28 критериев сохраняются.
 - `business_id == tenant_id == salon_id`; никаких копий компаний; не выдумывать бизнес-факты; исторические миграции не менять.
-- Типизированные версионированные контракты; idempotency + expected revision; FORCE RLS + schema guard (сейчас **25** определений); аудит; тест red→green; focused и полные проверки; CI точного SHA; evidence; без fake providers и успешных моков.
+- Типизированные версионированные контракты; idempotency + expected revision; FORCE RLS + schema guard (сейчас **29** определений + триггер записи); аудит; тест red→green; focused и полные проверки; CI точного SHA; evidence; без fake providers и успешных моков.
 - **После каждого завершенного шага обновлять handoff, реестр, аудит, DEVELOPMENT и ADR/evidence** — с SHA, состоянием CI, числами тестов и следующим шагом (требование владельца).
 - Без merge, deploy и промышленных миграций без явного разрешения владельца. Коммит/push в рабочую ветку — по поручению владельца.
 - Один исполнитель на рабочую копию и на тестовый кластер PostgreSQL (имена ролей fixture общие).
 
 ## 4. Как проверять локально
 
-1. Web: в `web/` — `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run test:unit` (34), `npm run build` (14 страниц).
+1. Web: в `web/` — `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run test:unit` (41), `npm run build` (14 страниц).
 2. API статика: в `api/` — `.venv/Scripts/python.exe -m ruff check src tests`, `-m ruff format --check src tests`, `-m mypy`.
-3. PostgreSQL 18.6 и браузеры: полная suite с `GBA_TEST_ADMIN_DSN` (передается только дочернему процессу, никогда не выводится), `GBA_REQUIRE_POSTGRES=1`, `GBA_REQUIRE_BROWSER=1`: `.venv/Scripts/python.exe -m pytest -q -rs --tb=short`. Последний результат после исправления гонки: **495 passed, 4 skipped** (три container gate без Docker, внешний site gate).
+3. PostgreSQL 18.6 и браузеры: полная suite с `GBA_TEST_ADMIN_DSN` (передается только дочернему процессу, никогда не выводится), `GBA_REQUIRE_POSTGRES=1`, `GBA_REQUIRE_BROWSER=1`: `.venv/Scripts/python.exe -m pytest -q -rs --tb=short`. Последний результат (пакет D, до правок ревью): **527 passed, 4 skipped** (три container gate без Docker, внешний site gate).
 4. Тестовые кластеры на этой машине:
    - `%LOCALAPPDATA%\GorgonaBookingTests\postgres-18.6\data` на **127.0.0.1:51454** — прежний кластер. Он работал, запущенный другим процессом в 15:58; этой сессией не использовался и не останавливался. Выяснить владельца перед использованием.
    - `%LOCALAPPDATA%\GorgonaBookingTests\claude-cluster` на **127.0.0.1:51455** — отдельный одноразовый кластер этой сессии из официального EDB PostgreSQL 18.6. Приватный `test-connection.json` лежит в той же папке; пароль не выводить. Запуск: `pg_ctl -D <data> -l <log> -o "-h 127.0.0.1 -p 51455 -c max_connections=250" start` через detached `Start-Process -WindowStyle Hidden`; после работы `pg_ctl stop -m fast`.
    - Скачанный архив EDB (~330 МБ) лежит рядом; удалить можно по решению владельца.
-5. Браузерные harness (Python → настоящий test-only OIDC → API → PostgreSQL): компания, филиал, делегирование, группы — `tests/integration/test_management_browser.py`. Перед ними нужен `npm run build`. Переход между страницами в spec только по ссылкам: `page.goto`/`reload` теряет сессию.
+5. Браузерные harness (Python → настоящий test-only OIDC → API → PostgreSQL): компания, филиал, делегирование, группы, конфигурация — `tests/integration/test_management_browser.py`. Перед ними нужен `npm run build`. Переход между страницами в spec только по ссылкам: `page.goto`/`reload` теряет сессию.
 
 ## 5. План дальше
 

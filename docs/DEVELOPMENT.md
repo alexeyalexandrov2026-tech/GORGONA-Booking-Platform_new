@@ -153,6 +153,23 @@ Focused acceptance: `tests/unit/test_delegation_contracts.py`, `tests/integratio
 
 Commands need `business.manage`, company-wide access and an `Idempotency-Key`. Focused acceptance: `tests/unit/test_group_contracts.py`, `tests/integration/test_groups.py` and `test_real_group_browser_oidc_pkce_and_database` (`npm run test:management:groups`).
 
+### Configuration publication and modules (stage 1, CORE-02)
+
+[ADR-0019](adr/0019-configuration-publication-and-modules.md) adds company configuration versions (draft → validated → published → superseded), a code-defined registry of 18 platform modules (`business/modules.py`) and readiness records for the 28 scenarios and 39 profiles (`business/readiness_registry.py`; the industry catalog reads `workflow_readiness` from it). Migration 0014 adds versions, their module selections and effective module states. The runtime requires 29 approved policy definitions plus the `bookings_require_booking_module` trigger and its function; damage fails readiness.
+
+| Route | Behavior |
+|---|---|
+| `GET /v1/businesses/{id}/module-catalog`, `GET …/readiness-registry` | Registries (`business.read`) |
+| `GET /v1/businesses/{id}/configuration` | Published version or implicit baseline (`baseline: true`, booking on), latest version, effective modules |
+| `GET …/configuration/versions?limit=20&before=N`, `GET …/versions/{n}` | History, newest first |
+| `GET …/versions/{n}/preview` | Modules turned on/off, operations that stop, activity changes, problems and warnings |
+| `PUT …/configuration/draft` | `expected_version`, `profile_revision`, `module_ids` (optional modules only) → next draft |
+| `POST …/versions/{n}/validate`, `…/publish` | `expected_revision`; only the latest version; validation failure is 422 `CONFIGURATION_INVALID`; publication re-validates and supersedes the previous version |
+
+Commands need `business.manage`, company-wide access and an `Idempotency-Key`; they are never delegable and share the `business-configuration` advisory lock with the booking trigger. Only optional modules that are at least `technically_verified` can be enabled; today that is `booking_resources`. When a published configuration disables it, every path that inserts a booking (workspace, reschedule, customer site, delegates, development holds) answers 409 `MODULE_DISABLED`; cancellation, confirming an existing hold and reads continue. `/v1/salons/{id}/workspace` returns `booking_enabled`.
+
+Focused acceptance: `tests/unit/test_configuration_contracts.py`, `tests/integration/test_configurations.py` and `test_real_configuration_browser_oidc_pkce_and_database` (`npm run test:management:configuration`). The broken-boundary test of `test_location_access.py` restores the 0010–0014 scope policies.
+
 **Embedding allowlist.** The customer web may be framed only by origins the owner approves per tenant (migration 0007, audited, FORCE RLS). Every HTML response carries `Content-Security-Policy: frame-ancestors 'self' <approved>`; API responses carry `frame-ancestors 'none'`. With no approved origin, `X-Frame-Options: SAMEORIGIN` is added too. Plain `http://` origins are accepted only for loopback, and only in `local`/`test`/`ci`.
 
 ```bash

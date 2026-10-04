@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ManagementLayout } from "../../components/management-layout";
+import { BusinessConfiguration } from "../../components/business-configuration";
 import { BusinessGroups } from "../../components/business-groups";
 import { Delegations } from "../../components/delegations";
 import { Departments } from "../../components/departments";
@@ -317,6 +318,14 @@ function BusinessContent({
                 </button>
               )}
             </form>
+            <BusinessConfiguration
+              businessId={businessId}
+              canManage={canManage}
+              profileRevision={business.profile?.revision ?? null}
+              industryNames={Object.fromEntries(
+                (catalog?.industries ?? []).map((item) => [item.id, item.name]),
+              )}
+            />
             <LegalEntities businessId={businessId} canManage={canManage} />
             <Departments
               businessId={businessId}

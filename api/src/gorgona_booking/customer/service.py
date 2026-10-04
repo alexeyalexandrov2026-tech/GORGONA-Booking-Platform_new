@@ -19,6 +19,7 @@ from gorgona_booking.booking.models import (
     SlotConflictError,
     booking_interval,
 )
+from gorgona_booking.business.configurations import require_booking_enabled
 from gorgona_booking.customer import queries
 from gorgona_booking.customer.contracts import (
     AvailabilityQuery,
@@ -76,6 +77,8 @@ class CustomerBookingService:
                 if stored.status_code == 409:
                     raise SlotConflictError("That time is no longer available")
                 return BookingResult.from_json(stored.body, replayed=True)
+            # Answer before any work; the database trigger stays the final arbiter.
+            await require_booking_enabled(conn, tenant_id)
             await repo.lock_resource_schedule(conn, tenant_id, body.resource_id)
             zone = await queries.location_zone(conn, body.location_id)
             available = await queries.availability(

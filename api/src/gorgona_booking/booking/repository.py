@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+import psycopg
 from psycopg.types.json import Jsonb
 
 from gorgona_booking.booking.models import (
@@ -11,12 +12,14 @@ from gorgona_booking.booking.models import (
     BookingStatus,
     ResourceUnavailableError,
 )
+from gorgona_booking.business.modules import ModuleDisabledError
 from gorgona_booking.catalog.models import Quote
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import NotFoundError
 
 NO_OVERLAP_CONSTRAINT = "booking_allocations_no_overlap"
 EXCLUSION_VIOLATION = "23P01"
+BOOKING_MODULE_DISABLED = "GBM01"
 
 
 def is_slot_conflict(exc: object) -> bool:
@@ -126,8 +129,8 @@ async def insert_booking(
     quote: Quote,
     created_by: str,
 ) -> UUID:
-    row = await (
-        await conn.execute(
+    try:
+        cursor = await conn.execute(
             """
             insert into gba.bookings (tenant_id, location_id, variant_id, status, starts_at,
                                       ends_at, hold_expires_at, total_cents, currency, quote,
@@ -153,7 +156,14 @@ async def insert_booking(
                 "created_by": created_by,
             },
         )
-    ).fetchone()
+    except psycopg.DatabaseError as exc:
+        # The booking-module trigger (ADR-0019) is the final arbiter for every caller.
+        if exc.sqlstate == BOOKING_MODULE_DISABLED:
+            raise ModuleDisabledError(
+                "Booking is turned off in this business's configuration"
+            ) from exc
+        raise
+    row = await cursor.fetchone()
     assert row is not None  # noqa: S101 - INSERT ... RETURNING always yields a row
     booking_id = UUID(str(row[0]))
     # The exclusion constraint decides here; 23P01 aborts the caller's savepoint.

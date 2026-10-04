@@ -5,23 +5,12 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, Field, StrictInt, field_validator
 
-from gorgona_booking.business.contracts import Strict
+from gorgona_booking.business.contracts import Strict, Versioned
 
 MembershipStatus = Literal["invited", "active", "declined", "left", "removed"]
 
 
-class _Versioned(Strict):
-    schema_version: Literal[1] = 1
-
-    @field_validator("schema_version", mode="before")
-    @classmethod
-    def integer_version(cls, value: object) -> object:
-        if type(value) is not int:
-            raise ValueError("Version must be an integer")
-        return value
-
-
-class GroupCreate(_Versioned):
+class GroupCreate(Versioned):
     code: str = Field(min_length=1, max_length=64, pattern=r"^[A-Z0-9][A-Z0-9_-]*$")
     name: str = Field(min_length=1, max_length=200)
 
@@ -34,11 +23,11 @@ class GroupCreate(_Versioned):
         return name
 
 
-class GroupInvite(_Versioned):
+class GroupInvite(Versioned):
     """An invitation states nothing but the parties; it confers no access."""
 
 
-class GroupDecision(_Versioned):
+class GroupDecision(Versioned):
     expected_revision: StrictInt = Field(ge=1, le=2_147_483_646)
 
 

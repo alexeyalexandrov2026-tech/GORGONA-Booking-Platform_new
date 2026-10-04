@@ -30,6 +30,18 @@ import {
   type BusinessGroup,
   type BusinessGroupPage,
 } from "./group-contracts";
+import {
+  configurationPreviewSchema,
+  configurationSchema,
+  configurationVersionListSchema,
+  configurationVersionSchema,
+  moduleCatalogSchema,
+  type Configuration,
+  type ConfigurationPreview,
+  type ConfigurationVersion,
+  type ConfigurationVersionPage,
+  type ModuleCatalog,
+} from "./configuration-contracts";
 import type {
   Business,
   BusinessProfile,
@@ -208,6 +220,8 @@ export interface Workspace {
   location_id: string | null;
   locations: LocationItem[];
   business_hours: BusinessHoursItem[];
+  /** False once a published configuration turns booking off (ADR-0019). */
+  booking_enabled: boolean;
 }
 
 export function fetchWorkspace(salonId: string): Promise<Workspace> {
@@ -493,6 +507,115 @@ export async function changeGroup(
     }),
   );
   if (result.group_id !== groupId)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load this record safely.",
+    );
+  return result;
+}
+
+function sameBusiness<T extends { business_id: string }>(
+  result: T,
+  businessId: string,
+): T {
+  if (result.business_id !== businessId)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load this record safely.",
+    );
+  return result;
+}
+
+export async function fetchModuleCatalog(
+  businessId: string,
+): Promise<ModuleCatalog> {
+  return moduleCatalogSchema.parse(
+    await managementFetch(`/v1/businesses/${businessId}/module-catalog`),
+  );
+}
+
+export async function fetchConfiguration(
+  businessId: string,
+): Promise<Configuration> {
+  return sameBusiness(
+    configurationSchema.parse(
+      await managementFetch(`/v1/businesses/${businessId}/configuration`),
+    ),
+    businessId,
+  );
+}
+
+export async function fetchConfigurationVersions(
+  businessId: string,
+  before?: number,
+): Promise<ConfigurationVersionPage> {
+  const query = before ? `?before=${before}` : "";
+  return sameBusiness(
+    configurationVersionListSchema.parse(
+      await managementFetch(
+        `/v1/businesses/${businessId}/configuration/versions${query}`,
+      ),
+    ),
+    businessId,
+  );
+}
+
+export async function fetchConfigurationPreview(
+  businessId: string,
+  version: number,
+): Promise<ConfigurationPreview> {
+  return sameBusiness(
+    configurationPreviewSchema.parse(
+      await managementFetch(
+        `/v1/businesses/${businessId}/configuration/versions/${version}/preview`,
+      ),
+    ),
+    businessId,
+  );
+}
+
+export type ConfigurationCommand =
+  | {
+      kind: "draft";
+      expectedVersion: number;
+      profileRevision: number;
+      moduleIds: string[];
+    }
+  | { kind: "validate" | "publish"; version: number; revision: number };
+
+export async function changeConfiguration(
+  businessId: string,
+  command: ConfigurationCommand,
+  key: string,
+): Promise<ConfigurationVersion> {
+  const base = `/v1/businesses/${businessId}/configuration`;
+  const [path, method, body] =
+    command.kind === "draft"
+      ? [
+          `${base}/draft`,
+          "PUT",
+          {
+            expected_version: command.expectedVersion,
+            profile_revision: command.profileRevision,
+            module_ids: command.moduleIds,
+          },
+        ]
+      : [
+          `${base}/versions/${command.version}/${command.kind}`,
+          "POST",
+          { expected_revision: command.revision },
+        ];
+  const result = sameBusiness(
+    configurationVersionSchema.parse(
+      await managementFetch(path, {
+        method,
+        body: JSON.stringify({ schema_version: 1, ...body }),
+        headers: { "Idempotency-Key": key },
+      }),
+    ),
+    businessId,
+  );
+  if (command.kind !== "draft" && result.version !== command.version)
     throw new ManagementApiError(
       "INVALID_RESPONSE",
       "Unable to load this record safely.",

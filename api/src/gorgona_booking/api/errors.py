@@ -26,6 +26,7 @@ from gorgona_booking.booking.models import (
     InvalidTransitionError,
     SlotConflictError,
 )
+from gorgona_booking.business.modules import ModuleDisabledError
 from gorgona_booking.errors import (
     ConflictError,
     DatabaseUnavailableError,
@@ -52,6 +53,7 @@ DOMAIN_ERROR_STATUS: dict[type[DomainError], int] = {
     SlotConflictError: 409,
     InvalidTransitionError: 409,
     HoldExpiredError: 409,
+    ModuleDisabledError: 409,
     IdempotencyKeyReusedError: 422,
     ConflictError: 409,
     InvalidReferenceError: 422,
