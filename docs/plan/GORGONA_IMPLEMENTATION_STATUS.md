@@ -39,7 +39,7 @@
 | PostgreSQL 18.6 focused: departments, legal entities, location access, roles/migrations, identity schema, tenant isolation | PASS: 69, 29.12 с |
 | Management browser harness (OIDC → API → PostgreSQL), desktop/mobile | PASS: 2 pytest; Playwright 7 passed / 1 намеренный skip, филиальный 2 passed; SQL подтвердил версии подразделений и их отсутствие у другого tenant |
 | Полная API suite, PostgreSQL 18.6 и обязательные браузеры | **PASS: 445; 4 skipped; 215.10 с.** Пропуски: три container gate (Docker на машине нет) и дополнительный внешний site gate |
-| CI точного SHA | Фиксируется после push |
+| Публикация и CI | Коммит `5b3c00b11e2bb2e844a3183bbd840ca36d764895` отправлен в ветку; результат GitHub CI в этой сессии **не получен** (нет `gh`, PR не привязан) — проверить и записать |
 
 Локальный кластер: прежний `%LOCALAPPDATA%\GorgonaBookingTests\postgres-18.6` уже работал на 127.0.0.1:51454, запущенный другим процессом в 15:58, и недоступен в файловом представлении этого исполнителя; его не использовали и не останавливали. Для проверки скачан официальный EDB-архив PostgreSQL 18.6 (343 808 005 байт, SHA256 `fbe23da234ee31547bf8a36d29dfd81e82b849df2d2b78d2eecb43d360252f8c`) и создан отдельный одноразовый кластер `claude-cluster` на 127.0.0.1:51455 с приватными учетными данными вне репозитория. После проверок он остановлен (`pg_ctl status`: no server running), данные сохранены; кластер на 51454 продолжает работать.
 
