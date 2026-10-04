@@ -425,3 +425,74 @@ def test_real_delegation_browser_oidc_pkce_and_database(
     assert access == [(f"user:{servicer.user_id}",)]
     with owner_tenant_transaction(owner_conn, world.b.tenant_id):
         assert owner_conn.execute("select count(*) from gba.bookings").fetchone() == (0,)
+
+
+def test_real_group_browser_oidc_pkce_and_database(
+    world: BookingWorld,
+    owner_conn: psycopg.Connection,
+    test_database: ProvisionedDatabase,
+) -> None:
+    """A business joins and leaves a partner's group and runs its own; no access follows."""
+    if os.environ.get("GBA_REQUIRE_BROWSER") != "1":
+        pytest.skip("BLOCKED: management browser verification requires GBA_REQUIRE_BROWSER=1")
+    web = Path(__file__).resolve().parents[3] / "web"
+    assert (web / "out" / "auth" / "callback" / "index.html").exists(), "build web first"
+    npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
+    assert npm is not None
+    seed_customer_setup(owner_conn, world)
+    app_port, idp_port = free_port(), free_port()
+    app_origin, issuer = f"http://127.0.0.1:{app_port}", f"http://127.0.0.1:{idp_port}"
+    member = seed_user(owner_conn, f"browser-group-member-{uuid7()}", issuer=issuer)
+    add_membership(owner_conn, tenant_id=world.b.tenant_id, user_id=member.user_id, role="owner")
+    organizer = seed_user(owner_conn, f"browser-group-organizer-{uuid7()}", issuer=issuer)
+    add_membership(owner_conn, tenant_id=world.a.tenant_id, user_id=organizer.user_id, role="owner")
+    idp = FakeIdp()
+    provider, verifier = _provider(issuer, app_origin, idp, member)
+    app = _management_app(test_database, verifier, issuer, web)
+    env = _browser_env(app_origin, issuer)
+    env.update(GBA_GROUP_PARTNER=str(world.a.tenant_id))
+    group_id = uuid7()
+    with live_server(provider, idp_port), live_server(app, app_port):
+        headers = idp.bearer(organizer.subject, email=organizer.email, iss=issuer)
+        base = f"{app_origin}/v1/businesses/{world.a.tenant_id}/groups/{group_id}"
+        for url, body in (
+            (base, {"code": "FAKE_PARTNER", "name": "FAKE Partner Holding"}),
+            (f"{base}/members/{world.b.tenant_id}", {}),
+        ):
+            seeded = httpx.put(
+                url, headers={**headers, "Idempotency-Key": str(uuid7())}, json=body, timeout=10
+            )
+            assert seeded.status_code == 200, seeded.text
+        result = subprocess.run(  # noqa: S603 - fixed repository script and located npm executable
+            [npm, "run", "test:management:groups"],
+            cwd=web,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=180,
+            check=False,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        print(result.stdout)  # noqa: T201 - surface browser evidence under pytest -s
+    with owner_tenant_transaction(owner_conn, world.a.tenant_id):
+        memberships = owner_conn.execute(
+            "select g.code, m.organizer_tenant_id = %s, m.status, m.revision "
+            "from gba.business_group_members m join gba.business_groups g "
+            "on g.organizer_tenant_id = m.organizer_tenant_id and g.id = m.group_id "
+            "order by g.code",
+            (world.a.tenant_id,),
+        ).fetchall()
+    # Joined after a lost response (one decision), then left; own invitation ended.
+    assert memberships == [("FAKE_NETWORK", False, "removed", 2), ("FAKE_PARTNER", True, "left", 3)]
+    with owner_tenant_transaction(owner_conn, world.b.tenant_id):
+        audit = owner_conn.execute(
+            "select action from gba.audit_events where target_type = %s order by occurred_at",
+            ("business_group",),
+        ).fetchall()
+    assert audit == [
+        ("business_group.joined",),
+        ("business_group.created",),
+        ("business_group.invited",),
+        ("business_group.removed",),
+        ("business_group.left",),
+    ]

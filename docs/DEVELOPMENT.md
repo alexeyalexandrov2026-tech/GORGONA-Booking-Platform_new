@@ -139,6 +139,20 @@ Delegated employees use the existing `/v1/salons/{owner_id}/…` booking workspa
 
 Focused acceptance: `tests/unit/test_delegation_contracts.py`, `tests/integration/test_delegations.py`, and `test_real_delegation_browser_oidc_pkce_and_database` running `npm run test:management:delegation`. The broken-boundary test restores the 0010–0012 scope policies.
 
+### Company groups (stage 1)
+
+[ADR-0018](adr/0018-company-groups.md) records consent-based groups of independent businesses. Migration 0013 adds groups and membership history; the runtime requires 25 approved scope-policy definitions. Group membership grants no data access.
+
+| Route | Behavior |
+|---|---|
+| `GET /v1/businesses/{id}/groups`, `GET …/groups/{group_id}` | Groups the business organizes or is invited to (`business.read`); members see only their own membership |
+| `PUT /v1/businesses/{id}/groups/{group_id}` | Organizer creates `{code, name}` |
+| `PUT …/groups/{group_id}/members/{member_id}` | Organizer invites a business by ID |
+| `POST …/groups/{group_id}/members/{member_id}/remove` | Organizer ends an invitation or membership (`expected_revision`) |
+| `POST …/groups/{group_id}/accept`, `/decline`, `/leave` | The member business decides for itself (`expected_revision`) |
+
+Commands need `business.manage`, company-wide access and an `Idempotency-Key`. Focused acceptance: `tests/unit/test_group_contracts.py`, `tests/integration/test_groups.py` and `test_real_group_browser_oidc_pkce_and_database` (`npm run test:management:groups`).
+
 **Embedding allowlist.** The customer web may be framed only by origins the owner approves per tenant (migration 0007, audited, FORCE RLS). Every HTML response carries `Content-Security-Policy: frame-ancestors 'self' <approved>`; API responses carry `frame-ancestors 'none'`. With no approved origin, `X-Frame-Options: SAMEORIGIN` is added too. Plain `http://` origins are accepted only for loopback, and only in `local`/`test`/`ci`.
 
 ```bash

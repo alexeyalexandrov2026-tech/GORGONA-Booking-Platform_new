@@ -16,7 +16,8 @@
     "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts --project=desktop",
     "test:management": "playwright test tests/management.spec.ts",
     "test:management:location": "playwright test tests/location-access.spec.ts",
-    "test:management:delegation": "playwright test tests/delegation.spec.ts"
+    "test:management:delegation": "playwright test tests/delegation.spec.ts",
+    "test:management:groups": "playwright test tests/groups.spec.ts"
   },
   "dependencies": {
     "next": "16.3.7",

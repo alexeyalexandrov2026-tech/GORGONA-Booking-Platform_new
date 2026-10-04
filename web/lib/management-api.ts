@@ -24,6 +24,12 @@ import {
   type DelegationIssue,
   type DelegationPage,
 } from "./delegation-contracts";
+import {
+  businessGroupListSchema,
+  businessGroupSchema,
+  type BusinessGroup,
+  type BusinessGroupPage,
+} from "./group-contracts";
 import type {
   Business,
   BusinessProfile,
@@ -427,6 +433,66 @@ function checkedDelegation(
     (result.owner_business_id !== businessId &&
       result.servicer_business_id !== businessId)
   )
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load this record safely.",
+    );
+  return result;
+}
+
+export async function fetchGroups(
+  businessId: string,
+  after?: string,
+): Promise<BusinessGroupPage> {
+  const query = after ? `?after=${encodeURIComponent(after)}` : "";
+  const result = businessGroupListSchema.parse(
+    await managementFetch(`/v1/businesses/${businessId}/groups${query}`),
+  );
+  if (result.business_id !== businessId)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load these records safely.",
+    );
+  return result;
+}
+
+export type GroupCommand =
+  | { kind: "create"; code: string; name: string }
+  | { kind: "invite"; member: string }
+  | { kind: "remove"; member: string; revision: number }
+  | { kind: "accept" | "decline" | "leave"; revision: number };
+
+export async function changeGroup(
+  businessId: string,
+  groupId: string,
+  command: GroupCommand,
+  key: string,
+): Promise<BusinessGroup> {
+  const base = `/v1/businesses/${businessId}/groups/${groupId}`;
+  const [path, method, body] =
+    command.kind === "create"
+      ? [base, "PUT", { code: command.code, name: command.name }]
+      : command.kind === "invite"
+        ? [`${base}/members/${command.member}`, "PUT", {}]
+        : command.kind === "remove"
+          ? [
+              `${base}/members/${command.member}/remove`,
+              "POST",
+              { expected_revision: command.revision },
+            ]
+          : [
+              `${base}/${command.kind}`,
+              "POST",
+              { expected_revision: command.revision },
+            ];
+  const result = businessGroupSchema.parse(
+    await managementFetch(path, {
+      method,
+      body: JSON.stringify({ schema_version: 1, ...body }),
+      headers: { "Idempotency-Key": key },
+    }),
+  );
+  if (result.group_id !== groupId)
     throw new ManagementApiError(
       "INVALID_RESPONSE",
       "Unable to load this record safely.",

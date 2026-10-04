@@ -271,3 +271,87 @@ test("account view lists delegated businesses separately from memberships", () =
     ),
   ).toEqual([]);
 });
+
+const groupId = "a9999999-9999-4999-8999-999999999999";
+const groupsPath = `/v1/businesses/${businessId}/groups`;
+const ownMembership = {
+  membership_id: "a8888888-8888-4888-8888-888888888888",
+  member_business_id: businessId,
+  member_name: null,
+  status: "invited",
+  revision: 1,
+  invited_at: "2026-10-04T12:00:00Z",
+  decided_at: null,
+  ended_at: null,
+};
+const memberView = {
+  schema_version: 1,
+  group_id: groupId,
+  organizer_business_id: servicerId,
+  organizer_name: "FAKE Holding Organizer",
+  code: "FAKE_HOLDING",
+  name: "FAKE Holding",
+  role: "member",
+  memberships: [ownMembership],
+  created_at: "2026-10-04T12:00:00Z",
+};
+
+test("group lists never show a member other businesses' memberships", () => {
+  const schema = managementResponseSchema(groupsPath, "GET");
+  const page = {
+    schema_version: 1,
+    business_id: businessId,
+    items: [memberView],
+    next_cursor: null,
+  };
+  expect(schema.parse(page)).toEqual(page);
+  expect(
+    schema.safeParse({
+      ...page,
+      items: [
+        {
+          ...memberView,
+          memberships: [
+            ownMembership,
+            { ...ownMembership, member_business_id: departmentId },
+          ],
+        },
+      ],
+    }).success,
+  ).toBe(false);
+});
+
+for (const [suffix, method] of [
+  ["", "GET"],
+  ["", "PUT"],
+  ["/accept", "POST"],
+  ["/decline", "POST"],
+  ["/leave", "POST"],
+  [`/members/${servicerId}`, "PUT"],
+  [`/members/${servicerId}/remove`, "POST"],
+]) {
+  test(`management boundary recognizes group ${method}${suffix}`, () => {
+    const schema = managementResponseSchema(
+      `${groupsPath}/${groupId}${suffix}`,
+      method!,
+    );
+    expect(schema.parse(memberView)).toEqual(memberView);
+    expect(
+      schema.safeParse({ ...memberView, permissions: ["booking.read"] })
+        .success,
+    ).toBe(false);
+  });
+}
+
+test("unknown group operations still fail closed", () => {
+  for (const [path, method] of [
+    [`${groupsPath}/${groupId}`, "DELETE"],
+    [`${groupsPath}/${groupId}/accept`, "PUT"],
+    [`${groupsPath}/${groupId}/members/${servicerId}`, "POST"],
+    [`${groupsPath}/${groupId}/members/${servicerId}/remove`, "PUT"],
+    [`${groupsPath}/${groupId}/share`, "POST"],
+  ])
+    expect(() => managementResponseSchema(path!, method!)).toThrow(
+      "Unrecognized business response contract",
+    );
+});

@@ -58,6 +58,8 @@ _DEFINITIONS = [
             "department_versions",
             "delegation_grants",
             "delegation_grant_members",
+            "business_groups",
+            "business_group_members",
         )
     ],
 ]

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ManagementLayout } from "../../components/management-layout";
+import { BusinessGroups } from "../../components/business-groups";
 import { Delegations } from "../../components/delegations";
 import { Departments } from "../../components/departments";
 import { LegalEntities } from "../../components/legal-entities";
@@ -322,6 +323,7 @@ function BusinessContent({
               canManage={canManage}
               locations={business.locations}
             />
+            <BusinessGroups businessId={businessId} canManage={canManage} />
             {canManage && (
               <Delegations
                 businessId={businessId}

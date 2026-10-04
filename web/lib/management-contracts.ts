@@ -15,6 +15,10 @@ import {
   delegationListSchema,
   delegationSchema,
 } from "./delegation-contracts";
+import {
+  businessGroupListSchema,
+  businessGroupSchema,
+} from "./group-contracts";
 const id = z.uuid();
 const instant = z.iso.datetime({ offset: true });
 const count = z.number().int().nonnegative();
@@ -210,6 +214,20 @@ export function managementResponseSchema(
         (grant[2] && grant[2] !== "delegates" && method === "POST"))
     )
       return delegationSchema;
+    if (business[1] === "/groups" && method === "GET")
+      return businessGroupListSchema;
+    const group =
+      /^\/groups\/[0-9a-f-]{36}(\/(accept|decline|leave)|\/members\/[0-9a-f-]{36}(\/remove)?)?$/i.exec(
+        business[1] ?? "",
+      );
+    if (
+      group &&
+      ((!group[1] && (method === "GET" || method === "PUT")) ||
+        (group[2] && method === "POST") ||
+        (group[1]?.startsWith("/members/") &&
+          (group[3] ? method === "POST" : method === "PUT")))
+    )
+      return businessGroupSchema;
     throw new Error("Unrecognized business response contract");
   }
   const suffix = clean.replace(/^\/v1\/salons\/[0-9a-f-]{36}/i, "");
