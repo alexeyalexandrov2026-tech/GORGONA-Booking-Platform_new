@@ -6,6 +6,7 @@ export const DELEGABLE_PERMISSIONS = [
   "booking.write",
   "catalog.read",
   "staff.read",
+  "report.booking.read",
 ] as const;
 export type DelegablePermission = (typeof DELEGABLE_PERMISSIONS)[number];
 /** Creating or moving a booking needs the services, staff and bookings it refers to. */
@@ -20,7 +21,7 @@ const instant = z.iso.datetime({ offset: true });
 const permissions = z
   .array(z.enum(DELEGABLE_PERMISSIONS))
   .min(1)
-  .max(4)
+  .max(5)
   .refine(
     (items) =>
       new Set(items).size === items.length &&
@@ -157,6 +158,7 @@ export const PERMISSION_LABELS: Record<DelegablePermission, string> = {
   "booking.write": "Create, move and cancel bookings",
   "catalog.read": "View services",
   "staff.read": "View staff and schedules",
+  "report.booking.read": "Read aggregate booking counts for company groups",
 };
 
 /** Adds the reads that booking changes depend on and keeps a canonical order. */

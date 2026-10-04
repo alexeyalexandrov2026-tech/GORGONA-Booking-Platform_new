@@ -385,6 +385,12 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 .partition("-- Department delegation scopes:")[0]
             )
             owner_conn.execute(department_scope[department_scope.index("\n") :].encode("utf-8"))
+            group_scope = (
+                next(m.sql for m in load_migrations() if m.version == 13)
+                .partition("-- Group branch scopes:")[2]
+                .partition("-- Group delegation scopes:")[0]
+            )
+            owner_conn.execute(group_scope[group_scope.index("\n") :].encode("utf-8"))
         elif damage == "weakened_function":
             definition = boundary.partition("create policy locations_location_scope")[0]
             owner_conn.execute(

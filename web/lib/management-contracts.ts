@@ -1,3 +1,10 @@
+import {
+  groupListSchema,
+  groupSchema,
+  invitationListSchema,
+  invitationSchema,
+  groupReportSchema,
+} from "./group-contracts";
 import { z } from "zod";
 import { departmentListSchema, departmentSchema } from "./department-contracts";
 import { availabilitySchema } from "./contracts";
@@ -181,6 +188,41 @@ export function managementResponseSchema(
       return businessProfileSchema;
     if (business[1] === "/legal-entities" && method === "GET")
       return legalEntityListSchema;
+    const suffix = business[1] ?? "";
+    if (suffix === "/groups" && method === "GET") return groupListSchema;
+    if (
+      /^\/groups\/[0-9a-f-]{36}$/i.test(suffix) &&
+      ["GET", "PUT"].includes(method)
+    )
+      return groupSchema;
+    if (
+      (/^\/groups\/[0-9a-f-]{36}\/invitations$/i.test(suffix) ||
+        suffix === "/group-invitations") &&
+      method === "GET"
+    )
+      return invitationListSchema;
+    if (
+      /^\/groups\/[0-9a-f-]{36}\/invitations\/[0-9a-f-]{36}$/i.test(suffix) &&
+      method === "PUT"
+    )
+      return invitationSchema;
+    if (
+      /^\/groups\/[0-9a-f-]{36}\/invitations\/[0-9a-f-]{36}\/withdraw$/i.test(
+        suffix,
+      ) &&
+      method === "POST"
+    )
+      return invitationSchema;
+    if (
+      /^\/group-invitations\/[0-9a-f-]{36}\/consent$/i.test(suffix) &&
+      method === "PUT"
+    )
+      return invitationSchema;
+    if (
+      /^\/groups\/[0-9a-f-]{36}\/booking-report$/i.test(suffix) &&
+      method === "GET"
+    )
+      return groupReportSchema;
     if (business[1] === "/departments" && method === "GET")
       return departmentListSchema;
     if (

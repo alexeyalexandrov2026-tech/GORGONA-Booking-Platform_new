@@ -15,7 +15,9 @@ from gorgona_booking.business.contracts import Strict
 
 MAX_REVISION_TERM = timedelta(days=366)
 
-DelegablePermission = Literal["booking.read", "booking.write", "catalog.read", "staff.read"]
+DelegablePermission = Literal[
+    "booking.read", "booking.write", "catalog.read", "staff.read", "report.booking.read"
+]
 GrantState = Literal["active", "revoked"]
 EffectiveState = Literal["scheduled", "active", "expired", "revoked"]
 
@@ -31,7 +33,7 @@ class DelegationGrantInput(Strict):
     expected_revision: StrictInt = Field(ge=0, le=2_147_483_646)
     grantee_business_id: UUID
     purpose: str = Field(min_length=1, max_length=200)
-    permissions: tuple[DelegablePermission, ...] = Field(min_length=1, max_length=4)
+    permissions: tuple[DelegablePermission, ...] = Field(min_length=1, max_length=5)
     location_id: UUID | None = None
     valid_from: AwareDatetime
     valid_until: AwareDatetime

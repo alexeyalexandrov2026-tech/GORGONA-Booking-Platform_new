@@ -1,5 +1,50 @@
 # Development
 
+## Company groups and consented reporting
+
+See [ADR-0018](adr/0018-consented-company-groups.md) and
+[acceptance](plan/evidence/2026-10-04-company-groups/ACCEPTANCE.md).
+Migration 0013 is additive; never rewrite an applied migration.
+Permissions map version 4 adds owner-only group.manage and separately delegable
+report.booking.read. A participant/data owner grants to the operator/serving
+business; the serving owner designates the reporting user. Owning both businesses
+does not replace this grant. Report-only grants do not offer an operational workspace.
+
+All group routes require the unrestricted operator/participant owner:
+- GET groups (code cursor), GET/PUT groups/{group_id} (optional GET revision).
+- GET groups/{group_id}/invitations, PUT .../invitations/{invitation_id}.
+- POST .../invitations/{invitation_id}/withdraw.
+- GET group-invitations; PUT group-invitations/{invitation_id}/consent.
+- GET groups/{group_id}/booking-report with aware from_at/until_at, UUID cursor
+  after and limit 1..25; the explicit positive period may not exceed 366 days.
+
+Paths are relative to /v1/businesses/{business_id}. Mutations use strict schema
+version 1, Idempotency-Key, and expected_revision for versioned changes.
+Group identity/code and versions are immutable; invitation withdrawal is final.
+Participant-owned consent is append-only accepted revision 1 / withdrawn revision 2.
+Re-entry uses a new invitation after the operator withdraws the previous one.
+
+Use READ COMMITTED. Acquire the company-groups operator lock before membership
+locks and the common invitation lock before reading the latest consent.
+Reports hold shared invitation locks; withdrawals/consents use exclusive locks.
+The report reuses the existing delegated authorization on its one connection,
+forces the exact serving business, restores context between sources and records
+delegation.access in the data owner. Never broaden tenants/bookings policies.
+Counts retain business and branch coverage; legal entity is explicitly unassigned,
+and no client, payment, revenue or persisted report copy is returned.
+
+Four FORCE RLS tables have exact-policy-set guard checks (65 definitions total).
+New location-dependent policies must be restored in the destructive branch-guard
+regression. Incoming metadata and operator consent reads are deliberately narrow.
+
+Focused tests: tests/unit/test_group_contracts.py,
+tests/integration/test_company_groups.py, tests/unit/test_delegation_contracts.py,
+tests/unit/test_migration_files.py and tests/integration/test_location_access.py.
+Build web/out first, then run test_delegation_browser.py with the groups scenario.
+It starts the real API and test-only OIDC/PKCE provider and runs test:groups on
+desktop/mobile; SQL verifies persistence. Group response unit tests are in test:unit.
+
+
 ## Selected-company query boundaries
 
 Authenticated RLS may expose the caller's memberships in several businesses and
