@@ -1,0 +1,22 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.next/
+.open-next/
+.wrangler/
+__pycache__/
+.pytest_cache/
+.venv/
+dist/
+coverage/
+*.log
+.mypy_cache/
+.ruff_cache/
+web/out/
+web/test-results/
+web/playwright-report/
+*.tsbuildinfo
+
+# Local continuation archives, original Git history, and transfer manifests.
+/handoff/

@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.png binary
+*.webp binary
+
+# Preserve intentional Markdown hard breaks in historical design proposals.
+docs/design/GORGONA_BOOKING_DESIGN_SYSTEM.md whitespace=-blank-at-eol
+docs/design/KA_NAILS_DESIGN_SYSTEM.md whitespace=-blank-at-eol
+# A unified diff uses a leading space even for empty context lines.
+docs/plan/M4_OPTION_A_IAC.diff whitespace=-blank-at-eol

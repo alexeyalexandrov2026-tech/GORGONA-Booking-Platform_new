@@ -1,0 +1,41 @@
+{
+  "name": "gorgona-booking-customer",
+  "version": "0.3.0",
+  "private": true,
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
+    "test:e2e": "playwright test tests/booking.spec.ts",
+    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts --project=desktop",
+    "test:management": "playwright test tests/management.spec.ts",
+    "test:management:location": "playwright test tests/location-access.spec.ts",
+    "test:management:delegation": "playwright test tests/delegation.spec.ts",
+    "test:management:groups": "playwright test tests/groups.spec.ts",
+    "test:management:configuration": "playwright test tests/configuration.spec.ts"
+  },
+  "dependencies": {
+    "next": "16.3.7",
+    "oidc-client-ts": "3.5.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.7",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3"
+  }
+}
