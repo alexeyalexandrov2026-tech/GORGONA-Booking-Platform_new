@@ -301,8 +301,22 @@ def test_real_management_browser_oidc_pkce_and_database(
                 "group by e.code order by e.code"
             ).fetchall()
         assert entities == [("FAKE_DESKTOP", 4, 4), ("FAKE_MOBILE", 4, 4)]
+        with owner_tenant_transaction(owner_conn, world.a.tenant_id):
+            departments = owner_conn.execute(
+                "select d.code, max(v.revision), count(*) "
+                "from gba.departments d join gba.department_versions v "
+                "on v.tenant_id = d.tenant_id and v.department_id = d.id "
+                "group by d.code order by d.code"
+            ).fetchall()
+        assert departments == [
+            ("FAKE_CHILD_DESKTOP", 1, 1),
+            ("FAKE_CHILD_MOBILE", 1, 1),
+            ("FAKE_DESKTOP", 4, 4),
+            ("FAKE_MOBILE", 4, 4),
+        ]
         with owner_tenant_transaction(owner_conn, world.b.tenant_id):
             assert owner_conn.execute("select count(*) from gba.legal_entities").fetchone() == (0,)
+            assert owner_conn.execute("select count(*) from gba.departments").fetchone() == (0,)
     if location_limited:
         with owner_tenant_transaction(owner_conn, world.a.tenant_id):
             private_state = owner_conn.execute(

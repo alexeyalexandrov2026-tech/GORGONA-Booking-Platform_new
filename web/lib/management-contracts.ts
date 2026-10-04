@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { departmentListSchema, departmentSchema } from "./department-contracts";
 import { availabilitySchema } from "./contracts";
 import {
   businessSchema,
@@ -180,6 +181,13 @@ export function managementResponseSchema(
       return businessProfileSchema;
     if (business[1] === "/legal-entities" && method === "GET")
       return legalEntityListSchema;
+    if (business[1] === "/departments" && method === "GET")
+      return departmentListSchema;
+    if (
+      /^\/departments\/[0-9a-f-]{36}$/i.test(business[1] ?? "") &&
+      (method === "GET" || method === "PUT")
+    )
+      return departmentSchema;
     if (
       /^\/legal-entities\/[0-9a-f-]{36}$/i.test(business[1] ?? "") &&
       (method === "GET" || method === "PUT")

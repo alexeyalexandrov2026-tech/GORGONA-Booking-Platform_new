@@ -262,6 +262,169 @@ test("legal entities persist, replay a lost response, preserve history and detec
   });
 });
 
+test("departments persist, replay a lost response, preserve history and detect stale edits", async ({
+  page,
+}, testInfo) => {
+  await signIn(page);
+  await page
+    .getByRole("link", { name: "Business profile", exact: true })
+    .click();
+  const section = page.getByRole("region", { name: "Departments" });
+  await expect(
+    section.getByRole("button", { name: "New department", exact: true }),
+  ).toBeVisible();
+  await section
+    .getByLabel("Internal reference")
+    .fill(`FAKE_${testInfo.project.name.toUpperCase()}`);
+  await section
+    .getByLabel("Department name", { exact: true })
+    .fill("FAKE Browser Department");
+  const attempts: string[] = [];
+  const ids: string[] = [];
+  let loseResponse = true;
+  await page.route("**/v1/businesses/*/departments/*", async (route) => {
+    if (route.request().method() !== "PUT") return route.continue();
+    attempts.push(route.request().headers()["idempotency-key"]!);
+    ids.push(route.request().url());
+    if (loseResponse) {
+      loseResponse = false;
+      await route.fetch(); // Real persistence; the client loses only the response.
+      await route.abort("failed");
+    } else await route.continue();
+  });
+  await section
+    .getByRole("button", { name: "Save department", exact: true })
+    .click();
+  await expect(
+    section.getByRole("button", { name: "Retry same department save" }),
+  ).toBeVisible();
+  const requestPromise = page.waitForRequest(
+    (request) =>
+      request.method() === "PUT" && request.url().includes("/departments/"),
+  );
+  await section
+    .getByRole("button", { name: "Retry same department save" })
+    .click();
+  const request = await requestPromise;
+  await expect(section.getByRole("status")).toHaveText(
+    "Department saved. Draft version 1.",
+  );
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0]).toBe(attempts[1]);
+  expect(ids[0]).toBe(ids[1]);
+  await page.unroute("**/v1/businesses/*/departments/*");
+  await section
+    .getByLabel("Department name", { exact: true })
+    .fill("FAKE Updated Department");
+  await section
+    .getByRole("button", { name: "Save department", exact: true })
+    .click();
+  await expect(section.getByRole("status")).toHaveText(
+    "Department saved. Draft version 2.",
+  );
+  await section
+    .getByRole("button", { name: "View previous department version" })
+    .click();
+  await expect(section.getByRole("note")).toContainText(
+    "Previous department version 1: FAKE Browser Department",
+  );
+  const competitor = await page.request.put(request.url(), {
+    headers: {
+      authorization: request.headers()["authorization"]!,
+      "Idempotency-Key": crypto.randomUUID(),
+    },
+    data: {
+      expected_revision: 2,
+      code: `FAKE_${testInfo.project.name.toUpperCase()}`,
+      name: "FAKE Concurrent Department",
+    },
+  });
+  expect(competitor.status()).toBe(200);
+  await section
+    .getByLabel("Department name", { exact: true })
+    .fill("FAKE Stale Department");
+  await section
+    .getByRole("button", { name: "Save department", exact: true })
+    .click();
+  await expect(section.getByRole("alert")).toContainText("department changed");
+  await expect(
+    section.getByRole("button", { name: "Save department", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    section.getByLabel("Department name", { exact: true }),
+  ).toHaveValue("FAKE Stale Department");
+  await section
+    .getByRole("button", { name: "Reload selected department" })
+    .click();
+  await expect(
+    section.getByLabel("Department name", { exact: true }),
+  ).toHaveValue("FAKE Concurrent Department");
+  await expect(
+    section.getByRole("button", { name: "Save department", exact: true }),
+  ).toBeEnabled();
+  await section
+    .getByLabel("Department name", { exact: true })
+    .fill("FAKE Final Department");
+  await section
+    .getByRole("button", { name: "Save department", exact: true })
+    .click();
+  await expect(section.getByRole("status")).toHaveText(
+    "Department saved. Draft version 4.",
+  );
+  await section
+    .getByRole("button", { name: "New department", exact: true })
+    .click();
+  await section
+    .getByLabel("Internal reference")
+    .fill(`FAKE_CHILD_${testInfo.project.name.toUpperCase()}`);
+  await section
+    .getByLabel("Department name", { exact: true })
+    .fill("FAKE Child Department");
+  const rootId = request.url().split("/").at(-1)!;
+  await section.getByLabel("Parent department (optional)").selectOption(rootId);
+  const branchSelect = section.getByLabel("Branch (optional)");
+  await branchSelect.selectOption(
+    (await branchSelect.locator("option").nth(1).getAttribute("value")) ?? "",
+  );
+  await section
+    .getByRole("button", { name: "Save department", exact: true })
+    .click();
+  await expect(section.getByRole("status")).toHaveText(
+    "Department saved. Draft version 1.",
+  );
+  const childId = await section
+    .getByLabel("Parent department (optional)")
+    .inputValue();
+  expect(childId).toBe(rootId);
+  await section
+    .getByRole("button", {
+      name: new RegExp(`^FAKE_${testInfo.project.name.toUpperCase()} ·`),
+    })
+    .click();
+  await section.getByLabel("Parent department (optional)").selectOption({
+    label: `FAKE_CHILD_${testInfo.project.name.toUpperCase()} · FAKE Child Department`,
+  });
+  await section
+    .getByRole("button", { name: "Save department", exact: true })
+    .click();
+  await expect(section.getByRole("alert")).toContainText(
+    "without creating a cycle",
+  );
+  expect(
+    (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
+      .violations,
+  ).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `test-results/departments-${page.viewportSize()?.width}.png`,
+    fullPage: true,
+  });
+});
+
 test("existing staff appointment uses local time through creation, transfer and cancellation", async ({
   page,
 }, testInfo) => {
