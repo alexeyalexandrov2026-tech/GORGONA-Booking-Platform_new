@@ -1,5 +1,17 @@
 # GORGONA — передача следующему агенту
 
+**Дополнение 2026-10-04: изоляция выбранной компании.** Продолжение находится в
+`C:\Users\alexa\.codex\worktrees\booking-state-isolation\Gorgona Booking`,
+ветка `codex/booking-state-isolation`, база `ef423f3c672bf2da219d6aef85f9a44cf1f37317`
+(делегирование + документы). PR #1/#2 при проверке открыты и не слиты.
+Исправлены три дефекта: `_booking_state`, подсчет владельцев перед публикацией,
+список сотрудников. Восемь новых регрессий дали FAIL до исправлений и PASS после;
+целевой набор вместе с onboarding: 14 PASS. Полная локальная suite: **479 passed,
+4 skipped, 146.75 с, exit 0**; пропуски — три контейнера и дополнительный внешний
+site gate. Детали, полные проверки и ограничения
+в [приемке](evidence/2026-10-04-selected-company/ACCEPTANCE.md).
+Ниже сохранен контекст предыдущего пакета; следующий продуктовый шаг — подразделения.
+
 **Актуально на 2026-10-04, после пакета «ограниченное делегирование между компаниями».** Этот документ самодостаточен: начните с него. Прежние версии сохранены без изменений: [checkpoint 3](NEXT_AGENT_HANDOFF_2026-10-04_CHECKPOINT_3.md), [checkpoint 2](NEXT_AGENT_HANDOFF_2026-10-04_CHECKPOINT_2.md), [checkpoint 1](NEXT_AGENT_HANDOFF_2026-10-04_CHECKPOINT_1.md). Их TODO и FAIL не считать актуальными без проверки.
 
 > **English summary for agents.** GORGONA is one multi-tenant platform (Python/FastAPI, PostgreSQL 18 with forced RLS, Next.js) for 39 industries; `business_id == tenant_id == legacy salon_id`. Implemented so far: stage-0 fixes, typed industry catalog and hybrid business profile, branch-scoped workspace (ADR-0014), legal-entity drafts (ADR-0015) and limited delegation between independent businesses (ADR-0016, migration 0011). Latest code: branch `claude/keen-mayer-lg9ift`, draft PR #2 into `codex/universal-business-foundation`, which has draft PR #1 into `main`. CI on `bd1a138`: 474 passed, 1 optional skip. Next: departments and company groups (consolidated reads only through permitted delegation), then configuration publication and shared resource occupancy (CORE-04). Never rewrite applied migrations, never invent business facts, never bypass RLS, no production actions without the owner's explicit approval. Report PASS/FAIL/BLOCKED/NOT TESTED with exact numbers.
@@ -111,7 +123,7 @@
 
 | Проблема | Что известно | Что делать |
 |---|---|---|
-| **Дефект `api/setup.py:_booking_state`** (существовал до делегирования) | Читает `select booking_state from gba.tenants` без фильтра; `tenants_member_read` показывает все компании, где пользователь активный член. Проба: у сотрудника двух компаний readiness не-live компании вернул `live`. Функция также защищает изменения настроек и подтверждения фактов при `live` | Отдельный небольшой PR: фильтр `where id = gba.current_tenant_id()`, regression-тест red→green, проверить другие чтения `gba.tenants` в контексте пользователя |
+| **Исправлено: выбор компании** | `_booking_state`, подсчет владельцев и список сотрудников явно ограничены выбранной компанией; восемь red→green регрессий | Продолжать от `codex/booking-state-isolation` либо ветки, куда принят этот пакет; проверить свежие SHA/CI |
 | Release gates из аудита | `deploy-staging.yml` не требует зеленый CI выбранного SHA; branch protection нет; пакет `ai/` не проверяется в CI | Решать перед staging с разрешения владельца |
 | HawkScan DAST | Не запускался: нужен Docker daemon и `HAWK_API_KEY` | Окружение с Docker и ключом от владельца |
 | Codeflash (плагин владельца) | Сервис `app.codeflash.ai` закрыт сетью, нет `CODEFLASH_API_KEY`, нет конфигурации в `web/package.json` | Владелец разрешает домен и ключ в настройках окружения и решает, добавлять ли конфигурацию |
@@ -119,7 +131,9 @@
 
 ## 9. Следующая работа (порядок и приемка)
 
-1. **(Небольшой отдельный PR)** исправить дефект `_booking_state` из §8.
+1. **Исправлено в ветке `codex/booking-state-isolation`:** `_booking_state`,
+   подсчет владельцев и список сотрудников. Перед продолжением сверить PR и SHA;
+   не повторять исправление и не считать локальный PASS проверкой другого SHA.
 2. **Подразделения внутри компании** (master plan §4, §12.2). Сущность компании с версиями по образцу юр. лиц: внутренняя ссылка, название, при необходимости родитель (иерархия без циклов) и связи с филиалами/юр. лицами только через проверенные ссылки той же компании. FORCE RLS, политики `*_unrestricted_scope` и `*_delegation_scope` (+ guard), idempotency, expected revision, аудит, UI на странице бизнеса. Приемка: создание/история/конфликт/повтор без дубля, изоляция компаний, запрет для филиальных и делегированных пользователей, откат при ошибке.
 3. **Группы компаний** (CORE-03, ENTERPRISE-01). Группа принадлежит компании-оператору; компании-участники вступают только явным согласием своего владельца; членство в группе само не дает строк других компаний. Сводный отчет читает только данные, разрешенные действующими полномочиями (расширение ADR-0016 на отчетные права), и показывает владельца и юр. лицо каждой строки. Приемка: участник без полномочия не виден в отчете; отзыв согласия или полномочия убирает данные со следующего запроса; данные не копируются.
 4. **Несколько областей данных** для членства и полномочия (несколько филиалов) — свои API, RLS, аудит, сценарии.

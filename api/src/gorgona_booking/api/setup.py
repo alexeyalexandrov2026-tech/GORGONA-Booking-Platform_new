@@ -76,7 +76,11 @@ class ReadinessView(BaseModel):
 
 
 async def _booking_state(conn: RuntimeConnection) -> str:
-    row = await (await conn.execute("select booking_state from gba.tenants")).fetchone()
+    row = await (
+        await conn.execute(
+            "select booking_state from gba.tenants where id = gba.current_tenant_id()"
+        )
+    ).fetchone()
     return str(row[0]) if row else "not_live"
 
 
