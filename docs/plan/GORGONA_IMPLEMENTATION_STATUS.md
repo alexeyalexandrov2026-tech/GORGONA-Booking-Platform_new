@@ -4,7 +4,25 @@
 
 **Уточненная граница:** реестр относится к самостоятельной GORGONA. KA Nails — отдельный проект, вне текущей разработки и приемки. Сохраненные проверки внешнего сайта описывают исторический дополнительный сценарий, не зависимость платформы.
 
-## Текущий пакет: ограниченное делегирование между независимыми компаниями
+## Текущий пакет: изоляция выбранной компании
+
+Ветка `codex/booking-state-isolation`, база `ef423f3c672bf2da219d6aef85f9a44cf1f37317`
+из пока не слитого PR #2. Исправлены выбор состояния записи, подсчет владельцев
+для готовности/публикации и список сотрудников: все три запроса теперь явно
+ограничены выбранной компанией. Политики RLS и существующие API сохранены.
+Новые восемь регрессий: FAIL до исправления; вместе с прежними onboarding-тестами
+PASS 14 после исправления. Ruff/format и mypy PASS, 135 файлов. Полная suite:
+**479 passed, 4 skipped, 146.75 с, exit 0**, обязательные PostgreSQL 18.6 и браузеры.
+Пропущены три контейнерных gate и дополнительный внешний site gate.
+Опубликовано `951708af2b88b9436abf2ddadd6de608cbf9f99d`, draft
+[PR #3](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/3)
+в пока не слитую ветку PR #2. **GitHub CI PASS: 482 passed, 1 optional skip,
+112.46 с**, [run 37221017342](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37221017342),
+включая контейнерные gates.
+[Доказательства и границы](evidence/2026-10-04-selected-company/ACCEPTANCE.md).
+Подразделения и группы компаний остаются следующими продуктовыми пакетами.
+
+## Предыдущий пакет: ограниченное делегирование между независимыми компаниями
 
 **Ветка `claude/keen-mayer-lg9ift`** поверх `codex/universal-business-foundation` (`eaa62339cf82ea69b96f2e8ec346ede585729f02`). Проверки выполнены в облачном Linux-контейнере на итоговом дереве до коммита. **Опубликовано `bd1a138a11ebbe506010c243a5a02d9989bc1b52`; push CI [37212099717](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37212099717) PASS: 474 passed, 1 skipped, 118.32 с** с обязательными PostgreSQL, браузерами и контейнерными gates; единственный пропуск — дополнительный внешний site gate. [ADR-0016](../adr/0016-limited-cross-business-delegation.md) задает границы, [приемка](evidence/2026-10-04-delegation/ACCEPTANCE.md) — доказательства. Изменения предложены в draft [PR #2](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/2) в `codex/universal-business-foundation`. Полная передача следующему агенту — [NEXT_AGENT_HANDOFF_2026-10-04.md](NEXT_AGENT_HANDOFF_2026-10-04.md).
 

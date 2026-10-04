@@ -289,7 +289,8 @@ async def list_members(access: TenantAccess) -> list[MemberView]:
         await access.conn.execute(
             "select m.id, m.user_id, u.display_name, m.role, m.status, m.location_id "
             "from gba.memberships m left join gba.users u on u.id = m.user_id "
-            "order by m.created_at"
+            "where m.tenant_id = %s order by m.created_at",
+            (access.tenant_id,),
         )
     ).fetchall()
     return [MemberView(r[0], r[1], r[2], r[3], r[4], r[5]) for r in rows]

@@ -4,6 +4,13 @@
 
 ## Проверенная база и границы
 
+Дополнение после делегирования: исправлены три ошибки выбора компании в
+readiness/live-state, проверке владельца перед публикацией и списке сотрудников.
+Восемь новых регрессий воспроизвели нарушения на базе `ef423f3`; после исправлений
+целевой набор дал 14 PASS. Это укрепляет BASE-04, но не завершает CORE-03:
+подразделения и группы еще не реализованы.
+[Точная приемка](evidence/2026-10-04-selected-company/ACCEPTANCE.md).
+
 - Спецификация: [исправленный master plan](GORGONA_MASTER_PLAN.md), включая 28 постоянных критериев BASE/CORE/отраслевых/OPS.
 - Рабочая копия: `C:\Users\alexa\Documents\ChatGPT\Gorgona Booking`; origin — `alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new`; ветка — `codex/universal-business-foundation`.
 - Опубликованная база аудита: `f8db038e4d10c02bec69578cfaba349d21595f71`. Исправления области проекта, отчет и закрытие development endpoint проверяются как отдельные изменения поверх этой базы.

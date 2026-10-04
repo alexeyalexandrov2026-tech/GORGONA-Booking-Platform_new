@@ -1,5 +1,16 @@
 # Development
 
+## Selected-company query boundaries
+
+Authenticated RLS may expose the caller's memberships in several businesses and
+support may see several tenant rows. Company-specific queries on these tables
+must also filter by the authorized tenant: `gba.current_tenant_id()` on the same
+connection or `access.tenant_id`. Do not narrow the shared discovery policies as
+a substitute. The readiness state, owner requirement and member-list regressions
+are in `tests/integration/test_setup_isolation.py`; run that file together with
+`tests/integration/test_onboarding.py` against required PostgreSQL before the full
+suite. See [acceptance evidence](plan/evidence/2026-10-04-selected-company/ACCEPTANCE.md).
+
 ## Prerequisites
 
 - [`uv`](https://docs.astral.sh/uv/) (installs CPython 3.14 on demand).
