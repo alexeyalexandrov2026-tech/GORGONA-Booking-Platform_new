@@ -274,10 +274,11 @@ async def change_membership(
     row = await (
         await conn.execute(
             "select organizer_tenant_id, id, status, revision from gba.business_group_members "
+            # The latest membership, open or ended: a concurrent decision then shows up
+            # as a stale revision (409) whichever side committed first.
             "where group_id = %s and member_tenant_id = %s "
-            "and status in ('invited', 'active') "
             "and (case when %s then organizer_tenant_id = %s else member_tenant_id = %s end) "
-            "for update",
+            "order by invited_at desc, id desc limit 1 for update",
             (group_id, member_business_id, organizer_side, business_id, business_id),
         )
     ).fetchone()

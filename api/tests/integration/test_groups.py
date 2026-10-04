@@ -312,3 +312,21 @@ async def test_group_scope_policy_damage_fails_readiness(
             "using (gba.current_location_id() is null) "
             "with check (gba.current_location_id() is null)"
         )
+
+
+async def test_decision_after_a_committed_removal_is_a_stale_revision(
+    groups: Groups,
+    world: BookingWorld,
+    owners: tuple[FakeUser, FakeUser, Salon, FakeUser],
+) -> None:
+    # Whichever side commits first, the other sees a stale revision, not a missing record.
+    owner_a, owner_b, _, _ = owners
+    a, b = world.a.tenant_id, world.b.tenant_id
+    group_id = uuid7()
+    assert (await groups.create(owner_a, a, group_id)).status_code == 200
+    assert (await groups.invite(owner_a, a, group_id, b)).status_code == 200
+    assert (await groups.remove(owner_a, a, group_id, b, 1)).status_code == 200
+    late = await groups.decide(owner_b, b, group_id, "accept", 1)
+    assert (late.status_code, late.json()["error"]["code"]) == (409, "CONFLICT")
+    ended = await groups.decide(owner_b, b, group_id, "accept", 2)
+    assert ended.json()["error"]["code"] == "GROUP_STATE_INVALID"
