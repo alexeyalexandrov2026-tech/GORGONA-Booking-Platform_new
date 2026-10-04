@@ -1,6 +1,6 @@
 # ADR-0017 — Cross-company delegation grants
 
-Status: accepted for the stage-1 implementation increment (CORE-03 step B). Technical acceptance is recorded separately after full CI on the exact commit.
+Status: accepted for the stage-1 implementation increment (CORE-03 step B). [Technical acceptance](../plan/evidence/2026-10-04-delegation/ACCEPTANCE.md): full CI passed on `ed370c6`.
 
 ## Context
 
