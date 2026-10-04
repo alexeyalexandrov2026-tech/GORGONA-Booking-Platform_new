@@ -262,6 +262,138 @@ test("legal entities persist, replay a lost response, preserve history and detec
   });
 });
 
+test("departments keep one acyclic structure, replay a lost response and detect stale edits", async ({
+  page,
+}, testInfo) => {
+  await signIn(page);
+  await page
+    .getByRole("link", { name: "Business profile", exact: true })
+    .click();
+  const section = page.getByRole("region", { name: "Departments" });
+  const prefix = `FAKE_${testInfo.project.name.toUpperCase()}`;
+  const field = (label: string) => section.getByLabel(label, { exact: true });
+  const save = () =>
+    section.getByRole("button", { name: "Save department", exact: true });
+  await expect(
+    section.getByRole("button", { name: "New department", exact: true }),
+  ).toBeVisible();
+  await field("Internal reference").fill(`${prefix}_OPS`);
+  await field("Department name").fill("FAKE Browser Operations");
+  const attempts: string[] = [];
+  const urls: string[] = [];
+  let authorization = "";
+  let loseResponse = true;
+  await page.route("**/v1/businesses/*/departments/*", async (route) => {
+    if (route.request().method() !== "PUT") return route.continue();
+    attempts.push(route.request().headers()["idempotency-key"]!);
+    urls.push(route.request().url());
+    authorization = route.request().headers()["authorization"]!;
+    if (loseResponse) {
+      loseResponse = false;
+      await route.fetch(); // Real persistence; the client loses only the response.
+      await route.abort("failed");
+    } else await route.continue();
+  });
+  await save().click();
+  await section
+    .getByRole("button", { name: "Retry same department save" })
+    .click();
+  await expect(section.getByRole("status")).toHaveText(
+    "Department saved. Draft version 1.",
+  );
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0]).toBe(attempts[1]);
+  expect(urls[0]).toBe(urls[1]);
+  await page.unroute("**/v1/businesses/*/departments/*");
+
+  await section
+    .getByRole("button", { name: "New department", exact: true })
+    .click();
+  await field("Internal reference").fill(`${prefix}_TEAM`);
+  await field("Department name").fill("FAKE Browser Team");
+  await field("Parent department").selectOption({
+    label: `${prefix}_OPS · FAKE Browser Operations`,
+  });
+  await field("Location").selectOption({ index: 1 });
+  await save().click();
+  await expect(section.getByRole("status")).toHaveText(
+    "Department saved. Draft version 1.",
+  );
+
+  // Placing the parent under its own child is rejected without locking the form.
+  await section
+    .getByRole("button", { name: new RegExp(`^${prefix}_OPS ·`) })
+    .click();
+  await field("Parent department").selectOption({
+    label: `${prefix}_TEAM · FAKE Browser Team`,
+  });
+  await save().click();
+  await expect(section.getByRole("alert")).toContainText("own subdepartment");
+  await expect(save()).toBeEnabled();
+  await field("Parent department").selectOption("");
+  await field("Archived").check();
+  await save().click();
+  await expect(section.getByRole("alert")).toContainText(
+    "active subdepartments",
+  );
+
+  for (const code of [`${prefix}_TEAM`, `${prefix}_OPS`]) {
+    await section
+      .getByRole("button", { name: new RegExp(`^${code} ·`) })
+      .click();
+    await field("Archived").check();
+    await save().click();
+    await expect(section.getByRole("status")).toHaveText(
+      "Department saved. Draft version 2.",
+    );
+  }
+  await section
+    .getByRole("button", { name: "View previous department version" })
+    .click();
+  await expect(section.getByRole("note")).toContainText(
+    "Previous department version 1: FAKE Browser Operations.",
+  );
+
+  const competitor = await page.request.put(urls[0]!, {
+    headers: { authorization, "Idempotency-Key": crypto.randomUUID() },
+    data: {
+      expected_revision: 2,
+      code: `${prefix}_OPS`,
+      name: "FAKE Concurrent Operations",
+      parent_department_id: null,
+      legal_entity_id: null,
+      location_id: null,
+      archived: true,
+    },
+  });
+  expect(competitor.status()).toBe(200);
+  await field("Department name").fill("FAKE Stale Operations");
+  await save().click();
+  await expect(section.getByRole("alert")).toContainText("department changed");
+  await expect(save()).toBeDisabled();
+  await expect(field("Department name")).toHaveValue("FAKE Stale Operations");
+  await section
+    .getByRole("button", { name: "Reload selected department" })
+    .click();
+  await expect(field("Department name")).toHaveValue(
+    "FAKE Concurrent Operations",
+  );
+  await expect(save()).toBeEnabled();
+  expect(
+    (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
+      .violations,
+  ).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `test-results/departments-${page.viewportSize()?.width}.png`,
+    fullPage: true,
+  });
+});
+
 test("existing staff appointment uses local time through creation, transfer and cancellation", async ({
   page,
 }, testInfo) => {

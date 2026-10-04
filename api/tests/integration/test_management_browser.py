@@ -301,8 +301,26 @@ def test_real_management_browser_oidc_pkce_and_database(
                 "group by e.code order by e.code"
             ).fetchall()
         assert entities == [("FAKE_DESKTOP", 4, 4), ("FAKE_MOBILE", 4, 4)]
+        with owner_tenant_transaction(owner_conn, world.a.tenant_id):
+            departments = owner_conn.execute(
+                "select d.code, v.revision, v.archived, v.location_id is not null, p.code "
+                "from gba.departments d join lateral (select * from gba.department_versions "
+                "where tenant_id = d.tenant_id and department_id = d.id "
+                "order by revision desc limit 1) v on true "
+                "left join gba.departments p "
+                "on p.tenant_id = v.tenant_id and p.id = v.parent_department_id "
+                "order by d.code"
+            ).fetchall()
+        # Lost response, rejected cycle/archive and stale edit add no versions.
+        assert departments == [
+            ("FAKE_DESKTOP_OPS", 3, True, False, None),
+            ("FAKE_DESKTOP_TEAM", 2, True, True, "FAKE_DESKTOP_OPS"),
+            ("FAKE_MOBILE_OPS", 3, True, False, None),
+            ("FAKE_MOBILE_TEAM", 2, True, True, "FAKE_MOBILE_OPS"),
+        ]
         with owner_tenant_transaction(owner_conn, world.b.tenant_id):
             assert owner_conn.execute("select count(*) from gba.legal_entities").fetchone() == (0,)
+            assert owner_conn.execute("select count(*) from gba.departments").fetchone() == (0,)
     if location_limited:
         with owner_tenant_transaction(owner_conn, world.a.tenant_id):
             private_state = owner_conn.execute(

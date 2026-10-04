@@ -55,18 +55,21 @@
   margin-bottom: 0;
 }
 
-.legal-entities {
+.legal-entities,
+.departments {
   margin-top: 40px;
   padding-top: 24px;
   border-top: 1px solid var(--line);
 }
-.legal-entity-list {
+.legal-entity-list,
+.department-list {
   display: grid;
   gap: 12px;
   padding: 0;
   list-style: none;
 }
-.legal-entity-list button {
+.legal-entity-list button,
+.department-list button {
   width: 100%;
   text-align: left;
   white-space: normal;

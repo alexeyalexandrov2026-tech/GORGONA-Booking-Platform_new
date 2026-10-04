@@ -106,6 +106,22 @@ The legal-entity section on `/business/` creates/edits real drafts and views sav
 
 Focused acceptance uses `tests/unit/test_legal_entity_contracts.py` and `tests/integration/test_legal_entities.py` against disposable PostgreSQL. The existing management browser harness now checks legal entities on desktop/mobile and verifies their saved versions through SQL. The broken-boundary test restores the two 0010 policies after its test-only cascade.
 
+### Departments (stage 1)
+
+[ADR-0016](adr/0016-tenant-owned-departments.md) adds owner-provided departments inside an existing business. Migration 0011 creates identities and immutable versions with optional company-bound links; no existing migration or tenant data is rewritten. The runtime now requires 21 approved scope-policy definitions before reporting readiness.
+
+| Route | Behavior |
+|---|---|
+| `GET /v1/businesses/{id}/departments?limit=50&after=REF` | Bounded current drafts, including archived ones; response provides `next_cursor` or null |
+| `GET /v1/businesses/{id}/departments/{department_id}?revision=1` | Current or explicitly selected saved version; unknown version returns 404 |
+| `PUT /v1/businesses/{id}/departments/{department_id}` | Client-generated UUID identity, `schema_version: 1`, `expected_revision`, `code`, `name`, `parent_department_id`, `legal_entity_id`, `location_id` (each UUID or null), `archived` and required `Idempotency-Key`; returns saved draft |
+
+`PUT` replaces the whole draft, so every link is stated explicitly. The code is immutable and unique per company. A parent must be active unless the saved department is archived; cycles, self-parenting, chains deeper than 32 levels and archiving a department with active subdepartments return 422 `DEPARTMENT_STRUCTURE_INVALID`. Another company's or an unknown parent, legal entity or location returns 422 `INVALID_REFERENCE` with the field name. Permissions, replay, stale-revision and duplicate-reference behavior match legal entities.
+
+The department section on `/business/` creates/edits real drafts, links a parent, legal entity and location, archives, and views saved history. No head, employee assignment, budget or access right is implied.
+
+Focused acceptance uses `tests/unit/test_department_contracts.py` and `tests/integration/test_departments.py` against disposable PostgreSQL. The management browser harness checks departments on desktop/mobile and verifies their versions through SQL. The broken-boundary test restores the 0010 and 0011 scope policies after its test-only cascade.
+
 **Embedding allowlist.** The customer web may be framed only by origins the owner approves per tenant (migration 0007, audited, FORCE RLS). Every HTML response carries `Content-Security-Policy: frame-ancestors 'self' <approved>`; API responses carry `frame-ancestors 'none'`. With no approved origin, `X-Frame-Options: SAMEORIGIN` is added too. Plain `http://` origins are accepted only for loopback, and only in `local`/`test`/`ci`.
 
 ```bash

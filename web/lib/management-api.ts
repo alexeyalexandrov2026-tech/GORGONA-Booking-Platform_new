@@ -8,6 +8,13 @@ import {
   type LegalEntityInput,
   type LegalEntityPage,
 } from "./legal-entity-contracts";
+import {
+  departmentListSchema,
+  departmentSchema,
+  type Department,
+  type DepartmentInput,
+  type DepartmentPage,
+} from "./department-contracts";
 import type {
   Business,
   BusinessProfile,
@@ -247,6 +254,80 @@ function checkedLegalEntity(
 ): LegalEntity {
   const result = legalEntitySchema.parse(value);
   if (result.business_id !== businessId || result.legal_entity_id !== entityId)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load this record safely.",
+    );
+  return result;
+}
+
+export async function fetchDepartments(
+  businessId: string,
+  after?: string,
+): Promise<DepartmentPage> {
+  const query = after ? `?after=${encodeURIComponent(after)}` : "";
+  const result = departmentListSchema.parse(
+    await managementFetch(`/v1/businesses/${businessId}/departments${query}`),
+  );
+  if (result.business_id !== businessId)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load these records safely.",
+    );
+  return result;
+}
+
+export async function fetchDepartment(
+  businessId: string,
+  departmentId: string,
+  revision?: number,
+): Promise<Department> {
+  const query = revision === undefined ? "" : `?revision=${revision}`;
+  const result = checkedDepartment(
+    await managementFetch(
+      `/v1/businesses/${businessId}/departments/${departmentId}${query}`,
+    ),
+    businessId,
+    departmentId,
+  );
+  if (revision !== undefined && result.revision !== revision)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load this saved version safely.",
+    );
+  return result;
+}
+
+export async function saveDepartment(
+  businessId: string,
+  departmentId: string,
+  body: DepartmentInput,
+  key: string,
+): Promise<Department> {
+  return checkedDepartment(
+    await managementFetch(
+      `/v1/businesses/${businessId}/departments/${departmentId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(body),
+        headers: { "Idempotency-Key": key },
+      },
+    ),
+    businessId,
+    departmentId,
+  );
+}
+
+function checkedDepartment(
+  value: unknown,
+  businessId: string,
+  departmentId: string,
+): Department {
+  const result = departmentSchema.parse(value);
+  if (
+    result.business_id !== businessId ||
+    result.department_id !== departmentId
+  )
     throw new ManagementApiError(
       "INVALID_RESPONSE",
       "Unable to load this record safely.",

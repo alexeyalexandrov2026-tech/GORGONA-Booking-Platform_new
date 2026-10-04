@@ -69,3 +69,80 @@ test("unknown legal-entity operations still fail closed", () => {
       "Unrecognized business response contract",
     );
 });
+
+const departmentId = "d1111111-1111-4111-8111-111111111111";
+const departments = `/v1/businesses/${businessId}/departments`;
+const department = {
+  schema_version: 1,
+  business_id: businessId,
+  department_id: departmentId,
+  code: "FAKE_OPS",
+  name: "FAKE Contract Test Operations",
+  parent_department_id: null,
+  legal_entity_id: entityId,
+  location_id: null,
+  archived: false,
+  revision: 3,
+  state: "draft",
+  created_at: "2026-10-04T12:00:00Z",
+};
+
+test("management boundary recognizes paginated department lists", () => {
+  const page = {
+    schema_version: 1,
+    business_id: businessId,
+    items: [department],
+    next_cursor: null,
+  };
+  const schema = managementResponseSchema(`${departments}?after=FAKE_A`, "GET");
+  expect(schema.parse(page)).toEqual(page);
+  expect(
+    schema.safeParse({ ...page, items: [department, department] }).success,
+  ).toBe(false);
+  expect(
+    schema.safeParse({
+      ...page,
+      items: [
+        { ...department, business_id: "b1111111-1111-4111-8111-111111111111" },
+      ],
+    }).success,
+  ).toBe(false);
+});
+
+for (const [method, query] of [
+  ["GET", ""],
+  ["GET", "?revision=3"],
+  ["PUT", ""],
+]) {
+  test(`management boundary recognizes department ${method}${query}`, () => {
+    const schema = managementResponseSchema(
+      `${departments}/${departmentId}${query}`,
+      method!,
+    );
+    expect(schema.parse(department)).toEqual(department);
+    for (const changed of [
+      { state: "published" },
+      { parent_department_id: departmentId },
+      { archived: "false" },
+      { head_user_id: departmentId },
+    ])
+      expect(schema.safeParse({ ...department, ...changed }).success).toBe(
+        false,
+      );
+    const missingLink: Record<string, unknown> = { ...department };
+    delete missingLink.location_id;
+    expect(schema.safeParse(missingLink).success).toBe(false);
+  });
+}
+
+test("unknown department operations still fail closed", () => {
+  for (const [path, method] of [
+    [departments, "PUT"],
+    [`${departments}/${departmentId}`, "DELETE"],
+    [`${departments}/${departmentId}/archive`, "POST"],
+    [`${departments}/not-an-id`, "GET"],
+  ])
+    expect(() => managementResponseSchema(path!, method!)).toThrow(
+      "Unrecognized business response contract",
+    );
+});

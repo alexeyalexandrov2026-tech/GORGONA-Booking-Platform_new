@@ -9,6 +9,7 @@ import {
   legalEntityListSchema,
   legalEntitySchema,
 } from "./legal-entity-contracts";
+import { departmentListSchema, departmentSchema } from "./department-contracts";
 const id = z.uuid();
 const instant = z.iso.datetime({ offset: true });
 const count = z.number().int().nonnegative();
@@ -175,6 +176,13 @@ export function managementResponseSchema(
       (method === "GET" || method === "PUT")
     )
       return legalEntitySchema;
+    if (business[1] === "/departments" && method === "GET")
+      return departmentListSchema;
+    if (
+      /^\/departments\/[0-9a-f-]{36}$/i.test(business[1] ?? "") &&
+      (method === "GET" || method === "PUT")
+    )
+      return departmentSchema;
     throw new Error("Unrecognized business response contract");
   }
   const suffix = clean.replace(/^\/v1\/salons\/[0-9a-f-]{36}/i, "");
