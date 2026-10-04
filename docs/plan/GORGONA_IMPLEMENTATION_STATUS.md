@@ -6,7 +6,7 @@
 
 ## Текущий пакет: ограниченное делегирование между независимыми компаниями
 
-**Ветка `claude/keen-mayer-lg9ift`** поверх `codex/universal-business-foundation` (`eaa62339cf82ea69b96f2e8ec346ede585729f02`). Проверки выполнены в облачном Linux-контейнере на итоговом дереве до коммита. **Опубликовано `bd1a138a11ebbe506010c243a5a02d9989bc1b52`; push CI [37212099717](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37212099717) PASS: 474 passed, 1 skipped, 118.32 с** с обязательными PostgreSQL, браузерами и контейнерными gates; единственный пропуск — дополнительный внешний site gate. [ADR-0016](../adr/0016-limited-cross-business-delegation.md) задает границы, [приемка](evidence/2026-10-04-delegation/ACCEPTANCE.md) — доказательства.
+**Ветка `claude/keen-mayer-lg9ift`** поверх `codex/universal-business-foundation` (`eaa62339cf82ea69b96f2e8ec346ede585729f02`). Проверки выполнены в облачном Linux-контейнере на итоговом дереве до коммита. **Опубликовано `bd1a138a11ebbe506010c243a5a02d9989bc1b52`; push CI [37212099717](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37212099717) PASS: 474 passed, 1 skipped, 118.32 с** с обязательными PostgreSQL, браузерами и контейнерными gates; единственный пропуск — дополнительный внешний site gate. [ADR-0016](../adr/0016-limited-cross-business-delegation.md) задает границы, [приемка](evidence/2026-10-04-delegation/ACCEPTANCE.md) — доказательства. Изменения предложены в draft [PR #2](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/2) в `codex/universal-business-foundation`. Полная передача следующему агенту — [NEXT_AGENT_HANDOFF_2026-10-04.md](NEXT_AGENT_HANDOFF_2026-10-04.md).
 
 Реализовано:
 
