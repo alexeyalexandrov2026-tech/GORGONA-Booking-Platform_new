@@ -1,0 +1,1691 @@
+"""Authenticated staff/admin routes. Every salon route authorizes through
+`authorized_tenant`; the path's salon id is a request, never a grant (ADR-0009)."""
+
+import hashlib
+import json
+from datetime import UTC, date, datetime
+from typing import Annotated, Any, Literal
+from uuid import UUID, uuid7
+from zoneinfo import ZoneInfo
+
+from fastapi import APIRouter, Depends, Header, Request
+from psycopg import errors as pg
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from gorgona_booking.api.deps import get_principal, runtime_pool
+from gorgona_booking.api.request_id import get_request_id
+from gorgona_booking.auth.permissions import Permission
+from gorgona_booking.auth.principal import Principal, set_user_context
+from gorgona_booking.booking import idempotency
+from gorgona_booking.booking import repository as repo
+from gorgona_booking.booking.idempotency import IdempotencyScope
+from gorgona_booking.booking.metrics import CurrencyAmount, confirmed_booking_value
+from gorgona_booking.booking.models import IdempotencyKeyReusedError, booking_interval
+from gorgona_booking.booking.repository import load_booking
+from gorgona_booking.catalog.models import Quote, QuoteLine
+from gorgona_booking.catalog.quote import ServiceNotBookableError
+from gorgona_booking.customer import queries
+from gorgona_booking.customer.contracts import (
+    AvailabilityQuery,
+    AvailabilityView,
+    QuoteView,
+    Selection,
+)
+from gorgona_booking.db.pool import RuntimeConnection
+from gorgona_booking.errors import (
+    ConflictError,
+    DatabaseUnavailableError,
+    DomainError,
+    InvalidReferenceError,
+    NotFoundError,
+)
+from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenant
+
+router = APIRouter(prefix="/v1", tags=["salons"])
+
+CurrentPrincipal = Annotated[Principal, Depends(get_principal)]
+MutationKey = Annotated[
+    str | None,
+    Header(alias="Idempotency-Key", min_length=8, max_length=255, pattern=r"^[A-Za-z0-9._:-]+$"),
+]
+
+
+class InvalidServiceError(DomainError):
+    code = "INVALID_SERVICE"
+
+
+_CODE = r"^[A-Z][A-Z0-9_]{1,63}$"
+
+
+class Strict(BaseModel):
+    # Unknown fields (for example a smuggled tenant_id) are rejected, never consulted.
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class MembershipView(BaseModel):
+    salon_id: UUID
+    salon_name: str | None
+    role: str
+    status: str
+    location_id: UUID | None = None
+
+
+class MeView(BaseModel):
+    user_id: UUID
+    display_name: str
+    platform_roles: list[str]
+    memberships: list[MembershipView]
+
+
+class ServiceCreate(Strict):
+    service_code: str = Field(pattern=_CODE)
+    service_name: str = Field(min_length=1, max_length=200)
+    code: str = Field(pattern=_CODE)
+    name: str = Field(min_length=1, max_length=200)
+    price_cents: int = Field(ge=0, le=10_000_000)
+    currency: str = Field(pattern=r"^[A-Z]{3}$")
+    booking_duration_minutes: int | None = Field(default=None, ge=1, le=720)
+    display_duration_min_minutes: int | None = Field(default=None, ge=1, le=720)
+    display_duration_max_minutes: int | None = Field(default=None, ge=1, le=720)
+
+
+class ServiceVariantUpdate(Strict):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    price_cents: int | None = Field(default=None, ge=0, le=10_000_000)
+    booking_duration_minutes: int | None = Field(default=None, ge=1, le=720)
+    is_bookable: bool | None = None
+
+
+class ServiceView(BaseModel):
+    id: UUID
+    service_id: UUID
+    code: str
+    name: str
+    status: str
+    price_cents: int
+    currency: str
+    booking_duration_minutes: int | None
+    is_bookable: bool
+    revision: int
+
+
+class StaffCreate(Strict):
+    display_name: str = Field(min_length=1, max_length=200)
+    location_id: UUID
+    kind: Literal["artist", "chair", "room"] = "artist"
+
+
+class StaffUpdate(Strict):
+    display_name: str | None = Field(default=None, min_length=1, max_length=200)
+    is_active: bool | None = None
+
+
+class StaffView(BaseModel):
+    id: UUID
+    location_id: UUID
+    kind: str
+    display_name: str
+    is_active: bool
+
+
+class ResourceHoursView(BaseModel):
+    id: UUID
+    weekday: int
+    opens_minute: int
+    closes_minute: int
+
+
+class ResourceHoursEntry(Strict):
+    weekday: int = Field(ge=1, le=7)
+    opens_minute: int = Field(ge=0, le=1439)
+    closes_minute: int = Field(ge=1, le=1440)
+
+
+class StaffScheduleView(BaseModel):
+    resource_id: UUID
+    display_name: str
+    is_active: bool
+    location_id: UUID
+    hours: list[ResourceHoursView]
+    service_ids: list[UUID]
+
+
+class StaffScheduleUpdate(Strict):
+    hours: list[ResourceHoursEntry] = Field(min_length=0, max_length=50)
+
+
+class StaffServicesUpdate(Strict):
+    service_ids: list[UUID] = Field(min_length=0, max_length=100)
+
+
+class BookingView(BaseModel):
+    booking_id: UUID
+    status: str
+    resource_id: UUID
+    start_at: datetime
+    end_at: datetime
+    hold_expires_at: datetime | None
+    total_cents: int
+    currency: str
+    quote: dict[str, Any]
+
+
+class BookingSummaryView(BaseModel):
+    booking_id: UUID
+    status: str
+    location_id: UUID
+    location_timezone: str
+    resource_id: UUID
+    resource_name: str
+    variant_id: UUID
+    service_name: str
+    variant_name: str
+    starts_at: datetime
+    ends_at: datetime
+    total_cents: int
+    currency: str
+    customer_name: str | None
+    customer_email: str | None
+    customer_phone: str | None
+    created_at: datetime
+    created_by: str
+
+
+class OverviewStats(BaseModel):
+    today_bookings_count: int
+    confirmed_bookings_count: int
+    cancelled_bookings_count: int
+    today_revenue_cents: int = Field(
+        deprecated=True,
+        description="Legacy booked-value sum, NOT paid or recognized revenue. "
+        "Use today_booked_value, which separates currencies. Retained for v1 compatibility only.",
+    )
+    today_booked_value: list[CurrencyAmount]
+    active_staff_count: int
+    total_services_count: int
+
+
+class ActivityItemView(BaseModel):
+    id: UUID
+    actor: str
+    action: str
+    target_type: str
+    target_id: str
+    details: dict[str, Any]
+    occurred_at: datetime
+
+
+class SalonOverviewView(BaseModel):
+    salon_id: UUID
+    salon_name: str
+    status: str
+    booking_state: str
+    stats: OverviewStats
+    today_bookings: list[BookingSummaryView]
+    recent_activity: list[ActivityItemView]
+
+
+class StaffBookingCreate(Strict):
+    location_id: UUID
+    resource_id: UUID
+    variant_id: UUID
+    starts_at: datetime
+    customer_name: str = Field(min_length=1, max_length=100)
+    customer_email: str = Field(min_length=3, max_length=254)
+    customer_phone: str = Field(min_length=7, max_length=32)
+    add_on_ids: list[UUID] = Field(default_factory=list)
+
+
+class BookingRescheduleRequest(Strict):
+    new_starts_at: datetime
+    new_resource_id: UUID | None = None
+
+
+class BookingCancelRequest(Strict):
+    reason: str = Field(default="cancelled_by_staff", min_length=1, max_length=200)
+
+
+class ManagementAvailabilityQuery(AvailabilityQuery):
+    booking_id: UUID | None = None
+
+
+class ClientView(BaseModel):
+    customer_name: str
+    email: str
+    phone: str
+    total_bookings: int
+    confirmed_bookings: int
+    last_booking_at: datetime | None
+
+
+class LocationItemView(BaseModel):
+    id: UUID
+    name: str
+    timezone: str
+
+
+class BusinessHoursItemView(BaseModel):
+    id: UUID
+    location_id: UUID
+    weekday: int
+    opens_minute: int
+    closes_minute: int
+
+
+class WorkspaceView(BaseModel):
+    salon_id: UUID
+    location_id: UUID | None
+    locations: list[LocationItemView]
+    business_hours: list[BusinessHoursItemView]
+
+
+class SalonFactItemView(BaseModel):
+    fact_key: str
+    status: str
+    source_note: str | None
+    recorded_by: str
+    recorded_at: datetime
+
+
+class SalonEmbedOriginItemView(BaseModel):
+    id: UUID
+    origin: str
+    status: str
+    updated_at: datetime
+
+
+class SalonSettingsView(BaseModel):
+    salon_id: UUID
+    slug: str
+    display_name: str
+    status: str
+    booking_state: str
+    locations: list[LocationItemView]
+    business_hours: list[BusinessHoursItemView]
+    policies: dict[str, Any]
+    fact_confirmations: list[SalonFactItemView]
+    embed_origins: list[SalonEmbedOriginItemView]
+
+
+_SERVICE_COLUMNS = (
+    "id, service_id, code, name, status, price_cents, currency, booking_duration_minutes, "
+    "is_bookable, revision"
+)
+
+_BOOKING_SUMMARY_SELECT = (
+    "select b.id, b.status, b.location_id, a.resource_id, coalesce(r.display_name, 'Unknown'), "
+    "b.variant_id, coalesce(s.name, 'Unknown'), coalesce(v.name, 'Unknown'), "
+    "b.starts_at, b.ends_at, b.total_cents, b.currency, "
+    "c.customer_name, c.email, c.phone, b.created_at, b.created_by, l.timezone "
+    "from gba.bookings b "
+    "join gba.booking_allocations a on a.tenant_id = b.tenant_id and a.booking_id = b.id "
+    "left join gba.resources r on r.tenant_id = b.tenant_id and r.id = a.resource_id "
+    "left join gba.service_variants v on v.tenant_id = b.tenant_id and v.id = b.variant_id "
+    "left join gba.services s on s.tenant_id = b.tenant_id and s.id = v.service_id "
+    "join gba.locations l on l.tenant_id = b.tenant_id and l.id = b.location_id "
+    "left join gba.booking_customers c on c.tenant_id = b.tenant_id and c.booking_id = b.id"
+)
+
+
+def _service(row: tuple[Any, ...]) -> ServiceView:
+    return ServiceView(
+        id=row[0],
+        service_id=row[1],
+        code=row[2],
+        name=row[3],
+        status=row[4],
+        price_cents=row[5],
+        currency=row[6],
+        booking_duration_minutes=row[7],
+        is_bookable=row[8],
+        revision=row[9],
+    )
+
+
+def _booking_summary(r: tuple[Any, ...]) -> BookingSummaryView:
+    return BookingSummaryView(
+        booking_id=r[0],
+        status=r[1],
+        location_id=r[2],
+        location_timezone=r[17],
+        resource_id=r[3],
+        resource_name=r[4],
+        variant_id=r[5],
+        service_name=r[6],
+        variant_name=r[7],
+        starts_at=r[8],
+        ends_at=r[9],
+        total_cents=r[10],
+        currency=r[11],
+        customer_name=r[12],
+        customer_email=r[13],
+        customer_phone=r[14],
+        created_at=r[15],
+        created_by=r[16],
+    )
+
+
+@router.get("/me")
+async def me(request: Request, principal: CurrentPrincipal) -> MeView:
+    async with runtime_pool(request).connection() as conn, conn.transaction():
+        await set_user_context(conn, principal.user_id, request_id=get_request_id(request))
+        rows = await (
+            await conn.execute(
+                "select m.tenant_id, t.display_name, m.role, m.status, m.location_id "
+                "from gba.memberships m left join gba.tenants t on t.id = m.tenant_id "
+                "where m.user_id = %s and m.status <> 'revoked' order by m.created_at",
+                (principal.user_id,),
+            )
+        ).fetchall()
+    return MeView(
+        user_id=principal.user_id,
+        display_name=principal.display_name,
+        platform_roles=sorted(principal.platform_roles),
+        memberships=[
+            MembershipView(salon_id=r[0], salon_name=r[1], role=r[2], status=r[3], location_id=r[4])
+            for r in rows
+        ],
+    )
+
+
+# --- Overview ---
+
+
+@router.get("/salons/{salon_id}/workspace")
+async def workspace(salon_id: UUID, request: Request, principal: CurrentPrincipal) -> WorkspaceView:
+    """Operational locations and hours, without company settings or audit data."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.STAFF_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        locations = await (
+            await access.conn.execute("select id, name, timezone from gba.locations order by name")
+        ).fetchall()
+        hours = await (
+            await access.conn.execute(
+                "select id, location_id, weekday, opens_minute, closes_minute "
+                "from gba.business_hours order by location_id, weekday, opens_minute"
+            )
+        ).fetchall()
+        return WorkspaceView(
+            salon_id=salon_id,
+            location_id=access.location_id,
+            locations=[LocationItemView(id=r[0], name=r[1], timezone=r[2]) for r in locations],
+            business_hours=[
+                BusinessHoursItemView(
+                    id=r[0], location_id=r[1], weekday=r[2], opens_minute=r[3], closes_minute=r[4]
+                )
+                for r in hours
+            ],
+        )
+
+
+@router.get("/salons/{salon_id}/overview")
+async def salon_overview(
+    salon_id: UUID, request: Request, principal: CurrentPrincipal
+) -> SalonOverviewView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        conn = access.conn
+        tenant_row = await (
+            await conn.execute(
+                "select display_name, status, booking_state from gba.tenants where id = %s",
+                (salon_id,),
+            )
+        ).fetchone()
+        if tenant_row is None:
+            raise NotFoundError("Salon not found", salon_id=str(salon_id))
+
+        today_rows = await (
+            await conn.execute(
+                f"{_BOOKING_SUMMARY_SELECT} "
+                "where b.tenant_id = %s "
+                "and (b.starts_at at time zone l.timezone)::date = "
+                "(now() at time zone l.timezone)::date "
+                "order by b.starts_at",
+                (salon_id,),
+            )
+        ).fetchall()
+        today_bookings = [_booking_summary(r) for r in today_rows]
+
+        confirmed_count = sum(1 for b in today_bookings if b.status == "CONFIRMED")
+        cancelled_count = sum(1 for b in today_bookings if b.status == "CANCELLED")
+        today_revenue = sum(b.total_cents for b in today_bookings if b.status == "CONFIRMED")
+
+        staff_count_row = await (
+            await conn.execute(
+                "select count(*) from gba.resources where tenant_id = %s and is_active = true",
+                (salon_id,),
+            )
+        ).fetchone()
+        active_staff = staff_count_row[0] if staff_count_row else 0
+
+        services_count_row = await (
+            await conn.execute(
+                "select count(*) from gba.service_variants where tenant_id = %s",
+                (salon_id,),
+            )
+        ).fetchone()
+        total_services = services_count_row[0] if services_count_row else 0
+
+        activity_rows = await (
+            await conn.execute(
+                "select id, actor, action, target_type, target_id, details, occurred_at "
+                "from gba.audit_events where tenant_id = %s "
+                "order by occurred_at desc limit 15",
+                (salon_id,),
+            )
+        ).fetchall()
+        recent_activity = [
+            ActivityItemView(
+                id=r[0],
+                actor=r[1],
+                action=r[2],
+                target_type=r[3],
+                target_id=r[4],
+                details=r[5],
+                occurred_at=r[6],
+            )
+            for r in activity_rows
+        ]
+
+    return SalonOverviewView(
+        salon_id=salon_id,
+        salon_name=str(tenant_row[0]),
+        status=str(tenant_row[1]),
+        booking_state=str(tenant_row[2]),
+        stats=OverviewStats(
+            today_bookings_count=len(today_bookings),
+            confirmed_bookings_count=confirmed_count,
+            cancelled_bookings_count=cancelled_count,
+            today_revenue_cents=today_revenue,
+            today_booked_value=confirmed_booking_value(today_bookings),
+            active_staff_count=active_staff,
+            total_services_count=total_services,
+        ),
+        today_bookings=today_bookings,
+        recent_activity=recent_activity,
+    )
+
+
+# --- Bookings Management ---
+
+
+def _preserved_quote(data: object) -> Quote:
+    try:
+        view = QuoteView.model_validate(data)
+    except ValidationError:
+        raise DomainError("Stored booking quote is invalid") from None
+    if (
+        not view.lines
+        or view.booking_duration_minutes <= 0
+        or sum(line.price_cents for line in view.lines) != view.total_cents
+        or sum(line.duration_minutes for line in view.lines) != view.booking_duration_minutes
+    ):
+        raise DomainError("Stored booking quote is invalid")
+    return Quote(
+        currency=view.currency,
+        total_cents=view.total_cents,
+        booking_duration_minutes=view.booking_duration_minutes,
+        lines=tuple(QuoteLine(**line.model_dump()) for line in view.lines),
+    )
+
+
+async def _ensure_available(
+    conn: RuntimeConnection,
+    selection: Selection,
+    starts_at: datetime,
+    quote: Quote,
+    *,
+    exclude_booking_id: UUID | None = None,
+) -> None:
+    zone = await queries.location_zone(conn, selection.location_id)
+    available = await queries.availability(
+        conn,
+        AvailabilityQuery(
+            **selection.model_dump(), day=starts_at.astimezone(ZoneInfo(zone)).date()
+        ),
+        preserved_quote=quote,
+        exclude_booking_id=exclude_booking_id,
+        require_live=False,
+    )
+    if not any(slot.start_at == starts_at.astimezone(UTC) for slot in available.slots):
+        raise ConflictError("That time is no longer available for this resource")
+
+
+async def _claim_mutation(
+    access: TenantAccess,
+    salon_id: UUID,
+    principal: Principal,
+    operation: str,
+    key: str | None,
+    body: BaseModel,
+    booking_id: UUID | None = None,
+) -> tuple[IdempotencyScope | None, BookingSummaryView | None]:
+    if key is None:
+        return None, None
+    conn = access.conn
+    scope = IdempotencyScope(salon_id, principal.actor, operation, key)
+    payload = body.model_dump(mode="json")
+    if "add_on_ids" in payload:
+        payload["add_on_ids"] = sorted(payload["add_on_ids"])
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            {"booking_id": str(booking_id) if booking_id else None, "body": payload},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    stored = await idempotency.claim(conn, scope, fingerprint)
+    if stored is None:
+        return scope, None
+    if stored.request_hash != fingerprint:
+        raise IdempotencyKeyReusedError("Key was used for another request")
+    payload = dict(stored.body)
+    try:
+        location_id = UUID(str(payload["location_id"]))
+    except KeyError, ValueError, TypeError:
+        raise DatabaseUnavailableError("Stored operation receipt is invalid") from None
+    access.require_location(location_id)
+    # Additive compatibility: old responses never captured the timezone. Resolve
+    # the real authorized location, while retaining every stored business value.
+    if "location_timezone" not in payload:
+        payload["location_timezone"] = await queries.location_zone(conn, location_id)
+    try:
+        return scope, BookingSummaryView.model_validate(payload)
+    except ValidationError:
+        raise DatabaseUnavailableError("Stored operation receipt is invalid") from None
+
+
+async def _complete_mutation(
+    conn: RuntimeConnection, scope: IdempotencyScope | None, status: int, view: BookingSummaryView
+) -> BookingSummaryView:
+    if scope is not None:
+        await idempotency.complete(conn, scope, status, view.model_dump(mode="json"))
+    return view
+
+
+@router.post("/salons/{salon_id}/availability")
+async def management_availability(
+    salon_id: UUID, body: ManagementAvailabilityQuery, request: Request, principal: CurrentPrincipal
+) -> AvailabilityView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_WRITE,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        access.require_location(body.location_id)
+        quote = None
+        if body.booking_id is not None:
+            row = await (
+                await access.conn.execute(
+                    "select location_id, variant_id, quote, status from gba.bookings where id = %s",
+                    (body.booking_id,),
+                )
+            ).fetchone()
+            if row is None:
+                raise NotFoundError("Booking not found")
+            if row[3] != "CONFIRMED":
+                raise ConflictError("Only a confirmed booking can be rescheduled")
+            if (row[0], row[1]) != (body.location_id, body.variant_id):
+                raise DomainError("Selection does not match the booking")
+            quote = _preserved_quote(row[2])
+        return await queries.availability(
+            access.conn,
+            AvailabilityQuery(**body.model_dump(exclude={"booking_id"})),
+            preserved_quote=quote,
+            exclude_booking_id=body.booking_id,
+            require_live=False,
+        )
+
+
+@router.get("/salons/{salon_id}/bookings")
+async def list_bookings(
+    salon_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    resource_id: UUID | None = None,
+    status: str | None = None,
+    local_day: date | None = None,
+    local_start_day: date | None = None,
+    local_end_day: date | None = None,
+    location_id: UUID | None = None,
+) -> list[BookingSummaryView]:
+    if (
+        local_start_day is not None
+        and local_end_day is not None
+        and local_start_day > local_end_day
+    ):
+        raise DomainError("The first local date must not be after the last local date")
+    for instant in (start_date, end_date):
+        if instant is not None and (instant.tzinfo is None or instant.utcoffset() is None):
+            raise DomainError("Date filters must include a UTC offset")
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        if location_id is not None:
+            access.require_location(location_id)
+        conditions = ["b.tenant_id = %s"]
+        params: list[Any] = [salon_id]
+        if start_date is not None:
+            conditions.append("b.starts_at >= %s")
+            params.append(start_date)
+        if end_date is not None:
+            conditions.append("b.starts_at <= %s")
+            params.append(end_date)
+        if resource_id is not None:
+            conditions.append("a.resource_id = %s")
+            params.append(resource_id)
+        if status is not None:
+            conditions.append("b.status = %s")
+            params.append(status)
+        if local_day is not None:
+            conditions.append("(b.starts_at at time zone l.timezone)::date = %s")
+            params.append(local_day)
+        if local_start_day is not None:
+            conditions.append("(b.starts_at at time zone l.timezone)::date >= %s")
+            params.append(local_start_day)
+        if local_end_day is not None:
+            conditions.append("(b.starts_at at time zone l.timezone)::date <= %s")
+            params.append(local_end_day)
+        if location_id is not None:
+            conditions.append("b.location_id = %s")
+            params.append(location_id)
+        where = " and ".join(conditions)
+        sql = f"{_BOOKING_SUMMARY_SELECT} where {where} order by b.starts_at desc limit 200"
+        rows = await (await access.conn.execute(sql, tuple(params))).fetchall()
+    return [_booking_summary(r) for r in rows]
+
+
+@router.post("/salons/{salon_id}/bookings", status_code=201)
+async def create_staff_booking(
+    salon_id: UUID,
+    body: StaffBookingCreate,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey = None,
+) -> BookingSummaryView:
+    if body.starts_at.tzinfo is None or body.starts_at.utcoffset() is None:
+        raise DomainError("start time must include a UTC offset")
+    if body.starts_at.second or body.starts_at.microsecond:
+        raise DomainError("start time must be on a whole minute")
+
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_WRITE,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        access.require_location(body.location_id)
+        conn = access.conn
+        scope, replay = await _claim_mutation(
+            access, salon_id, principal, "management.create", idempotency_key, body
+        )
+        if replay is not None:
+            return replay
+        selection = Selection(
+            location_id=body.location_id,
+            resource_id=body.resource_id,
+            variant_id=body.variant_id,
+            add_on_ids=body.add_on_ids,
+        )
+        quote = await queries.quote_selection(conn, selection)
+        starts_at, ends_at = booking_interval(body.starts_at, quote.booking_duration_minutes)
+        await repo.lock_resource_schedule(conn, salon_id, body.resource_id)
+        await _ensure_available(conn, selection, starts_at, quote)
+
+        await repo.set_audit_context(
+            conn,
+            actor="system:hold-expiry",
+            reason="expired_on_contention",
+            request_id=get_request_id(request),
+        )
+        await repo.expire_stale_holds_overlapping(conn, body.resource_id, starts_at, ends_at)
+
+        await repo.set_audit_context(
+            conn,
+            actor=principal.actor,
+            reason="created_confirmed",
+            request_id=get_request_id(request),
+        )
+        try:
+            async with conn.transaction():
+                booking_id = await repo.insert_booking(
+                    conn,
+                    tenant_id=salon_id,
+                    location_id=body.location_id,
+                    resource_id=body.resource_id,
+                    variant_id=body.variant_id,
+                    status="CONFIRMED",
+                    starts_at=starts_at,
+                    ends_at=ends_at,
+                    hold_ttl_seconds=600,
+                    quote=quote,
+                    created_by=principal.actor,
+                )
+                cap_hash = hashlib.sha256(f"staff:{uuid7()}".encode()).hexdigest()
+                await conn.execute(
+                    "insert into gba.booking_customers "
+                    "(tenant_id, booking_id, capability_hash, customer_name, email, phone) "
+                    "values (%s, %s, %s, %s, %s, %s)",
+                    (
+                        salon_id,
+                        booking_id,
+                        cap_hash,
+                        body.customer_name,
+                        body.customer_email,
+                        body.customer_phone,
+                    ),
+                )
+        except pg.ExclusionViolation as exc:
+            if repo.is_slot_conflict(exc):
+                raise ConflictError("That time is no longer available for this resource") from None
+            raise
+
+        row = await (
+            await conn.execute(
+                f"{_BOOKING_SUMMARY_SELECT} where b.tenant_id = %s and b.id = %s",
+                (salon_id, booking_id),
+            )
+        ).fetchone()
+        assert row is not None  # noqa: S101
+        return await _complete_mutation(conn, scope, 201, _booking_summary(row))
+
+
+@router.post("/salons/{salon_id}/bookings/{booking_id}/reschedule")
+async def reschedule_booking(
+    salon_id: UUID,
+    booking_id: UUID,
+    body: BookingRescheduleRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey = None,
+) -> BookingSummaryView:
+    if body.new_starts_at.tzinfo is None or body.new_starts_at.utcoffset() is None:
+        raise DomainError("new start time must include a UTC offset")
+    if body.new_starts_at.second or body.new_starts_at.microsecond:
+        raise DomainError("new start time must be on a whole minute")
+
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_WRITE,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        conn = access.conn
+        scope, replay = await _claim_mutation(
+            access, salon_id, principal, "management.reschedule", idempotency_key, body, booking_id
+        )
+        if replay is not None:
+            return replay
+        # Match guest confirmation's resource -> booking order. Lock both artists
+        # in UUID order so simultaneous opposite transfers cannot form a cycle.
+        resources = await repo.booking_resource_ids(conn, booking_id)
+        if not resources:
+            raise NotFoundError("Booking not found")
+        target_resource_id = body.new_resource_id or resources[0]
+        for resource_id in sorted({*resources, target_resource_id}):
+            await repo.lock_resource_schedule(conn, salon_id, resource_id)
+        status, _ = await repo.lock_booking(conn, booking_id)
+        if status != "CONFIRMED":
+            raise ConflictError("Only a confirmed booking can be rescheduled")
+
+        old_row = await (
+            await conn.execute(
+                "select b.location_id, b.variant_id, b.quote, a.resource_id, "
+                "c.customer_name, c.email, c.phone, c.capability_hash "
+                "from gba.bookings b "
+                "join gba.booking_allocations a on a.tenant_id = b.tenant_id "
+                "and a.booking_id = b.id "
+                "left join gba.booking_customers c on c.tenant_id = b.tenant_id "
+                "and c.booking_id = b.id "
+                "where b.tenant_id = %s and b.id = %s",
+                (salon_id, booking_id),
+            )
+        ).fetchone()
+        if old_row is None:
+            raise NotFoundError("Booking not found", booking_id=str(booking_id))
+
+        location_id: UUID = old_row[0]
+        variant_id: UUID = old_row[1]
+        quote = _preserved_quote(old_row[2])
+        customer_name: str | None = old_row[4]
+        customer_email: str | None = old_row[5]
+        customer_phone: str | None = old_row[6]
+        cap_hash: str = old_row[7] or hashlib.sha256(f"staff:{uuid7()}".encode()).hexdigest()
+
+        starts_at, ends_at = booking_interval(body.new_starts_at, quote.booking_duration_minutes)
+        await _ensure_available(
+            conn,
+            Selection(
+                location_id=location_id, variant_id=variant_id, resource_id=target_resource_id
+            ),
+            starts_at,
+            quote,
+            exclude_booking_id=booking_id,
+        )
+
+        await repo.set_audit_context(
+            conn,
+            actor="system:hold-expiry",
+            reason="expired_on_contention",
+            request_id=get_request_id(request),
+        )
+        await repo.expire_stale_holds_overlapping(conn, target_resource_id, starts_at, ends_at)
+
+        # Cancel old booking to release its allocation in gba.booking_allocations
+        await repo.set_audit_context(
+            conn,
+            actor=principal.actor,
+            reason="rescheduled_to_new_booking",
+            request_id=get_request_id(request),
+        )
+        await repo.set_status(conn, booking_id, "CANCELLED")
+
+        # Insert new booking
+        await repo.set_audit_context(
+            conn,
+            actor=principal.actor,
+            reason="rescheduled_from_old_booking",
+            request_id=get_request_id(request),
+        )
+        try:
+            async with conn.transaction():
+                new_booking_id = await repo.insert_booking(
+                    conn,
+                    tenant_id=salon_id,
+                    location_id=location_id,
+                    resource_id=target_resource_id,
+                    variant_id=variant_id,
+                    status="CONFIRMED",
+                    starts_at=starts_at,
+                    ends_at=ends_at,
+                    hold_ttl_seconds=600,
+                    quote=quote,
+                    created_by=principal.actor,
+                )
+                if customer_name is not None:
+                    await conn.execute(
+                        "insert into gba.booking_customers "
+                        "(tenant_id, booking_id, capability_hash, customer_name, email, phone) "
+                        "values (%s, %s, %s, %s, %s, %s)",
+                        (
+                            salon_id,
+                            new_booking_id,
+                            cap_hash,
+                            customer_name,
+                            customer_email,
+                            customer_phone,
+                        ),
+                    )
+        except pg.ExclusionViolation as exc:
+            if repo.is_slot_conflict(exc):
+                raise ConflictError("That time is no longer available for this resource") from None
+            raise
+
+        row = await (
+            await conn.execute(
+                f"{_BOOKING_SUMMARY_SELECT} where b.tenant_id = %s and b.id = %s",
+                (salon_id, new_booking_id),
+            )
+        ).fetchone()
+        assert row is not None  # noqa: S101
+        return await _complete_mutation(conn, scope, 200, _booking_summary(row))
+
+
+@router.post("/salons/{salon_id}/bookings/{booking_id}/cancel")
+async def cancel_booking(
+    salon_id: UUID,
+    booking_id: UUID,
+    body: BookingCancelRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey = None,
+) -> BookingSummaryView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_WRITE,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        conn = access.conn
+        scope, replay = await _claim_mutation(
+            access, salon_id, principal, "management.cancel", idempotency_key, body, booking_id
+        )
+        if replay is not None:
+            return replay
+        for resource_id in await repo.booking_resource_ids(conn, booking_id):
+            await repo.lock_resource_schedule(conn, salon_id, resource_id)
+        status, _ = await repo.lock_booking(conn, booking_id)
+        if status == "CANCELLED":
+            pass
+        elif status not in ("HOLD", "CONFIRMED"):
+            raise ConflictError(f"A {status.lower()} booking cannot be cancelled")
+        else:
+            await repo.set_audit_context(
+                conn, actor=principal.actor, reason=body.reason, request_id=get_request_id(request)
+            )
+            await repo.set_status(conn, booking_id, "CANCELLED")
+
+        row = await (
+            await conn.execute(
+                f"{_BOOKING_SUMMARY_SELECT} where b.tenant_id = %s and b.id = %s",
+                (salon_id, booking_id),
+            )
+        ).fetchone()
+        if row is None:
+            raise NotFoundError("Booking not found", booking_id=str(booking_id))
+        return await _complete_mutation(conn, scope, 200, _booking_summary(row))
+
+
+# --- Clients Management ---
+
+
+@router.get("/salons/{salon_id}/clients")
+async def list_clients(
+    salon_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    q: str | None = None,
+) -> list[ClientView]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        conn = access.conn
+        like_pattern = f"%{q.strip()}%" if q and q.strip() else None
+        rows = await (
+            await conn.execute(
+                "select c.customer_name, c.email, c.phone, "
+                "count(distinct b.id) as total_bookings, "
+                "count(distinct b.id) filter (where b.status = 'CONFIRMED') as confirmed_bookings, "
+                "max(b.starts_at) as last_booking_at "
+                "from gba.booking_customers c "
+                "join gba.bookings b on b.tenant_id = c.tenant_id and b.id = c.booking_id "
+                "where c.tenant_id = %s "
+                "and (%s::text is null or c.customer_name ilike %s "
+                "or c.email ilike %s or c.phone ilike %s) "
+                "group by c.customer_name, c.email, c.phone "
+                "order by max(b.starts_at) desc nulls last limit 100",
+                (salon_id, like_pattern, like_pattern, like_pattern, like_pattern),
+            )
+        ).fetchall()
+    return [
+        ClientView(
+            customer_name=r[0],
+            email=r[1],
+            phone=r[2],
+            total_bookings=r[3],
+            confirmed_bookings=r[4],
+            last_booking_at=r[5],
+        )
+        for r in rows
+    ]
+
+
+@router.get("/salons/{salon_id}/clients/history")
+async def client_history(
+    salon_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    email: str | None = None,
+    phone: str | None = None,
+) -> list[BookingSummaryView]:
+    if not email and not phone:
+        raise DomainError("Either email or phone is required")
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        rows = await (
+            await access.conn.execute(
+                f"{_BOOKING_SUMMARY_SELECT} "
+                "where b.tenant_id = %s and (c.email = %s or c.phone = %s) "
+                "order by b.starts_at desc limit 50",
+                (salon_id, email, phone),
+            )
+        ).fetchall()
+    return [_booking_summary(r) for r in rows]
+
+
+# --- Services Catalog ---
+
+
+@router.get("/salons/{salon_id}/services")
+async def list_services(
+    salon_id: UUID, request: Request, principal: CurrentPrincipal
+) -> list[ServiceView]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.CATALOG_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        rows = await (
+            await access.conn.execute(
+                f"select {_SERVICE_COLUMNS} from gba.service_variants order by code"  # noqa: S608
+            )
+        ).fetchall()
+    return [_service(r) for r in rows]
+
+
+@router.post("/salons/{salon_id}/services", status_code=201)
+async def create_service(
+    salon_id: UUID, body: ServiceCreate, request: Request, principal: CurrentPrincipal
+) -> ServiceView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.CATALOG_MANAGE,
+        request_id=get_request_id(request),
+    ) as access:
+        conn = access.conn
+        await conn.execute(
+            "insert into gba.services (tenant_id, code, name) values (%s, %s, %s) "
+            "on conflict (tenant_id, code) do nothing",
+            (salon_id, body.service_code, body.service_name),
+        )
+        service = await (
+            await conn.execute("select id from gba.services where code = %s", (body.service_code,))
+        ).fetchone()
+        assert service is not None  # noqa: S101 - inserted or existing above
+        try:
+            row = await (
+                await conn.execute(
+                    "insert into gba.service_variants (tenant_id, service_id, code, name, "
+                    "price_cents, currency, booking_duration_minutes, "
+                    "display_duration_min_minutes, display_duration_max_minutes) "
+                    "values (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
+                    "returning id, service_id, code, name, status, price_cents, currency, "
+                    "booking_duration_minutes, is_bookable, revision",
+                    (
+                        salon_id,
+                        service[0],
+                        body.code,
+                        body.name,
+                        body.price_cents,
+                        body.currency,
+                        body.booking_duration_minutes,
+                        body.display_duration_min_minutes,
+                        body.display_duration_max_minutes,
+                    ),
+                )
+            ).fetchone()
+        except pg.UniqueViolation:
+            raise ConflictError("A service with this code already exists", code=body.code) from None
+        except pg.CheckViolation as exc:
+            raise InvalidServiceError(
+                "The service definition is invalid", constraint=exc.diag.constraint_name
+            ) from None
+    assert row is not None  # noqa: S101
+    return _service(row)
+
+
+@router.patch("/salons/{salon_id}/services/{variant_id}")
+async def update_service_variant(
+    salon_id: UUID,
+    variant_id: UUID,
+    body: ServiceVariantUpdate,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ServiceView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.CATALOG_MANAGE,
+        request_id=get_request_id(request),
+    ) as access:
+        try:
+            row = await (
+                await access.conn.execute(
+                    "update gba.service_variants "
+                    "set name = coalesce(%s, name), "
+                    "price_cents = coalesce(%s, price_cents), "
+                    "booking_duration_minutes = coalesce(%s, booking_duration_minutes), "
+                    "is_bookable = coalesce(%s, is_bookable) "
+                    "where id = %s returning "
+                    "id, service_id, code, name, status, price_cents, currency, "
+                    "booking_duration_minutes, is_bookable, revision",
+                    (
+                        body.name,
+                        body.price_cents,
+                        body.booking_duration_minutes,
+                        body.is_bookable,
+                        variant_id,
+                    ),
+                )
+            ).fetchone()
+        except pg.CheckViolation as exc:
+            raise InvalidServiceError(
+                "The updated service definition violates constraints",
+                constraint=exc.diag.constraint_name,
+            ) from None
+    if row is None:
+        raise NotFoundError("Service not found", variant_id=str(variant_id))
+    return _service(row)
+
+
+@router.post("/salons/{salon_id}/services/{variant_id}/publish")
+async def publish_service(
+    salon_id: UUID, variant_id: UUID, request: Request, principal: CurrentPrincipal
+) -> ServiceView:
+    """Make a service bookable. The database refuses if its booking duration is unknown."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.CATALOG_MANAGE,
+        request_id=get_request_id(request),
+    ) as access:
+        try:
+            row = await (
+                await access.conn.execute(
+                    "update gba.service_variants set status = 'published', is_bookable = true "
+                    "where id = %s returning "
+                    "id, service_id, code, name, status, price_cents, currency, "
+                    "booking_duration_minutes, is_bookable, revision",
+                    (variant_id,),
+                )
+            ).fetchone()
+        except pg.CheckViolation as exc:
+            if exc.diag.constraint_name == "service_variants_bookable_requires_duration":
+                raise ServiceNotBookableError(
+                    "This service has no confirmed booking duration yet",
+                    variant=str(variant_id),
+                    reason="booking_duration_unknown",
+                ) from None
+            raise
+    if row is None:
+        raise NotFoundError("Service not found", variant_id=str(variant_id))
+    return _service(row)
+
+
+@router.post("/salons/{salon_id}/services/{variant_id}/unpublish")
+async def unpublish_service(
+    salon_id: UUID, variant_id: UUID, request: Request, principal: CurrentPrincipal
+) -> ServiceView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.CATALOG_MANAGE,
+        request_id=get_request_id(request),
+    ) as access:
+        row = await (
+            await access.conn.execute(
+                "update gba.service_variants set status = 'draft', is_bookable = false "
+                "where id = %s returning "
+                "id, service_id, code, name, status, price_cents, currency, "
+                "booking_duration_minutes, is_bookable, revision",
+                (variant_id,),
+            )
+        ).fetchone()
+    if row is None:
+        raise NotFoundError("Service not found", variant_id=str(variant_id))
+    return _service(row)
+
+
+# --- Staff Management ---
+
+
+@router.get("/salons/{salon_id}/staff")
+async def list_staff(
+    salon_id: UUID, request: Request, principal: CurrentPrincipal
+) -> list[StaffView]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.STAFF_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        rows = await (
+            await access.conn.execute(
+                "select id, location_id, kind, display_name, is_active from gba.resources "
+                "order by display_name"
+            )
+        ).fetchall()
+    return [
+        StaffView(id=r[0], location_id=r[1], kind=r[2], display_name=r[3], is_active=r[4])
+        for r in rows
+    ]
+
+
+@router.post("/salons/{salon_id}/staff", status_code=201)
+async def create_staff(
+    salon_id: UUID, body: StaffCreate, request: Request, principal: CurrentPrincipal
+) -> StaffView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.STAFF_MANAGE,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        access.require_location(body.location_id)
+        try:
+            row = await (
+                await access.conn.execute(
+                    "insert into gba.resources (tenant_id, location_id, kind, display_name) "
+                    "values (%s, %s, %s, %s) "
+                    "returning id, location_id, kind, display_name, is_active",
+                    (salon_id, body.location_id, body.kind, body.display_name),
+                )
+            ).fetchone()
+        except pg.ForeignKeyViolation:
+            raise InvalidReferenceError("Unknown location", field="location_id") from None
+    assert row is not None  # noqa: S101
+    return StaffView(
+        id=row[0], location_id=row[1], kind=row[2], display_name=row[3], is_active=row[4]
+    )
+
+
+@router.patch("/salons/{salon_id}/staff/{resource_id}")
+async def update_staff(
+    salon_id: UUID,
+    resource_id: UUID,
+    body: StaffUpdate,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> StaffView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.STAFF_MANAGE,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        row = await (
+            await access.conn.execute(
+                "update gba.resources set "
+                "display_name = coalesce(%s, display_name), "
+                "is_active = coalesce(%s, is_active) "
+                "where id = %s returning id, location_id, kind, display_name, is_active",
+                (body.display_name, body.is_active, resource_id),
+            )
+        ).fetchone()
+    if row is None:
+        raise NotFoundError("Staff not found", resource_id=str(resource_id))
+    return StaffView(
+        id=row[0], location_id=row[1], kind=row[2], display_name=row[3], is_active=row[4]
+    )
+
+
+@router.get("/salons/{salon_id}/staff/{resource_id}/schedule")
+async def get_staff_schedule(
+    salon_id: UUID, resource_id: UUID, request: Request, principal: CurrentPrincipal
+) -> StaffScheduleView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.STAFF_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        conn = access.conn
+        staff = await (
+            await conn.execute(
+                "select id, display_name, is_active, location_id from gba.resources where id = %s",
+                (resource_id,),
+            )
+        ).fetchone()
+        if staff is None:
+            raise NotFoundError("Staff not found", resource_id=str(resource_id))
+
+        hours = await (
+            await conn.execute(
+                "select id, weekday, opens_minute, closes_minute from gba.resource_hours "
+                "where resource_id = %s order by weekday, opens_minute",
+                (resource_id,),
+            )
+        ).fetchall()
+
+        services = await (
+            await conn.execute(
+                "select service_id from gba.resource_services where resource_id = %s",
+                (resource_id,),
+            )
+        ).fetchall()
+
+    return StaffScheduleView(
+        resource_id=staff[0],
+        display_name=staff[1],
+        is_active=staff[2],
+        location_id=staff[3],
+        hours=[
+            ResourceHoursView(id=h[0], weekday=h[1], opens_minute=h[2], closes_minute=h[3])
+            for h in hours
+        ],
+        service_ids=[s[0] for s in services],
+    )
+
+
+@router.put("/salons/{salon_id}/staff/{resource_id}/schedule")
+async def update_staff_schedule(
+    salon_id: UUID,
+    resource_id: UUID,
+    body: StaffScheduleUpdate,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> StaffScheduleView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.STAFF_MANAGE,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        conn = access.conn
+        staff = await (
+            await conn.execute(
+                "select id, display_name, is_active, location_id from gba.resources where id = %s",
+                (resource_id,),
+            )
+        ).fetchone()
+        if staff is None:
+            raise NotFoundError("Staff not found", resource_id=str(resource_id))
+
+        await conn.execute("delete from gba.resource_hours where resource_id = %s", (resource_id,))
+        for entry in body.hours:
+            await conn.execute(
+                "insert into gba.resource_hours "
+                "(tenant_id, resource_id, weekday, opens_minute, closes_minute) "
+                "values (%s, %s, %s, %s, %s)",
+                (salon_id, resource_id, entry.weekday, entry.opens_minute, entry.closes_minute),
+            )
+
+        hours = await (
+            await conn.execute(
+                "select id, weekday, opens_minute, closes_minute from gba.resource_hours "
+                "where resource_id = %s order by weekday, opens_minute",
+                (resource_id,),
+            )
+        ).fetchall()
+
+        services = await (
+            await conn.execute(
+                "select service_id from gba.resource_services where resource_id = %s",
+                (resource_id,),
+            )
+        ).fetchall()
+
+    return StaffScheduleView(
+        resource_id=staff[0],
+        display_name=staff[1],
+        is_active=staff[2],
+        location_id=staff[3],
+        hours=[
+            ResourceHoursView(id=h[0], weekday=h[1], opens_minute=h[2], closes_minute=h[3])
+            for h in hours
+        ],
+        service_ids=[s[0] for s in services],
+    )
+
+
+@router.put("/salons/{salon_id}/staff/{resource_id}/services")
+async def update_staff_services(
+    salon_id: UUID,
+    resource_id: UUID,
+    body: StaffServicesUpdate,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> StaffScheduleView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.STAFF_MANAGE,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        conn = access.conn
+        staff = await (
+            await conn.execute(
+                "select id, display_name, is_active, location_id from gba.resources where id = %s",
+                (resource_id,),
+            )
+        ).fetchone()
+        if staff is None:
+            raise NotFoundError("Staff not found", resource_id=str(resource_id))
+
+        await conn.execute(
+            "delete from gba.resource_services where resource_id = %s", (resource_id,)
+        )
+        for sid in body.service_ids:
+            await conn.execute(
+                "insert into gba.resource_services (tenant_id, resource_id, service_id) "
+                "values (%s, %s, %s) on conflict do nothing",
+                (salon_id, resource_id, sid),
+            )
+
+        hours = await (
+            await conn.execute(
+                "select id, weekday, opens_minute, closes_minute from gba.resource_hours "
+                "where resource_id = %s order by weekday, opens_minute",
+                (resource_id,),
+            )
+        ).fetchall()
+
+        services = await (
+            await conn.execute(
+                "select service_id from gba.resource_services where resource_id = %s",
+                (resource_id,),
+            )
+        ).fetchall()
+
+    return StaffScheduleView(
+        resource_id=staff[0],
+        display_name=staff[1],
+        is_active=staff[2],
+        location_id=staff[3],
+        hours=[
+            ResourceHoursView(id=h[0], weekday=h[1], opens_minute=h[2], closes_minute=h[3])
+            for h in hours
+        ],
+        service_ids=[s[0] for s in services],
+    )
+
+
+# --- Activity & Settings ---
+
+
+@router.get("/salons/{salon_id}/activity")
+async def salon_activity(
+    salon_id: UUID, request: Request, principal: CurrentPrincipal
+) -> list[ActivityItemView]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_READ,
+        request_id=get_request_id(request),
+    ) as access:
+        rows = await (
+            await access.conn.execute(
+                "select id, actor, action, target_type, target_id, details, occurred_at "
+                "from gba.audit_events where tenant_id = %s "
+                "order by occurred_at desc limit 50",
+                (salon_id,),
+            )
+        ).fetchall()
+    return [
+        ActivityItemView(
+            id=r[0],
+            actor=r[1],
+            action=r[2],
+            target_type=r[3],
+            target_id=r[4],
+            details=r[5],
+            occurred_at=r[6],
+        )
+        for r in rows
+    ]
+
+
+@router.get("/salons/{salon_id}/settings")
+async def salon_settings(
+    salon_id: UUID, request: Request, principal: CurrentPrincipal
+) -> SalonSettingsView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.CATALOG_READ,
+        request_id=get_request_id(request),
+    ) as access:
+        conn = access.conn
+        tenant = await (
+            await conn.execute(
+                "select id, slug, display_name, status, booking_state "
+                "from gba.tenants where id = %s",
+                (salon_id,),
+            )
+        ).fetchone()
+        if tenant is None:
+            raise NotFoundError("Salon not found", salon_id=str(salon_id))
+
+        locations = await (
+            await conn.execute(
+                "select id, name, timezone from gba.locations where tenant_id = %s order by name",
+                (salon_id,),
+            )
+        ).fetchall()
+
+        hours = await (
+            await conn.execute(
+                "select id, location_id, weekday, opens_minute, closes_minute "
+                "from gba.business_hours where tenant_id = %s order by weekday, opens_minute",
+                (salon_id,),
+            )
+        ).fetchall()
+
+        policies_row = await (
+            await conn.execute(
+                "select cancellation_policy, deposit_policy, booking_rules "
+                "from gba.salon_policies where tenant_id = %s",
+                (salon_id,),
+            )
+        ).fetchone()
+        policies_dict = {
+            "cancellation_policy": policies_row[0] if policies_row else None,
+            "deposit_policy": policies_row[1] if policies_row else None,
+            "booking_rules": policies_row[2] if policies_row else None,
+        }
+
+        facts = await (
+            await conn.execute(
+                "select fact_key, status, source_note, recorded_by, recorded_at "
+                "from gba.salon_fact_confirmations where tenant_id = %s order by fact_key",
+                (salon_id,),
+            )
+        ).fetchall()
+
+        origins = await (
+            await conn.execute(
+                "select id, origin, status, updated_at "
+                "from gba.tenant_embed_origins where tenant_id = %s order by origin",
+                (salon_id,),
+            )
+        ).fetchall()
+
+    return SalonSettingsView(
+        salon_id=tenant[0],
+        slug=tenant[1],
+        display_name=tenant[2],
+        status=tenant[3],
+        booking_state=tenant[4],
+        locations=[LocationItemView(id=loc[0], name=loc[1], timezone=loc[2]) for loc in locations],
+        business_hours=[
+            BusinessHoursItemView(
+                id=h[0], location_id=h[1], weekday=h[2], opens_minute=h[3], closes_minute=h[4]
+            )
+            for h in hours
+        ],
+        policies=policies_dict,
+        fact_confirmations=[
+            SalonFactItemView(
+                fact_key=f[0],
+                status=f[1],
+                source_note=f[2],
+                recorded_by=f[3],
+                recorded_at=f[4],
+            )
+            for f in facts
+        ],
+        embed_origins=[
+            SalonEmbedOriginItemView(id=o[0], origin=o[1], status=o[2], updated_at=o[3])
+            for o in origins
+        ],
+    )
+
+
+# --- Booking Read ---
+
+
+@router.get("/salons/{salon_id}/bookings/{booking_id}")
+async def get_booking(
+    salon_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> BookingView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        booking = await load_booking(access.conn, booking_id)
+    return BookingView(
+        booking_id=booking.booking_id,
+        status=booking.status,
+        resource_id=booking.resource_id,
+        start_at=booking.starts_at,
+        end_at=booking.ends_at,
+        hold_expires_at=booking.hold_expires_at,
+        total_cents=booking.total_cents,
+        currency=booking.currency,
+        quote=booking.quote,
+    )
