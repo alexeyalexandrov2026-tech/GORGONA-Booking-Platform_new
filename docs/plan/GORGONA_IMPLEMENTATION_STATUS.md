@@ -47,6 +47,8 @@ Ruff check/format и strict mypy **PASS, 147 файлов**.
 [приемке](evidence/2026-10-04-company-groups/ACCEPTANCE.md) после завершения,
 без переноса зеленого результата другого SHA.
 
+Опубликован код 1f199a2f198dbb89ef1f0c1177cf4668f1c344f4, draft [PR #5](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/5) в ветку PR #4; **GitHub push CI PASS: 549 passed, 1 optional skip, 117.27 с**, [run 37228734875](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37228734875), job 111513719787; точный SHA 1f199a2f198dbb89ef1f0c1177cf4668f1c344f4. PostgreSQL/browser/container gates, сборка production image/web и статические проверки выполнены. Свежий production-only npm audit: 0 vulnerabilities; полный dev audit: FAIL, 5 high в существующей цепочке ESLint/braces, безопасная patched version отсутствует. Подробности в приемке.
+
 CORE-03/ENTERPRISE-01 и этап 1 остаются частичными: несколько филиалов в области
 доступа, финансовая консолидация, SSO/SCIM, публикация конфигурации,
 офлайн-синхронизация и единая занятость CORE-04 не реализованы.

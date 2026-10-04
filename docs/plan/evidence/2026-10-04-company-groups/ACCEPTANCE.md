@@ -12,7 +12,7 @@ Checkout: C:\Users\alexa\.codex\worktrees\booking-state-isolation\Gorgona Bookin
 Ветка codex/company-groups. База 161509f0e3a298cef9d2929576a023a6dd2e93c3
 (PR #4, подразделения). На этой базе неизмененная реализация дала 512 passed,
 4 skipped, 170.80 с. Проверки реализации ниже относятся к текущему diff; точный
-опубликованный SHA и GitHub CI добавляются после публикации.
+опубликованный SHA кода: 1f199a2f198dbb89ef1f0c1177cf4668f1c344f4; draft [PR #5](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/5) → codex/company-departments. Точный GitHub CI фиксируется после завершения.
 PR #4 при текущей проверке открыт, draft, не слит; базовая ветка PR #3.
 Ни PR merge, ни production migration/deployment не выполнялись.
 
@@ -56,8 +56,8 @@ PR #4 при текущей проверке открыт, draft, не слит;
 | strict mypy | PASS, exit 0; 147 source files |
 | Полная итоговая API suite с обязательными PostgreSQL 18.6 и браузерами | **PASS: 546 passed, 4 skipped, 191.85 с, exit 0** |
 | Локальные пропуски | 3 container checks: нет обязательного контейнерного окружения; 1 optional external-site gate. Пропуски не PASS |
-| GitHub CI опубликованного SHA | NOT TESTED до публикации; свежий результат добавляется отдельным разделом |
-| Документация и final diff | PASS: git diff --check, exit 0; 8 UTF-8 документов и 96 локальных ссылок; целевые шаблоны секретов отсутствуют в 34 измененных текстовых файлах. Повторяются после последней правки |
+| GitHub CI опубликованного SHA | PASS: 549 passed, 1 optional skip, 117.27 с; run 37228734875, job 111513719787; PostgreSQL/browser/container gates и production image/web build выполнены |
+| Документация и final diff | PASS: git diff --check, exit 0; 8 UTF-8 документов и 97 локальных ссылок; целевые шаблоны секретов отсутствуют в 34 измененных текстовых файлах. Повторяются после последней правки |
 
 Команды: web — npm run typecheck, lint, format:check, test:unit, build.
 API — uv run ruff format --check ., uv run ruff check ., uv run mypy;
@@ -78,6 +78,29 @@ Reviewer повторно подтвердил исправление регис
 ([transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html),
 [advisory locks](https://www.postgresql.org/docs/18/explicit-locking.html#ADVISORY-LOCKS)).
 [ADR-0018](../../../adr/0018-consented-company-groups.md) фиксирует решение.
+
+## Опубликованный код и точный CI
+
+**GitHub push CI PASS: 549 passed, 1 optional skip, 117.27 с**, [run 37228734875](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37228734875), job 111513719787; точный SHA 1f199a2f198dbb89ef1f0c1177cf4668f1c344f4. PostgreSQL/browser/container gates, сборка production image/web и статические проверки выполнены.
+
+Единственный пропуск — tests/integration/test_tenant_site_embedding.py,
+дополнительный внешний сайт; это не PASS. Web unit в этом CI: 23 passed, 963 мс.
+Ruff format147/check и mypy147 PASS. Все шаги job завершены success.
+Локальные 3 container skips устранены в этом CI, а не пересчитаны как локальный PASS.
+Следующий коммит только документации требует отдельной проверки SHA; результат
+кода 1f199a2 не переносится на него автоматически.
+
+## Аудит зависимостей
+
+Свежий npm audit --omit=dev --json: PASS, exit 0, **0 vulnerabilities**.
+Полный npm audit --json: **FAIL, exit 1, 5 high, 0 critical**, одна цепочка
+разработки eslint-config-next → @next/eslint-plugin-next → fast-glob →
+micromatch → braces. Это существующие зависимости, новых пакетов/lock changes нет.
+[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
+указывает affected braces <=3.0.3 и отсутствие patched version на момент проверки.
+npm предлагает major downgrade eslint-config-next до 14.2.35; он не применялся
+к Next16, поскольку такой переход требует отдельной совместимости и приемки.
+Находка остается открытой в dev tooling; ее нельзя выдавать за нулевой полный audit.
 
 ## Границы и дальнейшая работа
 

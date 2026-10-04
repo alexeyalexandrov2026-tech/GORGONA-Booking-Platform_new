@@ -11,6 +11,10 @@ readiness/live-state, проверке владельца перед публи�
 подразделения реализованы по ADR-0017, группы и отдельные согласия владельцев — по ADR-0018. Первый отчет считает только разрешенные записи; связь с юридическим лицом отсутствует и явно отмечена unassigned. Текущая [приемка групп](evidence/2026-10-04-company-groups/ACCEPTANCE.md) не закрывает несколько областей данных, финансовую консолидацию и офлайн-синхронизацию.
 [Точная приемка](evidence/2026-10-04-selected-company/ACCEPTANCE.md).
 
+Текущий пакет групп опубликован в draft PR #5 на 1f199a2; полный GitHub CI:
+549 passed / 1 optional skip / 117.27 с, включая PostgreSQL/browser/container gates.
+Точный SHA/run и границы — в приемке групп. Новая версия документов проверяется отдельно.
+
 - Спецификация: [исправленный master plan](GORGONA_MASTER_PLAN.md), включая 28 постоянных критериев BASE/CORE/отраслевых/OPS.
 - Рабочая копия: `C:\Users\alexa\Documents\ChatGPT\Gorgona Booking`; origin — `alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new`; ветка — `codex/universal-business-foundation`.
 - Опубликованная база аудита: `f8db038e4d10c02bec69578cfaba349d21595f71`. Исправления области проекта, отчет и закрытие development endpoint проверяются как отдельные изменения поверх этой базы.
@@ -84,6 +88,8 @@ readiness/live-state, проверке владельца перед публи�
 Регрессия: [test_holds_api.py](../../api/tests/unit/test_holds_api.py). Четыре проверки staging/production, с экспортом и без него, **FAIL до исправления**: получали 201. После исправления связанный пакет из 55 тестов — **PASS, exit 0, 2.06 с**; локальные/test/ci запросы сохраняют 201. Это ASGI unit-проверка с тестовым сервисом, не эксперимент над живой БД и не промышленная проверка Azure.
 
 ### Открытые условия перед релизом
+
+Свежий dependency audit пакета групп: production-only 0 vulnerabilities (exit 0); полный dev audit 5 high (exit 1) в цепочке ESLint/braces, исправление остается открытым. [Точные результаты и advisory](evidence/2026-10-04-company-groups/ACCEPTANCE.md).
 
 - При проверке `main` и рабочая ветка не имели branch protection. PR остается draft; merge не выполнялся. Отдельно проверить правила review/required checks и доступы участников перед релизом.
 - `deploy-staging.yml` проверяет утвержденное окно, конфигурацию и образ, но не имеет автоматического требования зеленого CI именно выбранного SHA. До включения staging добавить и проверить этот gate; ручное наличие старого зеленого CI не заменяет его.

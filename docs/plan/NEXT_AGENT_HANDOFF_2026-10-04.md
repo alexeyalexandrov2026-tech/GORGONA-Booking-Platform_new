@@ -25,6 +25,8 @@ web unit 23 passed / 868 мс; typecheck/lint/format/build14, Ruff/format/mypy14
 [приемке групп](evidence/2026-10-04-company-groups/ACCEPTANCE.md).
 Независимый review нашел регистр UUID в приглашении: browser red→green после
 нормализации. Ни один прежний PASS не является проверкой нового SHA.
+Код опубликован 1f199a2f198dbb89ef1f0c1177cf4668f1c344f4; draft [PR #5](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/5) поверх PR #4. **GitHub push CI PASS: 549 passed, 1 optional skip, 117.27 с**, [run 37228734875](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37228734875), job 111513719787; точный SHA 1f199a2f198dbb89ef1f0c1177cf4668f1c344f4. PostgreSQL/browser/container gates, сборка production image/web и статические проверки выполнены.
+Рабочая копия владельца повторно проверена: чистая, eaa6233; отдельный тестовый PostgreSQL остановлен.
 
 Следующая работа: несколько филиалов в областях данных членства и полномочия,
 затем публикация конфигурации и единая занятость CORE-04. Финансовая консолидация,
@@ -80,7 +82,7 @@ site gate. Детали, полные проверки и ограничения
 | `claude/keen-mayer-lg9ift` | **База PR #3**: `eaa6233` + делегирование `bd1a138a11ebbe506010c243a5a02d9989bc1b52` + документы. Draft [PR #2](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/2) → `codex/universal-business-foundation` |
 | `codex/booking-state-isolation` | Изоляция выбранной компании, `b8647897cfa653e39f2e3188dbb9ad23c13e13fa`; draft [PR #3](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/3) → ветка PR #2 |
 | `codex/company-departments` | Подразделения: 161509f0e3a298cef9d2929576a023a6dd2e93c3 (код 931a11e + документация); draft [PR #4](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/4) → ветка PR #3 |
-| codex/company-groups | Текущий пакет, база 161509f; публикация и точный CI фиксируются в [приемке групп](evidence/2026-10-04-company-groups/ACCEPTANCE.md) |
+| codex/company-groups | Код 1f199a2, draft PR #5 → codex/company-departments; CI 549 PASS / 1 optional skip на 1f199a2; детали в [приемке групп](evidence/2026-10-04-company-groups/ACCEPTANCE.md) |
 | CI | `.github/workflows/ci.yml` на push и PR: web проверки и сборка, PostgreSQL 18 в Docker, сборка production image, Ruff, mypy, pytest с обязательными PostgreSQL/браузерами/контейнерами |
 | Исторический CI делегирования | [run 37212099717](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37212099717) на `bd1a138`: **474 passed, 1 skipped** (необязательный внешний site gate), 118.32 с |
 
@@ -186,6 +188,7 @@ site gate. Детали, полные проверки и ограничения
 | Release gates из аудита | `deploy-staging.yml` не требует зеленый CI выбранного SHA; branch protection нет; пакет `ai/` не проверяется в CI | Решать перед staging с разрешения владельца |
 | HawkScan DAST | Не запускался: нужен Docker daemon и `HAWK_API_KEY` | Окружение с Docker и ключом от владельца |
 | Codeflash (плагин владельца) | Сервис `app.codeflash.ai` закрыт сетью, нет `CODEFLASH_API_KEY`, нет конфигурации в `web/package.json` | Владелец разрешает домен и ключ в настройках окружения и решает, добавлять ли конфигурацию |
+| Dev dependency audit | Свежий полный npm audit: 5 high в цепочке ESLint/braces, patched braces version нет; production-only audit 0 | Не делать несовместимый downgrade Next/ESLint; проверить безопасное исправление отдельно, см. приемку групп |
 | Не проверено | Реальный IdP, Stripe/DAT/Motive/Gusto, Azure/staging, промышленная миграция, нагрузка 1000 компаний/100–200 RPS, RPO/RTO, отраслевые пилоты, AI | Отдельные этапы master plan |
 
 ## 9. Следующая работа (порядок и приемка)
