@@ -5,7 +5,7 @@ Roles come from server-side memberships and platform roles, never from token cla
 
 from enum import StrEnum
 
-PERMISSIONS_VERSION = 2
+PERMISSIONS_VERSION = 3
 
 
 class Permission(StrEnum):
@@ -19,6 +19,7 @@ class Permission(StrEnum):
     STAFF_MANAGE = "staff.manage"
     MEMBERS_MANAGE = "members.manage"
     MEMBERS_MANAGE_ADMINS = "members.manage_admins"
+    DELEGATION_MANAGE = "delegation.manage"
     SETTINGS_MANAGE = "settings.manage"
     READINESS_READ = "readiness.read"
     PLATFORM_TENANT_STATUS = "platform.tenant_status"
@@ -42,7 +43,8 @@ _MANAGER = _FRONT_DESK | {
     Permission.SETTINGS_MANAGE,
     Permission.READINESS_READ,
 }
-_OWNER = _MANAGER | {Permission.MEMBERS_MANAGE_ADMINS}
+# Granting another company access to this business is an owner decision (ADR-0016).
+_OWNER = _MANAGER | {Permission.MEMBERS_MANAGE_ADMINS, Permission.DELEGATION_MANAGE}
 
 ROLE_PERMISSIONS: dict[str, frozenset[Permission]] = {
     "artist": _STAFF,
@@ -66,6 +68,24 @@ PLATFORM_SUPPORT_PERMISSIONS = frozenset(
 PLATFORM_ADMIN_PERMISSIONS = PLATFORM_SUPPORT_PERMISSIONS | {
     Permission.PLATFORM_TENANT_STATUS,
     Permission.PLATFORM_GO_LIVE,
+}
+
+
+# The only permissions a grant may carry to another business (ADR-0016). Management,
+# membership, settings, organization records, audit and platform actions are never delegated.
+DELEGABLE_PERMISSIONS = frozenset(
+    {
+        Permission.BOOKING_READ,
+        Permission.BOOKING_WRITE,
+        Permission.CATALOG_READ,
+        Permission.STAFF_READ,
+    }
+)
+# Creating or moving a booking needs the services, staff and existing bookings it refers to.
+DELEGATION_DEPENDENCIES: dict[Permission, frozenset[Permission]] = {
+    Permission.BOOKING_WRITE: frozenset(
+        {Permission.BOOKING_READ, Permission.CATALOG_READ, Permission.STAFF_READ}
+    ),
 }
 
 

@@ -14,6 +14,8 @@ Baseline at the start of this work: clean checkout at `76ce4e52f1c19b176586c8f69
 
 The current implementation also includes location-scoped booking/resource operations, branch invitations, legacy command-receipt compatibility and a fail-closed PostgreSQL access-definition guard. Read [ADR-0014](docs/adr/0014-location-scoped-workspace.md) and the latest [next-agent handoff](docs/plan/NEXT_AGENT_HANDOFF_2026-10-04.md) before continuing. No industry-wide or production readiness is implied.
 
+Legal-entity drafts ([ADR-0015](docs/adr/0015-tenant-owned-legal-entity-drafts.md)) and limited delegation between independent businesses ([ADR-0016](docs/adr/0016-limited-cross-business-delegation.md), migration 0011) follow. Delegated work runs only through reviewed operational handlers, re-checks both companies, the designated employee and the current grant revision in each transaction, and is audited in the owner business. Groups, departments, offline synchronization and transport workflows remain open; see the registry for exact verification. The consolidated next-agent handoff, including the Linux cloud test setup and the ordered next work, is [docs/plan/NEXT_AGENT_HANDOFF_2026-10-04.md](docs/plan/NEXT_AGENT_HANDOFF_2026-10-04.md).
+
 ## Historical handoff — 2026-09-30 (preserved reference)
 
 The sections below describe the original proposal, audit and later repository separation. They are not current deployment instructions or current implementation status. The current continuation, master plan and accepted ADRs take precedence.

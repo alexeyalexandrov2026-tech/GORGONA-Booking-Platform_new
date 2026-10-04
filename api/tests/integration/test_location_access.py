@@ -373,6 +373,12 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 "-- Legal-entity branch scope:"
             )[2]
             owner_conn.execute(entity_scope[entity_scope.index("\n") :].encode("utf-8"))
+            delegation_scope = (
+                next(m.sql for m in load_migrations() if m.version == 11)
+                .partition("-- Branch-scoped and delegated transactions never read or write")[2]
+                .partition("-- A delegated transaction works with operational data only.")[0]
+            )
+            owner_conn.execute(delegation_scope[delegation_scope.index("\n") :].encode("utf-8"))
         elif damage == "weakened_function":
             definition = boundary.partition("create policy locations_location_scope")[0]
             owner_conn.execute(

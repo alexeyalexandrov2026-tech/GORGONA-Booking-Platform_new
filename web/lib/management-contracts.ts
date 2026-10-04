@@ -9,6 +9,14 @@ import {
   legalEntityListSchema,
   legalEntitySchema,
 } from "./legal-entity-contracts";
+import {
+  delegatedAccessSchema,
+  delegationGrantListSchema,
+  delegationGrantSchema,
+  incomingDelegationListSchema,
+  incomingDelegationSchema,
+  memberListSchema,
+} from "./delegation-contracts";
 const id = z.uuid();
 const instant = z.iso.datetime({ offset: true });
 const count = z.number().int().nonnegative();
@@ -96,6 +104,8 @@ const me = z.object({
       location_id: id.nullable(),
     }),
   ),
+  // Businesses served through another company's grant; absent from older servers.
+  delegations: z.array(delegatedAccessSchema).default([]),
 });
 const overview = z.object({
   salon_id: id,
@@ -175,6 +185,27 @@ export function managementResponseSchema(
       (method === "GET" || method === "PUT")
     )
       return legalEntitySchema;
+    if (business[1] === "/delegations" && method === "GET")
+      return delegationGrantListSchema;
+    if (
+      /^\/delegations\/[0-9a-f-]{36}$/i.test(business[1] ?? "") &&
+      (method === "GET" || method === "PUT")
+    )
+      return delegationGrantSchema;
+    if (
+      /^\/delegations\/[0-9a-f-]{36}\/revoke$/i.test(business[1] ?? "") &&
+      method === "POST"
+    )
+      return delegationGrantSchema;
+    if (business[1] === "/incoming-delegations" && method === "GET")
+      return incomingDelegationListSchema;
+    if (
+      /^\/incoming-delegations\/[0-9a-f-]{36}\/delegates\/[0-9a-f-]{36}$/i.test(
+        business[1] ?? "",
+      ) &&
+      (method === "PUT" || method === "DELETE")
+    )
+      return incomingDelegationSchema;
     throw new Error("Unrecognized business response contract");
   }
   const suffix = clean.replace(/^\/v1\/salons\/[0-9a-f-]{36}/i, "");
@@ -191,6 +222,7 @@ export function managementResponseSchema(
   if (suffix === "/overview") return overview;
   if (suffix === "/settings") return settings;
   if (suffix === "/activity") return z.array(activity);
+  if (suffix === "/members" && method === "GET") return memberListSchema;
   if (suffix === "/clients") return z.array(client);
   if (suffix === "/clients/history") return z.array(booking);
   if (suffix === "/bookings")

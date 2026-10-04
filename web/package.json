@@ -13,9 +13,11 @@
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "test:e2e": "playwright test tests/booking.spec.ts",
-    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts --project=desktop",
+    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts tests/delegation-contracts.spec.ts --project=desktop",
     "test:management": "playwright test tests/management.spec.ts",
-    "test:management:location": "playwright test tests/location-access.spec.ts"
+    "test:management:location": "playwright test tests/location-access.spec.ts",
+    "test:delegation:management": "playwright test tests/delegation-management.spec.ts",
+    "test:delegation:workspace": "playwright test tests/delegation-workspace.spec.ts"
   },
   "dependencies": {
     "next": "16.3.7",

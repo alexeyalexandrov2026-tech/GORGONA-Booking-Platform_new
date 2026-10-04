@@ -39,13 +39,53 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
   const [tick, setTick] = useState(0);
   const [authBusy, setAuthBusy] = useState(false);
   const membership = me?.memberships.find((item) => item.salon_id === salonId);
-  const locationLimited = membership?.location_id != null;
-  const navItems = locationLimited
+  // Work for another business through its grant (ADR-0016); the server decides each request.
+  const delegated =
+    membership === undefined
+      ? me?.delegations.filter((item) => item.business_id === salonId)
+      : undefined;
+  const delegation = delegated?.[0];
+  const delegatedPermissions = new Set(
+    delegated?.flatMap((item) => item.permissions) ?? [],
+  );
+  const locationLimited =
+    membership?.location_id != null ||
+    (delegated !== undefined &&
+      delegated.length > 0 &&
+      delegated.every((item) => item.location_id !== null));
+  const navItems = delegation
     ? NAV_ITEMS.filter(
         (item) =>
-          !["/business/", "/settings/", "/services/"].includes(item.href),
+          delegatedPermissions.has("booking.read") &&
+          ["/overview/", "/calendar/", "/bookings/", "/clients/"].includes(
+            item.href,
+          ),
       )
-    : NAV_ITEMS;
+    : locationLimited
+      ? NAV_ITEMS.filter(
+          (item) =>
+            !["/business/", "/settings/", "/services/"].includes(item.href),
+        )
+      : NAV_ITEMS;
+  const choices = me
+    ? [
+        ...me.memberships.map((m) => ({
+          id: m.salon_id,
+          label: `${m.salon_name ?? "Salon"} (${m.role})`,
+        })),
+        ...me.delegations
+          .filter(
+            (d, index, all) =>
+              all.findIndex((other) => other.business_id === d.business_id) ===
+                index &&
+              !me.memberships.some((m) => m.salon_id === d.business_id),
+          )
+          .map((d) => ({
+            id: d.business_id,
+            label: `${d.purpose} (delegated)`,
+          })),
+      ]
+    : [];
   const refresh = useCallback(() => {
     setLoading(true);
     setError(null);
@@ -72,12 +112,16 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       const data = await fetchMe();
       if (!active) return;
       const memberships = data.memberships.filter((m) => m.status === "active");
+      const available = [
+        ...memberships.map((m) => m.salon_id),
+        ...data.delegations.map((d) => d.business_id),
+      ];
+      const remembered = getActiveSalonId();
       const selected =
-        memberships.find((m) => m.salon_id === getActiveSalonId()) ??
-        memberships[0];
+        available.find((id) => id === remembered) ?? available[0] ?? null;
       setMe({ ...data, memberships });
-      setSalonId(selected?.salon_id ?? null);
-      setActiveSalonId(selected?.salon_id ?? null);
+      setSalonId(selected);
+      setActiveSalonId(selected);
     })()
       .catch(() => {
         if (active) {
@@ -127,7 +171,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
           <Link href="/overview/" className="mgmt-brand">
             GORGONA <span>Studio Manager</span>
           </Link>
-          {me && me.memberships.length > 1 ? (
+          {me && choices.length > 1 ? (
             <select
               className="mgmt-salon-select"
               aria-label="Active Salon"
@@ -137,17 +181,18 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
                 setSalonId(e.target.value);
               }}
             >
-              {me.memberships.map((m) => (
-                <option key={m.salon_id} value={m.salon_id}>
-                  {m.salon_name ?? "Salon"} ({m.role})
+              {choices.map((choice) => (
+                <option key={choice.id} value={choice.id}>
+                  {choice.label}
                 </option>
               ))}
             </select>
           ) : me && salonId ? (
             <div className="mgmt-salon-badge">
               <strong>
-                {me.memberships.find((m) => m.salon_id === salonId)
-                  ?.salon_name ?? "Active Salon"}
+                {membership?.salon_name ??
+                  delegation?.purpose ??
+                  "Active Salon"}
               </strong>
             </div>
           ) : null}
@@ -192,11 +237,20 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         </ul>
       </nav>
       <main className="mgmt-main" id="main-content">
-        {locationLimited && (
-          <p className="hold-note">
-            You have access to your assigned location. Company settings are
-            managed by the business owner.
+        {delegation ? (
+          <p className="hold-note delegated-note">
+            You are working for another business: {delegation.purpose}. Its
+            records stay with that business, your actions are recorded, and
+            access ends {new Date(delegation.valid_until).toLocaleString()} or
+            earlier if either business stops it.
           </p>
+        ) : (
+          locationLimited && (
+            <p className="hold-note">
+              You have access to your assigned location. Company settings are
+              managed by the business owner.
+            </p>
+          )
         )}
         {loading ? (
           <div className="mgmt-loading" aria-live="polite">
