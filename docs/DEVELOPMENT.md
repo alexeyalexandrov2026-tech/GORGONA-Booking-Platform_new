@@ -92,7 +92,7 @@ production migrations or deployment.
 
 ### Legal-entity drafts (stage 1)
 
-[ADR-0015](adr/0015-tenant-owned-legal-entity-drafts.md) adds owner-provided legal-entity drafts inside an existing business. Migration 0010 creates identities and immutable versions; no existing migration or tenant data is rewritten. The runtime requires all 19 approved scope-policy definitions before reporting readiness.
+[ADR-0015](adr/0015-tenant-owned-legal-entity-drafts.md) adds owner-provided legal-entity drafts inside an existing business. Migration 0010 creates identities and immutable versions; no existing migration or tenant data is rewritten. The runtime required all 19 approved scope-policy definitions before reporting readiness; migration 0011 extends this to the 45 definitions described below.
 
 | Route | Behavior |
 |---|---|
@@ -105,6 +105,27 @@ The internal code is immutable and unique per company; names alone never merge r
 The legal-entity section on `/business/` creates/edits real drafts and views saved history. It keeps the same entity ID and command after an uncertain response. No country, tax ID, currency, registration confirmation or branch assignment is silently populated, and saving does not activate finance or a delegated relationship.
 
 Focused acceptance uses `tests/unit/test_legal_entity_contracts.py` and `tests/integration/test_legal_entities.py` against disposable PostgreSQL. The existing management browser harness now checks legal entities on desktop/mobile and verifies their saved versions through SQL. The broken-boundary test restores the two 0010 policies after its test-only cascade.
+
+### Delegation between businesses (stage 1)
+
+[ADR-0016](adr/0016-limited-cross-business-delegation.md) lets an owner business grant another, independent business limited operational access. Migration 0011 adds grant identities, append-only grant revisions and serving-business designations; it is additive and also adds a unique key on memberships. The runtime now verifies 45 access-boundary definitions (both scope functions, every restrictive branch/delegation policy, the exact cross-tenant delegation policies and no extra policy on delegation tables) at startup, readiness and before every branch-scoped or delegated request.
+
+| Route | Behavior |
+|---|---|
+| `GET /v1/businesses/{id}/delegations?limit=50&after=GRANT` | Owner's grants with current terms and designated user IDs |
+| `GET /v1/businesses/{id}/delegations/{grant_id}?revision=1` | Current or explicitly selected revision |
+| `PUT /v1/businesses/{id}/delegations/{grant_id}` | `schema_version: 1`, `expected_revision`, `grantee_business_id`, `purpose`, `permissions`, optional `location_id`, `valid_from`, `valid_until` and required `Idempotency-Key` |
+| `POST /v1/businesses/{id}/delegations/{grant_id}/revoke` | `expected_revision`; appends a terminal revoked revision |
+| `GET /v1/businesses/{id}/incoming-delegations` | Grants addressed to this business, with its designated employees |
+| `PUT`/`DELETE /v1/businesses/{id}/incoming-delegations/{grant_id}/delegates/{membership_id}` | Designate or remove one active member of this business; `Idempotency-Key` required |
+
+All management routes require `delegation.manage`, held by business-wide owners only. Delegable permissions are `booking.read`, `booking.write`, `catalog.read` and `staff.read`; `booking.write` requires the three reads, and one revision lasts at most 366 days. The serving business ID must be supplied by the owner; unknown or unusable IDs and foreign locations return 422 without a record.
+
+A designated employee keeps signing in normally. `/v1/me` lists `delegations`, and only handlers that pass `allow_delegation=True` (workspace, overview, availability, bookings, clients, services list, staff list/schedule) admit them. Each delegated request is re-authorized against both businesses, the designation and the current revision, records `delegation.access`, writes owner-owned rows with `created_by = delegate:{user}@{serving business}/grant:{grant}`, and cannot read memberships, other users, invitations, legal entities, profiles, fact confirmations, embed origins, audit history or delegation records. Idempotency receipts remain keyed to the user.
+
+The `/business/` page shows owners both "Access for other businesses" and "Work you do for other businesses". The management layout lists delegated businesses as `purpose (delegated)` and limits navigation to Overview, Calendar, Bookings and Clients.
+
+Focused acceptance: `tests/unit/test_delegation_contracts.py`, `tests/integration/test_delegations.py` and, after rebuilding the web export with browsers required, `tests/integration/test_delegation_browser.py` (dispatches `test:delegation:management` and `test:delegation:workspace`). The location boundary test now also restores the three 0011 policies that depend on `gba.current_location_id()`.
 
 **Embedding allowlist.** The customer web may be framed only by origins the owner approves per tenant (migration 0007, audited, FORCE RLS). Every HTML response carries `Content-Security-Policy: frame-ancestors 'self' <approved>`; API responses carry `frame-ancestors 'none'`. With no approved origin, `X-Frame-Options: SAMEORIGIN` is added too. Plain `http://` origins are accepted only for loopback, and only in `local`/`test`/`ci`.
 

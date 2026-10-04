@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ManagementLayout } from "../../components/management-layout";
 import { LegalEntities } from "../../components/legal-entities";
+import { Delegations } from "../../components/delegations";
 import type {
   Business,
   BusinessFormat,
@@ -37,6 +38,13 @@ export default function BusinessPage() {
               m.location_id === null &&
               ["owner", "manager"].includes(m.role),
           )}
+          // Granting another business access is an owner decision (ADR-0016).
+          isOwner={me.memberships.some(
+            (m) =>
+              m.salon_id === salonId &&
+              m.location_id === null &&
+              m.role === "owner",
+          )}
         />
       )}
     </ManagementLayout>
@@ -46,9 +54,11 @@ export default function BusinessPage() {
 function BusinessContent({
   businessId,
   canManage,
+  isOwner,
 }: {
   businessId: string;
   canManage: boolean;
+  isOwner: boolean;
 }) {
   const [business, setBusiness] = useState<Business | null>(null);
   const [catalog, setCatalog] = useState<IndustryCatalog | null>(null);
@@ -307,6 +317,12 @@ function BusinessContent({
               )}
             </form>
             <LegalEntities businessId={businessId} canManage={canManage} />
+            {isOwner && (
+              <Delegations
+                businessId={businessId}
+                locations={business.locations}
+              />
+            )}
           </>
         )
       )}

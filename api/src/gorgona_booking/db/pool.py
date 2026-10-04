@@ -94,9 +94,9 @@ async def assert_safe_runtime_role(conn: RuntimeConnection) -> None:
     if problems:
         raise UnsafeDatabaseRoleError("runtime database role " + "; ".join(problems))
     # Imported here because schema checks share the RuntimeConnection type.
-    from gorgona_booking.db.schema_guard import assert_location_scope_ready
+    from gorgona_booking.db.schema_guard import assert_access_boundaries_ready
 
-    await assert_location_scope_ready(conn)
+    await assert_access_boundaries_ready(conn)
 
 
 def pool_readiness_probe(pool: RuntimePool, timeout: float = 2.0) -> Callable[[], Awaitable[None]]:

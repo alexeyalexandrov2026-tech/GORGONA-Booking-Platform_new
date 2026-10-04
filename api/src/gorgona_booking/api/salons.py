@@ -22,6 +22,8 @@ from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.metrics import CurrencyAmount, confirmed_booking_value
 from gorgona_booking.booking.models import IdempotencyKeyReusedError, booking_interval
 from gorgona_booking.booking.repository import load_booking
+from gorgona_booking.business.delegation_contracts import DelegatedAccessView
+from gorgona_booking.business.delegations import delegated_access
 from gorgona_booking.catalog.models import Quote, QuoteLine
 from gorgona_booking.catalog.quote import ServiceNotBookableError
 from gorgona_booking.customer import queries
@@ -75,6 +77,8 @@ class MeView(BaseModel):
     display_name: str
     platform_roles: list[str]
     memberships: list[MembershipView]
+    # Businesses the caller may currently serve through another company's grant (ADR-0016).
+    delegations: list[DelegatedAccessView] = Field(default_factory=list)
 
 
 class ServiceCreate(Strict):
@@ -377,6 +381,7 @@ async def me(request: Request, principal: CurrentPrincipal) -> MeView:
                 (principal.user_id,),
             )
         ).fetchall()
+        delegations = await delegated_access(conn, principal.user_id)
     return MeView(
         user_id=principal.user_id,
         display_name=principal.display_name,
@@ -385,6 +390,7 @@ async def me(request: Request, principal: CurrentPrincipal) -> MeView:
             MembershipView(salon_id=r[0], salon_name=r[1], role=r[2], status=r[3], location_id=r[4])
             for r in rows
         ],
+        delegations=list(delegations),
     )
 
 
@@ -401,6 +407,7 @@ async def workspace(salon_id: UUID, request: Request, principal: CurrentPrincipa
         Permission.STAFF_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         locations = await (
             await access.conn.execute("select id, name, timezone from gba.locations order by name")
@@ -435,6 +442,7 @@ async def salon_overview(
         Permission.BOOKING_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         conn = access.conn
         tenant_row = await (
@@ -626,6 +634,7 @@ async def management_availability(
         Permission.BOOKING_WRITE,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         access.require_location(body.location_id)
         quote = None
@@ -682,6 +691,7 @@ async def list_bookings(
         Permission.BOOKING_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         if location_id is not None:
             access.require_location(location_id)
@@ -737,6 +747,7 @@ async def create_staff_booking(
         Permission.BOOKING_WRITE,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         access.require_location(body.location_id)
         conn = access.conn
@@ -766,7 +777,7 @@ async def create_staff_booking(
 
         await repo.set_audit_context(
             conn,
-            actor=principal.actor,
+            actor=access.actor,
             reason="created_confirmed",
             request_id=get_request_id(request),
         )
@@ -783,7 +794,7 @@ async def create_staff_booking(
                     ends_at=ends_at,
                     hold_ttl_seconds=600,
                     quote=quote,
-                    created_by=principal.actor,
+                    created_by=access.actor,
                 )
                 cap_hash = hashlib.sha256(f"staff:{uuid7()}".encode()).hexdigest()
                 await conn.execute(
@@ -835,6 +846,7 @@ async def reschedule_booking(
         Permission.BOOKING_WRITE,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         conn = access.conn
         scope, replay = await _claim_mutation(
@@ -900,7 +912,7 @@ async def reschedule_booking(
         # Cancel old booking to release its allocation in gba.booking_allocations
         await repo.set_audit_context(
             conn,
-            actor=principal.actor,
+            actor=access.actor,
             reason="rescheduled_to_new_booking",
             request_id=get_request_id(request),
         )
@@ -909,7 +921,7 @@ async def reschedule_booking(
         # Insert new booking
         await repo.set_audit_context(
             conn,
-            actor=principal.actor,
+            actor=access.actor,
             reason="rescheduled_from_old_booking",
             request_id=get_request_id(request),
         )
@@ -926,7 +938,7 @@ async def reschedule_booking(
                     ends_at=ends_at,
                     hold_ttl_seconds=600,
                     quote=quote,
-                    created_by=principal.actor,
+                    created_by=access.actor,
                 )
                 if customer_name is not None:
                     await conn.execute(
@@ -973,6 +985,7 @@ async def cancel_booking(
         Permission.BOOKING_WRITE,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         conn = access.conn
         scope, replay = await _claim_mutation(
@@ -989,7 +1002,7 @@ async def cancel_booking(
             raise ConflictError(f"A {status.lower()} booking cannot be cancelled")
         else:
             await repo.set_audit_context(
-                conn, actor=principal.actor, reason=body.reason, request_id=get_request_id(request)
+                conn, actor=access.actor, reason=body.reason, request_id=get_request_id(request)
             )
             await repo.set_status(conn, booking_id, "CANCELLED")
 
@@ -1021,6 +1034,7 @@ async def list_clients(
         Permission.BOOKING_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         conn = access.conn
         like_pattern = f"%{q.strip()}%" if q and q.strip() else None
@@ -1070,6 +1084,7 @@ async def client_history(
         Permission.BOOKING_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         rows = await (
             await access.conn.execute(
@@ -1096,6 +1111,7 @@ async def list_services(
         Permission.CATALOG_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         rows = await (
             await access.conn.execute(
@@ -1277,6 +1293,7 @@ async def list_staff(
         Permission.STAFF_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         rows = await (
             await access.conn.execute(
@@ -1363,6 +1380,7 @@ async def get_staff_schedule(
         Permission.STAFF_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         conn = access.conn
         staff = await (
@@ -1676,6 +1694,7 @@ async def get_booking(
         Permission.BOOKING_READ,
         request_id=get_request_id(request),
         allow_location_scope=True,
+        allow_delegation=True,
     ) as access:
         booking = await load_booking(access.conn, booking_id)
     return BookingView(

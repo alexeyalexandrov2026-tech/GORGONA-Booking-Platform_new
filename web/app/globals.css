@@ -73,6 +73,42 @@
   overflow-wrap: anywhere;
 }
 
+.delegations {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.delegation-list {
+  display: grid;
+  gap: 20px;
+  padding: 0;
+  list-style: none;
+}
+.delegation-list > li {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.delegation-list h3 {
+  margin: 0 0 8px;
+}
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.danger {
+  background: #70291f;
+  border-color: #70291f;
+  color: #fff;
+}
+.delegated-note {
+  border-left: 4px solid var(--accent);
+  padding: 8px 16px;
+}
+
 :root {
   --ink: #28221e;
   --ivory: #faf7f2;

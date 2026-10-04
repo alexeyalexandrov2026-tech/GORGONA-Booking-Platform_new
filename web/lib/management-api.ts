@@ -8,6 +8,20 @@ import {
   type LegalEntityInput,
   type LegalEntityPage,
 } from "./legal-entity-contracts";
+import {
+  delegationGrantListSchema,
+  delegationGrantSchema,
+  incomingDelegationListSchema,
+  incomingDelegationSchema,
+  memberListSchema,
+  type DelegatedAccess,
+  type DelegationGrant,
+  type DelegationGrantInput,
+  type DelegationGrantPage,
+  type IncomingDelegation,
+  type IncomingDelegationPage,
+  type Member,
+} from "./delegation-contracts";
 import type {
   Business,
   BusinessProfile,
@@ -259,6 +273,156 @@ export interface MeView {
   display_name: string;
   platform_roles: string[];
   memberships: MembershipView[];
+  delegations: DelegatedAccess[];
+}
+
+// --- Delegation between independent businesses (ADR-0016) ---
+
+function unsafe(message: string): ManagementApiError {
+  return new ManagementApiError("INVALID_RESPONSE", message);
+}
+
+function checkedGrant(
+  value: unknown,
+  businessId: string,
+  grantId: string,
+): DelegationGrant {
+  const result = delegationGrantSchema.parse(value);
+  if (result.business_id !== businessId || result.grant_id !== grantId)
+    throw unsafe("Unable to load this delegation safely.");
+  return result;
+}
+
+function checkedIncoming(
+  value: unknown,
+  businessId: string,
+  grantId: string,
+): IncomingDelegation {
+  const result = incomingDelegationSchema.parse(value);
+  if (result.business_id !== businessId || result.grant_id !== grantId)
+    throw unsafe("Unable to load this delegation safely.");
+  return result;
+}
+
+export async function fetchDelegations(
+  businessId: string,
+  after?: string,
+): Promise<DelegationGrantPage> {
+  const query = after ? `?after=${encodeURIComponent(after)}` : "";
+  const result = delegationGrantListSchema.parse(
+    await managementFetch(`/v1/businesses/${businessId}/delegations${query}`),
+  );
+  if (result.business_id !== businessId)
+    throw unsafe("Unable to load these delegations safely.");
+  return result;
+}
+
+export async function fetchDelegation(
+  businessId: string,
+  grantId: string,
+  revision?: number,
+): Promise<DelegationGrant> {
+  const query = revision === undefined ? "" : `?revision=${revision}`;
+  const result = checkedGrant(
+    await managementFetch(
+      `/v1/businesses/${businessId}/delegations/${grantId}${query}`,
+    ),
+    businessId,
+    grantId,
+  );
+  if (revision !== undefined && result.revision !== revision)
+    throw unsafe("Unable to load this saved version safely.");
+  return result;
+}
+
+export async function saveDelegation(
+  businessId: string,
+  grantId: string,
+  body: DelegationGrantInput,
+  key: string,
+): Promise<DelegationGrant> {
+  return checkedGrant(
+    await managementFetch(
+      `/v1/businesses/${businessId}/delegations/${grantId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(body),
+        headers: { "Idempotency-Key": key },
+      },
+    ),
+    businessId,
+    grantId,
+  );
+}
+
+export async function revokeDelegation(
+  businessId: string,
+  grantId: string,
+  expectedRevision: number,
+  key: string,
+): Promise<DelegationGrant> {
+  return checkedGrant(
+    await managementFetch(
+      `/v1/businesses/${businessId}/delegations/${grantId}/revoke`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema_version: 1,
+          expected_revision: expectedRevision,
+        }),
+        headers: { "Idempotency-Key": key },
+      },
+    ),
+    businessId,
+    grantId,
+  );
+}
+
+export async function fetchIncomingDelegations(
+  businessId: string,
+  after?: string,
+): Promise<IncomingDelegationPage> {
+  const query = after ? `?after=${encodeURIComponent(after)}` : "";
+  const result = incomingDelegationListSchema.parse(
+    await managementFetch(
+      `/v1/businesses/${businessId}/incoming-delegations${query}`,
+    ),
+  );
+  if (result.business_id !== businessId)
+    throw unsafe("Unable to load these delegations safely.");
+  return result;
+}
+
+export async function changeDelegate(
+  businessId: string,
+  grantId: string,
+  membershipId: string,
+  designated: boolean,
+  key: string,
+): Promise<IncomingDelegation> {
+  const result = checkedIncoming(
+    await managementFetch(
+      `/v1/businesses/${businessId}/incoming-delegations/${grantId}/delegates/${membershipId}`,
+      {
+        method: designated ? "PUT" : "DELETE",
+        headers: { "Idempotency-Key": key },
+      },
+    ),
+    businessId,
+    grantId,
+  );
+  const listed = result.delegates.some(
+    (item) => item.membership_id === membershipId,
+  );
+  if (listed !== designated)
+    throw unsafe("Unable to confirm this designation safely.");
+  return result;
+}
+
+export async function fetchMembers(salonId: string): Promise<Member[]> {
+  return memberListSchema.parse(
+    await managementFetch(`/v1/salons/${salonId}/members`),
+  );
 }
 
 export class ManagementApiError extends Error {
