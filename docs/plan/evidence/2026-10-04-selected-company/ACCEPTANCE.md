@@ -2,6 +2,9 @@
 
 Date: 2026-10-04. Branch: `codex/booking-state-isolation`.
 Base: `ef423f3c672bf2da219d6aef85f9a44cf1f37317`, the delegation branch.
+Code commit: `951708af2b88b9436abf2ddadd6de608cbf9f99d`.
+Draft [PR #3](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/3)
+targets the unmerged delegation branch, so its diff contains only this package.
 PR #1 and PR #2 were open, draft and unmerged when this package started.
 The owner's foundation checkout was clean and remains untouched.
 
@@ -39,6 +42,12 @@ The private DSN was passed only through the test process environment.
 | New regression file plus existing onboarding tests after fixes | PASS: 14 passed, 4.73 s; exit 0 |
 | Ruff format/check and strict mypy after code changes | PASS: 135 files; exit 0 |
 | Final complete API suite with required PostgreSQL/browser | PASS: 479 passed, 4 skipped, 146.75 s; exit 0 |
+| GitHub push CI for code SHA `951708a`, including PostgreSQL/browser/container gates | PASS: 482 passed, 1 optional external-site skip, 112.46 s |
+
+Exact CI: [run 37221017342](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37221017342),
+job `111491194563`. The web checks/build, 16 web unit tests, image build, Ruff
+and mypy all succeeded. PR run `37221040137` also completed successfully;
+the numerical result above was read from the push job log.
 
 The red run returned both tenant states as `not_live`, allowed unconfirming a live
 fact, left live settings unconfirmed, counted an owner from elsewhere, published

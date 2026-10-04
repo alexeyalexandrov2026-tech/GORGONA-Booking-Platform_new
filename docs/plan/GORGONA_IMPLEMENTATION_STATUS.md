@@ -14,6 +14,11 @@
 PASS 14 после исправления. Ruff/format и mypy PASS, 135 файлов. Полная suite:
 **479 passed, 4 skipped, 146.75 с, exit 0**, обязательные PostgreSQL 18.6 и браузеры.
 Пропущены три контейнерных gate и дополнительный внешний site gate.
+Опубликовано `951708af2b88b9436abf2ddadd6de608cbf9f99d`, draft
+[PR #3](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/3)
+в пока не слитую ветку PR #2. **GitHub CI PASS: 482 passed, 1 optional skip,
+112.46 с**, [run 37221017342](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37221017342),
+включая контейнерные gates.
 [Доказательства и границы](evidence/2026-10-04-selected-company/ACCEPTANCE.md).
 Подразделения и группы компаний остаются следующими продуктовыми пакетами.
 
