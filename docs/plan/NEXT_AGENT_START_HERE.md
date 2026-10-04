@@ -6,7 +6,7 @@
 
 - Рабочая копия: `C:\Users\alexa\Documents\ChatGPT\Gorgona Booking`.
 - Репозиторий: `https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new`, ветка **`codex/universal-business-foundation`** (draft PR #1). `main` содержит только начальный README; merge не выполнялся.
-- Последний коммит этой сессии исправляет гонку решений в группах и добавляет этот документ (см. `git log -3`). **Первое действие — проверить GitHub CI этого точного SHA** (вкладка Actions или `gh run list --branch codex/universal-business-foundation`).
+- **Первое действие — проверить GitHub CI последнего точного SHA** (`git log -3`; вкладка Actions или публичный API `https://api.github.com/repos/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs?branch=codex/universal-business-foundation` — `gh` на машине нет, логи требуют авторизации, статусы шагов читаются без нее).
 
 ## 2. Что сделано и чем подтверждено
 
@@ -15,7 +15,7 @@
 | Юридические лица (черновики) | [0015](../adr/0015-tenant-owned-legal-entity-drafts.md) | 0010 | CI PASS `d97924f` |
 | CORE-03 A — подразделения | [0016](../adr/0016-tenant-owned-departments.md) | 0011 | CI PASS `5b3c00b`, [приемка](evidence/2026-10-04-departments/ACCEPTANCE.md) |
 | CORE-03 B — межкомпанейское делегирование | [0017](../adr/0017-cross-company-delegation.md) | 0012 | CI PASS `ed370c6`, [приемка](evidence/2026-10-04-delegation/ACCEPTANCE.md) |
-| CORE-03 C — группы компаний | [0018](../adr/0018-company-groups.md) | 0013 | Локально PASS; **CI на `c9193b2` FAIL в шаге pytest** (логи требуют авторизации и не прочитаны). Найдена и исправлена гонка: если «remove» фиксировался раньше «accept», конкурирующий accept получал 404 вместо 409. Регрессионный тест был красным до исправления и зеленым после. Исправление в следующем коммите; его CI нужно подтвердить. Если CI снова FAIL — прочитать лог шага `uv run pytest` (нужен `gh auth login`) |
+| CORE-03 C — группы компаний | [0018](../adr/0018-company-groups.md) | 0013 | CI PASS `6a81dfd`, [приемка](evidence/2026-10-04-groups/ACCEPTANCE.md). CI на `c9193b2` был FAIL: гонка remove→accept (404 вместо 409), исправлена с red→green тестом |
 
 Подробные результаты каждого шага: [реестр реализации](GORGONA_IMPLEMENTATION_STATUS.md). Состояние всех 28 критериев: [аудит](GORGONA_PLAN_AUDIT_2026-10-04.md). Технические маршруты и поведение API: [DEVELOPMENT](../DEVELOPMENT.md).
 
@@ -59,9 +59,10 @@
 
 - **Отдельная задача:** запросы к `gba.memberships` без фильтра компании видят собственные членства вызывающего в других компаниях (permissive policy `memberships_self_read`). Исправлен только `list_members`. Остаются `onboarding/readiness.py` (подсчет владельцев при go-live), `onboarding/service.py`, проверка последнего владельца в `identity/invitations.py`. Нужны тест red→green и явный фильтр.
 - Записаны в ADR-0017/0018: аудит на каждый делегированный запрос (объем); `/me` не видит, приостановлена ли компания-владелец; пагинация членств групп; нет блокировки приглашающих; дублирование помощников idempotent-команд в модулях этапа 1; хрупкий текстовый тест списка делегируемых маршрутов.
+- **Отдельная задача (не проверена):** web-схема `readiness` в `web/lib/management-contracts.ts` требует поле `missing`, а API `ReadinessView` (`api/setup.py`) возвращает `items`; ответы сохранения `/business-hours`, `/policies`, `/facts/{key}` в web, вероятно, не проходят проверку. Нужен тест red→green.
 - Docker на машине нет: контейнерные gates проверяются только в CI.
 - Azure/staging, промышленная миграция, реальные провайдеры, нагрузка/RPO/RTO и отраслевые пилоты не проверялись.
 
 ## 7. Текст поручения следующему агенту
 
-> Продолжи самостоятельную GORGONA в `C:\Users\alexa\Documents\ChatGPT\Gorgona Booking`, ветка `codex/universal-business-foundation`. Сначала прочитай `docs/plan/NEXT_AGENT_START_HERE.md`, AGENTS.md, мастер-план, реестр и handoff; не удаляй чужую незакоммиченную работу. Проверь GitHub CI последнего коммита. Если он красный — исправь причину с тестом red→green. Затем запиши в реестр приемку шага C (evidence по образцу `evidence/2026-10-04-delegation`). После этого составь план и ADR-0019 для пакета D и согласуй их с владельцем до кода. После каждого шага обновляй handoff, реестр, аудит, DEVELOPMENT и ADR/evidence. Без merge, deploy и промышленных миграций. Отчет по-русски с точными PASS/FAIL/NOT TESTED.
+> Продолжи самостоятельную GORGONA в `C:\Users\alexa\Documents\ChatGPT\Gorgona Booking`, ветка `codex/universal-business-foundation`. Сначала прочитай `docs/plan/NEXT_AGENT_START_HERE.md`, AGENTS.md, мастер-план, реестр и handoff; не удаляй чужую незакоммиченную работу. Проверь GitHub CI последнего коммита. Если он красный — исправь причину с тестом red→green. Шаг C принят (evidence `evidence/2026-10-04-groups`). Продолжи пакет D по ADR-0019 (когда он появится — по его плану и состоянию в реестре); новый пакет — свой план и ADR, согласованные с владельцем до кода. После каждого шага обновляй handoff, реестр, аудит, DEVELOPMENT и ADR/evidence. Без merge, deploy и промышленных миграций. Отчет по-русски с точными PASS/FAIL/NOT TESTED.

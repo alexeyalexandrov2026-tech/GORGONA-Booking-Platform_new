@@ -1,6 +1,6 @@
 # ADR-0018 — Company groups without shared access
 
-Status: accepted for the stage-1 implementation increment (CORE-03 step C). Technical acceptance is recorded separately after full CI on the exact commit.
+Status: accepted for the stage-1 implementation increment (CORE-03 step C). Technically verified on `6a81dfd` with full CI; see the [acceptance record](../plan/evidence/2026-10-04-groups/ACCEPTANCE.md).
 
 ## Context
 
