@@ -126,17 +126,18 @@ SCENARIOS: tuple[ScenarioReadiness, ...] = (
     ),
     ScenarioReadiness(
         id="CORE-02",
-        status=Readiness.IMPLEMENTED,
-        scope="Profile drafts were verified with the audit. Configuration publication with module "
-        "registry (ADR-0019) is implemented and awaits CI acceptance; custom fields and process "
-        "configuration are not implemented.",
+        status=Readiness.TECHNICALLY_VERIFIED,
+        scope="Configuration versions, module availability and readiness records (ADR-0019); "
+        "custom fields and process configuration are not implemented.",
+        code_version="5320c4a",
         schema_version=14,
         settings_version=1,
         evidence=(
             "api/tests/integration/test_business_profiles.py",
             "api/tests/integration/test_configurations.py",
-            "docs/adr/0019-configuration-publication-and-modules.md",
+            "docs/plan/evidence/2026-10-04-configuration/ACCEPTANCE.md",
         ),
+        verified_on=_AUDITED,
     ),
     _planned(
         "CORE-03",

@@ -1,6 +1,6 @@
 # ADR-0019 — Configuration publication, module registry and readiness records
 
-Status: accepted by the owner on 2026-10-04 for the stage-1 implementation increment (package D, CORE-02). Technical acceptance is recorded separately after full CI on the exact commit.
+Status: accepted by the owner on 2026-10-04 for the stage-1 implementation increment (package D, CORE-02). Technically verified on `5320c4a` with full CI; see the [acceptance record](../plan/evidence/2026-10-04-configuration/ACCEPTANCE.md).
 
 ## Context
 

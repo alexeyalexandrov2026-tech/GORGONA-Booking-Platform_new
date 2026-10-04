@@ -62,7 +62,7 @@
 | Полная API suite, PostgreSQL 18.6, браузеры | **PASS: 527; 4 skipped; 354.53 с** (три container gate без Docker, внешний site gate) — до правок ревью; после правок повторно: unit + конфигурация + группы + все 5 браузерных harness **292 passed** |
 | Review `/code-review high` (в той же сессии) | 6 находок: исправлены 4 (обрезанная история без пометки, кнопки до загрузки workspace, двойной запрос профиля, дубликат базового контракта); 2 записаны в ADR-0019 (клиентский bootstrap не сообщает об отключении; стоимость проверки триггера в guard) |
 | Тест `test_location_access` (missing_boundary) | Обновлен: восстанавливает политики 0014 после `drop … cascade` |
-| CI точного SHA | Ожидается после push |
+| CI точного SHA | **PASS** на `5320c4a`: PR CI [37244707198](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37244707198), push CI 37244704525, все шаги успешны; счетчики CI не получены. [Приемка](evidence/2026-10-04-configuration/ACCEPTANCE.md). Статус CORE-02 в `readiness_registry.py` поднят до technically_verified отдельным коммитом документов/данных |
 
 Новые тесты написаны вместе с кодом; красная фаза — отсутствие модуля/маршрутов (unit-тест реестра падал до появления интеграционного теста). Контейнерные gates локально не выполнялись.
 
