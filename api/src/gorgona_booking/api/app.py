@@ -100,7 +100,10 @@ def create_app(
     app.add_middleware(RequestIdMiddleware)
     install_error_handlers(app)
     app.include_router(health.router)
-    app.include_router(holds.router)
+    # The M1 endpoint omits customer policy/capability validation and is development only.
+    # Hosted bookings use customer.router; the underlying booking service remains reusable.
+    if settings.environment in ("local", "test", "ci"):
+        app.include_router(holds.router)
     app.include_router(salons.router)
     app.include_router(businesses.router)
     app.include_router(members.router)

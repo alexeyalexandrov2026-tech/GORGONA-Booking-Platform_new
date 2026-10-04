@@ -21,7 +21,7 @@ No customer data, tokens or booking IDs are written to the evidence.
         --second-tenant-url https://<ep2>.azurefd.net \\
         --origin-fqdn <app>.<env>.azurecontainerapps.io \\
         --postgres-fqdn <server>.postgres.database.azure.com \\
-        --authorized-origin https://<ka-site> --day 2026-10-20 \\
+        --authorized-origin https://<approved-business-origin> --day 2026-10-20 \\
         --image-digest sha256:... --allow-remote --out http.json
 """
 
@@ -79,6 +79,7 @@ REQUIRED: dict[str, frozenset[str]] = {
     "csp_frame_ancestors": frozenset(
         {"html_frame_ancestors_governed", "api_frame_ancestors_none", "unauthorized_origin_absent"}
     ),
+    # Version-one evidence names remain compatible; the supplied origin is business-neutral.
     "authorized_ka_origin": frozenset({"ka_origin_authorized"}),
     "direct_origin_bypass": frozenset({"direct_origin_forged_headers_refused"}),
     "secrets_managed_identity": frozenset(
@@ -577,7 +578,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     h.add_argument("--second-tenant-url", help="Front Door URL of a second FAKE tenant")
     h.add_argument("--origin-fqdn", required=True, help="container app FQDN (must be unreachable)")
     h.add_argument("--postgres-fqdn", required=True)
-    h.add_argument("--authorized-origin", help="the KA Nails site origin approved for framing")
+    h.add_argument(
+        "--authorized-origin", help="the business origin explicitly approved for framing"
+    )
     h.add_argument("--unauthorized-origin", default="https://unapproved.example.test")
     h.add_argument("--day", required=True, help="ISO date with open FAKE availability")
     h.add_argument("--staff-token-env", help="env var holding a valid staff bearer token")

@@ -5,6 +5,7 @@ here we check the API maps domain outcomes to the error envelope and statuses.
 """
 
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -21,7 +22,7 @@ from gorgona_booking.booking.models import (
     SlotConflictError,
 )
 from gorgona_booking.catalog.quote import ServiceNotBookableError
-from gorgona_booking.config import Settings
+from gorgona_booking.config import Environment, Settings
 from gorgona_booking.errors import DomainError
 
 pytestmark = pytest.mark.anyio
@@ -66,8 +67,8 @@ def _result(replayed: bool = False) -> BookingResult:
     )
 
 
-def _app(service: StubService) -> FastAPI:
-    app = create_app(Settings())
+def _app(service: StubService, settings: Settings | None = None) -> FastAPI:
+    app = create_app(settings or Settings())
 
     async def tenant() -> UUID:
         return TENANT
@@ -145,3 +146,46 @@ async def test_without_a_database_booking_is_unavailable() -> None:
     response = await _post(create_app(Settings()), BODY, KEY)
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "DATABASE_UNAVAILABLE"
+
+
+@pytest.mark.parametrize("environment", ["staging", "production"])
+@pytest.mark.parametrize("export_mounted", [False, True])
+async def test_legacy_hold_is_not_served_in_hosted_environments(
+    environment: Environment, export_mounted: bool, tmp_path: Path
+) -> None:
+    # Test-only authorization and IdP configuration; no live service or database is used.
+    front_door_id = "a0a0a0a0-bbbb-cccc-dddd-e1e1e1e1e1e1"
+    settings = Settings(
+        environment=environment,
+        auth_issuer="https://idp.example.test/",
+        auth_audience="api://gorgona-test",
+        auth_jwks_url="https://idp.example.test/jwks",
+        trusted_proxy="azure_front_door",
+        front_door_id=front_door_id,
+        production_authorization="PA-20261004-test-only" if environment == "production" else None,
+        customer_web_dir=tmp_path if export_mounted else None,
+    )
+    service = StubService(_result())
+    app = _app(service, settings)
+    response = await _post(
+        app,
+        BODY,
+        {**KEY, "X-Azure-FDID": front_door_id, "X-Forwarded-Host": "fake-business.test"},
+    )
+    # The static export rejects POST with 405; without that mount the route is absent (404).
+    assert response.status_code == (405 if export_mounted else 404)
+    assert service.calls == []
+    paths = app.openapi()["paths"]
+    assert "/v1/holds" not in paths
+    assert "/v1/customer/holds" in paths
+    assert "/v1/customer/bookings/{booking_id}/confirm" in paths
+
+
+@pytest.mark.parametrize("environment", ["local", "test", "ci"])
+async def test_development_environments_preserve_the_legacy_hold(environment: Environment) -> None:
+    service = StubService(_result())
+    app = _app(service, Settings(environment=environment))
+    response = await _post(app, BODY, KEY)
+    assert response.status_code == 201
+    assert len(service.calls) == 1
+    assert "/v1/holds" in app.openapi()["paths"]

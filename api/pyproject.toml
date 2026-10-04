@@ -1,7 +1,7 @@
 [project]
 name = "gorgona-booking"
 version = "0.1.0"
-description = "GORGONA Booking AI: tenant-aware appointment platform (KA Nails is the first tenant)."
+description = "GORGONA business platform: tenant-isolated APIs and reusable appointment workflows."
 readme = "../README.md"
 requires-python = ">=3.14,<3.15"
 license = "LicenseRef-Proprietary"

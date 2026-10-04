@@ -36,7 +36,7 @@ After its gates pass for an image digest, production is created from the **same*
 | 6 | Private PostgreSQL | `postgres.bicep` (public access disabled, private endpoint) | none | `http`: a login attempt from outside never reaches PostgreSQL authentication. `azure`: public access disabled |
 | 7 | Tenant isolation | Forced row-level security, host resolution, per-booking capability | `test_tenant_isolation`, `test_customer_api`; `test_bridge_acceptance_live` (two hosts) | `http`: two FAKE tenants on the two staging Front Door endpoints resolve separately; tenant A's booking is refused on tenant B's host |
 | 8 | CSP / frame-ancestors | `api/framing.py`, migration 0007 (governed allowlist) | `test_embed_origins`, Chromium allow/deny tests | `http`: HTML carries `frame-ancestors 'self' <approved>`; the API carries `'none'`; an unapproved origin is absent |
-| 9 | Authorized KA Nails origin | `gba-db embed-origin add` (audited) | Chromium test with a FAKE approved origin | `http`: the owner-approved KA site origin is listed in `frame-ancestors` |
+| 9 | Authorized business origin | `gba-db embed-origin add` (audited) | Chromium test with a FAKE approved origin | `http`: the explicitly approved origin for the selected test business is listed in `frame-ancestors` |
 | 10 | Direct-origin bypass refused | Private Link only, plus the Front Door ID check | `test_trusted_proxy` (forged headers return 404) | `http`: a direct request with forged Front Door headers never reaches the app |
 | 11 | Secrets and managed identity | Key Vault references, user-assigned identities, AcrPull, no admin user | `test_container_image` (no baked secrets) | `azure`: no plaintext secrets, registry pull by identity, Key Vault public access disabled |
 | 12 | Monitoring | OTLP to App Insights, JSON logs with request IDs, `alerts.bicep` | `test_request_logging`, `test_observability` | `azure`: this run's request IDs found in Log Analytics; all alert rules enabled |
@@ -56,7 +56,7 @@ After its gates pass for an image digest, production is created from the **same*
    - Staging uses the tenant's Entra issuer with audience `api://gorgona-staging`.
    - No app registration exists, so staff APIs fail closed.
    - Gate 2 needs one Entra app registration and a test staff identity linked with `gba-db link-user`. That is an identity-plane change that needs your approval.
-3. **KA Nails origin.** Gate 9 needs the owner-approved KA public site origin. In staging it is approved on a FAKE tenant; the KA tenant stays `not_live`.
+3. **Approved business origin.** Gate 9 tests framing authorization using an explicitly approved origin on a FAKE staging business. It does not require a particular external project, website or real customer's launch. The existing version-one evidence keys `authorized_ka_origin` / `ka_origin_authorized` are retained as historical schema names for compatibility; their check concerns the supplied origin.
 4. **Drills.** The revision rollback is quick. The PITR drill restores to a **new** server, which is billed while it exists, and is deleted afterwards. Both happen inside the approved staging window.
 5. **Rate-limit probe.** The probe sends up to the configured number of FAKE writes; it is opt-in and runs inside the window.
 

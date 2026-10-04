@@ -6,12 +6,12 @@ Primary region: **Central US** (owner decision 2026-10-01; East US 2 was dropped
 
 ## 1. System context
 
-GORGONA is a multi-tenant booking platform. KA Nails is the first tenant; its public website lives in a separate repository and embeds or links to the hosted `/book/` wizard.
+GORGONA is an independent multi-tenant business platform with reusable booking workflows. A business can use its platform storefront or separately authorized integration interfaces. External websites remain separate projects; no particular business website is a prerequisite for developing or releasing GORGONA.
 
 Customers, salon staff and platform operators reach GORGONA only through Front Door, using each tenant's registered hostname. PostgreSQL remains the only booking authority. The AI learning plane is a separate, persistent boundary that consumes evidence. It never decides prices, availability or confirmations.
 
 ```
- salon customers ──┐        tenant public site (KA-nails repo, own hosting)
+ business clients ─┐        optional business website (separate project)
  salon staff  ─────┤              │ iframe (allowlisted origin) / full-page link
  operators ────────┤              ▼
                    └──────► https://<tenant booking host>/book/ , /v1/...
@@ -27,7 +27,7 @@ Customers, salon staff and platform operators reach GORGONA only through Front D
 Production is **gated, not abandoned**. The intended production path is:
 
 ```
-KA Nails / GORGONA Booking public frontend
+GORGONA business platform public frontend
   → optional Cloudflare edge (public frontend delivery only; no backend, no booking logic, no data)
   → Azure Front Door Premium → WAF / security policies (managed rules, bot rules, rate limits)
   → Private Link → private Azure Container Apps (environment public network access disabled)
@@ -47,7 +47,7 @@ KA Nails / GORGONA Booking public frontend
   - private PostgreSQL;
   - tenant isolation;
   - CSP `frame-ancestors`;
-  - the authorized KA Nails origin;
+  - an approved origin used to test tenant-specific framing authorization;
   - direct-origin bypass negative tests;
   - secrets and managed identity;
   - monitoring;

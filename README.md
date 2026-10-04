@@ -4,16 +4,20 @@ GORGONA is being expanded from a tenant-isolated appointment platform into a mod
 
 The active repository is [GORGONA-Booking-Platform_new](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new). The owner's 2026-10-04 decision supersedes the previous repository destination. Existing source and uncommitted improvements were preserved during the [repository transition](docs/plan/REPOSITORY_TRANSITION_2026-10-04.md); historical milestone reports remain available.
 
+This repository develops the independent GORGONA business platform. KA Nails is a separate project and is outside this repository's development, release and acceptance scope. Inherited references, candidate fixtures and external-site test reports record earlier work; they do not make that project a platform dependency or assign its development to GORGONA agents.
+
 ## Implemented foundation
 
 - PostgreSQL tenant isolation, transactional appointment holds, price calculation, compatible add-ons and immutable booking snapshots.
-- Customer booking and OIDC-authenticated management pages; KA Nails remains a separate branded client of the shared engine.
+- Reusable customer booking and OIDC-authenticated business management pages.
 - Stable industry identifiers and a typed draft profile supporting several business activities without duplicating the company.
 - Local business dates, ISO weekdays, split operating hours and appointment value distinguished from paid revenue.
 - One-location membership permissions, restricted operational pages, database policy verification and compatible replay of older management responses.
 - A separate AI learning package with versioned examples, evaluation, approval and rollback. Its current local text embedder is deterministic hashing; this is not a general-purpose LLM assistant.
 
 Industry selection does not establish a complete logistics, restaurant, rental, construction or financial workflow. These modules remain development targets. See the [implementation register](docs/plan/GORGONA_IMPLEMENTATION_STATUS.md) and [current handoff](docs/plan/NEXT_AGENT_HANDOFF_2026-10-04.md) for evidence and next work.
+
+The [plan-conformance audit](docs/plan/GORGONA_PLAN_AUDIT_2026-10-04.md) maps all 28 acceptance criteria to current implementation and verification. The shared business foundation is partial. The legacy development-only `/v1/holds` route is available only in local/test/CI environments; hosted customer booking uses the validated `/v1/customer/holds` flow.
 
 ## Development and verification
 
@@ -31,7 +35,7 @@ npm run build
 
 API gates include Ruff, strict mypy and pytest against a disposable PostgreSQL database. Browser and container gates must be explicitly required in their applicable environments. Historical results belong to their recorded source snapshots; the transition report records checks repeated in this checkout.
 
-KA Nails remains `not_live`. Its timezone, operating hours, staff, service durations, policies and production domain require confirmed owner facts. Never infer them from test fixtures or publish fake booking/payment success.
+Each business's timezone, operating hours, staff, service durations, policies and public domain require verified configuration. Never infer business facts from test fixtures or publish fake booking/payment success.
 
 ## Collaboration and hosting
 

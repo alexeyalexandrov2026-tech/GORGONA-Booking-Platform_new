@@ -1,7 +1,9 @@
 """POST /v1/holds: reserve a slot for a limited time.
 
 M1 development surface only: no authentication or rate limiting, so it must not
-be exposed publicly (the app refuses to start in staging/production).
+be exposed publicly. The application registers it only in local/test/ci; staging
+and production use the validated /v1/customer/holds flow instead. Tenant resolution
+and service dependencies below are shared by the customer API in all environments.
 """
 
 from datetime import datetime

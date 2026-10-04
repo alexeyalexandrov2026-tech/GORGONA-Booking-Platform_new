@@ -9,7 +9,7 @@
 #   exact image digest. Evidence lives in docs/acceptance/<digest>/*.json (http, azure and
 #   drill records) and every required gate must be "pass": real Azure E2E booking, OIDC,
 #   trusted Front Door boundary, WAF/rate limiting, private origin, private PostgreSQL,
-#   tenant isolation, CSP frame-ancestors, the authorized KA Nails origin, direct-origin
+#   tenant isolation, CSP frame-ancestors, an explicitly approved business origin, direct-origin
 #   bypass refusal, secrets/managed identity, monitoring, rollback/recovery.
 # Gate 2: an owner authorization record docs/plan/production-authorizations/<id>.md
 #   naming the digest. Its id becomes GBA_PRODUCTION_AUTHORIZATION; without it the API

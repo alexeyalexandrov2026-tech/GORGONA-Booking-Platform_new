@@ -1,5 +1,9 @@
 # Platform and public tenant site ownership
 
+**Current scope, clarified by the owner on 2026-10-04:** this repository develops the independent GORGONA business platform at `alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new`. KA Nails is a separate project outside this implementation, deployment and acceptance scope. Generic integration interfaces do not require that project. The following 2026-09-30 integration record is preserved history; its repository URLs, first-tenant assumptions and unpublished-state claims are not current instructions.
+
+## Historical integration record — 2026-09-30
+
 The platform origin is `alexeyalexandrov2026-tech/-GORGONA-Booking-Platform`.
 The independent first-tenant site origin is `alexeyalexandrov2026-tech/KA-nails`.
 They have independent Git directories and histories. No KA site remote belongs in

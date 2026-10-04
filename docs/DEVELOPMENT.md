@@ -163,7 +163,7 @@ uv run --env-file ../.env python -m gorgona_booking   # API on 127.0.0.1:8000
 
 Tenants, host mappings and catalog data are provisioned by the owner role (see `gorgona_booking.db.provisioning`). Nothing seeds KA Nails data: `api/fixtures/ka_nails_catalog.candidate.json` is owner-unconfirmed and never loaded into a database.
 
-`POST /v1/holds` resolves the salon from the `Host` header through `gba.tenant_hosts`. It has no authentication or rate limiting and must not be exposed publicly.
+`POST /v1/holds` resolves the salon from the `Host` header through `gba.tenant_hosts`. This M1 development endpoint has no authentication or customer availability/capability validation. It is registered only for `GBA_ENV=local`, `test` or `ci`; never expose those environments publicly. Staging and production omit the route from OpenAPI and do not invoke its booking handler, including when a static web export is mounted. Public bookings use `/v1/customer/holds` with the customer policy, availability and `Booking-Token` checks. The shared booking service and tenant resolution remain available to the customer API.
 
 ## Authentication (M2)
 

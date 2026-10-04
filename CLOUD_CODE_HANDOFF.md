@@ -1,8 +1,12 @@
-# Cloud Code handoff — GORGONA Booking AI / KA Nails
+# Cloud Code handoff — GORGONA business platform
 
 ## Current continuation — 2026-10-04
 
-The owner authorized correction of the complete universal-business plan and the start of implementation. Read [the corrected master plan](docs/plan/GORGONA_MASTER_PLAN.md) and [implementation evidence](docs/plan/GORGONA_IMPLEMENTATION_STATUS.md) first. Preserve all 39 industry profiles, existing salon workflows and KA Nails compatibility. `business_id` is the existing tenant boundary; multiple profiles do not create duplicate companies. GORGONA supplies software, including inventory and transport tools for its customers, without operating its own warehouse or carrier.
+The owner authorized correction of the complete universal-business plan and the start of implementation. Read [the corrected master plan](docs/plan/GORGONA_MASTER_PLAN.md) and [implementation evidence](docs/plan/GORGONA_IMPLEMENTATION_STATUS.md) first. Preserve all 39 industry profiles and existing generic booking workflows. `business_id` is the existing tenant boundary; multiple profiles do not create duplicate companies. GORGONA supplies software, including inventory and transport tools for its customers, without operating its own warehouse or carrier.
+
+The current repository develops GORGONA only. KA Nails is a separate project, outside this implementation and release scope. The first-tenant proposals and brand instructions below are historical context; do not treat them as current tasks or platform acceptance requirements.
+
+The [2026-10-04 plan-conformance audit](docs/plan/GORGONA_PLAN_AUDIT_2026-10-04.md) maps all 28 acceptance criteria. Stage 1 is partial. A confirmed security issue in the old development hold endpoint has been corrected: `/v1/holds` is registered only in local/test/CI, while hosted bookings retain the customer validation/capability path. The linked audit records the failing regression, fresh focused PASS and independent review; compare every later CI result with its exact commit.
 
 Azure is the accepted deployment direction ([ADR-0012](docs/adr/0012-azure-hosting.md)); the OCI proposal below is historical. Production actions still require their acceptance gates and owner authorization. Begin with baseline defects, then the typed business foundation and shared resource/financial/material invariants. No provider approval or production readiness is implied by this handoff.
 

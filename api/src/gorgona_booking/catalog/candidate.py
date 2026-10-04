@@ -1,4 +1,4 @@
-"""Loads the owner-unconfirmed KA Nails candidate catalog for review and tests.
+"""Loads an owner-unconfirmed candidate catalog for review and tests.
 
 It is never seeded into a database. Every entry loads as a draft, non-bookable
 spec, and booking durations stay None until the owner confirms them.
