@@ -1,6 +1,6 @@
 # ADR-0016 — Tenant-owned departments
 
-Status: accepted for the stage-1 implementation increment (CORE-03 step A). Technical acceptance is recorded separately after full CI on the exact commit.
+Status: accepted for the stage-1 implementation increment (CORE-03 step A). [Technical acceptance](../plan/evidence/2026-10-04-departments/ACCEPTANCE.md): full CI passed on `5b3c00b11e2bb2e844a3183bbd840ca36d764895`.
 
 ## Context
 
