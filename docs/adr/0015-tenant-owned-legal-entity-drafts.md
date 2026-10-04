@@ -2,6 +2,8 @@
 
 Status: accepted for the stage-1 implementation increment; technical acceptance is recorded separately.
 
+[Technical acceptance](../plan/evidence/2026-10-04-legal-entities/ACCEPTANCE.md): full CI passed on `d97924f53a8ff34a69f82d36fe675b965e8aa6e6`. Registration verification and the remaining organization/group/delegation workflows remain outside this increment.
+
 ## Context
 
 The universal platform needs several legal entities within a business before it can introduce financial responsibility, company groups or independent dispatch delegation. The existing tenant is the data owner and authorization boundary. Copying it for each industry or legal-entity record would duplicate clients and resources and confuse ownership.
