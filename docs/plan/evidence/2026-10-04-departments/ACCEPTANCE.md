@@ -2,6 +2,9 @@
 
 Date: 2026-10-04. Branch: `codex/company-departments`.
 Base: `b8647897cfa653e39f2e3188dbb9ad23c13e13fa`, selected-company fix plus handoff.
+Code: `931a11e5b1ecfcba770980565b2e78f88e58ab13`, draft
+[PR #4](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/4)
+into the unmerged PR #3 branch.
 PR #3's code SHA `951708a` passed CI: 482 passed, one optional skip; both push
 and PR CI of its documentation SHA `b864789` also completed successfully.
 No pull request was merged, and the owner's foundation checkout is preserved.
@@ -37,9 +40,14 @@ unaffected by structural links.
 | Web format check and unit tests | PASS, exit 0; 20 passed, 836 ms |
 | Ruff format/check and strict mypy | PASS, exit 0; 140 source files |
 | Final complete API suite with required PostgreSQL 18.6/browser after snapshot protection | PASS: 512 passed, 4 skipped, 215.30 s, exit 0 |
+| GitHub push CI, exact code SHA `931a11e` with required PostgreSQL/browser/container gates | PASS: 515 passed, 1 optional external-site skip, 107.96 s |
 
 Local skips are the three container gates and the optional external-site gate.
-CI of the new department code must independently execute the container gates.
+CI independently executed the container gates:
+[run 37224005256](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37224005256),
+job `111499809655`. Web typecheck/lint/format/build, 20 web unit tests, production
+image build, Ruff and mypy all completed successfully. These numerical outcomes
+were read from the push job log for the code SHA; documentation commits are separate.
 Independent read-only review verified the final isolation-level fix and found no
 further substantial issue; the reviewer did not run tests.
 
@@ -77,3 +85,17 @@ multiple branches per department, configuration publication and shared occupancy
 are still planned. No real IdP/provider, staging, production migration, load,
 recovery or industry pilot was exercised. Full dependency audit retains the
 development ESLint/braces finding recorded in the previous package.
+
+## Changed files
+
+- Server: `api/src/gorgona_booking/api/{app,departments}.py`,
+  `business/{department_contracts,departments}.py`, `db/schema_guard.py`,
+  `db/migrations/0012_departments.sql`.
+- API tests: `api/tests/integration/{test_departments,test_location_access,test_management_browser}.py`,
+  `api/tests/unit/test_department_contracts.py`.
+- Web: `web/app/business/page.tsx`, `web/components/departments.tsx`,
+  `web/lib/{department-contracts,management-api,management-contracts}.ts`,
+  `web/package.json`, `web/tests/{department-contracts,management}.spec.ts`.
+- Documentation: `docs/DEVELOPMENT.md`, `docs/adr/0017-company-department-drafts.md`,
+  `docs/plan/{GORGONA_MASTER_PLAN,GORGONA_IMPLEMENTATION_STATUS,GORGONA_PLAN_AUDIT_2026-10-04,NEXT_AGENT_HANDOFF_2026-10-04}.md`
+  and this acceptance file.

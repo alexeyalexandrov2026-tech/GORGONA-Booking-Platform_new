@@ -31,6 +31,11 @@ PASS (140 файлов), web typecheck/lint/build/format PASS, **20 web unit PAS
 Итоговая локальная suite после защиты снимков: **512 passed, 4 skipped,
 215.30 с, exit 0** с обязательными PostgreSQL 18.6 и браузерами. Пропуски:
 три локальных контейнерных gate и дополнительный внешний сайт.
+Опубликовано `931a11e5b1ecfcba770980565b2e78f88e58ab13`, draft
+[PR #4](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/4).
+**GitHub CI PASS: 515 passed, 1 optional skip, 107.96 с**:
+[run 37224005256](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37224005256);
+PostgreSQL/browser/container gates, сборка image/web и статические проверки выполнены.
 
 CORE-03 и этап 1 остаются частичными: группы/согласия/сводные отчеты, несколько
 областей доступа, публикация конфигурации и CORE-04 впереди. Подразделения — черновики
