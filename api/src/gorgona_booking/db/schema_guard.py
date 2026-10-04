@@ -92,6 +92,8 @@ _COMPANY_RECORDS = (
     "invitations",
     "legal_entities",
     "legal_entity_versions",
+    "departments",
+    "department_versions",
 )
 
 DEFINITIONS: tuple[PolicyDefinition, ...] = (

@@ -1,5 +1,28 @@
 # GORGONA — передача следующему агенту
 
+**Текущий пакет 2026-10-04: подразделения.** Новая ветка `codex/company-departments`
+поверх `b8647897cfa653e39f2e3188dbb9ad23c13e13fa` (PR #3). Собственный checkout:
+`C:\Users\alexa\.codex\worktrees\booking-state-isolation\Gorgona Booking`.
+Добавлены подразделения с версиями и опциональными ссылками своей компании:
+родитель, один филиал, одно юридическое лицо. ADR-0017, миграция 0012, guard 49
+определений, strict API/web и UI на странице бизнеса. Иерархия не допускает циклов;
+запись требует READ COMMITTED, другие режимы отклоняются с откатом. Подразделение
+не дает новых прав. Целевые проверки: 44 PASS с PostgreSQL и браузерами;
+после защиты снимков транзакций 15 department tests PASS. Web: 20 unit PASS,
+проверки типов, стиля и сборка PASS. Итоговая локальная suite: **512 passed,
+4 skipped, 215.30 с, exit 0**, обязательные PostgreSQL 18.6 и браузеры.
+Пропуски: три контейнерных gate и необязательный внешний site gate.
+[Приемка](evidence/2026-10-04-departments/ACCEPTANCE.md).
+Код подразделений опубликован: `931a11e5b1ecfcba770980565b2e78f88e58ab13`, draft [PR #4](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/4) в ветку PR #3.
+GitHub CI кода: **515 passed, 1 optional skip, 107.96 с**,
+[run 37224005256](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37224005256),
+job `111499809655`; контейнерные gates выполнены. Рабочая копия владельца
+осталась чистой на `eaa6233`; отдельный тестовый PostgreSQL корректно остановлен
+после проверок, секреты не копировались в Git.
+Следующий продуктовый пакет: группы компаний, явные согласия владельцев и сводные
+чтения только по действующим полномочиям. Не копировать данные и не расширять
+permissive-политики `gba.tenants`. Перед работой сверить все PR и SHA.
+
 **Дополнение 2026-10-04: изоляция выбранной компании.** Продолжение находится в
 `C:\Users\alexa\.codex\worktrees\booking-state-isolation\Gorgona Booking`,
 ветка `codex/booking-state-isolation`, база `ef423f3c672bf2da219d6aef85f9a44cf1f37317`
@@ -10,11 +33,11 @@
 4 skipped, 146.75 с, exit 0**; пропуски — три контейнера и дополнительный внешний
 site gate. Детали, полные проверки и ограничения
 в [приемке](evidence/2026-10-04-selected-company/ACCEPTANCE.md).
-Опубликовано `951708af2b88b9436abf2ddadd6de608cbf9f99d`, draft [PR #3](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/3) поверх PR #2. GitHub CI этого SHA: **482 passed, 1 optional skip, 112.46 с**, [run 37221017342](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37221017342). Контейнерные gates выполнены. Следующий продуктовый шаг — подразделения.
+Опубликовано `951708af2b88b9436abf2ddadd6de608cbf9f99d`, draft [PR #3](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/3) поверх PR #2. GitHub CI этого SHA: **482 passed, 1 optional skip, 112.46 с**, [run 37221017342](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37221017342). Контейнерные gates выполнены. Этот пакет стал базой подразделений; текущая ветка указана выше.
 
-**Актуально на 2026-10-04, после исправления изоляции выбранной компании.** Этот документ самодостаточен: начните с него. Прежние версии сохранены без изменений: [checkpoint 3](NEXT_AGENT_HANDOFF_2026-10-04_CHECKPOINT_3.md), [checkpoint 2](NEXT_AGENT_HANDOFF_2026-10-04_CHECKPOINT_2.md), [checkpoint 1](NEXT_AGENT_HANDOFF_2026-10-04_CHECKPOINT_1.md). Их TODO и FAIL не считать актуальными без проверки.
+**Актуально на 2026-10-04, после пакета подразделений.** Этот документ самодостаточен: начните с него. Прежние версии сохранены без изменений: [checkpoint 3](NEXT_AGENT_HANDOFF_2026-10-04_CHECKPOINT_3.md), [checkpoint 2](NEXT_AGENT_HANDOFF_2026-10-04_CHECKPOINT_2.md), [checkpoint 1](NEXT_AGENT_HANDOFF_2026-10-04_CHECKPOINT_1.md). Их TODO и FAIL не считать актуальными без проверки.
 
-> **English summary for agents.** GORGONA is one multi-tenant platform (Python/FastAPI, PostgreSQL 18 with forced RLS, Next.js) for 39 industries; `business_id == tenant_id == legacy salon_id`. Implemented so far: stage-0 fixes, typed industry catalog and hybrid business profile, branch-scoped workspace (ADR-0014), legal-entity drafts (ADR-0015) and limited delegation between independent businesses (ADR-0016, migration 0011). Latest code: `codex/booking-state-isolation`, draft PR #3 into the unmerged delegation branch (PR #2 into foundation, PR #1 into main). Selected-company readiness/state/member-list queries were fixed. CI on `951708a`: 482 passed, 1 optional skip, 112.46 s. Next: departments and company groups (consolidated reads only through permitted delegation), then configuration publication and shared resource occupancy (CORE-04). Never rewrite applied migrations, never invent business facts, never bypass RLS, no production actions without the owner's explicit approval. Report PASS/FAIL/BLOCKED/NOT TESTED with exact numbers.
+> **English summary for agents.** GORGONA is one multi-tenant platform (Python/FastAPI, PostgreSQL 18 with forced RLS, Next.js) for 39 industries; `business_id == tenant_id == legacy salon_id`. Implemented so far: stage-0 fixes, typed industry catalog and hybrid business profile, branch-scoped workspace (ADR-0014), legal-entity drafts (ADR-0015) and limited delegation between independent businesses (ADR-0016, migration 0011). Latest code: `codex/company-departments` based on `b864789` (PR #3). Departments implemented with migration 0012/ADR-0017, strict revisions, same-tenant links, acyclic hierarchy and READ COMMITTED write gate; employee assignments/groups remain planned. Prior fix: draft PR #3 into the unmerged delegation branch (PR #2 into foundation, PR #1 into main). Selected-company readiness/state/member-list queries were fixed. CI on `951708a`: 482 passed, 1 optional skip, 112.46 s. Next: company groups (consolidated reads only through permitted delegation), then configuration publication and shared resource occupancy (CORE-04). Never rewrite applied migrations, never invent business facts, never bypass RLS, no production actions without the owner's explicit approval. Report PASS/FAIL/BLOCKED/NOT TESTED with exact numbers.
 
 ## 1. Где находится работа
 
@@ -24,10 +47,12 @@ site gate. Детали, полные проверки и ограничения
 | `main` | Только начальный README, `46cd866e059597aee75da4181dbb8c0928bbe57d` |
 | `codex/universal-business-foundation` | Импорт исходников, аудит, юридические лица; `eaa62339cf82ea69b96f2e8ec346ede585729f02`. Draft [PR #1](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/1) → `main` |
 | `claude/keen-mayer-lg9ift` | **База PR #3**: `eaa6233` + делегирование `bd1a138a11ebbe506010c243a5a02d9989bc1b52` + документы. Draft [PR #2](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/2) → `codex/universal-business-foundation` |
+| `codex/booking-state-isolation` | Изоляция выбранной компании, `b8647897cfa653e39f2e3188dbb9ad23c13e13fa`; draft [PR #3](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/3) → ветка PR #2 |
+| `codex/company-departments` | Подразделения: `931a11e5b1ecfcba770980565b2e78f88e58ab13`; draft [PR #4](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/4) → ветка PR #3 |
 | CI | `.github/workflows/ci.yml` на push и PR: web проверки и сборка, PostgreSQL 18 в Docker, сборка production image, Ruff, mypy, pytest с обязательными PostgreSQL/браузерами/контейнерами |
 | Исторический CI делегирования | [run 37212099717](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37212099717) на `bd1a138`: **474 passed, 1 skipped** (необязательный внешний site gate), 118.32 с |
 
-Перед работой проверьте заново PR #1/#2/#3 и SHA веток (`git fetch`, `git log`). Продолжайте от `codex/booking-state-isolation` либо от ветки, в которую уже принят PR #3. Слияние только PR #2 еще не включает исправления PR #3. Каждому агенту нужна своя ветка и свой checkout; общий checkout и общий тестовый кластер PostgreSQL одновременно использует один исполнитель.
+Перед работой проверьте заново PR #1/#2/#3/#4 и SHA веток (`git fetch`, `git log`). Продолжайте от `codex/company-departments` либо от ветки, в которую уже принят PR #4. Слияние только PR #2 или PR #3 еще не включает подразделения. Каждому агенту нужна своя ветка и свой checkout; общий checkout и общий тестовый кластер PostgreSQL одновременно использует один исполнитель.
 
 Локальная рабочая копия владельца на Windows (`C:\Users\alexa\Documents\ChatGPT\Gorgona Booking`, ветка `codex/universal-business-foundation`) могла содержать незакоммиченную работу. Не делать `reset`/`clean`/`restore` и не перезаписывать ее; после слияния PR сначала сохранить локальные изменения, затем `pull`.
 
@@ -37,7 +62,7 @@ site gate. Детали, полные проверки и ограничения
 2. [Master plan](GORGONA_MASTER_PLAN.md) — целевая спецификация, 39 направлений, 28 критериев приемки (§14.1.1).
 3. [Реестр реализации](GORGONA_IMPLEMENTATION_STATUS.md) — фактические результаты; верхний раздел — текущий пакет.
 4. [Аудит выполнения плана](GORGONA_PLAN_AUDIT_2026-10-04.md) — состояние всех критериев.
-5. ADR: [0009](../adr/0009-tenant-context-derivation.md) (контекст компании), [0012](../adr/0012-azure-hosting.md) (Azure), [0014](../adr/0014-location-scoped-workspace.md) (филиалы), [0015](../adr/0015-tenant-owned-legal-entity-drafts.md) (юр. лица), [0016](../adr/0016-limited-cross-business-delegation.md) (делегирование).
+5. ADR: [0009](../adr/0009-tenant-context-derivation.md) (контекст компании), [0012](../adr/0012-azure-hosting.md) (Azure), [0014](../adr/0014-location-scoped-workspace.md) (филиалы), [0015](../adr/0015-tenant-owned-legal-entity-drafts.md) (юр. лица), [0016](../adr/0016-limited-cross-business-delegation.md) (делегирование), [0017](../adr/0017-company-department-drafts.md) (подразделения).
 6. `docs/DEVELOPMENT.md` — маршруты, разделы по пакетам, запуск проверок.
 7. Доказательства: [юр. лица](evidence/2026-10-04-legal-entities/ACCEPTANCE.md), [делегирование](evidence/2026-10-04-delegation/ACCEPTANCE.md).
 
@@ -61,7 +86,8 @@ site gate. Детали, полные проверки и ограничения
 | Филиальный рабочий кабинет: одно членство — один филиал, restrictive RLS, guard | 0009 | ADR-0014 | реестр, снимки | Несколько филиалов на членство не реализованы |
 | Закрытие development `/v1/holds` вне local/test/ci | — | аудит P1 | аудит | — |
 | Черновики юридических лиц с неизменяемыми версиями | 0010 | ADR-0015 | приемка, CI `d97924f` | Регистрация, финансы не подтверждаются |
-| **Делегирование между независимыми компаниями** | 0011 | ADR-0016 | приемка, CI `bd1a138` | Группы, подразделения, офлайн-синхронизация, TMS не реализованы |
+| **Делегирование между независимыми компаниями** | 0011 | ADR-0016 | приемка, CI `bd1a138` | Группы, офлайн-синхронизация, TMS не реализованы |
+| **Подразделения** | 0012 | ADR-0017 | [приемка](evidence/2026-10-04-departments/ACCEPTANCE.md) | Черновики структуры; группы, назначения сотрудников и несколько филиалов на подразделение не реализованы |
 
 Все полные отраслевые циклы (TMS, рестораны, аренда, строительство, финансы, склад) остаются `planned`. Выбор отрасли в профиле ничего не включает.
 
@@ -78,7 +104,7 @@ site gate. Детали, полные проверки и ограничения
 | Область | Файлы |
 |---|---|
 | Авторизация и контекст | `api/src/gorgona_booking/tenancy/authorization.py` (`authorized_tenant`, членство, филиал, делегирование, platform support), `auth/permissions.py`, `auth/principal.py` |
-| БД | `db/migrations/0001…0011`, `db/schema_guard.py` (45 определений), `db/pool.py` (роль runtime, readiness), `db/provisioning.py` |
+| БД | `db/migrations/0001…0012`, `db/schema_guard.py` (49 определений), `db/pool.py` (роль runtime, readiness), `db/provisioning.py` |
 | Бизнес-основа | `business/{catalog,contracts,service}.py`, `business/legal_entit*.py`, `business/delegation*.py` |
 | API | `api/{salons,businesses,legal_entities,delegations,members,setup,platform,customer,health}.py`, ошибки — `api/errors.py` |
 | Запись | `booking/*`, `customer/*`, `catalog/*` |
@@ -89,9 +115,9 @@ site gate. Детали, полные проверки и ограничения
 
 ## 6. Правила изменения кода
 
-**Миграции.** Новый файл `NNNN_name.sql`, примененные не переписывать. Для каждой таблицы — `enable` и `force row level security` (это проверяет `tests/unit/test_migration_files.py`); в тексте миграции не должно быть строк `security definer` и `bypassrls`, даже в комментариях. Runtime получает минимальные права (часто построчно по столбцам). Неизменяемость — триггерами.
+**Миграции.** Новый файл `NNNN_name.sql`, примененные не переписывать. Для каждой таблицы — `enable` и `force row level security` (это проверяет `tests/unit/test_migration_files.py`); в тексте миграции не должно быть строк `security definer` и `bypassrls`, даже в комментариях. Runtime получает минимальные права (часто по столбцам). Неизменяемость — триггерами.
 
-**Guard.** Любая новая restrictive-политика филиала или делегирования и любая межкомпанейская permissive-политика добавляется в `DEFINITIONS` в `db/schema_guard.py` в канонической записи PostgreSQL 18: примените миграцию к временной базе и возьмите `pg_get_expr(polqual/polwithcheck)`. Для таблиц делегирования guard требует точный набор политик. Тест `test_scoped_work_fails_closed_when_schema_boundary_is_missing` удаляет `gba.current_location_id()` каскадно и восстанавливает политики 0009/0010/0011 — добавляйте туда новые зависимые политики.
+**Guard.** Любая новая restrictive-политика филиала или делегирования и любая межкомпанейская permissive-политика добавляется в `DEFINITIONS` в `db/schema_guard.py` в канонической записи PostgreSQL 18: примените миграцию к временной базе и возьмите `pg_get_expr(polqual/polwithcheck)`. Для таблиц делегирования guard требует точный набор политик. Тест `test_scoped_work_fails_closed_when_schema_boundary_is_missing` удаляет `gba.current_location_id()` каскадно и восстанавливает политики 0009/0010/0011/0012 — добавляйте туда новые зависимые политики.
 
 **Обработчики.** Доступ филиала (`allow_location_scope=True`) и делегирования (`allow_delegation=True`) включается только после проверки обработчика. В таких обработчиках: явные ссылки проверять через `access.require_location`, для аудита и `created_by` использовать `access.actor`, ключ идемпотентности — `principal.actor`. Делегированный обработчик не должен читать таблицы компании. Права, которые можно делегировать, перечислены в `DELEGABLE_PERMISSIONS`.
 
@@ -134,7 +160,7 @@ site gate. Детали, полные проверки и ограничения
 1. **Исправлено в ветке `codex/booking-state-isolation`:** `_booking_state`,
    подсчет владельцев и список сотрудников. Перед продолжением сверить PR и SHA;
    не повторять исправление и не считать локальный PASS проверкой другого SHA.
-2. **Подразделения внутри компании** (master plan §4, §12.2). Сущность компании с версиями по образцу юр. лиц: внутренняя ссылка, название, при необходимости родитель (иерархия без циклов) и связи с филиалами/юр. лицами только через проверенные ссылки той же компании. FORCE RLS, политики `*_unrestricted_scope` и `*_delegation_scope` (+ guard), idempotency, expected revision, аудит, UI на странице бизнеса. Приемка: создание/история/конфликт/повтор без дубля, изоляция компаний, запрет для филиальных и делегированных пользователей, откат при ошибке.
+2. **Подразделения реализованы** (ADR-0017, миграция 0012; см. текущую приемку). Ниже исходный критерий пакета (master plan §4, §12.2). Сущность компании с версиями по образцу юр. лиц: внутренняя ссылка, название, при необходимости родитель (иерархия без циклов) и связи с филиалами/юр. лицами только через проверенные ссылки той же компании. FORCE RLS, политики `*_unrestricted_scope` и `*_delegation_scope` (+ guard), idempotency, expected revision, аудит, UI на странице бизнеса. Приемка: создание/история/конфликт/повтор без дубля, изоляция компаний, запрет для филиальных и делегированных пользователей, откат при ошибке.
 3. **Группы компаний** (CORE-03, ENTERPRISE-01). Группа принадлежит компании-оператору; компании-участники вступают только явным согласием своего владельца; членство в группе само не дает строк других компаний. Сводный отчет читает только данные, разрешенные действующими полномочиями (расширение ADR-0016 на отчетные права), и показывает владельца и юр. лицо каждой строки. Приемка: участник без полномочия не виден в отчете; отзыв согласия или полномочия убирает данные со следующего запроса; данные не копируются.
 4. **Несколько областей данных** для членства и полномочия (несколько филиалов) — свои API, RLS, аудит, сценарии.
 5. **Конфигурация draft → preview → validation → publication** с готовностью модулей (CORE-02 полностью): неизменяемая опубликованная версия, ожидаемая версия, повтор команды без новой версии.
@@ -147,13 +173,13 @@ site gate. Детали, полные проверки и ограничения
 
 **Перед commit/push:** web и Python проверки полностью; focused и полная suite с обязательными PostgreSQL/браузерами; обзор своего diff на безопасность (RLS, авторизация, guard, идемпотентность, аудит); обновить реестр, handoff, аудит, `docs/DEVELOPMENT.md`, при необходимости ADR; `git diff --check`, UTF-8 и локальные ссылки; не коммитить секреты, `.env`, `test-connection.json`, `web/out`, `test-results`, данные PostgreSQL.
 
-**PR:** отдельная ветка; draft PR в ветку интеграции (сейчас `codex/universal-business-foundation`); после push проверить CI точного SHA и записать его результат отдельным коммитом документации.
+**PR:** отдельная ветка; draft PR в актуальную базовую ветку (пока предыдущие PR не слиты, использовать stacked PR поверх самого нового пакета, чтобы diff был отдельным); после push проверить CI точного SHA и записать его результат отдельным коммитом документации.
 
 ## 11. Запрос следующему агенту
 
-**RU:** Продолжи реализацию самостоятельной GORGONA по актуальному master plan. Сначала прочитай `docs/plan/NEXT_AGENT_HANDOFF_2026-10-04.md`, реестр и ADR-0014/0015/0016, проверь состояние PR #1 и PR #2 и продолжай от самой новой ветки. Не удаляй чужую незакоммиченную работу, не переписывай примененные миграции, не обходи RLS и не выдумывай бизнес-факты. Исправления `_booking_state`, подсчета владельцев и списка сотрудников уже в PR #3; продолжай с подразделений и группы компаний со сводными отчетами только по разрешенным данным, потом публикацию конфигурации и единую занятость (CORE-04). Для каждого пакета: ADR, миграция с guard, типизированные контракты, regression red→green, полные проверки с PostgreSQL 18 и браузерами, обновленные реестр и handoff, точные результаты по-русски; производственные действия — только с отдельного разрешения владельца.
+**RU:** Продолжи реализацию самостоятельной GORGONA по актуальному master plan. Сначала прочитай `docs/plan/NEXT_AGENT_HANDOFF_2026-10-04.md`, реестр и ADR-0014/0015/0016/0017, проверь состояние PR #1–#4 и продолжай от самой новой ветки. Не удаляй чужую незакоммиченную работу, не переписывай примененные миграции, не обходи RLS и не выдумывай бизнес-факты. Исправления `_booking_state`, подсчета владельцев и списка сотрудников уже в PR #3, подразделения в PR #4; продолжай с групп компаний со сводными отчетами только по разрешенным данным, потом публикацию конфигурации и единую занятость (CORE-04). Для каждого пакета: ADR, миграция с guard, типизированные контракты, regression red→green, полные проверки с PostgreSQL 18 и браузерами, обновленные реестр и handoff, точные результаты по-русски; производственные действия — только с отдельного разрешения владельца.
 
-**EN:** Continue the standalone GORGONA platform per the current master plan. First read `docs/plan/NEXT_AGENT_HANDOFF_2026-10-04.md`, the implementation registry and ADR-0014/0015/0016, check the state of PR #1 and PR #2, and continue from the newest branch. Do not discard others' uncommitted work, never rewrite applied migrations, never bypass RLS, never invent business facts. The `_booking_state`, owner-count and member-list fixes are in PR #3; continue with departments and company groups with consolidated reads limited to permitted data; then configuration publication and shared resource occupancy (CORE-04). For each package: ADR, migration with guard updates, typed contracts, red→green regression tests, full gates with PostgreSQL 18 and browsers, updated registry and handoff, exact results in Russian; production actions only with the owner's separate approval.
+**EN:** Continue the standalone GORGONA platform per the current master plan. First read `docs/plan/NEXT_AGENT_HANDOFF_2026-10-04.md`, the implementation registry and ADR-0014/0015/0016/0017, check PR #1 through PR #4, and continue from the newest branch. Do not discard others' uncommitted work, never rewrite applied migrations, never bypass RLS, never invent business facts. The `_booking_state`, owner-count and member-list fixes are in PR #3; departments are implemented; continue with company groups with consolidated reads limited to permitted data; then configuration publication and shared resource occupancy (CORE-04). For each package: ADR, migration with guard updates, typed contracts, red→green regression tests, full gates with PostgreSQL 18 and browsers, updated registry and handoff, exact results in Russian; production actions only with the owner's separate approval.
 
 ## 12. История и источники
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ManagementLayout } from "../../components/management-layout";
 import { LegalEntities } from "../../components/legal-entities";
+import { Departments } from "../../components/departments";
 import { Delegations } from "../../components/delegations";
 import type {
   Business,
@@ -317,6 +318,11 @@ function BusinessContent({
               )}
             </form>
             <LegalEntities businessId={businessId} canManage={canManage} />
+            <Departments
+              businessId={businessId}
+              canManage={canManage}
+              locations={business.locations}
+            />
             {isOwner && (
               <Delegations
                 businessId={businessId}

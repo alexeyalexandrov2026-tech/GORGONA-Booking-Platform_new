@@ -11,6 +11,28 @@ are in `tests/integration/test_setup_isolation.py`; run that file together with
 `tests/integration/test_onboarding.py` against required PostgreSQL before the full
 suite. See [acceptance evidence](plan/evidence/2026-10-04-selected-company/ACCEPTANCE.md).
 
+## Department drafts
+
+Migration 0012 and ADR-0017 add `/v1/businesses/{business_id}/departments`
+(GET collection) and `/departments/{department_id}` (GET, optional `revision`;
+PUT with `Idempotency-Key`). Use `business.read` for unrestricted company reads,
+`business.manage` for writes. Branch-scoped or delegated users cannot use these
+company-wide routes. Draft links do not grant employee or cross-business access.
+
+Commands contain schema_version 1, expected_revision, a stable uppercase internal
+code, a name, and nullable parent_department_id/location_id/legal_entity_id.
+Composite foreign keys and the version trigger enforce ownership and an acyclic
+current hierarchy. Writes require READ COMMITTED and fail closed under other
+isolation levels. Use the existing structure lock; do not create a separate
+department write path without it. See [ADR](adr/0017-company-department-drafts.md)
+and [evidence](plan/evidence/2026-10-04-departments/ACCEPTANCE.md).
+
+Focused checks: `tests/unit/test_department_contracts.py`,
+`tests/integration/test_departments.py`, `tests/integration/test_location_access.py`
+and `tests/integration/test_management_browser.py`. Build the web export first;
+the management browser harness also verifies departments on desktop and mobile.
+Web strict response tests are included in `npm run test:unit`.
+
 ## Prerequisites
 
 - [`uv`](https://docs.astral.sh/uv/) (installs CPython 3.14 on demand).
