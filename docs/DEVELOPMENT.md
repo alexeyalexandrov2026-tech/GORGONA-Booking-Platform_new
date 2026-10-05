@@ -1,5 +1,18 @@
 # Development
 
+## Bounded file profile and CSP (E2-A, 2026-10-05)
+
+`business/file_validation.py` returns frozen exact type/size/SHA/name/version
+metadata, with not_scanned; `pdf_validation.py` checks a conservative bounded
+grammar/xref/page tree and explicit feature vocabulary. It is not a general
+reader, full image decoder, antivirus or upload route. Documents stays planned.
+Reuse only within [ADR-0021 limits](adr/0021-bounded-file-validation-profile.md).
+API framing preserves existing CSP and adds a separate restrictive policy.
+Focused: `tests/unit/test_file_validation.py`, `tests/unit/test_framing_policy.py`;
+then static/full gates with required PostgreSQL/browser. Current results and
+next E2 persistence/API/UI: [evidence](plan/evidence/2026-10-05-file-validation/ACCEPTANCE.md),
+[handoff](plan/NEXT_AGENT_E2_FILE_VALIDATION_2026-10-05.md).
+
 ## Counterparties (Package E1, 2026-10-05)
 
 Migration 0015 adds five FORCE-RLS append-only tables for cards, version contacts,

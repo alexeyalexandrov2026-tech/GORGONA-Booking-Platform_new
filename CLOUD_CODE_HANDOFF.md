@@ -1,5 +1,14 @@
 # Cloud Code handoff — GORGONA business platform
 
+## Current E2-A continuation — 2026-10-05
+
+Read [E2-A handoff](docs/plan/NEXT_AGENT_E2_FILE_VALIDATION_2026-10-05.md) and
+[evidence](docs/plan/evidence/2026-10-05-file-validation/ACCEPTANCE.md).
+Branch codex/package-e2-file-validation from accepted E1 3983dd4. This increment
+is the bounded file-profile/CSP prerequisite, no storage/API/UI/migration or
+documents readiness promotion. Continue E2 persistence/integration per ADR0020/0021,
+then E3 and CORE-04. Owner dirty checkout is preserved; no production action.
+
 ## Current E1 continuation — 2026-10-05
 
 Read [the E1 handoff](docs/plan/NEXT_AGENT_PACKAGE_E1_2026-10-05.md) and

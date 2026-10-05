@@ -1,5 +1,21 @@
 # GORGONA — реестр реализации
 
+## Актуально E2-A: ограниченная проверка файлов и CSP, 2026-10-05
+
+Новая ветка codex/package-e2-file-validation от принятого E1 3983dd4 добавляет
+типизированный валидатор поддерживаемого PDF/PNG/JPEG-профиля и сохранение
+существующих API CSP в отдельной политике. Новых БД/API/UI документа нет,
+documents остается planned. Зависимости, роли, RLS и миграции не меняются.
+Focused81, Ruff/format/mypy168, web47/typecheck/lint/format/build15 PASS.
+Полная локальная suite после последнего исправления: 677 passed/4 skipped/204.12s,
+exit0; PostgreSQL/браузеры обязательны, три Docker gate и один внешний site gate
+пропущены локально. Контейнеры должны пройти в CI.
+Полная suite и точный CI — в [свежем evidence](evidence/2026-10-05-file-validation/ACCEPTANCE.md);
+предыдущий CI не переносится на новую ветку. [Передача](NEXT_AGENT_E2_FILE_VALIDATION_2026-10-05.md).
+Независимый аудит: исправления PDF-вложений/3D, чисел, page-tree и JPEG MCU
+проверены, 20 PDF + 9 JPEG probes PASS. Общая совместимость,
+malware/render safety и полный E2 NOT TESTED.
+
 ## Текущее продолжение: E1, 2026-10-05
 
 Общие контрагенты реализованы в отдельной ветке `codex/package-e1-counterparties`

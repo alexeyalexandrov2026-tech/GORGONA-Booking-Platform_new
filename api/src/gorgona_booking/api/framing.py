@@ -36,7 +36,11 @@ class FramingPolicyMiddleware:
             if message["type"] == "http.response.start":
                 headers = MutableHeaders(scope=message)
                 if is_api:
-                    headers["content-security-policy"] = "frame-ancestors 'none'"
+                    # Multiple CSP policies are enforced together. Keep any
+                    # existing default-src/sandbox policy, and add a separate
+                    # policy so a pre-existing frame-ancestors cannot win by
+                    # appearing first inside one semicolon-delimited policy.
+                    headers.append("content-security-policy", "frame-ancestors 'none'")
                     headers["cache-control"] = (
                         "no-store"
                         if scope["path"].startswith("/v1/customer/")
