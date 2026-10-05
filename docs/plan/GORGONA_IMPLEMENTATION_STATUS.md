@@ -1,5 +1,26 @@
 # GORGONA — реестр реализации
 
+## Актуальное дополнение: аудит E0, 2026-10-04
+
+Продолжение — [передача после аудита E0](NEXT_AGENT_AUDITED_E0_2026-10-04.md),
+код 4ad645fc27a2334f55e5c7c47ee1e3de8eede3a5, draft PR #6 в актуальную
+codex/universal-business-foundation от 2f16380. Основная копия владельца сохранена.
+Исправлены company predicates и web readiness contract по полученному пакету E.
+Свежая regression: 7 failed / 4 passed до кода, 1 web failed; после — focused30,
+полная локальная suite 538 passed / 4 skipped / 193.26 s, web42 и сборка14,
+Ruff/mypy153 PASS. CI конкретного SHA и пределы — в
+[приемке E0](evidence/2026-10-04-isolation-audit/ACCEPTANCE.md).
+Переданные [план E](PACKAGE_E_PLAN_2026-10-04.md) и
+[ADR-0020](../adr/0020-counterparties-documents-and-contracts.md) сохранены;
+E1–E3 и CORE-04 еще не выполнены. Исторические цифры/следующие задачи ниже
+не считать актуальнее этого дополнения без проверки.
+
+Azure прочитан: Container Apps env Failed, apps0; PostgreSQL18/KeyVault private.
+Сквозной staging BLOCKED. В npm остаются 5 dev findings одной braces-цепочки,
+prod0; load tool воспроизводит ложный PASS и пока не принят для OPS-02.
+Новых провайдеров, сканера файлов, отраслевых пилотов и промышленного запуска нет.
+
+
 **Рабочая копия после решения владельца 2026-10-04:** `C:\Users\alexa\Documents\ChatGPT\Gorgona Booking`, origin `alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new`, ветка `codex/universal-business-foundation`. Исходный checkout и полная история сохранены; [отчет переноса](REPOSITORY_TRANSITION_2026-10-04.md) содержит свежую сверку файлов и отдельные результаты новой копии. Проверки ниже относятся к исходному пакету прав филиалов; их не выдавать за новый запуск.
 
 **Уточненная граница:** реестр относится к самостоятельной GORGONA. KA Nails — отдельный проект, вне текущей разработки и приемки. Сохраненные проверки внешнего сайта описывают исторический дополнительный сценарий, не зависимость платформы.
