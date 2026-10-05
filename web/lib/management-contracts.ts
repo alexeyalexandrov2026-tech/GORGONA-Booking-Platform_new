@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { counterpartyResponseSchema } from "./counterparty-contracts";
 import { availabilitySchema } from "./contracts";
 import {
   businessSchema,
@@ -198,6 +199,11 @@ export function managementResponseSchema(
   if (clean === "/v1/me") return me;
   const business = clean.match(/^\/v1\/businesses\/[0-9a-f-]{36}(.*)$/i);
   if (business) {
+    const counterparties = counterpartyResponseSchema(
+      business[1] ?? "",
+      method,
+    );
+    if (counterparties) return counterparties;
     if (business[1] === "" && method === "GET") return businessSchema;
     if (business[1] === "/industry-catalog" && method === "GET")
       return industryCatalogSchema;

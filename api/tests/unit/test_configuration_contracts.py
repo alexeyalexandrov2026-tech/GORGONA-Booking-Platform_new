@@ -91,7 +91,7 @@ def test_module_registry_is_consistent() -> None:
 
     for module_id in ids:
         walk(module_id, ())
-    assert [m.id for m in MODULES if m.enableable] == [BOOKING_MODULE]
+    assert [m.id for m in MODULES if m.enableable] == ["counterparties", BOOKING_MODULE]
     assert BASELINE_MODULE_IDS == (BOOKING_MODULE,)
 
 

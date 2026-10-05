@@ -1,0 +1,86 @@
+{
+  "production": {
+    "exit": 0,
+    "counts": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "findings": {}
+  },
+  "all": {
+    "exit": 1,
+    "counts": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 5,
+      "critical": 0,
+      "total": 5
+    },
+    "findings": {
+      "@next/eslint-plugin-next": {
+        "severity": "high",
+        "fixAvailable": {
+          "name": "eslint-config-next",
+          "version": "14.2.35",
+          "isSemVerMajor": true
+        },
+        "via": [
+          "fast-glob"
+        ]
+      },
+      "braces": {
+        "severity": "high",
+        "fixAvailable": {
+          "name": "eslint-config-next",
+          "version": "14.2.35",
+          "isSemVerMajor": true
+        },
+        "via": [
+          {
+            "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+            "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+            "range": "<=3.0.3"
+          }
+        ]
+      },
+      "eslint-config-next": {
+        "severity": "high",
+        "fixAvailable": {
+          "name": "eslint-config-next",
+          "version": "14.2.35",
+          "isSemVerMajor": true
+        },
+        "via": [
+          "@next/eslint-plugin-next"
+        ]
+      },
+      "fast-glob": {
+        "severity": "high",
+        "fixAvailable": {
+          "name": "eslint-config-next",
+          "version": "14.2.35",
+          "isSemVerMajor": true
+        },
+        "via": [
+          "micromatch"
+        ]
+      },
+      "micromatch": {
+        "severity": "high",
+        "fixAvailable": {
+          "name": "eslint-config-next",
+          "version": "14.2.35",
+          "isSemVerMajor": true
+        },
+        "via": [
+          "braces"
+        ]
+      }
+    }
+  }
+}

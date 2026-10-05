@@ -27,6 +27,7 @@ const NAV_ITEMS = [
   { href: "/services/", label: "Services" },
   { href: "/staff/", label: "Staff" },
   { href: "/clients/", label: "Clients" },
+  { href: "/counterparties/", label: "Counterparties" },
   { href: "/settings/", label: "Settings" },
 ];
 
@@ -43,16 +44,23 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
   const locationLimited = membership?.location_id != null;
   const delegation = membership?.delegation;
   // Delegated work is limited to bookings; company areas stay with the owner business.
+  const permittedNav = NAV_ITEMS.filter(
+    (item) =>
+      item.href !== "/counterparties/" ||
+      (!locationLimited &&
+        !delegation &&
+        ["owner", "manager"].includes(membership?.role ?? "")),
+  );
   const navItems = delegation
-    ? NAV_ITEMS.filter((item) =>
+    ? permittedNav.filter((item) =>
         ["/overview/", "/calendar/", "/bookings/"].includes(item.href),
       )
     : locationLimited
-      ? NAV_ITEMS.filter(
+      ? permittedNav.filter(
           (item) =>
             !["/business/", "/settings/", "/services/"].includes(item.href),
         )
-      : NAV_ITEMS;
+      : permittedNav;
   const refresh = useCallback(() => {
     setLoading(true);
     setError(null);

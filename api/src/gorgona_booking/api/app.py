@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from gorgona_booking.api import (
     businesses,
     configurations,
+    counterparties,
     customer,
     delegations,
     departments,
@@ -116,6 +117,7 @@ def create_app(
     app.include_router(delegations.router)
     app.include_router(groups.router)
     app.include_router(configurations.router)
+    app.include_router(counterparties.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

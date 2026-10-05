@@ -1,5 +1,61 @@
 # GORGONA — аудит выполнения мастер-плана, 4 октября 2026
 
+## Текущее продолжение: E1, 2026-10-05
+
+Общие контрагенты реализованы в отдельной ветке `codex/package-e1-counterparties`
+поверх E0 `bbe6ecd80d8827ca94a63f15587704ffc22dba62`. Новая миграция 0015:
+карточки и контакты с версиями, ручные решения о дублях, подтвержденные связи
+с клиентами записей; исходные снимки записей не изменяются. Доступ только
+owner/manager всей компании; FORCE RLS, 34 определения guard, пять module gates,
+атомарные reference-only receipts/audit. Страница `/counterparties/` работает
+с реальными API/БД; проверены desktop/mobile и автоматическая доступность.
+
+Локально: полная suite **595 passed / 4 skipped / 248.75 s**, затем отдельный
+добавленный readiness-тест **1 passed / 1.89 s**; web **47 unit**, сборка **15**
+страниц, typecheck/lint/format PASS; Ruff/mypy **163** файла PASS. PostgreSQL
+18.6 и браузеры обязательны; три контейнерных и один дополнительный внешний
+site gate пропущены локально. Независимый ограниченный обзор чувствительного
+кода завершен после исправлений; это не самостоятельный прогон reviewer в БД.
+
+Код `2392566595a2df59f8ec3f073ed9bf184df6447f` прошел два полных CI: push **599 passed / 1 skipped / 118.52 s**,
+PR **599 passed / 1 skipped / 171.17 s**. Контейнерные gates выполнены в CI.
+Отдельный коммит приемки переводит только counterparties в **technically_verified**,
+реестр версии 1; исходный business baseline остается booking-only. Проверено
+явное включение через публикацию конфигурации без registry override: focused
+**68 passed / 37.26 s**. Финальный SHA приемки требует своего CI; свежий результат
+публикуется в PR и STATE.json архива, прежний CI не переносится на новый SHA.
+Ссылки на SHA/PR/CI и точные границы — в
+[приемке E1](evidence/2026-10-05-counterparties/ACCEPTANCE.md).
+Начните с [актуальной передачи](NEXT_AGENT_PACKAGE_E1_2026-10-05.md).
+[Draft PR #7](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/7) идет в `codex/package-e-isolation-audit`; PR #6 остается отдельным.
+Основная копия владельца с незакоммиченной работой сохранена.
+
+Следующие шаги: E2 документы/файлы, E3 договоры по ADR-0020, затем F/CORE-04.
+Этап 1 частичен; 39 отраслей/28 критериев сохранены, полные отраслевые циклы
+planned. Azure, реальные провайдеры, нагрузка/восстановление, отраслевые пилоты,
+промышленная эксплуатация и ручная screen-reader приемка NOT TESTED.
+Ни merge, ни deployment, ни промышленная миграция не выполнялись.
+Azure/load tool ниже — исторические проверки E0. npm audit повторен 2026-10-05:
+prod **0, exit 0**; общий **5 high dev, exit 1** одной braces-цепочки, без
+изменения зависимостей. Прежняя Desktop/handoff777 сейчас отсутствует; новая
+передача использует отдельную папку GORGONA_HANDOFF_2026-10-05.
+
+Полный финальный локальный прогон приемки: **596 passed / 4 skipped / 251.25 s**,
+exit 0, обязательные PostgreSQL/browser и обычный реестр без override. Ранее
+попытка дала 302 setup errors из-за остановленной тестовой БД; после проверки
+и запуска только disposable 51454 smoke и полный повтор прошли. Это не
+промышленный restart. Подробности и оба результата сохранены в приемке.
+
+Принятая версия readiness `e68ce907ba0459ab99e4c71137c044694a920be1`
+имеет собственный зеленый CI: [PR run37272593391](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37272593391)
+**599 passed / 1 skipped / 173.32 s** и
+[push run37272589058](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37272589058)
+**599 passed / 1 skipped / 163.07 s**. Web47, mypy163, PostgreSQL/browser/container
+gates выполнены; единственный skip — дополнительный внешний site gate. Следующий
+документационный HEAD проверяется отдельно и не выдается за эту версию кода.
+
+## Исторические записи до E1
+
 ## Актуальное дополнение: аудит E0, 2026-10-04
 
 Продолжение — [передача после аудита E0](NEXT_AGENT_AUDITED_E0_2026-10-04.md),

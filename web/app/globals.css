@@ -832,6 +832,42 @@ footer {
   border-left-color: #c5221f;
   opacity: 0.7;
 }
+.cp-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 16px;
+}
+.cp-list {
+  list-style: none;
+  padding: 0;
+}
+.cp-list li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.counterparties fieldset {
+  min-width: 0;
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+}
+.counterparties legend {
+  font-weight: 600;
+}
+.counterparties label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+.counterparties input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+.counterparties button {
+  margin: 8px 8px 8px 0;
+}
 
 @media (max-width: 760px) {
   .mgmt-header,

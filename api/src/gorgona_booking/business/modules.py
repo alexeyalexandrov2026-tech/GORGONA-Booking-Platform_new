@@ -94,7 +94,17 @@ MODULES: tuple[PlatformModule, ...] = (
         "and the audit log.",
         "Always on.",
     ),
-    _module("counterparties", "Customers and counterparties", _OPTIONAL, ("organization",)),
+    _module(
+        "counterparties",
+        "Customers and counterparties",
+        _OPTIONAL,
+        ("organization",),
+        Readiness.TECHNICALLY_VERIFIED,
+        "Versioned cards and contacts, manual duplicate decisions and booking links. "
+        "Technical evidence: docs/plan/evidence/2026-10-05-counterparties/ACCEPTANCE.md. "
+        "No contracts, consent management, import or erasure.",
+        "New cards, versions, match decisions and booking links. Reads and history continue.",
+    ),
     _module("sales", "Sales", _OPTIONAL, ("counterparties", "products_services")),
     _module("products_services", "Products and services", _OPTIONAL, ("organization",)),
     _module(
