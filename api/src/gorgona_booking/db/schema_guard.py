@@ -47,6 +47,8 @@ _COUNTERPARTY_TABLES = (
     "counterparty_version_contacts",
     "counterparty_match_decisions",
     "counterparty_booking_links",
+    "agreements",
+    "agreement_versions",
 )
 _DOCUMENT_TABLES = (
     "document_files",

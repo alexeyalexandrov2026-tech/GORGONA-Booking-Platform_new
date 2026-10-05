@@ -1,5 +1,34 @@
 # Development
 
+## Contracts with counterparties (Package E3, 2026-10-05)
+
+Migration 0017 adds FORCE-RLS insert-only `agreements` (counterparty, optional own
+legal entity) and `agreement_versions` (draft → agreed → amendment draft →
+agreed … → terminated). SQL enforces transitions, contiguous revisions, attested
+fields, unchanged content on agree, no future signing dates and an active card for
+new contracts, drafts and agreements. A termination (also from an open amendment
+draft, which is then reported `abandoned`) names the latest agreed revision in
+`terminates_revision`, repeats it exactly and may take effect on a future
+`terminated_on`; views expose `in_force_revision`, list rows the agreed version in
+force (`in_force`). A contract needs its first version before commit. Module
+`counterparties`
+(permissions, exclusive counterparties lock, gate); guard 40 definitions and twelve
+optional gates.
+
+API base `/v1/businesses/{business_id}`: `counterparties/{id}/agreements`
+(after/limit; includes merged duplicates), `agreements/{id}` (GET with revision; PUT
+draft with expected_revision, counterparty_id, optional legal_entity_id, title,
+number, summary, term and document reference), `agreements/{id}/versions`,
+`agreements/{id}/agree` (expected_revision, signed_on, attestation
+`signed_outside_platform`, optional signed document version) and
+`agreements/{id}/terminate` (expected_revision, terminated_on). Errors:
+`AGREEMENT_STATE_INVALID` 409, `COUNTERPARTY_STATE_INVALID` 409,
+`ATTESTATION_REQUIRED` 422, `AGREEMENT_DATE_INVALID` 422, `AGREEMENT_INVALID` 422.
+
+Focused: `tests/integration/test_agreements.py`, `tests/unit/test_agreement_contracts.py`;
+browser harness `test_agreement_browser.py` runs `npm run test:management:agreements`
+(contracts panel on the counterparty card) on desktop/mobile.
+
 ## Documents and files (Package E2, 2026-10-05)
 
 Migration 0016 adds four FORCE-RLS insert-only tables: `document_files` (bytea,

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CounterpartyEditor } from "./counterparty-editor";
 import { CounterpartyRelationships } from "./counterparty-relationships";
 import { CounterpartyDocumentsPanel } from "./counterparty-documents";
+import { CounterpartyAgreements } from "./agreements";
 import {
   fetchCounterparties,
   fetchCounterparty,
@@ -551,6 +552,15 @@ export function Counterparties({ businessId }: { businessId: string }) {
           key={`${selected.counterparty_id}:${selected.revision}`}
           businessId={businessId}
           counterpartyId={selected.counterparty_id}
+        />
+      )}
+      {selected && (
+        <CounterpartyAgreements
+          key={selected.counterparty_id}
+          businessId={businessId}
+          counterpartyId={selected.counterparty_id}
+          cardActive={selected.state === "active"}
+          enabled={enabled}
         />
       )}
     </div>

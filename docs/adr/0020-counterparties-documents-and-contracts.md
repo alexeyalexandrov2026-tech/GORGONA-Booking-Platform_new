@@ -1,5 +1,60 @@
 # ADR-0020 — Counterparties, documents and contracts
 
+## E3 implementation, 2026-10-05
+
+Contracts ("agreements" in code) are implemented with migration 0017 on branch
+`claude/package-e3-agreements` (based on accepted E2 `c5a3908`), inside the already
+verified `counterparties` module: its permissions, lock and gate apply, and its
+`limits` now describe contracts (evidence is added by the acceptance commit).
+Clarifications:
+
+- SQL enforces the transitions, contiguous revisions, attested fields per state
+  (`draft` has none; `agreed` has `signed_on` and the attestation; `terminated` also
+  `terminated_on ≥ signed_on` and `terminates_revision`), and that agreeing keeps
+  the drafted title, number, summary and term. Signing dates cannot be later than
+  the latest calendar date on Earth (UTC+14), checked by the API and by SQL.
+- Owner decision 2026-10-05: a termination acts on the latest agreed (executed)
+  version, never on an unsigned amendment draft. It is allowed from `agreed` and
+  from an amendment `draft` that follows an agreed version (`draft → terminated`,
+  never for a contract that was not agreed). The termination row names that
+  revision in `terminates_revision` and repeats its content exactly, including the
+  signing date, attestation and document reference. An open amendment draft stays
+  in the history and is reported as `abandoned` (closed by the termination); the
+  audit records `terminates_revision` and `abandoned_draft_revision`.
+- Owner decision 2026-10-05: `terminated_on` is the day the termination takes
+  effect and may be in the future. Until then the agreed version stays legally in
+  force. Views expose `in_force_revision` (the latest agreed revision up to the
+  viewed one; kept on the termination) and `terminates_revision`; list summaries
+  show the signing date of the version in force.
+- A new contract and every draft or agreement need the card's latest version to be
+  `active`; termination is allowed for archived or merged cards. A counterparty's
+  contract list includes contracts of duplicates merged into it.
+- The optional signed copy is a reference to one saved document version (tenant-
+  scoped foreign key); when agreeing without one, the draft's reference is kept.
+  Legal entity references are tenant-scoped too; the counterparty and legal entity
+  of a contract never change.
+- Audit details hold revision, counterparty id, amendment flag, document presence
+  and dates only. The guard checks 40 definitions and twelve optional gates.
+- The web shows contracts in the counterparty card. A contract is shown as agreed or
+  terminated only from a server response; the attestation checkbox and signing date
+  are required before the agree command can be sent. The card always shows the
+  agreed version in force, also during an amendment draft and until a recorded
+  termination takes effect; the status uses the viewer's calendar day, as document
+  validity does.
+- Review fixes before the code commit: list rows carry the agreed version in force
+  as `in_force` (revision, title, number, term, signing date), so an open amendment
+  never describes the unsigned draft as the contract; only the draft immediately
+  before a termination is `abandoned` (earlier drafts were superseded); every save
+  of an open amendment is audited as an amendment; a new amendment starts without
+  the agreed version's signed copy; a contract needs its first version before
+  commit (deferred constraint trigger); text the database refuses (including C1
+  controls) answers 422, never a conflict; contracts listed through a merged
+  duplicate are read-only there except termination; agreeing is disabled while the
+  draft form has unsaved edits; history pages beyond 50 versions load on request.
+- Limits: a recorded termination is final (withdrawing a scheduled termination
+  needs a future version state); a company-wide contract has no single time zone,
+  so "in force" vs "terminated" on the effective day follows the viewer's date.
+
 ## E2 implementation, 2026-10-05
 
 Documents, immutable files and counterparty links are implemented with migration
