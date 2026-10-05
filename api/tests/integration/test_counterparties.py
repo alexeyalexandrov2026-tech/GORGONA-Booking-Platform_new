@@ -1,7 +1,7 @@
 """Company-wide counterparty behavior against real disposable PostgreSQL."""
 
 import asyncio
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import Mapping
 from datetime import datetime
 from uuid import UUID, uuid7
 from zoneinfo import ZoneInfo
@@ -21,7 +21,6 @@ from tests.integration import test_management_api as shared
 from tests.integration.booking_support import BookingWorld
 from tests.integration.configuration_support import Config
 from tests.integration.customer_support import customer_day
-from tests.integration.module_support import verified_modules
 from tests.integration.seed import FakeUser, seed_user
 from tests.integration.test_delegations import Parties
 from tests.integration.test_groups import Groups
@@ -91,33 +90,29 @@ class Counterparties:
 @pytest.fixture
 async def enabled(
     client: httpx.AsyncClient, world: BookingWorld, manager_a: FakeUser, idp: FakeIdp
-) -> AsyncIterator[Counterparties]:
+) -> Counterparties:
     cp = Counterparties(client, world, manager_a, idp)
-    with verified_modules("counterparties"):
-        await cp.config.profile(manager_a, cp.business, 0, [1, 6, 24])
-        await cp.config.publish(manager_a, cp.business, 0, ["booking_resources", "counterparties"])
-        yield cp
+    await cp.config.profile(manager_a, cp.business, 0, [1, 6, 24])
+    await cp.config.publish(manager_a, cp.business, 0, ["booking_resources", "counterparties"])
+    return cp
 
 
-async def test_unverified_counterparties_cannot_be_published_without_a_registry_override(
+async def test_accepted_counterparties_use_real_registry_and_require_explicit_publication(
     client: httpx.AsyncClient, world: BookingWorld, manager_a: FakeUser, idp: FakeIdp
 ) -> None:
     cp = Counterparties(client, world, manager_a, idp)
-    await cp.config.profile(manager_a, cp.business, 0, [1, 24])
-    drafted = await cp.config.draft(manager_a, cp.business, 0, ["counterparties"])
-    assert drafted.status_code == 200, drafted.text
-    validated = await cp.config.step(manager_a, cp.business, 1, "validate", 1)
-    assert validated.status_code == 422, validated.text
-    error = validated.json()["error"]
-    assert error["code"] == "CONFIGURATION_INVALID"
-    assert {(p["code"], p["module_id"]) for p in error["details"]["problems"]} == {
-        ("MODULE_NOT_READY", "counterparties")
-    }
-    assert (await cp.config.get(manager_a, cp.business, "/versions/1")).json()["state"] == "draft"
-    refused = await cp.config.step(manager_a, cp.business, 1, "publish", 1)
-    assert refused.status_code == 422, refused.text
-    assert refused.json()["error"]["code"] == "CONFIGURATION_STATE_INVALID"
+    baseline = (await cp.config.get(manager_a, cp.business)).json()
+    assert baseline["baseline"] is True
+    assert "counterparties" not in baseline["effective_module_ids"]
     assert (await cp.save(uuid7(), card())).json()["error"]["code"] == "MODULE_DISABLED"
+    await cp.config.profile(manager_a, cp.business, 0, [1, 24])
+    published = await cp.config.publish(
+        manager_a, cp.business, 0, ["booking_resources", "counterparties"]
+    )
+    assert (published["state"], published["revision"]) == ("published", 3)
+    created = await cp.create()
+    assert created["revision"] == 1
+    assert created["roles"] == ["customer", "supplier"]
 
 
 async def test_cards_keep_immutable_versions_and_reference_only_receipts(

@@ -1,16 +1,18 @@
 # ADR-0020 — Counterparties, documents and contracts
 
-> Source snapshot received 2026-10-04; original preserved in the owner's handoff777 archive. Current E1 implementation and fresh evidence are in [acceptance](../plan/evidence/2026-10-05-counterparties/ACCEPTANCE.md) and [handoff](../plan/NEXT_AGENT_PACKAGE_E1_2026-10-05.md). E1 migration 0015 has run only in disposable tests. E2/E3 and production migrations remain planned. Initial context below describes the pre-E1 source snapshot.
+> Source snapshot received 2026-10-04; original was recorded in the owner's handoff777 archive (that Desktop directory is absent at the October-5 recheck). Current E1 implementation and fresh evidence are in [acceptance](../plan/evidence/2026-10-05-counterparties/ACCEPTANCE.md) and [handoff](../plan/NEXT_AGENT_PACKAGE_E1_2026-10-05.md). E1 migration 0015 has run only in disposable tests. E2/E3 and production migrations remain planned. Initial context below describes the pre-E1 source snapshot.
 
 
-Status: accepted by the owner on 2026-10-04 together with the package plan (package E of stage 1). Planned for implementation in steps E1–E3, each with its own migration, commit, full CI and acceptance record; this ADR is updated with the exact commits when each step is verified.
+Status: accepted by the owner on 2026-10-04 with the stage-1 package plan. E1 has exact-code CI evidence and a separate technical-readiness acceptance; E2/E3 remain planned. Each step has its own migration, commit, full CI and acceptance record.
 
 ## E1 implementation, 2026-10-05
 
 Counterparty cards, contacts, explicit match decisions and confirmed booking links
-are implemented with migration 0015 and permission map v4. The module remains
-`implemented` until exact code CI is green; it cannot yet be enabled by the real
-registry. E2/E3 remain planned. Existing booking customer snapshots are untouched.
+are implemented with migration 0015 and permission map v4. Code `2392566595a2df59f8ec3f073ed9bf184df6447f` passed exact push and PR CI (599/1
+in 118.52 s and 171.17 s). This separate acceptance promotes it to
+`technically_verified`; registry version stays 1 and explicit business publication
+is still required. The initial implementation's real refusal is evidenced in CI;
+acceptance API/browser fixtures now use the unmodified registry. E2/E3 remain planned. Existing booking customer snapshots are untouched.
 
 Historical card views exclude current merged-child relationships; the separate
 `merged-from` endpoint exposes those, preserving immutable command replay. Merge

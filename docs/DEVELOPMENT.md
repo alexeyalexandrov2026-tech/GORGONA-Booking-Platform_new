@@ -25,9 +25,11 @@ links recheck normalized email/phone against the current card/contacts; booking
 snapshots are never rewritten. Read/history/replay work when disabled, new writes
 do not. Company publication and writes share the existing configuration lock.
 
-Initial registry status is implemented and not enableable; a separate exact-CI
-acceptance may promote it. Integration fixtures override readiness only in tests
-and use real profile/draft/validation/publication. Baseline remains booking-only;
+Counterparties is technically_verified after exact implementation CI. Registry
+version stays 1. Initial code CI proved refusal while only implemented; acceptance
+API/browser fixtures now use the real registry with explicit profile/draft/
+validation/publication. module_support.py remains a test-only helper for unaccepted
+module development; it is not used by current accepted E1 fixtures. Baseline remains booking-only;
 no module is automatically enabled for an existing business.
 
 Focused: `tests/integration/test_counterparties.py`,

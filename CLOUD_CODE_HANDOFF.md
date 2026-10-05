@@ -8,8 +8,9 @@ Current branch codex/package-e1-counterparties builds on audited E0 bbe6ecd and
 targets that branch in its own draft PR. Owner checkout remains untouched.
 Versioned counterparties/contacts, explicit duplicate decisions and manual booking
 links are implemented; E2 documents/files and E3 agreements are next, then CORE-04.
-Initial module status implemented cannot be published until exact code CI and a
-separate acceptance commit. Local API/browser/static gates passed with explicit
+Code 2392566595a2df59f8ec3f073ed9bf184df6447f has green exact push/PR CI (599/1);
+a separate acceptance promotes counterparties to technically_verified. Registry v1
+and booking-only baseline remain unchanged; each business explicitly publishes it. Local API/browser/static gates passed with explicit
 container/external-site skips; production/providers/Azure/load remain unverified.
 The October-4 continuation and earlier counts below are historical, not current
 code acceptance. Preserve all 39 profiles, 28 criteria and generic booking.

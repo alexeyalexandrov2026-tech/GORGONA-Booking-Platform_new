@@ -123,7 +123,7 @@ async def test_lifecycle_keeps_every_version_and_replays(
     catalog = (
         await config.client.get(f"/v1/businesses/{a}/module-catalog", headers=config.auth(owner_a))
     ).json()
-    assert [m["id"] for m in catalog["modules"] if m["enableable"]] == [BOOKING]
+    assert [m["id"] for m in catalog["modules"] if m["enableable"]] == ["counterparties", BOOKING]
     assert len(catalog["modules"]) == 18
     registry = (
         await config.client.get(

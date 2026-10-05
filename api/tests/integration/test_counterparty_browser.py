@@ -18,7 +18,6 @@ from tests.integration.booking_support import BookingWorld
 from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.customer_support import customer_day, seed_customer_setup
 from tests.integration.live_server import free_port, live_server
-from tests.integration.module_support import verified_modules
 from tests.integration.seed import seed_user
 from tests.integration.test_management_browser import _browser_env, _management_app, _provider
 from tests.support.fake_idp import FakeIdp
@@ -45,7 +44,6 @@ def test_real_counterparty_browser_oidc_pkce_and_database(
     env["GBA_CP_BUSINESS"] = str(world.a.tenant_id)
     headers = {**idp.bearer(owner.subject, email=owner.email, iss=issuer)}
     with (
-        verified_modules("counterparties"),
         live_server(provider, idp_port),
         live_server(app, app_port),
     ):
