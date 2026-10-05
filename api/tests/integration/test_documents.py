@@ -23,7 +23,6 @@ from gorgona_booking.db.provisioning import (
 from tests.integration import test_management_api as shared
 from tests.integration.booking_support import BookingWorld
 from tests.integration.configuration_support import Config
-from tests.integration.module_support import verified_modules
 from tests.integration.seed import FakeUser, seed_user
 from tests.integration.test_counterparties import card
 from tests.integration.test_delegations import Parties
@@ -70,8 +69,7 @@ class Documents:
 
     async def enable(self, modules: list[str] = ALL_MODULES) -> None:
         await self.config.profile(self.user, self.business, 0, [1, 6, 24])
-        with verified_modules("documents"):
-            await self.config.publish(self.user, self.business, 0, modules)
+        await self.config.publish(self.user, self.business, 0, modules)
 
     async def upload(
         self,
@@ -178,17 +176,12 @@ async def test_documents_use_real_registry_and_require_explicit_publication(
     }
     for refused in (await docs.upload(), await docs.save(uuid7(), doc())):
         assert (refused.status_code, refused.json()["error"]["code"]) == (409, "MODULE_DISABLED")
-    # Without the test override the registry still refuses the module.
+    # The real registry accepts the module; a business still opts in explicitly.
+    configuration = (await docs.config.get(manager_a, docs.business)).json()
+    assert "documents" not in configuration["effective_module_ids"]
     await docs.config.profile(manager_a, docs.business, 0, [1])
-    assert (await docs.config.draft(manager_a, docs.business, 0, ALL_MODULES)).status_code == 200
-    refused = await docs.config.step(manager_a, docs.business, 1, "validate", 1)
-    assert refused.status_code == 422, refused.text
-    assert ("MODULE_NOT_READY", "documents") in {
-        (p["code"], p["module_id"]) for p in refused.json()["error"]["details"]["problems"]
-    }
-    with verified_modules("documents"):
-        published = await docs.config.publish(manager_a, docs.business, 1, ALL_MODULES)
-    assert published["state"] == "published"
+    published = await docs.config.publish(manager_a, docs.business, 0, ALL_MODULES)
+    assert (published["state"], published["revision"]) == ("published", 3)
     assert (await docs.upload()).status_code == 200
 
 
@@ -486,10 +479,9 @@ async def test_links_also_need_the_counterparties_module(
 ) -> None:
     counterparty = await enabled.counterparty()
     subject = str((await enabled.create())["document_id"])
-    with verified_modules("documents"):
-        await enabled.config.publish(
-            enabled.user, enabled.business, 1, ["booking_resources", "documents"]
-        )
+    await enabled.config.publish(
+        enabled.user, enabled.business, 1, ["booking_resources", "documents"]
+    )
     refused = await enabled.link(subject, {"action": "link", "counterparty_id": counterparty})
     assert refused.status_code == 409, refused.text
     assert refused.json()["error"]["details"] == {"module_id": "counterparties"}

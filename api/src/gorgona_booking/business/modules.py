@@ -126,12 +126,13 @@ MODULES: tuple[PlatformModule, ...] = (
         "Documents",
         _OPTIONAL,
         ("organization",),
-        Readiness.IMPLEMENTED,
+        Readiness.TECHNICALLY_VERIFIED,
         "Versioned documents with validity dates and one immutable PDF, PNG or JPEG file of at "
         "most 10 MiB per version, checked against a bounded format profile but not scanned for "
         "malware; uploads are refused in staging and production until a scanner exists. "
-        "Manual links to counterparties. No templates, signatures, per-document access, "
-        "retention or erasure.",
+        "Manual links to counterparties. Technical evidence: "
+        "docs/plan/evidence/2026-10-05-documents/ACCEPTANCE.md. No templates, signatures, "
+        "per-document access, retention or erasure.",
         "New uploads, documents, versions and counterparty links. Reads, history and "
         "downloads continue.",
     ),

@@ -7,11 +7,15 @@ agents' worktrees and test cluster 51454 were not touched. Local tests used the
 disposable PostgreSQL 18.6 cluster 127.0.0.1:51455 only; its DSN stayed in the
 child process environment.
 
-**Gate: IMPLEMENTED, not technically verified.** Module `documents` is
-`implemented` and cannot be enabled by a business. Promotion to
-`technically_verified` requires green CI on the exact code SHA and a separate
-acceptance commit (ADR-0019/0020). Registry version stays 1; the business
-baseline stays booking-only.
+**Gate: TECHNICALLY_VERIFIED for documents only.** Implementation code
+`2ab24f3` passed its exact-SHA push CI ([run 37289072512](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37289072512), job `api`
+111694923527: success, with mandatory PostgreSQL, browser and container gates).
+No pull request exists yet (the GitHub CLI was unavailable in this session), so
+there is no PR CI. This separate acceptance commit promotes `documents` to
+`technically_verified`; registry version stays 1 and every business still has
+to publish a configuration that enables it — the baseline stays booking-only.
+Fixtures and the browser harness now use the unmodified registry. The acceptance
+SHA needs its own CI; never transfer a code CI result to another SHA.
 
 ## Implemented boundary
 
@@ -65,7 +69,11 @@ preview. Lost responses keep the command pending and retry with the same key.
 | Focused documents/counterparties/location after review fixes | PASS: 76 passed, 42.12 s |
 | Web | PASS: typecheck, ESLint, Prettier, 55 unit tests, 16-page production export |
 | Python static | PASS: Ruff format/check and strict mypy, 171 files |
-| Final full local suite | PASS: **728 passed / 4 skipped / 286.50 s**, exit 0; mandatory PostgreSQL 18.6 and browsers, fresh export; skips: 3 Docker container gates (required in CI) and the external tenant-site gate |
+| Exact code push CI `2ab24f3` | PASS: [run 37289072512](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37289072512), job 111694923527, conclusion success; test counts are in the authenticated job log |
+| Real registry before promotion | Expected FAIL: 1 failed, 3.04 s (publication refused while `implemented`) |
+| Focused after promotion (no override) | PASS: documents, configurations, configuration contracts, counterparties — 96 passed, 34.14 s |
+| Full local suite after promotion (real registry) | PASS: **728 passed / 4 skipped / 234.26 s**, exit 0; mandatory PostgreSQL 18.6 and browsers; same 4 skips |
+| Final full local suite (code SHA) | PASS: **728 passed / 4 skipped / 286.50 s**, exit 0; mandatory PostgreSQL 18.6 and browsers, fresh export; skips: 3 Docker container gates (required in CI) and the external tenant-site gate |
 
 Review fixes: web schemas count code points like the server (astral titles,
 file names and E1 display names no longer break whole lists); the guard refuses

@@ -20,9 +20,8 @@ body with `Content-Type`, percent-encoded `X-File-Name`, Idempotency-Key),
 `FILE_SCANNING_NOT_CONFIGURED` in staging/production before reading the body; the
 list reports `file_uploads`. No file is scanned (`not_scanned`) or previewed.
 
-Documents is `implemented` until its acceptance commit: fixtures use
-`module_support.verified_modules("documents")` around real publication; the
-registry refusal itself is tested without it. Focused:
+Documents is `technically_verified` after exact code CI (`2ab24f3`); fixtures
+publish it through the real registry. Baseline stays booking-only. Focused:
 `tests/integration/test_documents.py`, `tests/unit/test_document_contracts.py`,
 `tests/unit/test_file_validation.py`; browser harness `test_document_browser.py`
 (fresh `npm run build`, real OIDC/PKCE test IdP, HTTP and PostgreSQL) invokes

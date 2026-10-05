@@ -17,7 +17,6 @@ from tests.integration.booking_support import BookingWorld
 from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.customer_support import seed_customer_setup
 from tests.integration.live_server import free_port, live_server
-from tests.integration.module_support import verified_modules
 from tests.integration.seed import seed_user
 from tests.integration.test_counterparties import card
 from tests.integration.test_management_browser import _browser_env, _management_app, _provider
@@ -72,19 +71,17 @@ def test_real_document_browser_oidc_pkce_and_database(
             return data
 
         request("PUT", "profile", {"expected_revision": 0, "industry_ids": [1, 6, 24]})
-        # Test-only registry override; the publication itself is the real command path.
-        with verified_modules("documents"):
-            request(
-                "PUT",
-                "configuration/draft",
-                {
-                    "expected_version": 0,
-                    "profile_revision": 1,
-                    "module_ids": ["booking_resources", "counterparties", "documents"],
-                },
-            )
-            request("POST", "configuration/versions/1/validate", {"expected_revision": 1})
-            request("POST", "configuration/versions/1/publish", {"expected_revision": 2})
+        request(
+            "PUT",
+            "configuration/draft",
+            {
+                "expected_version": 0,
+                "profile_revision": 1,
+                "module_ids": ["booking_resources", "counterparties", "documents"],
+            },
+        )
+        request("POST", "configuration/versions/1/validate", {"expected_revision": 1})
+        request("POST", "configuration/versions/1/publish", {"expected_revision": 2})
         request(
             "PUT",
             f"counterparties/{uuid7()}",

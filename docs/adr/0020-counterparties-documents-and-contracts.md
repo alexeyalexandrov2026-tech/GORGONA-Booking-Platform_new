@@ -3,12 +3,12 @@
 ## E2 implementation, 2026-10-05
 
 Documents, immutable files and counterparty links are implemented with migration
-0016 on branch `claude/package-e2-documents` (based on E2-A `4a6f63b`). The module
-is `implemented`, not enableable: integration and browser fixtures publish it through
-the real draft → validate → publish path with the test-only registry override, and a
-separate test proves the real `MODULE_NOT_READY` refusal without it. Promotion to
-`technically_verified` needs green CI on the exact code SHA and a separate acceptance
-commit. [Evidence](../plan/evidence/2026-10-05-documents/ACCEPTANCE.md).
+0016 on branch `claude/package-e2-documents` (based on E2-A `4a6f63b`). Code
+`2ab24f3` passed exact push CI (run 37289072512); a separate acceptance commit
+promotes `documents` to `technically_verified` (registry version 1, explicit
+publication still required). Code-commit fixtures used the test-only override and
+proved the real `MODULE_NOT_READY` refusal; acceptance fixtures use the real registry.
+[Evidence](../plan/evidence/2026-10-05-documents/ACCEPTANCE.md).
 
 Clarifications made while implementing:
 

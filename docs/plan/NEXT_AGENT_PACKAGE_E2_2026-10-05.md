@@ -10,7 +10,9 @@ Read [AGENTS](../../AGENTS.md), [master plan](GORGONA_MASTER_PLAN.md),
 
 Branch `claude/package-e2-documents` in worktree
 `C:\Users\alexa\Documents\ChatGPT\gorgona-e2-documents`, based on E2-A `4a6f63b`
-(draft PR #8). Its draft PR targets `codex/package-e2-file-validation`; nothing is
+(draft PR #8). Code `2ab24f3` passed push CI run 37289072512; the acceptance
+commit promotes `documents` to `technically_verified`. No PR was opened (no GitHub CLI
+in that session): open a draft PR into `codex/package-e2-file-validation`. Nothing is
 merged. Fetch and check the exact HEAD, PR and CI before editing — acceptance is
 specific to a SHA. The owner checkout `C:\Users\alexa\Documents\ChatGPT\Gorgona Booking`
 keeps uncommitted work: no reset/clean/restore/overwrite/merge there. Each agent
@@ -25,13 +27,13 @@ Migration 0016 (four FORCE-RLS insert-only tables), `business/document_contracts
 `business/documents.py`, `api/documents.py`, guard 38 definitions + ten optional
 gates (no WHEN/constraint triggers), web `/documents/` page, counterparty "Linked
 documents" panel, verified binary upload/download, integration/unit/web/browser
-tests. Module `documents` is **implemented** only.
+tests. Module `documents` is **technically_verified** after the acceptance commit.
 
 ## Next steps, in order
 
-1. Confirm exact-code CI (push and PR) for the E2 code SHA is green. If red: find
-   the cause, add a red→green regression, new SHA, new CI.
-2. Separate acceptance commit: `documents` → `technically_verified` in
+1. Done: exact code push CI green. Check the acceptance SHA's own CI and open the
+   draft PR (PR CI then runs too). If red: cause, red→green regression, new SHA.
+2. Done in the acceptance commit: `documents` → `technically_verified` in
    `business/modules.py` with the evidence path in `limits`; switch fixtures
    (`test_documents.py`, `test_document_browser.py`) from `verified_modules` to the
    real registry; turn `test_documents_use_real_registry_and_require_explicit_publication`
