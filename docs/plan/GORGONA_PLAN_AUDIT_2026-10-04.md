@@ -1,5 +1,14 @@
 # GORGONA — аудит выполнения мастер-плана, 4 октября 2026
 
+## Дополнение E2-A, 5 октября
+
+Ограниченный валидатор файлов и сохранение CSP — проверяемый prerequisite
+документов по [ADR-0021](../adr/0021-bounded-file-validation-profile.md).
+Этап1 остается частичным: E2 storage/API/UI отсутствуют, documents planned;
+никакой критерий полного цикла не закрыт только наличием валидатора.
+Точные проверки: [evidence](evidence/2026-10-05-file-validation/ACCEPTANCE.md),
+продолжение: [handoff](NEXT_AGENT_E2_FILE_VALIDATION_2026-10-05.md).
+
 ## Текущее продолжение: E1, 2026-10-05
 
 Общие контрагенты реализованы в отдельной ветке `codex/package-e1-counterparties`

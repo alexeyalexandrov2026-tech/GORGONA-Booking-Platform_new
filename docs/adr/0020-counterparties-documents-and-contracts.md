@@ -1,5 +1,15 @@
 # ADR-0020 — Counterparties, documents and contracts
 
+## E2 security prerequisite, 2026-10-05
+
+[ADR-0021](0021-bounded-file-validation-profile.md) defines the bounded initial
+file profile and preserves existing API CSP policies. This is a prerequisite,
+not E2 storage/API/UI acceptance: documents remains planned and migration0016
+is not introduced. Reject both external GoToR and embedded GoToE, optional-type
+attachments (EF/FileAttachment),3D lifecycle scripts and unknown capabilities.
+No new dependency or scanner was introduced; general-format/render safety is
+not claimed. [Evidence](../plan/evidence/2026-10-05-file-validation/ACCEPTANCE.md).
+
 > Source snapshot received 2026-10-04; original was recorded in the owner's handoff777 archive (that Desktop directory is absent at the October-5 recheck). Current E1 implementation and fresh evidence are in [acceptance](../plan/evidence/2026-10-05-counterparties/ACCEPTANCE.md) and [handoff](../plan/NEXT_AGENT_PACKAGE_E1_2026-10-05.md). E1 migration 0015 has run only in disposable tests. E2/E3 and production migrations remain planned. Initial context below describes the pre-E1 source snapshot.
 
 
