@@ -104,7 +104,8 @@ MODULES: tuple[PlatformModule, ...] = (
         "Technical evidence: docs/plan/evidence/2026-10-05-counterparties/ACCEPTANCE.md. "
         "Contracts keep insert-only versions (draft, agreed, terminated); signing happens "
         "outside the platform and is only attested; a termination ends the latest agreed "
-        "version from a possibly future date and is final. No electronic signature, "
+        "version from a possibly future date and is final. Contract evidence: "
+        "docs/plan/evidence/2026-10-05-agreements/ACCEPTANCE.md. No electronic signature, "
         "consent management, import or erasure.",
         "New cards, versions, match decisions, booking links and contract versions. Reads "
         "and history continue.",

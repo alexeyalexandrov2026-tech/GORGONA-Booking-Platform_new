@@ -5,7 +5,8 @@
 Contracts ("agreements" in code) are implemented with migration 0017 on branch
 `claude/package-e3-agreements` (based on accepted E2 `c5a3908`), inside the already
 verified `counterparties` module: its permissions, lock and gate apply, and its
-`limits` now describe contracts (evidence is added by the acceptance commit).
+`limits` now describe contracts with their own evidence
+([E3 evidence](../plan/evidence/2026-10-05-agreements/ACCEPTANCE.md)); code `3044f97`.
 Clarifications:
 
 - SQL enforces the transitions, contiguous revisions, attested fields per state

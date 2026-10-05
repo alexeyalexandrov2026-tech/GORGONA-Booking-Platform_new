@@ -28,6 +28,7 @@ number, summary, term and document reference), `agreements/{id}/versions`,
 Focused: `tests/integration/test_agreements.py`, `tests/unit/test_agreement_contracts.py`;
 browser harness `test_agreement_browser.py` runs `npm run test:management:agreements`
 (contracts panel on the counterparty card) on desktop/mobile.
+Evidence: [E3 acceptance](plan/evidence/2026-10-05-agreements/ACCEPTANCE.md).
 
 ## Documents and files (Package E2, 2026-10-05)
 
