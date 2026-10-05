@@ -10,8 +10,13 @@ Focused81, Ruff/format/mypy168, web47/typecheck/lint/format/build15 PASS.
 Полная локальная suite после последнего исправления: 677 passed/4 skipped/204.12s,
 exit0; PostgreSQL/браузеры обязательны, три Docker gate и один внешний site gate
 пропущены локально. Контейнеры должны пройти в CI.
-Полная suite и точный CI — в [свежем evidence](evidence/2026-10-05-file-validation/ACCEPTANCE.md);
-предыдущий CI не переносится на новую ветку. [Передача](NEXT_AGENT_E2_FILE_VALIDATION_2026-10-05.md).
+Код ce31e21de2d1d290408ace74628ed928d728deb8: PR CI 37280252370 —
+680 passed/1 skipped/127.85s; push CI 37280214524 — 680/1/154.96s.
+Обязательные PostgreSQL/browser/container gate выполнены; web 47 и build 15 PASS.
+Draft [PR #8](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/8)
+→ codex/package-e1-counterparties, без merge. Точный CI коммита документации
+проверяется отдельно. [Evidence](evidence/2026-10-05-file-validation/ACCEPTANCE.md),
+[передача](NEXT_AGENT_E2_FILE_VALIDATION_2026-10-05.md).
 Независимый аудит: исправления PDF-вложений/3D, чисел, page-tree и JPEG MCU
 проверены, 20 PDF + 9 JPEG probes PASS. Общая совместимость,
 malware/render safety и полный E2 NOT TESTED.

@@ -5,6 +5,13 @@ Base `3983dd4f36e67830427cc09fafcb51ae68c7705d` (accepted E1), branch
 `codex/package-e2-file-validation`. No migration or readiness promotion.
 [Decision](../../../adr/0021-bounded-file-validation-profile.md).
 
+Code SHA: `ce31e21de2d1d290408ace74628ed928d728deb8`.
+Draft [PR #8](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/8)
+targets `codex/package-e1-counterparties`; no merge.
+Disposition: **PASS for the bounded E2-A prerequisite**, not complete E2 acceptance.
+The follow-up evidence commit changes documentation only; inspect its exact-head
+CI in PR checks rather than treating this code-SHA proof as its own result.
+
 ## Observable flow and reuse
 
 File bytes → actual size/signature → bounded structural profile → immutable metadata.
@@ -36,14 +43,33 @@ independent framing policy; no auth, tenant or HTML embedding rewrite.
 | Fresh web export | PASS, exit0:15 pages |
 | Full local suite before final MCU review | PASS, exit0:673 passed/4 skipped/200.00s |
 | Final full local suite, required PostgreSQL/browser | PASS, exit0:677 passed/4 skipped/204.12s |
-| Exact new-commit CI | NOT TESTED: not pushed yet; never transfer E1 CI to this branch |
+| Exact code PR CI, ce31e21 | PASS:680 passed/1 skipped/127.85s; [run37280252370](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37280252370), job111666417806 |
+| Exact code push CI, ce31e21 | PASS:680 passed/1 skipped/154.96s; [run37280214524](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37280214524), job111666297033 |
+| CI web/static/image checks | PASS both runs:47 web tests (1.4s/1.5s),15-page export, Ruff/format/mypy168, production-image build |
+| Changed documentation | PASS, exit0:11 UTF-8 files/135 local links; git diff --check and staged check |
 | Final independent implementation review | PASS for bounded prerequisite:20 PDF and9 final JPEG probes, exit0; no edits/DB |
 
 Local four skips are three Docker/container gates and one optional external tenant
-site gate; mandatory PostgreSQL/browser gates are not skipped. Code CI must run all
-required container gates. One executor uses the existing disposable18.6 cluster,
+site gate; mandatory PostgreSQL/browser gates are not skipped. Both code CI runs
+executed all required PostgreSQL, browser and three container gates; the only skip
+was the optional external site. One executor used the disposable 18.6 cluster,
 loopback51454/max_connections250. Credentials remain in child environment only;
 private connection settings are never printed, copied or committed.
+The known test cluster was stopped after the final local suite, exit0.
+
+Observed CI tooling warnings: Node deprecations in existing action/tool runners,
+`setup-uv@v6` targets the deprecated Node20 action runtime (forced to24), and
+`eslint@9.39.5` reports unsupported status. These remain a separate toolchain
+maintenance item; no dependency audit/upgrade was performed in E2-A. They do not
+replace the earlier dependency findings with a fresh audit result.
+
+## Changed files
+
+Source: `business/file_errors.py`, `file_validation.py`, `pdf_validation.py`,
+`api/framing.py`; regression suites `test_file_validation.py` and
+`test_framing_policy.py`. Documentation: ADR0020/0021, master/Package E plan,
+implementation registry/audit, DEVELOPMENT, CLOUD_CODE_HANDOFF, START_HERE,
+E2-A handoff and this evidence record. Total:17 files in the code commit.
 
 ## Independent security review
 

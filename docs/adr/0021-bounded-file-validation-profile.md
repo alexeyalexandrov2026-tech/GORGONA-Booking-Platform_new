@@ -1,6 +1,7 @@
 # ADR-0021 — Bounded file validation before E2 persistence
 
-Status: implemented security prerequisite, awaiting exact-commit CI. This clarifies
+Status: technically verified security prerequisite at code `ce31e21`; both exact
+code CI runs passed with680 tests/1 optional skip. This clarifies
 the initial file profile in [ADR-0020](0020-counterparties-documents-and-contracts.md);
 it does not accept or enable the documents module.
 
@@ -14,7 +15,7 @@ checking and searches for dangerous strings do not establish PDF syntax or safet
 
 This increment is intentionally one reviewable prerequisite: a typed, bounded,
 side-effect-free file validator and preservation of existing API CSP policies.
-Acceptance: complete supported structure; exact media/size/hash/name metadata;
+Acceptance: bounded supported structural profile; exact media/size/hash/name metadata;
 rejection of unsupported or ambiguous features, active PDF capabilities and limit
 violations; actual red-to-green regressions; existing workflows remain unchanged.
 Persistence, authorization of uploads and document UI require the next E2 increment.
@@ -33,8 +34,8 @@ Persistence, authorization of uploads and document UI require the next E2 increm
   of remaining+1, require `eof`, refuse overflow/tails/trailing compressed bytes;
   never use unbounded `flush()`. [Python zlib](https://docs.python.org/3.14/library/zlib.html)
 - Filename: NFC, basename, no control/bidi/reserved characters; Windows reserved
-  basenames checked through NFKC; detected type controls extension; at most120
-  characters. An input name over4096 characters is refused.
+  basenames checked through NFKC; detected type controls extension; at most 120
+  characters. An input name over 4096 characters is refused.
 - Preserve existing API CSP fields as an independent response policy and append
   `frame-ancestors 'none'` as another policy. A permissive existing framing field
   cannot override the additional policy. Customer HTML behavior stays governed by
@@ -42,7 +43,7 @@ Persistence, authorization of uploads and document UI require the next E2 increm
 
 ## Supported profile and limits
 
-**PDF:** versions1.0–1.7, one classic xref/trailer, generation-zero objects, direct
+**PDF:** versions 1.0–1.7, one classic xref/trailer, generation-zero objects, direct
 stream lengths, raw or Flate streams (also a one-element Flate filter array).
 Validate object syntax, names/#xx aliases, references, exact xref offsets, trailer,
 page-tree root/parents/counts, inherited resources and positive page geometry.
@@ -51,31 +52,30 @@ custom names are allowed inside direct resource-map dictionaries. Separately
 referenced map dictionaries with custom keys can be refused by the global
 vocabulary; this conservative profile does not resolve their context.
 Unknown capabilities fail closed.
-Bounds:4096 object numbers,100,000 tokens,32 nesting levels,127 decoded name bytes
-(381 encoded),381-byte word scan. Compressed streams are inspected for active
+Bounds: 4096 object numbers, 100,000 tokens, 32 nesting levels, 127 decoded name bytes
+(381 encoded), 381-byte word scan. Compressed streams are inspected for active
 names with the same aggregate budget.
 
 Refuse encryption, incremental updates, object/xref streams, unsupported/indirect
 filters, DecodeParms/predictors, external streams, dangling references, duplicate
 keys, extra payload and active capabilities. These include JavaScript/JS, launch,
 attachments/EF/FileAttachment, associated files, rich media, XFA, submission/import,
-external GoToR, embedded GoToE, and3D/OnInstantiate lifecycle scripts. OpenAction
+external GoToR, embedded GoToE, and 3D/OnInstantiate lifecycle scripts. OpenAction
 alone is allowed for a supported passive destination or local GoTo action.
 [Adobe PDF reference](https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/pdfreference1.6.pdf),
-[Adobe3D lifecycle](https://opensource.adobe.com/dc-acrobat-sdk-docs/library/plugin/Plugins_3D_samples.html)
+[Adobe 3D lifecycle](https://opensource.adobe.com/dc-acrobat-sdk-docs/library/plugin/Plugins_3D_samples.html)
 
-**PNG:** noninterlaced8-bit gray/RGB/gray-alpha/RGBA; dimensions1..16,384,
-at most16,000,000 pixels,4096 chunks; CRCs, ordering, expected decompressed scanline
-length and filter codes0..4, complete IEND with no appended payload. Limited
+**PNG:** noninterlaced 8-bit gray/RGB/gray-alpha/RGBA; dimensions 1..16,384,
+at most 16,000,000 pixels, 4096 chunks; CRCs, ordering, expected decompressed scanline
+length and filter codes 0..4, complete IEND with no appended payload. Limited
 uncompressed metadata is validated. Palette/interlaced/animated PNG, compressed
 metadata and unknown chunks require a later reviewed profile.
 [W3C PNG](https://www.w3.org/TR/png/)
 
-**JPEG:** one8-bit baseline frame and one scan, gray or3 components; quantization,
+**JPEG:** one 8-bit baseline frame and one scan, gray or 3 components; quantization,
 Huffman table structure/symbol bounds and marker/scan/EOI structure. Interleaved
-scans have at most10 blocks per MCU. [Upstream decoder](https://github.com/libjpeg-turbo/libjpeg-turbo/blob/main/src/jdinput.c)
-Reject
-progressive/arithmetic/lossless, restart, multi-scan, truncated or extra-payload
+scans have at most 10 blocks per MCU. [Upstream decoder](https://github.com/libjpeg-turbo/libjpeg-turbo/blob/main/src/jdinput.c)
+Reject progressive/arithmetic/lossless, restart, multi-scan, truncated or extra-payload
 forms. This does **not** decode entropy coefficients or prove rendering correctness.
 
 These compatibility limits exclude many valid real-world files, including some
@@ -87,9 +87,9 @@ and independent acceptance. Do not relax a refusal merely to accept a fixture.
 
 Structural validity is not a malware-free, script-safety-for-all-readers or rendering
 verdict. Decoder/parser memory includes input bytes, decoded buffers and temporary
-values;32 MiB is an output budget, not a measured process-memory ceiling. No public
+values; 32 MiB is an output budget, not a measured process-memory ceiling. No public
 upload route or metadata persistence is added in this increment. Documents remains
-`planned`, registry version1, existing business baseline booking-only.
+`planned`, registry version 1, existing business baseline booking-only.
 
 Next E2 integration must refuse staging/production uploads before reading bytes,
 perform short initial authorization then final transactional reauthorization after
