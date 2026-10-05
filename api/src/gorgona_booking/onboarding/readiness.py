@@ -99,10 +99,12 @@ def evaluate(s: ReadinessSnapshot) -> Readiness:
     return Readiness(ready=all(i.status == "confirmed" for i in items), items=tuple(items))
 
 
-# Runs inside a tenant transaction (runtime or owner); RLS scopes every table.
+# Runs inside a tenant transaction (runtime or owner); RLS scopes every table except
+# memberships, whose self-read policy also shows the caller's memberships elsewhere.
 _SNAPSHOT = """
 select
-    (select count(*) from gba.memberships where role = 'owner' and status = 'active'),
+    (select count(*) from gba.memberships
+      where tenant_id = gba.current_tenant_id() and role = 'owner' and status = 'active'),
     (select count(*) from gba.locations),
     (select count(*) from gba.business_hours),
     (select count(*) from gba.resources where kind = 'artist' and is_active),

@@ -188,6 +188,26 @@ async def test_go_live_requires_readiness_and_gates_public_booking(
     assert (by_owner.status_code, _code(by_owner)) == (403, "PERMISSION_DENIED")
 
 
+async def test_go_live_ignores_owner_memberships_elsewhere(
+    client: httpx.AsyncClient, owner_conn: psycopg.Connection, idp: FakeIdp
+) -> None:
+    # The operator owns another company; that must not stand in for this salon's owner.
+    salon = apply_onboarding(owner_conn, fake_spec(_slug(), status="confirmed"), actor="op:test")
+    operator = seed_user(owner_conn, "operator-owner")
+    grant_platform_admin(owner_conn, user_id=operator.user_id, granted_by="test")
+    elsewhere = apply_onboarding(
+        owner_conn, fake_spec(_slug(), status="confirmed"), actor="op:test"
+    )
+    add_membership(
+        owner_conn, tenant_id=elsewhere.tenant_id, user_id=operator.user_id, role="owner"
+    )
+    platform = idp.bearer(operator.subject, email=operator.email)
+
+    refused = await client.post(f"/v1/platform/salons/{salon.tenant_id}/go-live", headers=platform)
+    assert (refused.status_code, _code(refused)) == (409, "NOT_READY")
+    assert refused.json()["error"]["details"]["missing"] == ["owner"]
+
+
 async def test_salon_admin_settings_are_validated_governed_and_audited(
     client: httpx.AsyncClient,
     owner_conn: psycopg.Connection,

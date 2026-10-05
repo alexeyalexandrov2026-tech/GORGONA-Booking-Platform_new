@@ -461,3 +461,39 @@ test("unknown configuration operations still fail closed", () => {
       "Unrecognized business response contract",
     );
 });
+
+test("salon readiness responses match the API ReadinessView", () => {
+  const salonId = "c1111111-1111-4111-8111-111111111111";
+  const view = {
+    salon_id: salonId,
+    ready: false,
+    booking_state: "not_live",
+    items: [
+      {
+        fact: "owner",
+        status: "missing",
+        detail: "an active owner membership",
+      },
+      { fact: "timezone", status: "unconfirmed", detail: "a location" },
+      { fact: "domain", status: "confirmed", detail: "a host name" },
+    ],
+  };
+  for (const [path, method] of [
+    [`/v1/salons/${salonId}/readiness`, "GET"],
+    [`/v1/salons/${salonId}/business-hours`, "PUT"],
+    [`/v1/salons/${salonId}/policies`, "PUT"],
+    [`/v1/salons/${salonId}/facts/timezone`, "PUT"],
+  ] as const) {
+    const schema = managementResponseSchema(path, method);
+    expect(schema.parse(view)).toEqual(view);
+    expect(
+      schema.safeParse({
+        ...view,
+        items: [{ fact: "owner", status: "approved", detail: "" }],
+      }).success,
+    ).toBe(false);
+  }
+  expect(() =>
+    managementResponseSchema(`/v1/salons/${salonId}/readiness`, "PUT"),
+  ).toThrow("Unrecognized management response contract");
+});

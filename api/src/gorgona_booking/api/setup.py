@@ -75,8 +75,12 @@ class ReadinessView(BaseModel):
     items: list[ReadinessItemView]
 
 
-async def _booking_state(conn: RuntimeConnection) -> str:
-    row = await (await conn.execute("select booking_state from gba.tenants")).fetchone()
+async def _booking_state(conn: RuntimeConnection, salon_id: UUID) -> str:
+    # Explicit filter: a member of several companies (or a platform admin) can read other
+    # companies' rows through the permissive tenant read policies.
+    row = await (
+        await conn.execute("select booking_state from gba.tenants where id = %s", (salon_id,))
+    ).fetchone()
     return str(row[0]) if row else "not_live"
 
 
@@ -96,7 +100,7 @@ async def _record_fact(
 async def _after_edit(conn: RuntimeConnection, salon_id: UUID, facts: Sequence[str]) -> None:
     """Edited data needs a fresh confirmation, unless the salon is live: then the
     admin who edited it is on record as confirming it (audited)."""
-    live = await _booking_state(conn) == "live"
+    live = await _booking_state(conn, salon_id) == "live"
     for fact in facts:
         await _record_fact(
             conn,
@@ -112,7 +116,7 @@ async def _readiness_view(conn: RuntimeConnection, salon_id: UUID) -> ReadinessV
     return ReadinessView(
         salon_id=salon_id,
         ready=result.ready,
-        booking_state=await _booking_state(conn),
+        booking_state=await _booking_state(conn, salon_id),
         items=[
             ReadinessItemView(fact=i.fact, status=i.status, detail=i.detail) for i in result.items
         ],
@@ -221,7 +225,7 @@ async def put_fact(
         request_id=get_request_id(request),
     ) as access:
         conn = access.conn
-        if body.status == "unconfirmed" and await _booking_state(conn) == "live":
+        if body.status == "unconfirmed" and await _booking_state(conn, salon_id) == "live":
             raise SalonIsLiveError("A live salon's booking facts cannot be unconfirmed")
         await _record_fact(conn, salon_id, fact_key, body.status, body.source_note)
         return await _readiness_view(conn, salon_id)

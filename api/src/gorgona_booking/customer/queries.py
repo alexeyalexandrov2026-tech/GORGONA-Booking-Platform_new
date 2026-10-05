@@ -43,8 +43,8 @@ class PaymentRequiredError(DomainError):
 async def live_name(conn: RuntimeConnection) -> str:
     row = await (
         await conn.execute(
-            "select display_name from gba.tenants where status = 'active' "
-            "and booking_state = 'live'"
+            "select display_name from gba.tenants where id = gba.current_tenant_id() "
+            "and status = 'active' and booking_state = 'live'"
         )
     ).fetchone()
     if row is None:

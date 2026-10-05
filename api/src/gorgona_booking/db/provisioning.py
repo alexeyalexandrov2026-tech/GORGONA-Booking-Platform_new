@@ -113,7 +113,8 @@ def set_membership_status(
     with owner_tenant_transaction(conn, tenant_id):
         _set_context(conn, actor=actor)
         conn.execute(
-            "update gba.memberships set status = %s where id = %s", (status, membership_id)
+            "update gba.memberships set status = %s where tenant_id = %s and id = %s",
+            (status, tenant_id, membership_id),
         )
 
 

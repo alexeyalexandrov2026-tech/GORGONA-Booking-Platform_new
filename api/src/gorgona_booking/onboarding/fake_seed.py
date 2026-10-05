@@ -134,7 +134,9 @@ def _ensure_owner(conn: psycopg.Connection, tenant_id: UUID, slug: str, actor: s
     )
     with owner_tenant_transaction(conn, tenant_id):
         exists = conn.execute(
-            "select 1 from gba.memberships where user_id = %s and role = 'owner'", (user_id,)
+            "select 1 from gba.memberships where tenant_id = %s and user_id = %s "
+            "and role = 'owner'",
+            (tenant_id, user_id),
         ).fetchone()
     if exists is None:
         add_membership(conn, tenant_id=tenant_id, user_id=user_id, role="owner", actor=actor)

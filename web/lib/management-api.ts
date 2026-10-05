@@ -1,5 +1,8 @@
 import { accessToken } from "./auth";
-import { managementResponseSchema } from "./management-contracts";
+import {
+  managementResponseSchema,
+  type Readiness,
+} from "./management-contracts";
 import { availabilitySchema, Availability } from "./contracts";
 import {
   legalEntityListSchema,
@@ -1085,8 +1088,8 @@ export async function savePolicies(
     deposit_policy: { version: 1; required: boolean };
     cancellation_policy: { version: 1; summary: string };
   },
-): Promise<unknown> {
-  return managementFetch(`/v1/salons/${salonId}/policies`, {
+): Promise<Readiness> {
+  return managementFetch<Readiness>(`/v1/salons/${salonId}/policies`, {
     method: "PUT",
     body: JSON.stringify(payload),
   });
@@ -1095,8 +1098,8 @@ export async function saveBusinessHours(
   salonId: string,
   locationId: string,
   hours: { weekday: number; opens: string; closes: string }[],
-): Promise<unknown> {
-  return managementFetch(`/v1/salons/${salonId}/business-hours`, {
+): Promise<Readiness> {
+  return managementFetch<Readiness>(`/v1/salons/${salonId}/business-hours`, {
     method: "PUT",
     body: JSON.stringify({ location_id: locationId, hours }),
   });
@@ -1106,8 +1109,8 @@ export async function saveFact(
   key: string,
   status: "confirmed" | "unconfirmed",
   sourceNote: string,
-): Promise<unknown> {
-  return managementFetch(
+): Promise<Readiness> {
+  return managementFetch<Readiness>(
     `/v1/salons/${salonId}/facts/${encodeURIComponent(key)}`,
     {
       method: "PUT",
