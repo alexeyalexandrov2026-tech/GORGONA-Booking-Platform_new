@@ -1,5 +1,25 @@
 # Development
 
+## Selected-company isolation (Package E0)
+
+Company-specific reads of tenants/memberships/tenant_hosts must include the
+authorized business predicate even when RLS discovery policies expose the user's
+other companies. Keep intentional discovery paths in the conservative scanner
+allowlist; the scanner is a linter, not a SQL parser or runtime authorization.
+Readiness web contracts use items[{fact,status,detail}], not missing; PUT policies,
+business-hours and facts return the typed Readiness view; GET readiness is registered.
+Focused: test_cross_company_reads.py, test_invitations_api.py, test_onboarding.py,
+test_cross_tenant_queries.py and the readiness test in management-contracts.spec.ts.
+See [acceptance](plan/evidence/2026-10-04-isolation-audit/ACCEPTANCE.md) and
+[current handoff](plan/NEXT_AGENT_AUDITED_E0_2026-10-04.md).
+
+**Known load-harness defect:** the existing tool below can report PASS after 4xx
+confirm failures/missing requested bookings, select overlapping slots and combine
+different phase windows. It is unchanged; do not use its verdict for OPS-02 until
+the saved regressions and measurement repairs are implemented. Actual workload,
+errors and latency thresholds require separate verified evidence.
+
+
 ## Prerequisites
 
 - [`uv`](https://docs.astral.sh/uv/) (installs CPython 3.14 on demand).

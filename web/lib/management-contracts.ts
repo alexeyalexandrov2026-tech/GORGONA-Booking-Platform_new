@@ -174,12 +174,20 @@ const settings = z.object({
     }),
   ),
 });
-const readiness = z.object({
+// API ReadinessView (api/setup.py): every required fact with its status.
+export const readinessSchema = z.strictObject({
   salon_id: id,
   ready: z.boolean(),
-  missing: z.array(z.string()),
-  booking_state: z.string(),
+  booking_state: z.enum(["not_live", "live"]),
+  items: z.array(
+    z.strictObject({
+      fact: z.string(),
+      status: z.enum(["confirmed", "unconfirmed", "missing"]),
+      detail: z.string(),
+    }),
+  ),
 });
+export type Readiness = z.infer<typeof readinessSchema>;
 
 /** A response is validated before management views receive any external fields. */
 export function managementResponseSchema(
@@ -289,11 +297,13 @@ export function managementResponseSchema(
   if (suffix === "/staff") return method === "GET" ? z.array(staff) : staff;
   if (/^\/staff\/[^/]+\/(schedule|services)$/.test(suffix)) return schedule;
   if (/^\/staff\//.test(suffix)) return staff;
+  if (suffix === "/readiness" && method === "GET") return readinessSchema;
   if (
-    suffix === "/business-hours" ||
-    suffix === "/policies" ||
-    /^\/facts\//.test(suffix)
+    (suffix === "/business-hours" ||
+      suffix === "/policies" ||
+      /^\/facts\//.test(suffix)) &&
+    method === "PUT"
   )
-    return readiness;
+    return readinessSchema;
   throw new Error("Unrecognized management response contract");
 }

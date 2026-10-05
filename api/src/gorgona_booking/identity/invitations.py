@@ -110,8 +110,8 @@ async def create_invitation(
     member = await (
         await conn.execute(
             "select 1 from gba.memberships m join gba.users u on u.id = m.user_id "
-            "where u.email_normalized = %s and m.status <> 'revoked'",
-            (normalized,),
+            "where m.tenant_id = %s and u.email_normalized = %s and m.status <> 'revoked'",
+            (access.tenant_id, normalized),
         )
     ).fetchone()
     if member is not None:
@@ -187,7 +187,7 @@ async def accept_invitation(
                 "select i.id, i.email_normalized, i.role, i.status, i.expires_at <= now(), "
                 "i.accepted_by_user_id, i.accepted_membership_id, t.status, i.location_id "
                 "from gba.invitations i join gba.tenants t on t.id = i.tenant_id "
-                "where i.token_sha256 = %s for update of i",
+                "where t.id = gba.current_tenant_id() and i.token_sha256 = %s for update of i",
                 (token_digest(invitation_token),),
             )
         ).fetchone()
@@ -304,8 +304,9 @@ async def change_member_status(
     conn = access.conn
     target = await (
         await conn.execute(
-            "select user_id, role, status from gba.memberships where id = %s for update",
-            (membership_id,),
+            "select user_id, role, status from gba.memberships "
+            "where tenant_id = %s and id = %s for update",
+            (access.tenant_id, membership_id),
         )
     ).fetchone()
     if target is None:
@@ -320,21 +321,23 @@ async def change_member_status(
     if role == "owner" and new_status != "active":
         owners = await (
             await conn.execute(
-                "select count(*) from gba.memberships "
-                "where role = 'owner' and status = 'active' and location_id is null and id <> %s",
-                (membership_id,),
+                "select count(*) from gba.memberships where tenant_id = %s "
+                "and role = 'owner' and status = 'active' and location_id is null and id <> %s",
+                (access.tenant_id, membership_id),
             )
         ).fetchone()
         if owners is None or owners[0] == 0:
             raise LastOwnerError("A salon must keep at least one active owner")
     await conn.execute(
-        "update gba.memberships set status = %s where id = %s", (new_status, membership_id)
+        "update gba.memberships set status = %s where tenant_id = %s and id = %s",
+        (new_status, access.tenant_id, membership_id),
     )
     member = await (
         await conn.execute(
             "select m.id, m.user_id, u.display_name, m.role, m.status, m.location_id "
-            "from gba.memberships m left join gba.users u on u.id = m.user_id where m.id = %s",
-            (membership_id,),
+            "from gba.memberships m left join gba.users u on u.id = m.user_id "
+            "where m.tenant_id = %s and m.id = %s",
+            (access.tenant_id, membership_id),
         )
     ).fetchone()
     assert member is not None  # noqa: S101

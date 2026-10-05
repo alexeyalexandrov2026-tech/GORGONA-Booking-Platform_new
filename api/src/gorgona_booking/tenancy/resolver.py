@@ -30,7 +30,9 @@ async def resolve_tenant_by_host(pool: RuntimePool, raw_host: str) -> UUID:
         tenant_id = UUID(str(row[0]))
         await set_tenant_context(conn, tenant_id)
         status = await (
-            await conn.execute("select status, booking_state from gba.tenants")
+            await conn.execute(
+                "select status, booking_state from gba.tenants where id = %s", (tenant_id,)
+            )
         ).fetchone()
     # A suspended or not-yet-live salon is indistinguishable from an unknown one (ADR-0010).
     if status is None or status[0] != "active" or status[1] != "live":

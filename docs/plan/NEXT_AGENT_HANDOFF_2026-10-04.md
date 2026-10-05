@@ -1,5 +1,26 @@
 # GORGONA — актуальная передача после выбора нового репозитория
 
+## Актуальное дополнение: аудит E0, 2026-10-04
+
+Продолжение — [передача после аудита E0](NEXT_AGENT_AUDITED_E0_2026-10-04.md),
+код 4ad645fc27a2334f55e5c7c47ee1e3de8eede3a5, draft PR #6 в актуальную
+codex/universal-business-foundation от 2f16380. Основная копия владельца сохранена.
+Исправлены company predicates и web readiness contract по полученному пакету E.
+Свежая regression: 7 failed / 4 passed до кода, 1 web failed; после — focused30,
+полная локальная suite 538 passed / 4 skipped / 193.26 s, web42 и сборка14,
+Ruff/mypy153 PASS. CI конкретного SHA и пределы — в
+[приемке E0](evidence/2026-10-04-isolation-audit/ACCEPTANCE.md).
+Переданные [план E](PACKAGE_E_PLAN_2026-10-04.md) и
+[ADR-0020](../adr/0020-counterparties-documents-and-contracts.md) сохранены;
+E1–E3 и CORE-04 еще не выполнены. Исторические цифры/следующие задачи ниже
+не считать актуальнее этого дополнения без проверки.
+
+Azure прочитан: Container Apps env Failed, apps0; PostgreSQL18/KeyVault private.
+Сквозной staging BLOCKED. В npm остаются 5 dev findings одной braces-цепочки,
+prod0; load tool воспроизводит ложный PASS и пока не принят для OPS-02.
+Новых провайдеров, сканера файлов, отраслевых пилотов и промышленного запуска нет.
+
+
 **Следующему агенту: начать с [NEXT_AGENT_START_HERE.md](NEXT_AGENT_START_HERE.md)** — состояние, правила, проверки, план пакета D и текст поручения. CI шага C на `c9193b2` был FAIL; исправление гонки подтверждено полным CI на `6a81dfd` ([приемка шага C](evidence/2026-10-04-groups/ACCEPTANCE.md)).
 
 **Обновление: пакет D — принят технически на `5320c4a`.** Шаг C принят на `6a81dfd`. Владелец утвердил план и [ADR-0019](../adr/0019-configuration-publication-and-modules.md): публикация конфигурации с реестром модулей и записями готовности (миграция 0014). Реализовано: миграция 0014 (guard 29 определений + триггер записи), API и панель «Configuration», отключение записи блокирует новые записи и переносы на всех путях. Локально полная suite 527 passed / 4 skipped, пять браузерных harness PASS, web unit 41; review — 4 исправлены, 2 ограничения в ADR. Полный CI `5320c4a` **PASS** (PR 37244707198, push 37244704525; [приемка](evidence/2026-10-04-configuration/ACCEPTANCE.md)). Следующий пакет этапа 1 — E (контрагенты, контакты, договоры, документы), свой план и ADR-0020 до кода.

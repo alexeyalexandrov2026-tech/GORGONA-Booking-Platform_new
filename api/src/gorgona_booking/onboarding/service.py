@@ -274,10 +274,11 @@ def _owner_invitation(
         return None
     email = normalize_email(spec.owner_email.value)
     existing = conn.execute(
-        "select 1 from gba.memberships where role = 'owner' and status = 'active' "
-        "union all select 1 from gba.invitations where email_normalized = %s "
-        "and role = 'owner' and status = 'pending'",
-        (email,),
+        "select 1 from gba.memberships where tenant_id = %s and role = 'owner' "
+        "and status = 'active' union all select 1 from gba.invitations "
+        "where tenant_id = %s and email_normalized = %s and role = 'owner' "
+        "and status = 'pending'",
+        (tenant_id, tenant_id, email),
     ).fetchone()
     if existing is not None:
         return None
@@ -291,7 +292,8 @@ def _owner_invitation(
 
 
 _FINGERPRINT_QUERIES = (
-    "select slug, display_name, status, booking_state from gba.tenants",
+    "select slug, display_name, status, booking_state from gba.tenants "
+    "where id = gba.current_tenant_id()",
     "select host from gba.tenant_hosts where tenant_id = gba.current_tenant_id()",
     "select id, name, timezone from gba.locations",
     "select location_id, weekday, opens_minute, closes_minute from gba.business_hours",
@@ -304,7 +306,7 @@ _FINGERPRINT_QUERIES = (
     "select fact_key, status, source_note from gba.salon_fact_confirmations",
     "select kind, asset_ref, sha256 from gba.salon_branding_refs",
     "select email_normalized, role, status from gba.invitations",
-    "select user_id, role, status from gba.memberships",
+    "select user_id, role, status from gba.memberships where tenant_id = gba.current_tenant_id()",
 )
 
 
