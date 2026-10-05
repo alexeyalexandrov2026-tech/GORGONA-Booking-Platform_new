@@ -26,6 +26,13 @@ from gorgona_booking.booking.models import (
     InvalidTransitionError,
     SlotConflictError,
 )
+from gorgona_booking.business.file_errors import (
+    FileIntegrityError,
+    FileScanningNotConfiguredError,
+    FileTooLargeError,
+    FileTypeMismatchError,
+    UnsupportedMediaTypeError,
+)
 from gorgona_booking.business.modules import ModuleDisabledError
 from gorgona_booking.errors import (
     ConflictError,
@@ -54,6 +61,11 @@ DOMAIN_ERROR_STATUS: dict[type[DomainError], int] = {
     InvalidTransitionError: 409,
     HoldExpiredError: 409,
     ModuleDisabledError: 409,
+    FileTooLargeError: 413,
+    FileTypeMismatchError: 415,
+    UnsupportedMediaTypeError: 415,
+    FileScanningNotConfiguredError: 503,
+    FileIntegrityError: 500,
     IdempotencyKeyReusedError: 422,
     ConflictError: 409,
     InvalidReferenceError: 422,

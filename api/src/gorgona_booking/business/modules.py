@@ -121,7 +121,20 @@ MODULES: tuple[PlatformModule, ...] = (
     ),
     _module("workforce", "Workforce", _OPTIONAL, ("users_access",)),
     _module("projects", "Projects and work", _OPTIONAL, ("counterparties",)),
-    _module("documents", "Documents", _OPTIONAL, ("organization",)),
+    _module(
+        "documents",
+        "Documents",
+        _OPTIONAL,
+        ("organization",),
+        Readiness.IMPLEMENTED,
+        "Versioned documents with validity dates and one immutable PDF, PNG or JPEG file of at "
+        "most 10 MiB per version, checked against a bounded format profile but not scanned for "
+        "malware; uploads are refused in staging and production until a scanner exists. "
+        "Manual links to counterparties. No templates, signatures, per-document access, "
+        "retention or erasure.",
+        "New uploads, documents, versions and counterparty links. Reads, history and "
+        "downloads continue.",
+    ),
     _module("finance", "Finance", _OPTIONAL, ("organization",)),
     _module("procurement", "Procurement", _OPTIONAL, ("counterparties", "finance")),
     _module("inventory", "Inventory and customer warehouses", _OPTIONAL, ("products_services",)),

@@ -41,12 +41,29 @@ begin
     return new;
 end;
 """
-_MODULE_TABLES = (
+_COUNTERPARTY_TABLES = (
     "counterparties",
     "counterparty_versions",
     "counterparty_version_contacts",
     "counterparty_match_decisions",
     "counterparty_booking_links",
+)
+_DOCUMENT_TABLES = (
+    "document_files",
+    "documents",
+    "document_versions",
+    "document_counterparty_links",
+)
+_MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES)
+# (table, trigger, module argument) for every optional-module write gate.
+_MODULE_TRIGGERS = (
+    *[(table, f"{table}_require_module", "counterparties") for table in _COUNTERPARTY_TABLES],
+    *[(table, f"{table}_require_module", "documents") for table in _DOCUMENT_TABLES],
+    (
+        "document_counterparty_links",
+        "document_counterparty_links_require_counterparties",
+        "counterparties",
+    ),
 )
 
 
@@ -145,6 +162,7 @@ select exists (
     where t.tgrelid = pg_catalog.to_regclass('gba.bookings')
       and t.tgname = 'bookings_require_booking_module'
       and t.tgtype = 7 and t.tgenabled = 'O' and not t.tgisinternal
+      and t.tgqual is null and t.tgconstraint = 0
       and t.tgnargs = 0 and pg_catalog.octet_length(t.tgargs) = 0
       and f.oid = pg_catalog.to_regprocedure('gba.enforce_booking_module()')
       and not f.prosecdef and f.proconfig is null
@@ -178,13 +196,16 @@ and exists (
       and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
       and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
 ) and not exists (
-    select 1 from unnest(%s::text[]) required(table_name)
+    select 1 from unnest(%s::text[], %s::text[], %s::bytea[])
+        required(table_name, trigger_name, arguments)
     left join pg_catalog.pg_trigger t
       on t.tgrelid = pg_catalog.to_regclass('gba.' || required.table_name)
-     and t.tgname = required.table_name || '_require_module'
+     and t.tgname = required.trigger_name
     where t.oid is null or t.tgtype <> 7 or t.tgenabled <> 'O' or t.tgisinternal
+       -- A WHEN clause or constraint trigger could silently skip the gate.
+       or t.tgqual is not null or t.tgconstraint <> 0
        or t.tgfoid is distinct from pg_catalog.to_regprocedure('gba.require_enabled_module()')
-       or t.tgnargs <> 1 or t.tgargs <> %s::bytea
+       or t.tgnargs <> 1 or t.tgargs <> required.arguments
 )
 """
 
@@ -192,7 +213,12 @@ and exists (
 async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
     parameters: list[object] = [field for definition in _DEFINITIONS for field in definition]
     parameters += [_FUNCTION_SOURCE, _compact(_BOOKING_MODULE_SOURCE)]
-    parameters += [_compact(_OPTIONAL_MODULE_SOURCE), list(_MODULE_TABLES), b"counterparties\x00"]
+    parameters += [
+        _compact(_OPTIONAL_MODULE_SOURCE),
+        [table for table, _, _ in _MODULE_TRIGGERS],
+        [trigger for _, trigger, _ in _MODULE_TRIGGERS],
+        [module.encode() + b"\x00" for _, _, module in _MODULE_TRIGGERS],
+    ]
     row = await (await conn.execute(_ACCESS_BOUNDARY, parameters)).fetchone()
     if row is None or row[0] is not True:
         raise DatabaseUnavailableError("Required database access controls are not ready")
