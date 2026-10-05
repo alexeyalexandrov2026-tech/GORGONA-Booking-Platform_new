@@ -77,8 +77,10 @@ Verified locally: fresh baseline 538 passed/4 skipped; full E1 595 passed/4 skip
 in 248.75 s; final added readiness refusal 1 passed/1.89 s. Web 47 unit tests,
 15-page export, typecheck/lint/format; Ruff/mypy 163 files. Both exact code CI runs passed 599/1 with required container gates. Final readiness
 transition was focused-checked (68/37.26 s) and full-checked **596/4, 251.25 s**,
-exit 0 without overrides after test-cluster recovery. Its own HEAD/CI must be checked
-in PR #7 and the archived STATE.json. Do not substitute initial code CI, local
+exit 0 without overrides after test-cluster recovery. Acceptance SHA `e68ce907ba0459ab99e4c71137c044694a920be1`
+passed its own PR CI run37272593391 (599/1, 173.32 s) and push run37272589058
+(599/1, 163.07 s), web47/mypy163 and mandatory container/browser/PG gates. Later
+documentation HEAD/CI is recorded separately in PR #7 and archived STATE.json. Do not substitute initial code CI, local
 skips or historical E0 CI for a new SHA. See acceptance for red→green and review details.
 
 Windows disposable cluster: PostgreSQL 18.6, loopback port 51454,

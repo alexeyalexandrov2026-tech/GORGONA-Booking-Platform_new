@@ -46,6 +46,14 @@ exit 0, обязательные PostgreSQL/browser и обычный реест
 и запуска только disposable 51454 smoke и полный повтор прошли. Это не
 промышленный restart. Подробности и оба результата сохранены в приемке.
 
+Принятая версия readiness `e68ce907ba0459ab99e4c71137c044694a920be1`
+имеет собственный зеленый CI: [PR run37272593391](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37272593391)
+**599 passed / 1 skipped / 173.32 s** и
+[push run37272589058](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37272589058)
+**599 passed / 1 skipped / 163.07 s**. Web47, mypy163, PostgreSQL/browser/container
+gates выполнены; единственный skip — дополнительный внешний site gate. Следующий
+документационный HEAD проверяется отдельно и не выдается за эту версию кода.
+
 ## Исторические записи до E1
 
 ## Актуальное дополнение: аудит E0, 2026-10-04

@@ -10,8 +10,10 @@ CI runs passed; this separate acceptance changes readiness without incrementing
 registry version 1. Existing businesses remain booking-only until they explicitly
 publish a configuration. Initial code CI proved real `MODULE_NOT_READY` refusal;
 the acceptance fixtures and browser now use the unmodified real registry. The
-acceptance commit requires fresh CI of its own; see PR/archived STATE.json for its
-exact final HEAD and run, never transfer the initial CI result to a new SHA.
+acceptance SHA `e68ce907ba0459ab99e4c71137c044694a920be1` passed its own complete push/PR CI
+(recorded below), with the real registry and no readiness overrides. The later
+documentation HEAD is separately checked in PR/archived STATE.json; never transfer
+a code CI result to a different SHA.
 
 ## Implemented boundary
 
@@ -67,6 +69,8 @@ booking store, runtime dependency, service or cloud component was introduced.
 | Exact code PR CI | PASS: [run37268628400](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37268628400), job111630673111; **599 passed / 1 skipped / 171.17 s**, web47/2.1 s, mypy163; all required gates exit 0 |
 | Real registry acceptance | Before promotion: expected refusal (1 failed / 2.97 s); after promotion focused counterparties/configuration/contracts/browser **68 passed / 37.26 s**, exit 0, without readiness overrides |
 | Full final acceptance local suite | PASS: **596 passed / 4 skipped / 251.25 s**, exit 0 after test-cluster recovery; actual registry/publication, required PostgreSQL/browser, same unchanged web export |
+| Exact acceptance PR CI | PASS: [run37272593391](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37272593391), job111642581253, SHA `e68ce907ba0459ab99e4c71137c044694a920be1`; **599 passed / 1 skipped / 173.32 s**, web47/1.9 s, mypy163; required PostgreSQL/browser/container gates exit 0 |
+| Exact acceptance push CI | PASS: [run37272589058](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37272589058), job111642567702, same acceptance SHA; **599 passed / 1 skipped / 163.07 s**, web47/1.4 s, mypy163; all steps exit 0 |
 | Fresh dependency audit | Production PASS: 0 findings/exit 0; full audit FAIL: 5 high development findings/exit 1; no dependencies changed |
 
 The full browser suite includes retry with the same key after a lost response,

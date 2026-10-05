@@ -12,7 +12,9 @@ are implemented with migration 0015 and permission map v4. Code `2392566595a2df5
 in 118.52 s and 171.17 s). This separate acceptance promotes it to
 `technically_verified`; registry version stays 1 and explicit business publication
 is still required. The initial implementation's real refusal is evidenced in CI;
-acceptance API/browser fixtures now use the unmodified registry. E2/E3 remain planned. Existing booking customer snapshots are untouched.
+acceptance API/browser fixtures now use the unmodified registry. Acceptance
+`e68ce907ba0459ab99e4c71137c044694a920be1` also passed exact PR/push CI: 599/1 in
+173.32 s and 163.07 s, with required container/browser/PostgreSQL gates. E2/E3 remain planned. Existing booking customer snapshots are untouched.
 
 Historical card views exclude current merged-child relationships; the separate
 `merged-from` endpoint exposes those, preserving immutable command replay. Merge
