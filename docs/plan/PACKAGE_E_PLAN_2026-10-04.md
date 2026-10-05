@@ -1,5 +1,17 @@
 # GORGONA — пакет E: контрагенты, документы, договоры (+ шаг E0)
 
+## Обновление исполнения, 2026-10-05
+
+E0 проверен отдельно. E1 реализован; его текущий статус и конкретные проверки
+см. в [приемке](evidence/2026-10-05-counterparties/ACCEPTANCE.md) и
+[актуальной передаче](NEXT_AGENT_PACKAGE_E1_2026-10-05.md). E2/E3 остаются
+planned. Исходные решения/объем пакета ниже сохранены как исторический снимок;
+не считать их описанием текущего кода/ветки. Для E1 использован проверенный
+одноисполнительный disposable PostgreSQL 18.6 на 51454; чужой 51455 не трогали.
+Включение counterparties требует отдельной технической приемки после CI.
+
+## Исходный план и контекст, 2026-10-04
+
 > Source snapshot received 2026-10-04. Original preserved in the owner's handoff777 archive. E0 now has independent fresh evidence in [the current handoff](NEXT_AGENT_AUDITED_E0_2026-10-04.md). E1–E3 remain planned; no such migrations are applied. Statements below about prior tests/approval are the supplied record, not a new execution.
 
 

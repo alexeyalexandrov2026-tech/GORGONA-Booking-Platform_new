@@ -1,9 +1,32 @@
 # ADR-0020 — Counterparties, documents and contracts
 
-> Source snapshot received 2026-10-04. Original preserved in the owner's handoff777 archive. E0 now has independent fresh evidence in [the current handoff](../plan/NEXT_AGENT_AUDITED_E0_2026-10-04.md). E1–E3 remain planned; no such migrations are applied. Statements below about prior tests/approval are the supplied record, not a new execution.
+> Source snapshot received 2026-10-04; original preserved in the owner's handoff777 archive. Current E1 implementation and fresh evidence are in [acceptance](../plan/evidence/2026-10-05-counterparties/ACCEPTANCE.md) and [handoff](../plan/NEXT_AGENT_PACKAGE_E1_2026-10-05.md). E1 migration 0015 has run only in disposable tests. E2/E3 and production migrations remain planned. Initial context below describes the pre-E1 source snapshot.
 
 
 Status: accepted by the owner on 2026-10-04 together with the package plan (package E of stage 1). Planned for implementation in steps E1–E3, each with its own migration, commit, full CI and acceptance record; this ADR is updated with the exact commits when each step is verified.
+
+## E1 implementation, 2026-10-05
+
+Counterparty cards, contacts, explicit match decisions and confirmed booking links
+are implemented with migration 0015 and permission map v4. The module remains
+`implemented` until exact code CI is green; it cannot yet be enabled by the real
+registry. E2/E3 remain planned. Existing booking customer snapshots are untouched.
+
+Historical card views exclude current merged-child relationships; the separate
+`merged-from` endpoint exposes those, preserving immutable command replay. Merge
+and separation decisions identify the exact card revision, are unique for it,
+and must create the matching version in the same transaction. SQL rechecks the
+graph at version insertion, rejecting staged cycles and chains. A separation
+restores the pre-merge card state with a new version.
+
+The access guard checks 34 definitions and five optional-module gate triggers.
+Company-wide E1 handlers invoke it too. The optional and booking gate functions
+must be VOLATILE so reads after the configuration lock use a fresh snapshot;
+the guard verifies volatility and other executable metadata, not source alone.
+Reference: [PostgreSQL 18 volatility](https://www.postgresql.org/docs/18/xfunc-volatility.html).
+Mutation, staged-SQL, runtime API and real desktop/mobile regressions plus bounded
+independent source review are recorded in acceptance. No production, provider or
+complete industry acceptance is implied.
 
 ## Context
 

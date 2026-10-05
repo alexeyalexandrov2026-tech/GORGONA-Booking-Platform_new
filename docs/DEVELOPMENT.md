@@ -1,5 +1,45 @@
 # Development
 
+## Counterparties (Package E1, 2026-10-05)
+
+Migration 0015 adds five FORCE-RLS append-only tables for cards, version contacts,
+duplicate decisions and booking-link events. Runtime has minimal insert/select
+grants; immutable identity/history and decision/version coupling also hold in SQL.
+Company-wide owner/manager only; permission map v4. No branch, delegation or
+platform-support access. Guard: 34 definitions plus the booking gate and five
+optional-module gates; damaged executable metadata fails readiness. Gate functions
+are VOLATILE so a read after the configuration lock observes a committed disable.
+
+API base: `/v1/businesses/{business_id}/counterparties`. GET list supports q/state/
+after/limit; PUT `{counterparty_id}` uses Idempotency-Key and expected_revision.
+GET card supports revision; `versions` uses before/limit. `merged-from` is the
+current relationship read and deliberately excluded from immutable card views.
+POST `match-check` takes potential identifiers in the body. Per-card endpoints:
+`duplicates`, `match-decisions` (GET/POST), `booking-candidates`, `bookings`,
+`booking-links` (GET/POST). Paged reads expose cursors; web validates schema and IDs.
+
+Matching is advisory. Merge/separate preserve source data and require human
+confirmation. Decisions couple to exactly one version in the same transaction;
+staged cycles/chains and duplicate decisions for one version are refused. Manual
+links recheck normalized email/phone against the current card/contacts; booking
+snapshots are never rewritten. Read/history/replay work when disabled, new writes
+do not. Company publication and writes share the existing configuration lock.
+
+Initial registry status is implemented and not enableable; a separate exact-CI
+acceptance may promote it. Integration fixtures override readiness only in tests
+and use real profile/draft/validation/publication. Baseline remains booking-only;
+no module is automatically enabled for an existing business.
+
+Focused: `tests/integration/test_counterparties.py`,
+`tests/unit/test_counterparty_contracts.py`, `test_configurations.py`,
+`test_location_access.py` and `test_delegation_contracts.py`. Browser harness:
+`test_counterparty_browser.py`, fresh web export, real OIDC/PKCE test IdP, HTTP and
+PostgreSQL; invokes `npm run test:management:counterparties` on desktop/mobile.
+New web contract cases are included in `npm run test:unit` (47 total).
+Shared config fixtures: `configuration_support.py`, test-only `module_support.py`.
+See [E1 acceptance](plan/evidence/2026-10-05-counterparties/ACCEPTANCE.md) and
+[handoff](plan/NEXT_AGENT_PACKAGE_E1_2026-10-05.md) for exact results/limitations.
+
 ## Selected-company isolation (Package E0)
 
 Company-specific reads of tenants/memberships/tenant_hosts must include the

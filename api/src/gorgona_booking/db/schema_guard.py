@@ -27,6 +27,28 @@ begin
 end;
 """
 
+_OPTIONAL_MODULE_SOURCE = """
+begin
+    perform pg_catalog.pg_advisory_xact_lock_shared(
+        pg_catalog.hashtextextended('gba:business-configuration:' || new.tenant_id::text, 0));
+    if not exists (
+        select 1 from gba.business_module_states s
+        where s.tenant_id = new.tenant_id and s.module_id = tg_argv[0] and s.enabled
+    ) then
+        raise exception using errcode = 'GBM01',
+            message = 'the ' || tg_argv[0] || ' module is disabled for this business';
+    end if;
+    return new;
+end;
+"""
+_MODULE_TABLES = (
+    "counterparties",
+    "counterparty_versions",
+    "counterparty_version_contacts",
+    "counterparty_match_decisions",
+    "counterparty_booking_links",
+)
+
 
 def _compact(text: str) -> str:
     return "".join(text.split())
@@ -97,6 +119,7 @@ _DEFINITIONS = [
             "business_group_members",
             "business_configuration_versions",
             "business_configuration_modules",
+            *_MODULE_TABLES,
         )
     ],
     # Branch sessions read effective module states; only company-wide sessions write them.
@@ -122,8 +145,11 @@ select exists (
     where t.tgrelid = pg_catalog.to_regclass('gba.bookings')
       and t.tgname = 'bookings_require_booking_module'
       and t.tgtype = 7 and t.tgenabled = 'O' and not t.tgisinternal
+      and t.tgnargs = 0 and pg_catalog.octet_length(t.tgargs) = 0
       and f.oid = pg_catalog.to_regprocedure('gba.enforce_booking_module()')
       and not f.prosecdef and f.proconfig is null
+      and f.pronargs = 0 and f.prokind = 'f' and f.provolatile = 'v' and f.proparallel = 'u'
+      and f.prorettype = 'pg_catalog.trigger'::regtype
       and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
       and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
 ) and not exists (
@@ -141,10 +167,32 @@ select exists (
 )
 """.replace("__VALUES__", ", ".join("(%s, %s, %s, %s, %s)" for _ in _DEFINITIONS))
 
+# Inspect the body and every trigger argument, not just a familiar object name.
+_ACCESS_BOUNDARY += """
+and exists (
+    select 1 from pg_catalog.pg_proc f
+    where f.oid = pg_catalog.to_regprocedure('gba.require_enabled_module()')
+      and not f.prosecdef and f.proconfig is null and f.pronargs = 0
+      and f.prorettype = 'pg_catalog.trigger'::regtype and f.prokind = 'f'
+      and f.provolatile = 'v' and f.proparallel = 'u'
+      and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
+      and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
+) and not exists (
+    select 1 from unnest(%s::text[]) required(table_name)
+    left join pg_catalog.pg_trigger t
+      on t.tgrelid = pg_catalog.to_regclass('gba.' || required.table_name)
+     and t.tgname = required.table_name || '_require_module'
+    where t.oid is null or t.tgtype <> 7 or t.tgenabled <> 'O' or t.tgisinternal
+       or t.tgfoid is distinct from pg_catalog.to_regprocedure('gba.require_enabled_module()')
+       or t.tgnargs <> 1 or t.tgargs <> %s::bytea
+)
+"""
+
 
 async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
-    parameters: list[str] = [field for definition in _DEFINITIONS for field in definition]
+    parameters: list[object] = [field for definition in _DEFINITIONS for field in definition]
     parameters += [_FUNCTION_SOURCE, _compact(_BOOKING_MODULE_SOURCE)]
+    parameters += [_compact(_OPTIONAL_MODULE_SOURCE), list(_MODULE_TABLES), b"counterparties\x00"]
     row = await (await conn.execute(_ACCESS_BOUNDARY, parameters)).fetchone()
     if row is None or row[0] is not True:
         raise DatabaseUnavailableError("Required database access controls are not ready")

@@ -117,22 +117,25 @@ def test_delegated_handlers_must_support_location_scope() -> None:
 def test_delegated_routes_are_exactly_the_booking_workspace() -> None:
     # Any new delegated route needs an explicit review; settings, clients, audit and
     # staff/catalog changes stay with the owner business.
-    source = Path(salons.__file__).read_text(encoding="utf-8")
     delegated = {
-        block.split(")", 1)[0]
-        for block in source.split("@router.")[1:]
+        (path.name, block.split(")", 1)[0])
+        for path in Path(salons.__file__).parent.glob("*.py")
+        for block in path.read_text(encoding="utf-8").split("@router.")[1:]
         if "allow_delegation=True" in block
     }
     assert delegated == {
-        'get("/salons/{salon_id}/workspace"',
-        'get("/salons/{salon_id}/overview"',
-        'post("/salons/{salon_id}/availability"',
-        'get("/salons/{salon_id}/bookings"',
-        'post("/salons/{salon_id}/bookings", status_code=201',
-        'post("/salons/{salon_id}/bookings/{booking_id}/reschedule"',
-        'post("/salons/{salon_id}/bookings/{booking_id}/cancel"',
-        'get("/salons/{salon_id}/services"',
-        'get("/salons/{salon_id}/staff"',
-        'get("/salons/{salon_id}/staff/{resource_id}/schedule"',
-        'get("/salons/{salon_id}/bookings/{booking_id}"',
+        ("salons.py", route)
+        for route in {
+            'get("/salons/{salon_id}/workspace"',
+            'get("/salons/{salon_id}/overview"',
+            'post("/salons/{salon_id}/availability"',
+            'get("/salons/{salon_id}/bookings"',
+            'post("/salons/{salon_id}/bookings", status_code=201',
+            'post("/salons/{salon_id}/bookings/{booking_id}/reschedule"',
+            'post("/salons/{salon_id}/bookings/{booking_id}/cancel"',
+            'get("/salons/{salon_id}/services"',
+            'get("/salons/{salon_id}/staff"',
+            'get("/salons/{salon_id}/staff/{resource_id}/schedule"',
+            'get("/salons/{salon_id}/bookings/{booking_id}"',
+        }
     }

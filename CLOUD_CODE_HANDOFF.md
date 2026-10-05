@@ -1,5 +1,19 @@
 # Cloud Code handoff — GORGONA business platform
 
+## Current E1 continuation — 2026-10-05
+
+Read [the E1 handoff](docs/plan/NEXT_AGENT_PACKAGE_E1_2026-10-05.md) and
+[acceptance](docs/plan/evidence/2026-10-05-counterparties/ACCEPTANCE.md) first.
+Current branch codex/package-e1-counterparties builds on audited E0 bbe6ecd and
+targets that branch in its own draft PR. Owner checkout remains untouched.
+Versioned counterparties/contacts, explicit duplicate decisions and manual booking
+links are implemented; E2 documents/files and E3 agreements are next, then CORE-04.
+Initial module status implemented cannot be published until exact code CI and a
+separate acceptance commit. Local API/browser/static gates passed with explicit
+container/external-site skips; production/providers/Azure/load remain unverified.
+The October-4 continuation and earlier counts below are historical, not current
+code acceptance. Preserve all 39 profiles, 28 criteria and generic booking.
+
 ## Current continuation — 2026-10-04
 
 The owner authorized correction of the complete universal-business plan and the start of implementation. Read [the corrected master plan](docs/plan/GORGONA_MASTER_PLAN.md) and [implementation evidence](docs/plan/GORGONA_IMPLEMENTATION_STATUS.md) first. Preserve all 39 industry profiles and existing generic booking workflows. `business_id` is the existing tenant boundary; multiple profiles do not create duplicate companies. GORGONA supplies software, including inventory and transport tools for its customers, without operating its own warehouse or carrier.
