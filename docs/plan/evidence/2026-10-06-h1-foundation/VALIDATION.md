@@ -94,6 +94,41 @@ test/runtime failure. Other PostgreSQL instances were untouched. Full suite,
 browser/container and exact-source CI outcomes must be recorded separately when
 run; green planning CI does not prove this new source.
 
+## Final broader checks and delivery
+
+At unchanged reviewed API source843d0b3, local full suite:
+**PASS906 passed/4 skipped/327.81s**, exit0. PostgreSQL and real
+OIDC/Chromium/browser gates were mandatory. The4 skips are3 local Docker gates
+and1 optional separate tenant-site integration. No H invoice workflow was
+exercised; it remains unimplemented, and this is G/configuration regression plus
+the new contract/arithmetic tests. Docker is NOT TESTED locally.
+
+`npm run build`: PASS, exit0; existing Next16.3.7/Turbopack compiled the unchanged
+web and18 static routes. A first attempt used an own junction to existing
+dependencies and failed because Turbopack refuses an outside-root target. Only
+that junction was removed nonrecursively; its G target was preserved. Unchanged
+locked dependencies were then installed via `npm ci --offline --ignore-scripts`,
+exit0, and the build passed. Neither package.json nor lockfiles nor web source
+changed. This build does not add an invoice UI.
+
+The owned PostgreSQL51456 was stopped after tests (pg_ctl stop exit0). Its
+captured startup process then completed exit0. G checkout stays clean at5be6e7a;
+owner/incoming checkouts retain their19/9 paths and original heads. No service
+other than this owned test postmaster was started or stopped.
+
+Planning PR13 is published at925ae02 with completed/success CI37525975637.
+Implementation source/evidence remains local: auto-review rejected push of
+codex/package-h-invoices because it interpreted prior authorization as covering
+the documentation branch only. No implementation PR was created and no indirect
+publication was attempted. New explicit source-branch publication authorization
+is pending. Exact-H1-source CI/container gates therefore remain NOT TESTED.
+
+Final doc checks cover11 changed Markdown docs,25 added/changed local link
+targets, unchanged reviewed source, retained12 NOT TESTED H cases, normalized
+independent-report hashes and both git diff checks. External helper syntax is
+checked by AST without executing mutation scripts. Local/historical links and
+anchors outside added/changed lines are not claimed as verified.
+
 ## Remaining work
 
 H1 remains IN PROGRESS: forward0021 data/constraints, invoice draft/issue API,
