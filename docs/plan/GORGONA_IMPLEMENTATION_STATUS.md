@@ -1,5 +1,16 @@
 # GORGONA — реестр реализации
 
+## Актуально F шаг 1: общая занятость ресурсов, 2026-10-05
+
+Ветка claude/package-f-occupancy. Миграция 0018: `resource_allocations` — одна
+таблица занятости для всех модулей (исключение пересечений для held/confirmed,
+FORCE RLS, область филиала через ресурс), триггеры точного зеркала
+`booking_allocations` и защиты строк; перенос данных до 0018 — операторской
+командой `backfill-occupancy` по компании (миграции не обходят RLS). Полная
+локальная suite 775 passed / 4 skipped; код `f74b5de` push CI 37408551883 success.
+CORE-04 еще NOT TESTED (шаг 2: служебная резервация).
+[Evidence](evidence/2026-10-05-occupancy/ACCEPTANCE.md).
+
 ## Актуально E3: договоры с контрагентами, 2026-10-05
 
 Ветка claude/package-e3-agreements от E2 c5a3908. Миграция 0017: `agreements` и
