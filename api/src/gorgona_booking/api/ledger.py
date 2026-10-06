@@ -2,7 +2,7 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Path, Query, Request
@@ -23,7 +23,9 @@ from gorgona_booking.business.ledger_contracts import (
     CommandStatus,
     EntryInput,
     JournalEntryList,
+    JournalEntryListV2,
     JournalEntryView,
+    JournalEntryViewV2,
     LedgerAccountList,
     LedgerAccountView,
     LedgerBookView,
@@ -224,8 +226,19 @@ async def entries(
     period: Annotated[str | None, Query(pattern=MONTH_PATTERN)] = None,
     after: UUID | None = None,
     limit: Limit = 50,
-) -> JournalEntryList:
+    schema_version: Literal["1", "2"] = "1",
+) -> JournalEntryList | JournalEntryListV2:
     async with _access(request, principal, business_id) as access:
+        if schema_version == "2":
+            return await service.list_entries(
+                access.conn,
+                business_id,
+                book_id,
+                period=month(period) if period else None,
+                after=after,
+                limit=limit,
+                view_version=2,
+            )
         return await service.list_entries(
             access.conn,
             business_id,
@@ -238,10 +251,19 @@ async def entries(
 
 @router.get("/books/{book_id}/entries/{entry_id}")
 async def get_entry(
-    business_id: UUID, book_id: UUID, entry_id: UUID, request: Request, principal: CurrentPrincipal
-) -> JournalEntryView:
+    business_id: UUID,
+    book_id: UUID,
+    entry_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    schema_version: Literal["1", "2"] = "1",
+) -> JournalEntryView | JournalEntryViewV2:
     async with _access(request, principal, business_id) as access:
-        result = await service.load_entry(access.conn, business_id, book_id, entry_id)
+        result = (
+            await service.load_entry(access.conn, business_id, book_id, entry_id, view_version=2)
+            if schema_version == "2"
+            else await service.load_entry(access.conn, business_id, book_id, entry_id)
+        )
         if result is None:
             raise NotFoundError("Journal entry not found")
         return result

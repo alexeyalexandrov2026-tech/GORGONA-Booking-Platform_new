@@ -98,58 +98,77 @@ const summary = z.strictObject({
   reversed_by_entry_id: id.nullable(),
   created_at: instant,
 });
-export const entrySchema = summary
-  .extend({
-    ...envelope,
-    book_id: id,
-    minor_units: scale,
-    lines: z
-      .array(
-        z.strictObject({
-          line_no: z.number().int().min(1).max(200),
-          account_id: id,
-          account_code: z.string(),
-          account_name: z.string(),
-          side: z.enum(["debit", "credit"]),
-          amount,
-        }),
-      )
-      .min(2)
-      .max(200),
-  })
-  .refine((v) => {
-    let debit = 0n,
-      credit = 0n;
-    for (const line of v.lines) {
-      const value = minorUnits(line.amount, v.minor_units);
-      if (value === null || value <= 0n) return false;
-      if (line.side === "debit") debit += value;
-      else credit += value;
-    }
-    return (
-      unique(v.lines, (x) => String(x.line_no)) &&
-      debit === credit &&
-      debit === minorUnits(v.total, v.minor_units) &&
-      v.period === v.entry_date.slice(0, 7) &&
-      (v.source_kind === "reversal") === (v.reverses_entry_id !== null)
-    );
-  });
-export const entryListSchema = z
-  .strictObject({
-    ...envelope,
-    book_id: id,
-    items: z.array(summary).max(100),
-    next_cursor: id.nullable(),
-  })
-  .refine(
-    (v) =>
-      unique(v.items, (x) => x.entry_id) &&
-      v.items.every(
-        (x) =>
-          x.period === x.entry_date.slice(0, 7) &&
-          (x.source_kind === "reversal") === (x.reverses_entry_id !== null),
-      ),
+const entryRecord = summary.extend({
+  ...envelope,
+  book_id: id,
+  minor_units: scale,
+  lines: z
+    .array(
+      z.strictObject({
+        line_no: z.number().int().min(1).max(200),
+        account_id: id,
+        account_code: z.string(),
+        account_name: z.string(),
+        side: z.enum(["debit", "credit"]),
+        amount,
+      }),
+    )
+    .min(2)
+    .max(200),
+});
+const entryRecordV2 = entryRecord.extend({
+  schema_version: z.literal(2),
+  source_kind: z.enum(["manual", "opening", "reversal", "invoice"]),
+});
+const validEntry = (
+  v: z.infer<typeof entryRecord> | z.infer<typeof entryRecordV2>,
+) => {
+  let debit = 0n,
+    credit = 0n;
+  for (const line of v.lines) {
+    const value = minorUnits(line.amount, v.minor_units);
+    if (value === null || value <= 0n) return false;
+    if (line.side === "debit") debit += value;
+    else credit += value;
+  }
+  return (
+    unique(v.lines, (x) => String(x.line_no)) &&
+    debit === credit &&
+    debit === minorUnits(v.total, v.minor_units) &&
+    v.period === v.entry_date.slice(0, 7) &&
+    (v.source_kind === "reversal") === (v.reverses_entry_id !== null)
   );
+};
+export const entrySchema = z.discriminatedUnion("schema_version", [
+  entryRecord.refine(validEntry),
+  entryRecordV2.refine(validEntry),
+]);
+const entryListRecord = z.strictObject({
+  ...envelope,
+  book_id: id,
+  items: z.array(summary).max(100),
+  next_cursor: id.nullable(),
+});
+const summaryV2 = summary.extend({
+  source_kind: z.enum(["manual", "opening", "reversal", "invoice"]),
+});
+const entryListRecordV2 = entryListRecord.extend({
+  schema_version: z.literal(2),
+  items: z.array(summaryV2).max(100),
+});
+const validEntryList = (
+  v: z.infer<typeof entryListRecord> | z.infer<typeof entryListRecordV2>,
+) =>
+  unique(v.items, (x) => x.entry_id) &&
+  v.items.every(
+    (x) =>
+      x.period === x.entry_date.slice(0, 7) &&
+      (x.source_kind === "reversal") === (x.reverses_entry_id !== null),
+  );
+export const entryListSchema = z.discriminatedUnion("schema_version", [
+  entryListRecord.refine(validEntryList),
+  entryListRecordV2.refine(validEntryList),
+]);
 const event = z.strictObject({
   sequence: revision,
   action: z.enum(["closed", "reopened"]),

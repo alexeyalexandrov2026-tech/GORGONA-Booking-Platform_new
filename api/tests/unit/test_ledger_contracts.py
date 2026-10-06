@@ -10,6 +10,8 @@ from gorgona_booking.business.ledger_contracts import (
     AccountInput,
     BookInput,
     EntryInput,
+    JournalEntryList,
+    JournalEntryListV2,
     ReopenInput,
     from_minor,
     month,
@@ -84,3 +86,33 @@ def test_command_boundaries() -> None:
                 {"account_id": uuid7(), "side": "credit", "amount": "1.25"},
             ),
         )
+
+
+def test_invoice_origin_is_an_explicit_v2_read_contract() -> None:
+    payload = {
+        "schema_version": 2,
+        "business_id": uuid7(),
+        "book_id": uuid7(),
+        "items": [
+            {
+                "entry_id": uuid7(),
+                "entry_date": "2026-10-01",
+                "period": "2026-10",
+                "currency": "USD",
+                "source_kind": "invoice",
+                "source_id": str(uuid7()),
+                "memo": None,
+                "total": "100.00",
+                "reverses_entry_id": None,
+                "reversed_by_entry_id": None,
+                "created_at": "2026-10-06T12:00:00Z",
+            }
+        ],
+        "next_cursor": None,
+    }
+    assert JournalEntryListV2.model_validate(payload).items[0].source_kind == "invoice"
+    for version in (1, True, 2.0, "2"):
+        with pytest.raises(ValidationError):
+            JournalEntryListV2.model_validate({**payload, "schema_version": version})
+    with pytest.raises(ValidationError):
+        JournalEntryList.model_validate({**payload, "schema_version": 1})

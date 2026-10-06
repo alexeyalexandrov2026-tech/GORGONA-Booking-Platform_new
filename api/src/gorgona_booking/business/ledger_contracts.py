@@ -18,6 +18,7 @@ from gorgona_booking.business.contracts import Strict, Versioned
 AccountType = Literal["asset", "liability", "equity", "revenue", "expense"]
 Side = Literal["debit", "credit"]
 SourceKind = Literal["manual", "opening", "reversal"]
+SourceKindV2 = Literal["manual", "opening", "reversal", "invoice"]
 PeriodAction = Literal["closed", "reopened"]
 PeriodState = Literal["open", "closed"]
 ChartTemplate = Literal["starter", "empty"]
@@ -165,13 +166,9 @@ class LineInput(Strict):
     amount: str = Field(min_length=1, max_length=24)
 
 
-class EntryInput(Versioned):
+class _PostingFields(Versioned):
     entry_date: date
     currency: str = Field(pattern=CURRENCY_PATTERN)
-    source_kind: Literal["manual", "opening"] = "manual"
-    # The business operation this entry records; it posts once per book.
-    # Omitted, the entry id is the operation.
-    source_id: str | None = Field(default=None, pattern=SOURCE_ID_PATTERN)
     memo: str | None = Field(default=None, min_length=1, max_length=500)
     lines: tuple[LineInput, ...] = Field(min_length=2, max_length=200)
 
@@ -179,6 +176,20 @@ class EntryInput(Versioned):
     @classmethod
     def single_line(cls, value: str | None) -> str | None:
         return single_line_text(value)
+
+
+class EntryInput(_PostingFields):
+    source_kind: Literal["manual", "opening"] = "manual"
+    # The business operation this entry records; it posts once per book.
+    # Omitted, the entry id is the operation.
+    source_id: str | None = Field(default=None, pattern=SOURCE_ID_PATTERN)
+
+
+class InvoicePosting(_PostingFields):
+    """Public internal posting seam; SQL requires the issued invoice lineage."""
+
+    source_kind: Literal["invoice"] = "invoice"
+    source_id: str = Field(pattern=SOURCE_ID_PATTERN)
 
 
 class ReversalInput(Versioned):
@@ -201,12 +212,11 @@ class JournalLine(Strict):
     amount: str
 
 
-class JournalEntrySummary(Strict):
+class _JournalFields(Strict):
     entry_id: UUID
     entry_date: date
     period: str
     currency: str
-    source_kind: SourceKind
     source_id: str
     memo: str | None
     # The sum of the debit lines, equal to the sum of the credit lines.
@@ -214,6 +224,14 @@ class JournalEntrySummary(Strict):
     reverses_entry_id: UUID | None
     reversed_by_entry_id: UUID | None
     created_at: AwareDatetime
+
+
+class JournalEntrySummary(_JournalFields):
+    source_kind: SourceKind
+
+
+class JournalEntrySummaryV2(_JournalFields):
+    source_kind: SourceKindV2
 
 
 class JournalEntryView(JournalEntrySummary):
@@ -229,6 +247,31 @@ class JournalEntryList(Strict):
     business_id: UUID
     book_id: UUID
     items: tuple[JournalEntrySummary, ...]
+    next_cursor: UUID | None
+
+
+class _JournalVersionV2(Strict):
+    schema_version: Literal[2] = 2
+
+    @field_validator("schema_version", mode="before")
+    @classmethod
+    def integer_version(cls, value: object) -> object:
+        if type(value) is not int:
+            raise ValueError("Journal view version must be an integer")
+        return value
+
+
+class JournalEntryViewV2(JournalEntrySummaryV2, _JournalVersionV2):
+    business_id: UUID
+    book_id: UUID
+    minor_units: int = Field(ge=0, le=3)
+    lines: tuple[JournalLine, ...]
+
+
+class JournalEntryListV2(_JournalVersionV2):
+    business_id: UUID
+    book_id: UUID
+    items: tuple[JournalEntrySummaryV2, ...]
     next_cursor: UUID | None
 
 

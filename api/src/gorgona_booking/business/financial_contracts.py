@@ -138,3 +138,34 @@ class FinancialCommandReference(Versioned):
         if self.operation == "invoice_issue" and self.revision < 2:
             raise ValueError("An issued version follows a saved draft")
         return self
+
+
+class FinancialCommandStatus(Versioned):
+    business_id: UUID
+    key: str
+    operation: FinancialCommandKind
+    state: Literal["committed", "unresolved", "cancelled"]
+
+
+class InvoiceSummary(Strict):
+    document_id: UUID
+    revision: StrictInt = Field(ge=1)
+    state: InvoiceState
+    direction: Direction
+    counterparty_id: UUID
+    currency: str
+    invoice_date: date
+    due_date: date | None
+    title: str
+    number: str
+    total: str
+    entry_id: UUID | None
+    obligation_id: UUID | None
+    created_at: AwareDatetime
+
+
+class InvoiceList(Versioned):
+    business_id: UUID
+    book_id: UUID
+    items: tuple[InvoiceSummary, ...]
+    next_cursor: UUID | None
