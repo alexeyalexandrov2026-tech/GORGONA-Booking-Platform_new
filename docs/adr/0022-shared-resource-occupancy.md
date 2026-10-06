@@ -80,6 +80,22 @@ writes without one locking mechanism. Resources today are `artist`, `chair` and
   also check its legacy booking allocations. Triggers on `booking_allocations`
   keep the mirror exact for every write path (insert, status cascade), so the
   shared constraint decides booking versus reservation conflicts even for raw SQL.
+- Step 2 (migration 0019) adds `gba.resource_reservations` and the `reservation`
+  source: the reservation service takes the booking advisory locks in resource-id
+  order, releases stale overlapping holds, and inserts the reservation with one
+  confirmed allocation per resource in one savepoint (all or nothing). The row
+  guard refuses reservation rows outside the active reservation's interval or
+  branch, releases without cancellation, and overlaps with booking allocations
+  not copied yet (raised as `resource_allocations_no_overlap`, so it stays a slot
+  conflict). Customer availability reads confirmed reservation allocations;
+  booking summaries keep reading `booking_allocations`.
+- Step 2 review fixes: a reservation stores `resource_count`; its allocations are
+  inserted only in the reservation's own transaction and exactly that many must
+  exist before commit (deferred constraint trigger, checked by the schema guard);
+  a cancellation must release all of them, so a branch session that cannot see a
+  resource moved to another branch fails closed (409) and a company-wide session
+  cancels; concurrent cancels are idempotent; a reused id is a conflict. Known
+  limit (as E1–E3): author columns can be forged by direct runtime SQL.
 - Step 1 deliberately omits two columns named in decision 1: `units` arrives with
   capacity above one (owner decision: later), and authorship stays in the source
   domain (booking events; the reservation rows of step 2) instead of a duplicate

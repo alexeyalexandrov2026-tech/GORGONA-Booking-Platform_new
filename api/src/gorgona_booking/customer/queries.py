@@ -247,7 +247,12 @@ async def availability(
                     "and (%s::uuid is null or b.id <> %s) "
                     "and a.during && tstzrange(%s, %s, '[)') "
                     "union all select starts_at, ends_at from gba.resource_blocks "
-                    "where resource_id = %s and starts_at < %s and ends_at > %s",
+                    "where resource_id = %s and starts_at < %s and ends_at > %s "
+                    # Staff reservations take the resource in the shared occupancy (ADR-0022).
+                    "union all select lower(r.during), upper(r.during) "
+                    "from gba.resource_allocations r where r.resource_id = %s "
+                    "and r.source_kind = 'reservation' and r.state = 'confirmed' "
+                    "and r.during && tstzrange(%s, %s, '[)')",
                     (
                         artist.id,
                         exclude_booking_id,
@@ -257,6 +262,9 @@ async def availability(
                         artist.id,
                         windows[-1][1],
                         windows[0][0],
+                        artist.id,
+                        windows[0][0],
+                        windows[-1][1],
                     ),
                 )
             ).fetchall()

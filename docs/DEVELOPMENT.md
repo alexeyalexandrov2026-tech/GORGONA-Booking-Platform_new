@@ -1,5 +1,22 @@
 # Development
 
+## Staff resource reservations (Package F step 2, 2026-10-05)
+
+Migration 0019 adds `gba.resource_reservations` (FORCE RLS, branch scope by
+location, insert-only except one cancellation, at least one resource before
+commit, booking-module gate) and the `reservation` source of
+`gba.resource_allocations`: one confirmed allocation per reserved resource of the
+reservation's branch, released only by the cancellation; the row guard also
+refuses an overlap with an active booking allocation that was not copied yet.
+API base `/v1/businesses/{business_id}/resource-reservations` (staff permissions,
+branch managers within their branch, no delegates): GET list (`starts`, `ends`
+≤ 62 days, optional `location_id`), GET/PUT `{id}` (Idempotency-Key; 1..10
+resources, ≤ 31 days, optional purpose), POST `{id}/cancel`. Conflicts with
+bookings or reservations answer `409 SLOT_CONFLICT`; customer availability skips
+reserved intervals. Web: `/reservations/` page. CORE-04:
+`tests/integration/test_resource_reservations.py`; browser harness
+`test_reservation_browser.py` runs `npm run test:management:reservations`.
+
 ## Shared resource occupancy (Package F step 1, 2026-10-05)
 
 Migration 0018 adds `gba.resource_allocations`, the one occupancy table for every

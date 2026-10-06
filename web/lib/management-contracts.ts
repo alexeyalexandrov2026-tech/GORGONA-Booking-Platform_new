@@ -2,6 +2,7 @@ import { z } from "zod";
 import { counterpartyResponseSchema } from "./counterparty-contracts";
 import { documentResponseSchema } from "./document-contracts";
 import { agreementResponseSchema } from "./agreement-contracts";
+import { reservationResponseSchema } from "./reservation-contracts";
 import { availabilitySchema } from "./contracts";
 import {
   businessSchema,
@@ -210,6 +211,8 @@ export function managementResponseSchema(
     if (documents) return documents;
     const agreements = agreementResponseSchema(business[1] ?? "", method);
     if (agreements) return agreements;
+    const reservations = reservationResponseSchema(business[1] ?? "", method);
+    if (reservations) return reservations;
     if (business[1] === "" && method === "GET") return businessSchema;
     if (business[1] === "/industry-catalog" && method === "GET")
       return industryCatalogSchema;

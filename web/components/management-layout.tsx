@@ -26,6 +26,7 @@ const NAV_ITEMS = [
   { href: "/bookings/", label: "Bookings" },
   { href: "/services/", label: "Services" },
   { href: "/staff/", label: "Staff" },
+  { href: "/reservations/", label: "Reservations" },
   { href: "/clients/", label: "Clients" },
   { href: "/counterparties/", label: "Counterparties" },
   { href: "/documents/", label: "Documents" },
@@ -47,10 +48,13 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
   // Delegated work is limited to bookings; company areas stay with the owner business.
   const permittedNav = NAV_ITEMS.filter(
     (item) =>
-      !["/counterparties/", "/documents/"].includes(item.href) ||
-      (!locationLimited &&
-        !delegation &&
-        ["owner", "manager"].includes(membership?.role ?? "")),
+      (!["/counterparties/", "/documents/"].includes(item.href) ||
+        (!locationLimited &&
+          !delegation &&
+          ["owner", "manager"].includes(membership?.role ?? ""))) &&
+      // Resource reservations are staff management, also within one branch.
+      (item.href !== "/reservations/" ||
+        (!delegation && ["owner", "manager"].includes(membership?.role ?? ""))),
   );
   const navItems = delegation
     ? permittedNav.filter((item) =>
