@@ -127,6 +127,7 @@ async def test_lifecycle_keeps_every_version_and_replays(
         "counterparties",
         BOOKING,
         "documents",
+        "finance",
     ]
     assert len(catalog["modules"]) == 18
     registry = (
@@ -263,7 +264,7 @@ async def test_invalid_configurations_are_explained(
     unknown = await config.draft(owner_a, a, 0, ["organization"])
     assert unknown.json()["error"]["code"] == "INVALID_REQUEST"
     for version, modules, codes in (
-        (1, ["finance"], {("MODULE_NOT_READY", "finance")}),
+        (1, ["workforce"], {("MODULE_NOT_READY", "workforce")}),
         (
             2,
             ["sales"],

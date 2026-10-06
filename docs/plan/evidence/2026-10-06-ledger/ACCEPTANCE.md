@@ -191,6 +191,19 @@ fault policy readiness снова 200. Fresh Ruff/format/strict mypy 197 фай�
 свежего полного CI; его точный HEAD/run проверяются в [PR #12 Checks](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/12/checks)
 и записываются в финальный отчет/описание PR без переноса старого green на новый SHA.
 
+Независимый [обзор приемочного diff a6f2d8b](INDEPENDENT_ACCEPTANCE_REVIEW_a6f2d8b.md)
+PASS по source: ссылки на95a0de4/schema20, обычные API/browser fixtures, только
+отрицательный readiness override с restoration через monkeypatch; финансовая
+логика не менялась. Runtime этого приемочного diff не повторялся независимо.
+Первый local full a6f2d8b остановлен на устаревшем Configuration snapshot:
+**1 failed / 74 passed / 3 skipped / 84.00 s**. Focused configuration затем
+подтвердил старое finance-as-unready ожидание (1 failed / 12 passed / 7.15 s).
+В явные списки enableable добавлен finance; отказ по MODULE_NOT_READY теперь
+проверяет planned workforce. Отдельный ledger negative test понижает именно
+finance и сохраняет доказательство запрета до acceptance. Assertions не удалены.
+Свежий Configuration API/contracts: **31 passed / 6.66 s**. Последний полный
+прогон и CI этого test-snapshot исправления должны завершиться перед финальным отчетом.
+
 ## Свежая проверка
 
 | Проверка | Результат |
