@@ -1,5 +1,23 @@
 # Cloud Code handoff — GORGONA business platform
 
+## Current G continuation — 2026-10-06
+
+Read [package G handoff](docs/plan/NEXT_AGENT_PACKAGE_G_2026-10-06.md) and
+[fresh evidence](docs/plan/evidence/2026-10-06-ledger/ACCEPTANCE.md).
+Branch codex/package-g-ledger-review from accepted stage-2 plan 151472a;
+own checkout under .codex/worktrees/package-g-ledger-review/Gorgona Booking.
+The original gorgona-e2-documents and owner checkout are preserved.
+Ledger books/accounts/double entry/reversals/periods/trial balance and real API/UI
+are implemented. The early-SET-CONSTRAINTS balance bypass was reproduced and fixed.
+All five initial independent findings are fixed; follow-up review is running.
+Fresh focused: 57 Python tests, including 4 desktop/mobile browser flows, and
+68 web unit tests PASS. Reload recovery and permanent safe cancellation prevent
+the delayed original from running after an unresolved request is cancelled.
+Finance remains implemented until independent review and exact-SHA CI acceptance;
+only explicit test fixtures temporarily promote readiness. Full final suite is running.
+No merge, deployment, production migration, providers or Azure changes.
+Older continuation sections below are historical for their own code versions.
+
 ## Current E2-A continuation — 2026-10-05
 
 Read [E2-A handoff](docs/plan/NEXT_AGENT_E2_FILE_VALIDATION_2026-10-05.md) and

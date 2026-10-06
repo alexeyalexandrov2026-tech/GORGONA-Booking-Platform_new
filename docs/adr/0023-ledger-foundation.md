@@ -77,6 +77,26 @@ currencies are not mixed; a closed period forbids posting".
 
 ## Consequences
 
+### Local implementation — 2026-10-06
+
+Package G is implemented in codex/package-g-ledger-review (migration 0020,
+permission map v5, real ledger API and /ledger UI). The original uncommitted work
+is preserved separately. A reproduced early-SET-CONSTRAINTS balance bypass is
+closed by deferred triggers on both entries and lines. Readiness inspects the
+approved integrity and access definitions from the packaged migration.
+Mutations require READ COMMITTED to prevent stale month/account/module snapshots
+after lock waits. Extra original lines after reversal are rejected. Function source
+checks are exact, including SQL literals. A minimal session-scoped recovery reference
+and serialized resolve/cancel API preserve unknown outcomes across reload/navigation;
+permanent cancellation records reject delayed originals. Recovery has no financial
+effect and remains available when finance is disabled. No financial payload or token
+is persisted in browser storage; cross-browser intent deduplication still needs an
+explicit business operation ID. Trial balances validate each row equation as well
+as column totals. These decisions close all five initial independent review findings.
+[Current evidence and acceptance gates](../plan/evidence/2026-10-06-ledger/ACCEPTANCE.md).
+Finance and FIN-01 remain implemented while final independent review and exact-SHA
+CI are pending. This is not authorization for production migration or deployment.
+
 Later packages (invoices and payments H, materials J, provider events K) post through
 this ledger instead of keeping their own money records. Currency conversion, group
 consolidation, year-end closing and imports are separate decisions. Production

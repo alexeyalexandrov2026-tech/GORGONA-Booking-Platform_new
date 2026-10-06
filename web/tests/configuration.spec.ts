@@ -46,7 +46,11 @@ test("the owner turns booking off and on through published configuration version
     await expect(section).toContainText("No published version yet");
     // Planned modules are listed with their readiness and cannot be chosen.
     await expect(
-      section.getByRole("checkbox", { name: /^Finance · Planned/ }),
+      section
+        .getByRole("checkbox", {
+          name: / · (Planned|Implemented, not yet verified)/,
+        })
+        .first(),
     ).toBeDisabled();
     await expect(
       section.getByRole("checkbox", { name: /Organization and structure/ }),

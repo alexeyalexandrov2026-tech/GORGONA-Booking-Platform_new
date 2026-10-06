@@ -143,7 +143,18 @@ MODULES: tuple[PlatformModule, ...] = (
         "New uploads, documents, versions and counterparty links. Reads, history and "
         "downloads continue.",
     ),
-    _module("finance", "Finance", _OPTIONAL, ("organization",)),
+    _module(
+        "finance",
+        "Finance",
+        _OPTIONAL,
+        ("organization",),
+        Readiness.IMPLEMENTED,
+        "Ledger foundation (ADR-0023): books, neutral chart, double entry, reversals, monthly "
+        "periods and currency-separated trial balances. Local checks do not promote readiness; "
+        "exact-SHA CI acceptance is required before configurations can enable finance. "
+        "No invoices, payments, tax filing, payroll or currency conversion.",
+        "New books, account versions, entries, reversals and period events. Reads continue.",
+    ),
     _module("procurement", "Procurement", _OPTIONAL, ("counterparties", "finance")),
     _module("inventory", "Inventory and customer warehouses", _OPTIONAL, ("products_services",)),
     _module("assets", "Assets and maintenance", _OPTIONAL, ("organization",)),

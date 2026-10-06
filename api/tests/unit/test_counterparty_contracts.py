@@ -88,7 +88,7 @@ def test_commands_and_matching_are_typed_and_require_human_decisions() -> None:
 
 
 def test_new_permissions_are_company_owner_manager_only_and_not_delegable() -> None:
-    assert PERMISSIONS_VERSION == 4
+    assert PERMISSIONS_VERSION == 5
     rights = {
         Permission.COUNTERPARTIES_READ,
         Permission.COUNTERPARTIES_MANAGE,

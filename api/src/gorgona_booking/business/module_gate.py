@@ -18,6 +18,7 @@ from gorgona_booking.db.pool import RuntimeConnection
 MODULE_DISABLED_SQLSTATE = "GBM01"
 COUNTERPARTIES_MODULE = "counterparties"
 DOCUMENTS_MODULE = "documents"
+FINANCE_MODULE = "finance"
 
 
 def _disabled(module_id: str) -> ModuleDisabledError:

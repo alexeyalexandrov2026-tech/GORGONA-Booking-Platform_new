@@ -30,6 +30,7 @@ const NAV_ITEMS = [
   { href: "/clients/", label: "Clients" },
   { href: "/counterparties/", label: "Counterparties" },
   { href: "/documents/", label: "Documents" },
+  { href: "/ledger/", label: "Ledger" },
   { href: "/settings/", label: "Settings" },
 ];
 
@@ -48,7 +49,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
   // Delegated work is limited to bookings; company areas stay with the owner business.
   const permittedNav = NAV_ITEMS.filter(
     (item) =>
-      (!["/counterparties/", "/documents/"].includes(item.href) ||
+      (!["/counterparties/", "/documents/", "/ledger/"].includes(item.href) ||
         (!locationLimited &&
           !delegation &&
           ["owner", "manager"].includes(membership?.role ?? ""))) &&
