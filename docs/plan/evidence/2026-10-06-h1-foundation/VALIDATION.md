@@ -90,9 +90,10 @@ root test target. Its DSN/password stayed outside Git and tool output. The
 Windows sandbox cannot inspect the outside-owned postmaster; live status was
 checked with the same explicit task permissions used to start it. Startup
 capture holds inherited Windows handles until server shutdown; this is not a
-test/runtime failure. Other PostgreSQL instances were untouched. Full suite,
-browser/container and exact-source CI outcomes must be recorded separately when
-run; green planning CI does not prove this new source.
+test/runtime failure. Other PostgreSQL instances were untouched. At that
+focused checkpoint the broader checks had not run; their actual final local
+and exact-head CI outcomes are recorded below. Green planning CI alone is not
+proof for the new source.
 
 ## Final broader checks and delivery
 
@@ -117,17 +118,35 @@ owner/incoming checkouts retain their19/9 paths and original heads. No service
 other than this owned test postmaster was started or stopped.
 
 Planning PR13 is published at925ae02 with completed/success CI37525975637.
-Implementation source/evidence remains local: auto-review rejected push of
-codex/package-h-invoices because it interpreted prior authorization as covering
-the documentation branch only. No implementation PR was created and no indirect
-publication was attempted. New explicit source-branch publication authorization
-is pending. Exact-H1-source CI/container gates therefore remain NOT TESTED.
+The initial source push was blocked by automatic review because it interpreted
+the earlier authorization as documentation-only. The owner subsequently
+explicitly approved pushing codex/package-h-invoices/da3966b and creating its
+draft PR. This historical publication block is RESOLVED.
 
-Final doc checks cover11 changed Markdown docs,25 added/changed local link
-targets, unchanged reviewed source, retained12 NOT TESTED H cases, normalized
-independent-report hashes and both git diff checks. External helper syntax is
-checked by AST without executing mutation scripts. Local/historical links and
-anchors outside added/changed lines are not claimed as verified.
+[Draft PR14](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/14)
+is OPEN/unmerged, targets planning925ae02 and published foundation checkpoint
+`da3966b571062654993f72c8f65c23ab2c843829`. Connected GitHub verified the exact
+head and [CI37534227319](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37534227319):
+completed/success, **909 passed/1 skipped/266.98s**. Mandatory PG, real browser
+and all3 Docker gates PASS. Web unit68 passed/2.2s, typecheck/lint/format/build
+and production image PASS; Ruff/format200 and strict mypy200 PASS.
+The only skip is the optional separate tenant-site integration.
+
+The [complete successor handoff](../../NEXT_AGENT_PACKAGE_H1_2026-10-06.md)
+and [copyable prompt](../../NEXT_AGENT_PROMPT_H1_2026-10-06.md) were prepared
+after this publication, without source changes. They record the next H1 SQL/API
+slice, preservation inventory and test environment. Their docs-only successor
+has its own HEAD/CI; inspect current PR14 rather than treating this stable
+checkpoint's run as proof for a later revision. The ignored local
+`handoff/package-h-foundation/FINAL_VALIDATION.md` records final delivery checks.
+
+The prepublication doc checks passed11 changed Markdown docs and25 added/
+changed local link targets. The handoff successor adds a prompt and fresh doc
+checks; exact updated counts/outcomes are in its final delivery record.
+Both checkpoints retain unchanged reviewed source,12 NOT TESTED H cases,
+normalized independent-report hashes and clean diff checks. External helper
+syntax is checked by AST without executing mutation scripts. Historical links
+and anchors outside added/changed lines are not claimed as verified.
 
 ## Remaining work
 
