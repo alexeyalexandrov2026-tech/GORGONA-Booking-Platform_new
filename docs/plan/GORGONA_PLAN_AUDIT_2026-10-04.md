@@ -159,7 +159,7 @@ prod0; load tool воспроизводит ложный PASS и пока не �
 | CORE-04 | NOT TESTED | GiST исключает пересечения записей; `booking_allocations` пока связан только с booking. Совместная конкуренция booking/rental/trip еще невозможна |
 | FIN-01 | technically_verified (2026-10-06) | Книги, двойная запись, сторно, периоды и ведомость; evidence code 95a0de4: full local 858 passed/4 skipped, exact-SHA CI 861 passed/1 skipped с Docker, независимые обзоры закрыли 7 findings. [Приемка и границы](evidence/2026-10-06-ledger/ACCEPTANCE.md), свежий CI приемочного HEAD — PR #12. Промышленная эксплуатация NOT TESTED |
 | FIN-02 | NOT TESTED | Нет принятой платежной интеграции и обработки повторных/переставленных provider-событий |
-| FIN-03 | NOT TESTED | [План H](PACKAGE_H_PLAN_2026-10-06.md) и [ADR-0024 Proposed](../adr/0024-invoices-obligations-and-external-settlements.md): счета, отдельные обязательства, конкурирующие резервы и частичные внешние confirmations/credits/refunds предложены; H не реализован/не проверен. |
+| FIN-03 | NOT TESTED | [H1 foundation](evidence/2026-10-06-h1-foundation/VALIDATION.md): контракты, арифметика и закрытый gate проверены; реальные H SQL/API/UI/обязательства/резервы/выплаты не реализованы. Полные H-01..H-12 NOT TESTED. |
 | STOCK-01 | NOT TESTED | Нет связанных с владельцем материальных документов и движений |
 | WORK-01 | NOT TESTED | Недельная доступность специалиста не является сменами, обменом смен или версионированным табелем |
 | BEAUTY-01 | ЧАСТИЧНО, полный цикл NOT TESTED | Запись, цены и дополнения проверены; этапы услуги, многоресурсное освобождение, пакеты, материалы, платежи и комиссии еще не образуют полный цикл |

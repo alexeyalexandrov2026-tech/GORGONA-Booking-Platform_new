@@ -1,6 +1,31 @@
-# GORGONA — начните здесь (актуальное продолжение, 2026-10-05)
+# GORGONA — начните здесь (актуальное продолжение, 2026-10-06)
 
-## Актуально: пакет H — план на согласование, 2026-10-06
+## Актуально: передача H1 после публикации PR14
+
+Сначала [полная передача следующему агенту](NEXT_AGENT_PACKAGE_H1_2026-10-06.md)
+и [готовый prompt](NEXT_AGENT_PROMPT_H1_2026-10-06.md).
+Репозиторий alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new;
+ветка `codex/package-h-invoices`, checkout
+`C:\Users\alexa\.codex\worktrees\package-h-finance-plan\Gorgona Booking`.
+Создать собственную ветку/checkout от текущего delivered H HEAD; исходные
+Booking/E2 с19/9 измененными путями сохранить.
+
+[Draft PR14](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/14)
+опубликован после явного разрешения владельца. Проверенный source843d0b3,
+checkpointda3966b:
+[CI37534227319](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37534227319)
+PASS909 passed/1 optional skip, PG/browser/Docker и build PASS.
+Эта передача — следующий docs-only commit; свежий exact-HEAD CI проверять вPR14.
+[Evidence](evidence/2026-10-06-h1-foundation/VALIDATION.md).
+
+G/FIN-01 technically_verified; H1 IN PROGRESS, FIN-03/02 planned.
+Контракты, арифметика и закрытый finance_documents реализованы; H SQL/API/UI нет.
+Следующий шаг: forward0021, typed G posting seam и атомарный invoice issue.
+Не включать H и не объявлять FIN-03 принятым. Локальное продолжение разрешено;
+production/provider/merge не разрешены. Все старые planning snapshots ниже
+исторические для своих SHA и не создают нового запроса на действия.
+
+## История: пакет H — план на согласование, 2026-10-06
 
 Продолжение G переходит в отдельную ветку `codex/package-h-finance-plan`, база
 `5be6e7a`. [Передача H](NEXT_AGENT_PACKAGE_H_2026-10-06.md),

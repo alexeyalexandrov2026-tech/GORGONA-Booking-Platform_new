@@ -1,6 +1,22 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current H planning — 2026-10-06
+## Current H1 foundation — 2026-10-06
+
+Owner continued local work and explicitly approved H1 source publication.
+[Draft PR14](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/14)
+targets planning PR13. Delivery branch codex/package-h-invoices; reviewed
+source843d0b3, checkpointda3966b. Exact-head CI37534227319 PASS909 passed/
+1 optional skip with PG/browser/Docker and build. This handoff update is a
+docs-only successor; refresh current PR14 head/CI.
+[Copyable successor prompt](docs/plan/NEXT_AGENT_PROMPT_H1_2026-10-06.md).
+Read [H1 handoff](docs/plan/NEXT_AGENT_PACKAGE_H1_2026-10-06.md) and
+[checks/boundaries](docs/plan/evidence/2026-10-06-h1-foundation/VALIDATION.md).
+Strict contracts, pure allocation math and planned finance_documents/registry2
+are implemented. H1 workflow is IN PROGRESS; actual H SQL/API/UI is not built.
+FIN-03/02 remain planned; G acceptance and old published configurations remain.
+Earlier planning/review statements below describe their own snapshots.
+
+## Historical H planning snapshot — 2026-10-06
 
 Own branch codex/package-h-finance-plan from G head5be6e7a.
 Read [H handoff](docs/plan/NEXT_AGENT_PACKAGE_H_2026-10-06.md),

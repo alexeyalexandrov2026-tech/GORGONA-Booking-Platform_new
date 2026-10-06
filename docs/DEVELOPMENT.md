@@ -1,6 +1,20 @@
 # Development
 
-## Package H planning (2026-10-06)
+## H1 foundation (2026-10-06)
+
+[Evidence](plan/evidence/2026-10-06-h1-foundation/VALIDATION.md) and
+[continuation](plan/NEXT_AGENT_PACKAGE_H1_2026-10-06.md) record the current source.
+financial_contracts/math reuse G validation and currency minor units. New
+finance_documents follows FIN-03 readiness and requires its own publication;
+registry2 preserves existing published v1 finance. No H endpoints/tables yet.
+H1 IN PROGRESS; no provider SDK, new dependency or acceptance promotion.
+[Published draft PR14](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/14)
+checkpointda3966b has CI37534227319 PASS909/1 optional skip with PG/browser/
+Docker/build. This docs-only successor requires its own current-head CI.
+The handoff includes exact environment/check commands, owned PG boundaries,
+preservation inventory and [copyable next-agent prompt](plan/NEXT_AGENT_PROMPT_H1_2026-10-06.md).
+
+## Historical Package H planning snapshot (2026-10-06)
 
 [Plan](plan/PACKAGE_H_PLAN_2026-10-06.md) and
 [ADR-0024 Proposed](adr/0024-invoices-obligations-and-external-settlements.md)
@@ -8,7 +22,8 @@ describe the next extension of G. No new dependency, service or migration has
 been added. FIN-03 is planned. Reuse current money/ledger/auth/commands and real
 test harnesses; extend closed source/recovery/view contracts explicitly. Do not
 turn an invoice state into paid money or automatic recognized revenue. Owner
-confirmation is pending; independent proposed-design review PASS.
+confirmation was pending at that snapshot; the current handoff records
+the later owner continuation/publication. Independent proposed-design review PASS.
 [Documentation and review evidence](plan/evidence/2026-10-06-package-h-plan/VALIDATION.md).
 No H runtime validation is claimed.
 
