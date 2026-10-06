@@ -1,7 +1,9 @@
 # ADR-0023 — Ledger foundation: books, chart of accounts, double entry and periods (FIN-01)
 
-- Status: **Proposed (2026-10-06)** — waiting for the owner's four decisions in the
-  [stage 2 plan](../plan/STAGE2_PLAN_2026-10-06.md). No code before acceptance.
+- Status: **Accepted (2026-10-06)** — owner decisions: ledger foundation only
+  (invoices and payments in package H), neutral starter chart of accounts, no
+  currency conversion, and both owner and manager may close and reopen periods
+  ([stage 2 plan](../plan/STAGE2_PLAN_2026-10-06.md)).
 - Scope: master plan §11.1 and criterion FIN-01; first package (G) of stage 2.
   Builds on ADR-0015 (tenant-owned legal entities), ADR-0019 (configuration and
   module gates), ADR-0002/0014 (tenancy, RLS and location scope).
@@ -23,12 +25,12 @@ not summed without an explicit rate, date and source; currency scale is not assu
 to be two decimals. FIN-01: "double entry is balanced; different legal entities and
 currencies are not mixed; a closed period forbids posting".
 
-## Decision (proposed, defaults marked; owner choices in the plan)
+## Decision
 
 1. **Module and rights.** Implement module `finance` (readiness `implemented` with the
    code, `technically_verified` only after exact-SHA CI). New permissions
-   `finance.read`, `finance.manage` (owner and manager) and `finance.close` (owner
-   only by default, decision 4); not delegable, not platform support, company-wide
+   `finance.read`, `finance.manage` and `finance.close` (owner and manager, owner
+   decision 4); not delegable, not platform support, company-wide
    members only. Permission map version increments.
 2. **Books.** `gba.ledger_books`: one per legal entity, insert-only versions with base
    currency (ISO 4217 alpha code from a built-in table with its minor-unit scale),
