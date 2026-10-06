@@ -129,6 +129,26 @@ def _go_live(args: argparse.Namespace) -> None:
     print(f"salon {args.slug} is live")
 
 
+def _backfill_occupancy(args: argparse.Namespace) -> None:
+    """Copy one company's pre-0018 booking allocations into shared occupancy (ADR-0022)."""
+    from gorgona_booking.occupancy.backfill import UnknownCompanyError, backfill_for_owner
+    from gorgona_booking.onboarding.service import stable_id
+
+    try:
+        tenant_id = UUID(args.company)
+    except ValueError:
+        tenant_id = stable_id(None, "tenant", args.company)
+    try:
+        with _owner_conn() as conn:
+            result = backfill_for_owner(conn, tenant_id)
+    except UnknownCompanyError:
+        print(f"unknown company {tenant_id}")
+        raise SystemExit(2) from None
+    print(f"company {tenant_id}: copied {result.copied}, mismatches {result.mismatches}")
+    if result.mismatches:
+        raise SystemExit(2)
+
+
 def _embed_origin(args: argparse.Namespace) -> None:
     from gorgona_booking.onboarding.service import stable_id
     from gorgona_booking.tenancy.embedding import (
@@ -221,6 +241,12 @@ def main(argv: list[str] | None = None) -> None:
     live = commands.add_parser("go-live", help="open public booking if the salon is ready")
     live.add_argument("slug")
     live.set_defaults(run=_go_live)
+    backfill = commands.add_parser(
+        "backfill-occupancy",
+        help="copy a company's booking allocations into shared occupancy (owner DSN)",
+    )
+    backfill.add_argument("company", help="company id or onboarding slug")
+    backfill.set_defaults(run=_backfill_occupancy)
     embed = commands.add_parser(
         "embed-origin", help="approve/revoke/list origins allowed to frame a salon's booking pages"
     )

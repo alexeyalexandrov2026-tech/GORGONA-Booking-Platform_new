@@ -72,12 +72,20 @@ writes without one locking mechanism. Resources today are `artist`, `chair` and
 
 - Migration 0018 creates `gba.resource_allocations` (FORCE RLS, branch scope
   through the resource, insert and state change only under triggers) with the
-  exclusion constraint `resource_allocations_no_overlap` for `held`/`confirmed`,
-  mirrors every existing `booking_allocations` row per tenant (state from the
-  booking status) and adds a reconciliation function; a mismatch fails the
-  migration. Triggers on `booking_allocations` keep the mirror exact for every
-  write path (insert, status cascade), so the shared constraint decides booking
-  versus reservation conflicts even for raw SQL.
+  exclusion constraint `resource_allocations_no_overlap` for `held`/`confirmed`
+  and a reconciliation function. Migrations never bypass row security (enforced
+  by `tests/unit/test_migration_files.py`), so pre-0018 booking allocations are
+  copied per company by the operator command `backfill-occupancy` in that
+  company's context; until a company is reconciled, the reservation path must
+  also check its legacy booking allocations. Triggers on `booking_allocations`
+  keep the mirror exact for every write path (insert, status cascade), so the
+  shared constraint decides booking versus reservation conflicts even for raw SQL.
+- Step 1 deliberately omits two columns named in decision 1: `units` arrives with
+  capacity above one (owner decision: later), and authorship stays in the source
+  domain (booking events; the reservation rows of step 2) instead of a duplicate
+  `created_by` here. The status cascade runs the mirror in the foreign-key
+  context, so branch row security cannot hide the row it updates (tested with a
+  resource moved to another branch).
 - `gba.resource_reservations` (insert, then one cancellation) with its allocations
   in the shared table; a cancellation releases all of them.
 - Python `occupancy` takes the per-resource advisory locks in id order for both

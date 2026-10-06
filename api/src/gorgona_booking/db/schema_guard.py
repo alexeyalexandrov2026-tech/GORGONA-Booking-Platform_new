@@ -41,6 +41,71 @@ begin
     return new;
 end;
 """
+# Approved bodies of the shared-occupancy triggers (ADR-0022), compared without
+# whitespace: a disabled or rewritten mirror would let two modules double-book.
+_OCCUPANCY_GUARD_SOURCE = """
+begin
+    if tg_op = 'DELETE' then
+        raise exception using errcode = 'check_violation',
+            message = 'resource allocations are kept';
+    end if;
+    if tg_op = 'UPDATE' then
+        if (new.tenant_id, new.id, new.resource_id, new.source_kind, new.source_id,
+            new.during, new.created_at)
+           is distinct from (old.tenant_id, old.id, old.resource_id, old.source_kind,
+                             old.source_id, old.during, old.created_at) then
+            raise exception using errcode = 'check_violation',
+                message = 'an allocation keeps its resource, source and interval';
+        end if;
+        if new.state is distinct from old.state and not (
+            (old.state = 'held' and new.state in ('confirmed', 'released'))
+            or (old.state = 'confirmed' and new.state = 'released')
+        ) then
+            raise exception using errcode = 'check_violation',
+                message = 'this allocation state change is not allowed';
+        end if;
+        new.updated_at := pg_catalog.now();
+    end if;
+    if new.source_kind = 'booking' and not exists (
+        select 1 from gba.booking_allocations a
+        where a.tenant_id = new.tenant_id and a.booking_id = new.source_id
+          and a.resource_id = new.resource_id and a.during = new.during
+          and gba.booking_occupancy_state(a.booking_status) = new.state
+    ) then
+        raise exception using errcode = 'check_violation',
+            message = 'a booking allocation follows its booking';
+    end if;
+    return new;
+end;
+"""
+_OCCUPANCY_MIRROR_SOURCE = """
+begin
+    if tg_op = 'INSERT' then
+        insert into gba.resource_allocations (tenant_id, resource_id, source_kind, source_id,
+                                              during, state)
+        values (new.tenant_id, new.resource_id, 'booking', new.booking_id, new.during,
+                gba.booking_occupancy_state(new.booking_status));
+    elsif new.booking_status is distinct from old.booking_status then
+        update gba.resource_allocations r
+           set state = gba.booking_occupancy_state(new.booking_status)
+         where r.tenant_id = new.tenant_id and r.source_kind = 'booking'
+           and r.source_id = new.booking_id and r.resource_id = new.resource_id
+           and r.state <> gba.booking_occupancy_state(new.booking_status);
+        -- Nothing to update means an allocation from before 0018; the backfill copies
+        -- it later with the booking's state. The status cascade runs this trigger in
+        -- the foreign-key context, so branch row security never hides the row.
+    end if;
+    return null;
+end;
+"""
+_OCCUPANCY_STATE_SOURCE = """
+    select case status when 'HOLD' then 'held' when 'CONFIRMED' then 'confirmed'
+                       else 'released' end
+"""
+_OCCUPANCY_CONSTRAINT = (
+    "EXCLUDE USING gist (tenant_id WITH =, resource_id WITH =, during WITH &&) "
+    "WHERE ((state = ANY (ARRAY['held'::text, 'confirmed'::text])))"
+)
 _COUNTERPARTY_TABLES = (
     "counterparties",
     "counterparty_versions",
@@ -117,6 +182,10 @@ _DEFINITIONS = [
         f"({_NO_LOCATION} OR ("
         f"{_parent('booking_allocations', 'bookings', 'b', 'booking_id')} AND "
         f"{_parent('booking_allocations', 'resources', 'r', 'resource_id')}))",
+    ),
+    _definition(
+        "resource_allocations",
+        f"({_NO_LOCATION} OR {_parent('resource_allocations', 'resources', 'r', 'resource_id')})",
     ),
     _definition("audit_events", _NO_LOCATION, command="r"),
     *[
@@ -212,6 +281,48 @@ and exists (
 """
 
 
+# Shared occupancy: the exclusion constraint, the row guard (BEFORE INSERT OR UPDATE
+# OR DELETE, tgtype 31) and the booking mirror (AFTER INSERT OR UPDATE OF
+# booking_status, tgtype 21), each enabled and calling its approved function.
+_ACCESS_BOUNDARY += """
+and exists (
+    select 1 from pg_catalog.pg_constraint k
+    where k.conrelid = pg_catalog.to_regclass('gba.resource_allocations')
+      and k.conname = 'resource_allocations_no_overlap' and k.contype = 'x' and k.convalidated
+      and regexp_replace(pg_catalog.pg_get_constraintdef(k.oid), '[[:space:]]', '', 'g') = %s
+) and exists (
+    select 1 from pg_catalog.pg_proc f
+    where f.oid = pg_catalog.to_regprocedure('gba.booking_occupancy_state(text)')
+      and not f.prosecdef and f.proconfig is null and f.provolatile = 'i'
+      and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'sql')
+      and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
+) and not exists (
+    select 1 from (values
+        ('resource_allocations', 'resource_allocations_guard', 31,
+         'gba.guard_resource_allocation()', '', %s::text),
+        ('booking_allocations', 'booking_allocations_mirror_occupancy', 21,
+         'gba.mirror_booking_allocation()', 'booking_status', %s::text)
+    ) required(table_name, trigger_name, trigger_type, function_name, columns, source)
+    left join pg_catalog.pg_trigger t
+      on t.tgrelid = pg_catalog.to_regclass('gba.' || required.table_name)
+     and t.tgname = required.trigger_name
+    left join pg_catalog.pg_proc f on f.oid = t.tgfoid
+    where t.oid is null or t.tgtype <> required.trigger_type or t.tgenabled <> 'O'
+       or t.tgisinternal or t.tgqual is not null or t.tgconstraint <> 0 or t.tgnargs <> 0
+       or f.oid is distinct from pg_catalog.to_regprocedure(required.function_name)
+       or f.prosecdef or f.proconfig is not null
+       or f.prolang <> (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
+       or regexp_replace(f.prosrc, '[[:space:]]', '', 'g') <> required.source
+       -- An UPDATE OF list on other columns would skip the status changes.
+       or coalesce((
+           select string_agg(a.attname, ',' order by a.attnum)
+           from unnest(t.tgattr::int2[]) k(attnum)
+           join pg_catalog.pg_attribute a on a.attrelid = t.tgrelid and a.attnum = k.attnum
+       ), '') <> required.columns
+)
+"""
+
+
 async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
     parameters: list[object] = [field for definition in _DEFINITIONS for field in definition]
     parameters += [_FUNCTION_SOURCE, _compact(_BOOKING_MODULE_SOURCE)]
@@ -220,6 +331,10 @@ async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
         [table for table, _, _ in _MODULE_TRIGGERS],
         [trigger for _, trigger, _ in _MODULE_TRIGGERS],
         [module.encode() + b"\x00" for _, _, module in _MODULE_TRIGGERS],
+        _compact(_OCCUPANCY_CONSTRAINT),
+        _compact(_OCCUPANCY_STATE_SOURCE),
+        _compact(_OCCUPANCY_GUARD_SOURCE),
+        _compact(_OCCUPANCY_MIRROR_SOURCE),
     ]
     row = await (await conn.execute(_ACCESS_BOUNDARY, parameters)).fetchone()
     if row is None or row[0] is not True:

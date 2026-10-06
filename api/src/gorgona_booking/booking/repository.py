@@ -18,17 +18,18 @@ from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import NotFoundError
 
 NO_OVERLAP_CONSTRAINT = "booking_allocations_no_overlap"
+# Shared occupancy of every module (ADR-0022) rejects overlaps with the same SQLSTATE.
+SHARED_NO_OVERLAP_CONSTRAINT = "resource_allocations_no_overlap"
 EXCLUSION_VIOLATION = "23P01"
 BOOKING_MODULE_DISABLED = "GBM01"
 
 
 def is_slot_conflict(exc: object) -> bool:
-    """True only for the occupancy exclusion constraint, never for other 23P01s."""
+    """True only for the occupancy exclusion constraints, never for other 23P01s."""
     diag = getattr(exc, "diag", None)
-    return (
-        getattr(exc, "sqlstate", None) == EXCLUSION_VIOLATION
-        and getattr(diag, "constraint_name", None) == NO_OVERLAP_CONSTRAINT
-    )
+    return getattr(exc, "sqlstate", None) == EXCLUSION_VIOLATION and getattr(
+        diag, "constraint_name", None
+    ) in (NO_OVERLAP_CONSTRAINT, SHARED_NO_OVERLAP_CONSTRAINT)
 
 
 async def set_audit_context(

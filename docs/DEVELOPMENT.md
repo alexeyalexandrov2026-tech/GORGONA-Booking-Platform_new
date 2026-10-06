@@ -1,5 +1,23 @@
 # Development
 
+## Shared resource occupancy (Package F step 1, 2026-10-05)
+
+Migration 0018 adds `gba.resource_allocations`, the one occupancy table for every
+module (ADR-0022): resource, `source_kind`/`source_id`, half-open `during`, state
+`held`/`confirmed`/`released`, exclusion `resource_allocations_no_overlap` for
+active states, FORCE RLS with branch scope through the resource. Booking keeps
+writing `booking_allocations`; the trigger `booking_allocations_mirror_occupancy`
+copies every insert and every status change (also the FK cascade from
+`bookings`) in the same transaction, and `resource_allocations_guard` refuses
+deletes, moved intervals, backward states and booking rows that do not match
+their booking. Migrations never bypass row security, so allocations from before
+0018 are copied per company by the operator command
+`gba-db backfill-occupancy <company id or slug>` (owner DSN; repeatable; exits 2
+while mismatches remain); `select gba.booking_occupancy_mismatches()` must be 0.
+The schema guard checks the policy, the constraint and both trigger bodies.
+Focused: `tests/integration/test_resource_occupancy.py` (mirror lifecycle, forged
+SQL, drift detection, migration backfill on a fresh database).
+
 ## Contracts with counterparties (Package E3, 2026-10-05)
 
 Migration 0017 adds FORCE-RLS insert-only `agreements` (counterparty, optional own
