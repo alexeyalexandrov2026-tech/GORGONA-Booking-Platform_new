@@ -1,6 +1,24 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current H1 foundation — 2026-10-06
+## Current H1 backend and next-agent handoff — 2026-10-06
+
+[Full successor handoff](docs/plan/NEXT_AGENT_H1_BACKEND_2026-10-06.md),
+[copyable prompt](docs/plan/NEXT_AGENT_PROMPT_H1_BACKEND_2026-10-06.md),
+[changed files/checks/reviews](docs/plan/evidence/2026-10-06-h1-backend/VALIDATION.md).
+Delivery branch codex/package-h1-persistence; reviewed source2d5a8f9 from
+foundation18e3f5e. [Draft PR15](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/15)
+targets PR14. Read exact current delivery HEAD/CI there.
+Real forward0021 and invoice API persist one immutable issue, principal
+obligation and G accrual atomically; minimal permanent recovery and explicit
+journal-v2 are implemented. Root953/4skip/378.14s, Ruff/format/mypy204 PASS;
+independent corrective review47 PG/109 units PASS, H1-R01 closed.
+FIN-03/02 remain planned and finance_documents unavailable. H2 settlement/
+manual accrual, H3 credits/refunds and H4 UI/admission remain unfinished.
+Owner/E2 dirty trees preserved; own root51456 and review51460 stopped.
+No merge/deploy/production/provider/funds action. Historical foundation below
+has been superseded for continuation; its evidence remains snapshot-specific.
+
+## Historical H1 foundation — 2026-10-06
 
 Owner continued local work and explicitly approved H1 source publication.
 [Draft PR14](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/14)

@@ -1,5 +1,15 @@
 # Пакет H — счета, обязательства и подтвержденные внешние расчеты
 
+**Implementation checkpoint:** owner continuation authorized local H work and
+draft publication. Source2d5a8f9 implements the bounded H1 invoice backend on
+forward0021, with a closed feature gate; [current handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md)
+and [direct evidence](evidence/2026-10-06-h1-backend/VALIDATION.md).
+H2/H3/H4 continue through new forward migrations without changing published
+checksums. ADR0024 remains formally Proposed; all twelve COMPLETE criteria
+below remain NOT TESTED and FIN-03/02 planned. Older approval-pending text is
+historical context, not a new action request.
+
+
 Статус: **план на согласование, H не реализован**. Дата: 2026-10-06.
 Объем этапа 2 согласован ранее; новые правила H ниже остаются предложением.
 База: `5be6e7abd7b552903a4f4b2884b150c62532c17d`, технически принятый G.

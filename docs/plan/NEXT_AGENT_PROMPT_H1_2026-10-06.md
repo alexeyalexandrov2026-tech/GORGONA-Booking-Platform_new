@@ -1,5 +1,7 @@
 # Copyable prompt for the next agent — H1 persistence
 
+> Historical foundation snapshot. Continue with the [current backend handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md) and [current prompt](NEXT_AGENT_PROMPT_H1_BACKEND_2026-10-06.md). This file's next H1 persistence step is now implemented on source2d5a8f9.
+
 Copy the following into the next agent's task. The authoritative local handoff is:
 `C:\Users\alexa\.codex\worktrees\package-h-finance-plan\Gorgona Booking\docs\plan\NEXT_AGENT_PACKAGE_H1_2026-10-06.md`.
 It and this prompt are also published in draft PR14.
