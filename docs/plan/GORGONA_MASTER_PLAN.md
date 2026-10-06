@@ -1,5 +1,11 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
+**H1, 6 октября:** после указания владельца продолжить опубликован план PR13
+и создана ветка codex/package-h-invoices. Контракты, денежная арифметика и
+закрытый finance_documents/registry2 проверены на source843d0b3. Это основа;
+полный H1 еще IN PROGRESS, FIN-03/02 planned. [Передача H1](NEXT_AGENT_PACKAGE_H1_2026-10-06.md),
+[фактические проверки](evidence/2026-10-06-h1-foundation/VALIDATION.md).
+
 **Продолжение H, 6 октября:** подготовлены
 [план](PACKAGE_H_PLAN_2026-10-06.md) и
 [ADR-0024 Proposed](../adr/0024-invoices-obligations-and-external-settlements.md)

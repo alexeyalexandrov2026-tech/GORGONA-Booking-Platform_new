@@ -1,5 +1,15 @@
 # GORGONA — реестр реализации
 
+## Актуально H1: контракты и инварианты, 2026-10-06
+
+Ветка codex/package-h-invoices, source843d0b3, parent925ae02/PR13.
+[Передача H1](NEXT_AGENT_PACKAGE_H1_2026-10-06.md),
+[проверки и независимый обзор](evidence/2026-10-06-h1-foundation/VALIDATION.md).
+Реализована проверенная основа: строгие контракты, точная арифметика и закрытый
+finance_documents gate/registry2. H1 IN PROGRESS: SQL/API/денежного выпуска/UI
+еще нет. FIN-03/02 planned; G остается technically_verified. Local continuation
+разрешено владельцем; никакой production/provider приемки не было.
+
 ## Актуально H: архитектурный план, 2026-10-06
 
 От G `5be6e7a`, собственная ветка `codex/package-h-finance-plan`.

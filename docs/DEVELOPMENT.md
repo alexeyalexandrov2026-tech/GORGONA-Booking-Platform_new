@@ -1,5 +1,14 @@
 # Development
 
+## H1 foundation (2026-10-06)
+
+[Evidence](plan/evidence/2026-10-06-h1-foundation/VALIDATION.md) and
+[continuation](plan/NEXT_AGENT_PACKAGE_H1_2026-10-06.md) record the current source.
+financial_contracts/math reuse G validation and currency minor units. New
+finance_documents follows FIN-03 readiness and requires its own publication;
+registry2 preserves existing published v1 finance. No H endpoints/tables yet.
+H1 IN PROGRESS; no provider SDK, new dependency or acceptance promotion.
+
 ## Package H planning (2026-10-06)
 
 [Plan](plan/PACKAGE_H_PLAN_2026-10-06.md) and

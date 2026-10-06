@@ -1,5 +1,16 @@
 # Cloud Code handoff — GORGONA business platform
 
+## Current H1 foundation — 2026-10-06
+
+Owner continued local work/publication; H plan is published as draftPR13.
+Current code branch codex/package-h-invoices, reviewed source843d0b3.
+Read [H1 handoff](docs/plan/NEXT_AGENT_PACKAGE_H1_2026-10-06.md) and
+[checks/boundaries](docs/plan/evidence/2026-10-06-h1-foundation/VALIDATION.md).
+Strict contracts, pure allocation math and planned finance_documents/registry2
+are implemented. H1 workflow is IN PROGRESS; actual H SQL/API/UI is not built.
+FIN-03/02 remain planned; G acceptance and old published configurations remain.
+Earlier planning/review statements below describe their own snapshots.
+
 ## Current H planning — 2026-10-06
 
 Own branch codex/package-h-finance-plan from G head5be6e7a.
