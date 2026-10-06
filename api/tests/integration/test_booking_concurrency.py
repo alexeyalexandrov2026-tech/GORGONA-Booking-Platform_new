@@ -129,6 +129,15 @@ async def test_raw_sql_race_the_constraint_alone_admits_exactly_one(
             await conn.execute("select count(*) from gba.bookings where starts_at = %s", (start,))
         ).fetchone()
     assert row == (1,)  # losing transactions left no booking rows behind
+    async with tenant_transaction(app_pool, tenant) as conn:
+        shared = await (
+            await conn.execute(
+                "select count(*) from gba.resource_allocations where resource_id = %s "
+                "and state in ('held', 'confirmed')",
+                (resource,),
+            )
+        ).fetchone()
+    assert shared == (1,)  # the shared occupancy mirrors exactly the winner
 
 
 async def test_service_race_100_attempts_one_success_99_clean_conflicts(

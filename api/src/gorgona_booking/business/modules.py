@@ -119,10 +119,12 @@ MODULES: tuple[PlatformModule, ...] = (
         ("organization", "users_access"),
         Readiness.TECHNICALLY_VERIFIED,
         "Single-resource booking with its own service catalog, prices and compatible add-ons, "
-        "staff hours and the customer booking site. No multi-resource booking, payments or "
-        "occupancy shared with other modules.",
-        "New bookings and reschedules in the workspace, on the customer site and by delegates. "
-        "Cancellations, existing holds, history and reads continue.",
+        "staff hours and the customer booking site; staff reservations of one or more "
+        "resources share one occupancy with bookings (ADR-0022). No multi-resource booking, "
+        "capacity above one or payments.",
+        "New bookings and reschedules in the workspace, on the customer site and by delegates, "
+        "and new resource reservations. Cancellations, existing holds, history and reads "
+        "continue.",
     ),
     _module("workforce", "Workforce", _OPTIONAL, ("users_access",)),
     _module("projects", "Projects and work", _OPTIONAL, ("counterparties",)),

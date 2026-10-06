@@ -41,6 +41,213 @@ begin
     return new;
 end;
 """
+# Approved bodies of the shared-occupancy triggers (ADR-0022), compared without
+# whitespace: a disabled or rewritten mirror would let two modules double-book.
+_OCCUPANCY_GUARD_SOURCE = """
+begin
+    if tg_op = 'DELETE' then
+        raise exception using errcode = 'check_violation',
+            message = 'resource allocations are kept';
+    end if;
+    if tg_op = 'UPDATE' then
+        if (new.tenant_id, new.id, new.resource_id, new.source_kind, new.source_id,
+            new.during, new.created_at)
+           is distinct from (old.tenant_id, old.id, old.resource_id, old.source_kind,
+                             old.source_id, old.during, old.created_at) then
+            raise exception using errcode = 'check_violation',
+                message = 'an allocation keeps its resource, source and interval';
+        end if;
+        if new.state is distinct from old.state and not (
+            (old.state = 'held' and new.state in ('confirmed', 'released'))
+            or (old.state = 'confirmed' and new.state = 'released')
+        ) then
+            raise exception using errcode = 'check_violation',
+                message = 'this allocation state change is not allowed';
+        end if;
+        new.updated_at := pg_catalog.now();
+    end if;
+    if new.source_kind = 'booking' and not exists (
+        select 1 from gba.booking_allocations a
+        where a.tenant_id = new.tenant_id and a.booking_id = new.source_id
+          and a.resource_id = new.resource_id and a.during = new.during
+          and gba.booking_occupancy_state(a.booking_status) = new.state
+    ) then
+        raise exception using errcode = 'check_violation',
+            message = 'a booking allocation follows its booking';
+    end if;
+    if new.source_kind = 'reservation' then
+        if tg_op = 'INSERT' and not exists (
+            select 1 from gba.resource_reservations v
+            join gba.resources r
+              on r.tenant_id = v.tenant_id and r.location_id = v.location_id
+            where v.tenant_id = new.tenant_id and v.id = new.source_id
+              and v.status = 'active' and new.state = 'confirmed'
+              -- Only in the transaction that created the reservation.
+              and v.created_at = pg_catalog.now()
+              and new.during = tstzrange(v.starts_at, v.ends_at, '[)')
+              and r.id = new.resource_id and r.is_active
+        ) then
+            raise exception using errcode = 'check_violation',
+                message = 'a reservation allocation follows its active reservation';
+        end if;
+        if tg_op = 'UPDATE' and new.state = 'released' and not exists (
+            select 1 from gba.resource_reservations v
+            where v.tenant_id = new.tenant_id and v.id = new.source_id
+              and v.status = 'cancelled'
+        ) then
+            raise exception using errcode = 'check_violation',
+                message = 'a reservation allocation is released by its cancellation';
+        end if;
+        -- Mirrored bookings are decided by the exclusion constraint; this only
+        -- covers booking allocations a company has not copied yet.
+        if tg_op = 'INSERT' and exists (
+            select 1 from gba.booking_allocations a
+            where a.tenant_id = new.tenant_id and a.resource_id = new.resource_id
+              and a.booking_status in ('HOLD', 'CONFIRMED') and a.during && new.during
+              and not exists (
+                  select 1 from gba.resource_allocations c
+                  where c.tenant_id = a.tenant_id and c.source_kind = 'booking'
+                    and c.source_id = a.booking_id and c.resource_id = a.resource_id)
+        ) then
+            raise exception using errcode = 'exclusion_violation',
+                constraint = 'resource_allocations_no_overlap',
+                message = 'the resource is booked in this interval';
+        end if;
+    end if;
+    return new;
+end;
+"""
+_RESERVATION_GUARD_SOURCE = """
+begin
+    if tg_op = 'DELETE' then
+        raise exception using errcode = 'check_violation',
+            message = 'resource reservations are kept';
+    end if;
+    if tg_op = 'INSERT' then
+        if new.status <> 'active' then
+            raise exception using errcode = 'check_violation',
+                message = 'a reservation is created active';
+        end if;
+        return new;
+    end if;
+    if (new.tenant_id, new.id, new.location_id, new.starts_at, new.ends_at, new.purpose,
+        new.resource_count, new.created_by, new.created_at)
+       is distinct from (old.tenant_id, old.id, old.location_id, old.starts_at, old.ends_at,
+                         old.purpose, old.resource_count, old.created_by, old.created_at)
+       or not (old.status = 'active' and new.status = 'cancelled') then
+        raise exception using errcode = 'check_violation',
+            message = 'an active reservation can only be cancelled';
+    end if;
+    new.cancelled_at := pg_catalog.now();
+    return new;
+end;
+"""
+_RESERVATION_RELEASE_SOURCE = """
+declare
+    released integer;
+begin
+    if new.status = 'cancelled' then
+        update gba.resource_allocations r set state = 'released'
+         where r.tenant_id = new.tenant_id and r.source_kind = 'reservation'
+           and r.source_id = new.id and r.state <> 'released';
+        get diagnostics released = row_count;
+        -- Row security hides a resource moved to another branch: never leave it
+        -- reserved silently; a company-wide session can cancel.
+        if released <> new.resource_count then
+            raise exception using errcode = 'check_violation',
+                message = 'a reserved resource is outside the current branch';
+        end if;
+    end if;
+    return null;
+end;
+"""
+_RESERVATION_ALLOCATED_SOURCE = """
+begin
+    if (
+        select count(*) from gba.resource_allocations r
+        where r.tenant_id = new.tenant_id and r.source_kind = 'reservation'
+          and r.source_id = new.id
+    ) <> new.resource_count then
+        raise exception using errcode = 'check_violation',
+            message = 'a reservation requires its resources before commit';
+    end if;
+    return null;
+end;
+"""
+_OCCUPANCY_MIRROR_SOURCE = """
+begin
+    if tg_op = 'INSERT' then
+        insert into gba.resource_allocations (tenant_id, resource_id, source_kind, source_id,
+                                              during, state)
+        values (new.tenant_id, new.resource_id, 'booking', new.booking_id, new.during,
+                gba.booking_occupancy_state(new.booking_status));
+    elsif new.booking_status is distinct from old.booking_status then
+        update gba.resource_allocations r
+           set state = gba.booking_occupancy_state(new.booking_status)
+         where r.tenant_id = new.tenant_id and r.source_kind = 'booking'
+           and r.source_id = new.booking_id and r.resource_id = new.resource_id
+           and r.state <> gba.booking_occupancy_state(new.booking_status);
+        -- Nothing to update means an allocation from before 0018; the backfill copies
+        -- it later with the booking's state. The status cascade runs this trigger in
+        -- the foreign-key context, so branch row security never hides the row.
+    end if;
+    return null;
+end;
+"""
+_OCCUPANCY_STATE_SOURCE = """
+    select case status when 'HOLD' then 'held' when 'CONFIRMED' then 'confirmed'
+                       else 'released' end
+"""
+_OCCUPANCY_CONSTRAINT = (
+    "EXCLUDE USING gist (tenant_id WITH =, resource_id WITH =, during WITH &&) "
+    "WHERE ((state = ANY (ARRAY['held'::text, 'confirmed'::text])))"
+)
+# (table, trigger, tgtype, function, UPDATE OF columns, approved body) of the shared
+# occupancy triggers: row guards (BEFORE INSERT OR UPDATE OR DELETE, 31), the booking
+# mirror (AFTER INSERT OR UPDATE OF booking_status, 21), the reservation release
+# (AFTER UPDATE OF status, 17) and the booking-module gate on reservations (7).
+_OCCUPANCY_TRIGGERS = (
+    (
+        "resource_allocations",
+        "resource_allocations_guard",
+        31,
+        "gba.guard_resource_allocation()",
+        "",
+        _OCCUPANCY_GUARD_SOURCE,
+    ),
+    (
+        "booking_allocations",
+        "booking_allocations_mirror_occupancy",
+        21,
+        "gba.mirror_booking_allocation()",
+        "booking_status",
+        _OCCUPANCY_MIRROR_SOURCE,
+    ),
+    (
+        "resource_reservations",
+        "resource_reservations_guard",
+        31,
+        "gba.guard_resource_reservation()",
+        "",
+        _RESERVATION_GUARD_SOURCE,
+    ),
+    (
+        "resource_reservations",
+        "resource_reservations_release",
+        17,
+        "gba.release_reservation_allocations()",
+        "status",
+        _RESERVATION_RELEASE_SOURCE,
+    ),
+    (
+        "resource_reservations",
+        "resource_reservations_require_booking_module",
+        7,
+        "gba.enforce_booking_module()",
+        "",
+        _BOOKING_MODULE_SOURCE,
+    ),
+)
 _COUNTERPARTY_TABLES = (
     "counterparties",
     "counterparty_versions",
@@ -102,7 +309,7 @@ _DEFINITIONS = [
     _definition("locations", f"({_NO_LOCATION} OR (id = gba.current_location_id()))"),
     *[
         _definition(table, f"({_NO_LOCATION} OR (location_id = gba.current_location_id()))")
-        for table in ("resources", "bookings", "business_hours")
+        for table in ("resources", "bookings", "business_hours", "resource_reservations")
     ],
     *[
         _definition(table, f"({_NO_LOCATION} OR {_parent(table, 'resources', 'r', 'resource_id')})")
@@ -117,6 +324,10 @@ _DEFINITIONS = [
         f"({_NO_LOCATION} OR ("
         f"{_parent('booking_allocations', 'bookings', 'b', 'booking_id')} AND "
         f"{_parent('booking_allocations', 'resources', 'r', 'resource_id')}))",
+    ),
+    _definition(
+        "resource_allocations",
+        f"({_NO_LOCATION} OR {_parent('resource_allocations', 'resources', 'r', 'resource_id')})",
     ),
     _definition("audit_events", _NO_LOCATION, command="r"),
     *[
@@ -212,6 +423,66 @@ and exists (
 """
 
 
+# Shared occupancy: the exclusion constraint, the row guard (BEFORE INSERT OR UPDATE
+# OR DELETE, tgtype 31) and the booking mirror (AFTER INSERT OR UPDATE OF
+# booking_status, tgtype 21), each enabled and calling its approved function.
+_ACCESS_BOUNDARY += """
+and exists (
+    select 1 from pg_catalog.pg_constraint k
+    where k.conrelid = pg_catalog.to_regclass('gba.resource_allocations')
+      and k.conname = 'resource_allocations_no_overlap' and k.contype = 'x' and k.convalidated
+      and regexp_replace(pg_catalog.pg_get_constraintdef(k.oid), '[[:space:]]', '', 'g') = %s
+) and exists (
+    select 1 from pg_catalog.pg_proc f
+    where f.oid = pg_catalog.to_regprocedure('gba.booking_occupancy_state(text)')
+      and not f.prosecdef and f.proconfig is null and f.provolatile = 'i'
+      and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'sql')
+      and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
+) and not exists (
+    select 1 from (values __OCCUPANCY_TRIGGERS__
+    ) required(table_name, trigger_name, trigger_type, function_name, columns, source)
+    left join pg_catalog.pg_trigger t
+      on t.tgrelid = pg_catalog.to_regclass('gba.' || required.table_name)
+     and t.tgname = required.trigger_name
+    left join pg_catalog.pg_proc f on f.oid = t.tgfoid
+    where t.oid is null or t.tgtype <> required.trigger_type or t.tgenabled <> 'O'
+       or t.tgisinternal or t.tgqual is not null or t.tgconstraint <> 0 or t.tgnargs <> 0
+       or f.oid is distinct from pg_catalog.to_regprocedure(required.function_name)
+       or f.prosecdef or f.proconfig is not null
+       or f.prolang <> (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
+       or regexp_replace(f.prosrc, '[[:space:]]', '', 'g') <> required.source
+       -- An UPDATE OF list on other columns would skip the status changes.
+       or coalesce((
+           select string_agg(a.attname, ',' order by a.attnum)
+           from unnest(t.tgattr::int2[]) k(attnum)
+           join pg_catalog.pg_attribute a on a.attrelid = t.tgrelid and a.attnum = k.attnum
+       ), '') <> required.columns
+)
+""".replace(
+    "__OCCUPANCY_TRIGGERS__",
+    ", ".join("(%s, %s, %s::int, %s, %s, %s::text)" for _ in range(5)),
+)
+
+
+# A reservation's resources before commit: the deferred constraint trigger,
+# enabled and calling its approved function.
+_ACCESS_BOUNDARY += """
+and exists (
+    select 1 from pg_catalog.pg_trigger t
+    join pg_catalog.pg_proc f on f.oid = t.tgfoid
+    where t.tgrelid = pg_catalog.to_regclass('gba.resource_reservations')
+      and t.tgname = 'resource_reservations_allocated'
+      and t.tgtype = 5 and t.tgenabled = 'O' and not t.tgisinternal
+      and t.tgconstraint <> 0 and t.tgdeferrable and t.tginitdeferred
+      and t.tgqual is null and t.tgnargs = 0
+      and f.oid = pg_catalog.to_regprocedure('gba.check_reservation_allocated()')
+      and not f.prosecdef and f.proconfig is null
+      and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
+      and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
+)
+"""
+
+
 async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
     parameters: list[object] = [field for definition in _DEFINITIONS for field in definition]
     parameters += [_FUNCTION_SOURCE, _compact(_BOOKING_MODULE_SOURCE)]
@@ -220,7 +491,12 @@ async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
         [table for table, _, _ in _MODULE_TRIGGERS],
         [trigger for _, trigger, _ in _MODULE_TRIGGERS],
         [module.encode() + b"\x00" for _, _, module in _MODULE_TRIGGERS],
+        _compact(_OCCUPANCY_CONSTRAINT),
+        _compact(_OCCUPANCY_STATE_SOURCE),
     ]
+    for table, trigger, kind, function, columns, source in _OCCUPANCY_TRIGGERS:
+        parameters += [table, trigger, kind, function, columns, _compact(source)]
+    parameters.append(_compact(_RESERVATION_ALLOCATED_SOURCE))
     row = await (await conn.execute(_ACCESS_BOUNDARY, parameters)).fetchone()
     if row is None or row[0] is not True:
         raise DatabaseUnavailableError("Required database access controls are not ready")
