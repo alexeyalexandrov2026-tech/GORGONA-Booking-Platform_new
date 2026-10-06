@@ -1,7 +1,7 @@
 # ADR-0022 — Shared resource occupancy (CORE-04)
 
-- Status: **Proposed (2026-10-05)** — documents only; no code, migration or
-  registry change until the owner approves this ADR and the
+- Status: **Accepted (2026-10-05)** — the owner answered the four open decisions
+  (below) and asked to continue; implementation follows the
   [package F plan](../plan/PACKAGE_F_PLAN_2026-10-05.md).
 - Scope: master plan §12.2.1 and criterion CORE-04; builds on ADR-0003
   (booking occupancy under a GiST exclusion constraint), ADR-0019 (module gates)
@@ -57,15 +57,33 @@ writes without one locking mechanism. Resources today are `artist`, `chair` and
    (booking keeps `booking_resources`); the shared table itself is core
    infrastructure, not an optional module.
 
-## Open decisions for the owner (asked in the plan)
+## Owner decisions (2026-10-05)
 
-- Which **real second consumer** proves CORE-04 (a minimal staff reservation of a
-  resource versus waiting for the rental module). A test-only source kind would
-  be a fake consumer and is not proposed.
-- Whether **capacity > 1** is built now or with its first consumer.
-- Whether `gba.resource_blocks` joins the shared table as a source kind.
-- Read-switch form: `booking_allocations` kept as a table written by the shared
-  path until stage 1 closes, or replaced by a compatibility view.
+- **Second real consumer:** a minimal staff reservation of one or more resources
+  for an interval (no customer, no payment) — source kind `reservation`. It
+  belongs to the "Booking and resources" module of master plan §4, so it uses the
+  `booking_resources` gate and the staff permissions with branch scope (ADR-0014).
+- **Capacity > 1:** later, with its first consumer; all resources stay exclusive.
+- **`gba.resource_blocks`:** stays separate (availability only) for now.
+- **Read switch:** `booking_allocations` stays a table, written by the booking path
+  and mirrored into the shared table in the same transaction, until stage 1 closes.
+
+## Implementation shape
+
+- Migration 0018 creates `gba.resource_allocations` (FORCE RLS, branch scope
+  through the resource, insert and state change only under triggers) with the
+  exclusion constraint `resource_allocations_no_overlap` for `held`/`confirmed`,
+  mirrors every existing `booking_allocations` row per tenant (state from the
+  booking status) and adds a reconciliation function; a mismatch fails the
+  migration. Triggers on `booking_allocations` keep the mirror exact for every
+  write path (insert, status cascade), so the shared constraint decides booking
+  versus reservation conflicts even for raw SQL.
+- `gba.resource_reservations` (insert, then one cancellation) with its allocations
+  in the shared table; a cancellation releases all of them.
+- Python `occupancy` takes the per-resource advisory locks in id order for both
+  consumers and maps either exclusion constraint to the same typed conflict.
+- Availability reads the shared table (active reservations block slots); booking
+  summaries keep reading `booking_allocations`.
 
 ## Acceptance (when implemented)
 
