@@ -12,10 +12,15 @@ module gates и проверка определений.
 Regression red→green подтвердил исправление SQL-обхода баланса. Пять замечаний
 независимого обзора исправлены: сторно/поздние строки, stale snapshot, точные SQL
 литералы, recovery после reload/nav и арифметика строки ведомости. Focused:
-57 Python + 4 desktop/mobile browser; SQL-гонки с наблюдением lock; 68 web unit;
-статика 197 файлов и web build PASS. Полный окончательный прогон выполняется.
-finance/FIN-01 implemented, без преждевременного повышения готовности.
-Независимый обзор и exact-SHA CI ожидаются. [Приемка](evidence/2026-10-06-ledger/ACCEPTANCE.md),
+68 Python + 4 desktop/mobile browser после приемки без promotion override;
+SQL-гонки с наблюдением lock; 68 web unit; статика 197 файлов и web build PASS.
+Дополнительная permissive policy теперь вызывает 503 на всех восьми таблицах.
+`95a0de4`: full local 858 passed/4 skipped; exact-SHA CI 861 passed/1 skipped,
+включая обязательный Docker. Независимые обзоры закрыли 3 P1 и 4 P2; final guard
+review — code/unit, PG runtime подтвержден отдельно local/CI. finance/FIN-01
+technically_verified отдельным коммитом приемки. Свежий CI приемочного HEAD —
+в [PR #12](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/12).
+[Приемка](evidence/2026-10-06-ledger/ACCEPTANCE.md),
 [передача](NEXT_AGENT_PACKAGE_G_2026-10-06.md). H–K и промышленная эксплуатация
 этой реализацией не закрываются.
 

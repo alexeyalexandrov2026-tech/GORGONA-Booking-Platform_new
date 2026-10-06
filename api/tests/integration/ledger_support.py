@@ -1,4 +1,4 @@
-"""TEST ONLY readiness promotion to exercise finance before exact-SHA CI acceptance."""
+"""TEST ONLY removal of technical acceptance to verify the publication gate."""
 
 import pytest
 
@@ -6,13 +6,13 @@ from gorgona_booking.business import modules
 from gorgona_booking.business.readiness_registry import Readiness
 
 
-def allow_finance_in_test(monkeypatch: pytest.MonkeyPatch) -> None:
-    promoted = tuple(
-        m.model_copy(update={"readiness": Readiness.TECHNICALLY_VERIFIED, "enableable": True})
+def mark_finance_implemented_in_test(monkeypatch: pytest.MonkeyPatch) -> None:
+    withheld = tuple(
+        m.model_copy(update={"readiness": Readiness.IMPLEMENTED, "enableable": False})
         if m.id == "finance"
         else m
         for m in modules.MODULES
     )
-    monkeypatch.setattr(modules, "MODULES", promoted)
-    monkeypatch.setattr(modules, "MODULES_BY_ID", {m.id: m for m in promoted})
-    monkeypatch.setattr(modules, "MODULE_CATALOG", modules.ModuleCatalog(modules=promoted))
+    monkeypatch.setattr(modules, "MODULES", withheld)
+    monkeypatch.setattr(modules, "MODULES_BY_ID", {m.id: m for m in withheld})
+    monkeypatch.setattr(modules, "MODULE_CATALOG", modules.ModuleCatalog(modules=withheld))

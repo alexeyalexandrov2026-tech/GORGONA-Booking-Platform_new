@@ -1,6 +1,8 @@
 # Пакет G — финансовая основа (FIN-01), 2026-10-06
 
-Статус: **implemented**. Это локальная реализация, не промышленная приемка.
+Статус FIN-01 и модуля finance: **technically_verified** (2026-10-06).
+Проверенный код: `95a0de4ac9f5aa3c96b054c5504f59115b0e4b69`.
+Это техническая приемка пакета G, без промышленной приемки или разрешения на deploy.
 Основа: принятый ADR-0023 и решения владельца 1A, 2A, 3A, 4B.
 База — `151472a68d736ef21f68550ec36674eb36efc23c` (план этапа 2), ее собственный
 [CI 37425859611](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37425859611)
@@ -44,11 +46,13 @@ tenant-bound FK и ограничение всей компанией. Runtime �
 проводки используют уникальный ID. Настройки и план счетов сворачиваются через
 нативный details/summary, таблица ведомости доступна с клавиатуры.
 
-Модуль и FIN-01 остаются `implemented`, не `technically_verified`: обычный реестр
-пока запрещает включение. Только интеграционные/browser fixtures временно повышают
-готовность finance; это явно test-only, без подмены API, PostgreSQL или проверки денег.
-Отдельный тест проверяет запрет включения в обычном реестре. Чтение существующих
-финансов продолжается после отключения модуля.
+После полного прогона, независимого обзора и CI точного SHA readiness повышается
+отдельным коммитом приемки. Finance можно включить только новой публикацией
+конфигурации владельцем/менеджером; реестр не меняет уже опубликованные настройки.
+API и browser fixtures больше не повышают finance искусственно: они публикуют его
+через обычный реестр. Только отрицательный gate test временно понижает готовность
+до implemented и доказывает MODULE_NOT_READY. Чтение истории и восстановление
+неопределенных команд продолжаются после отключения finance.
 
 ## Найденные дефекты и проверка изменения
 
@@ -159,23 +163,49 @@ readiness и ledger API отвечают 503 до восстановления �
 11 вариантов дополнительных политик (восемь таблиц; SELECT/INSERT/ALL;
 public/runtime/member role) и document/guard contracts. После finally удаления
 fault policy readiness снова 200. Fresh Ruff/format/strict mypy 197 файлов PASS.
-Окончательные полный прогон, CI нового SHA и независимая проверка guard предстоят.
+Окончательная проверка этого guard на `95a0de4`:
+
+- Полная local suite **PASS: 858 passed / 4 skipped / 358.82 s**. Локальные три
+  Docker skips компенсируются обязательными container gates в CI; внешний сайт
+  остается отдельным необязательным тестом.
+- [CI 37496936531](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37496936531)
+  точного `95a0de4` **PASS: 861 passed / 1 skipped / 223.29 s**; PostgreSQL 18,
+  browser и Docker обязательны. Web unit 68, сборки web/image, Ruff и mypy PASS.
+- [Финальный независимый обзор](INDEPENDENT_REVIEW_95a0de4.md) **PASS** для
+  конечного guard/test diff: 21 unit, Ruff/format/mypy трех файлов, 95 placeholders
+  и параметров, восьми таблиц и 11 regression cases. PG runtime последнего guard
+  не повторялся независимо; его доказывают отдельные root/CI прогоны. Ранее
+  независимый reviewer выполнил 88 Python checks, реальные UI 4 сценария и
+  отдельные deterministic UI probes на собственной БД. Все найденные 3 P1 и
+  4 P2 закрыты; конкретных незакрытых findings нет.
+
+Два последующих запуска прежнего агента остановила автоматическая проверка
+содержимого. Финальный ограниченный code review выполнен другим агентом в новой
+отдельной clean checkout. Это не заменяло runtime proof статическим предположением:
+отдельные реальные full suites выше сохраняют свои SHA и границы.
+
+После повышения реестра и удаления положительных test overrides свежий focused
+**PASS: 68 Python / 63.52 s**, внутри **4 desktop/mobile browser / 29.5 s**.
+Обычная публикация finance и тот же полный учет проверены без promotion fixture;
+отрицательный тест readiness продолжает отказывать. Приемочный commit требует
+свежего полного CI; его точный HEAD/run проверяются в [PR #12 Checks](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/12/checks)
+и записываются в финальный отчет/описание PR без переноса старого green на новый SHA.
 
 ## Свежая проверка
 
 | Проверка | Результат |
 |---|---|
-| Focused contracts + SQL/API + browser окончательного кода | PASS: 57 Python tests / 40.33 s; внутри 4 Playwright tests / 16.2 s, desktop + mobile |
-| Ledger SQL/API отдельно | PASS: 33 passed / 19.67 s до дополнительного случая порчи общего SQL-литерала; оба close/post порядка и cancel/post |
+| Focused contracts + SQL/API + browser приемочного реестра | PASS: 68 Python / 63.52 s; внутри 4 Playwright / 29.5 s, desktop + mobile; без положительного override |
+| Ledger SQL/API и document/guard contracts | PASS: 66 passed / 20.64 s; оба close/post и cancel/post порядка, 11 дополнительных policy cases |
 | Web unit | PASS: 68 tests / 1.3 s, включая 5 ledger boundary tests |
 | Web typecheck/lint/format | PASS, exit 0 |
 | Web build | PASS, страница /ledger; 17 routes в таблице Next.js, 18 generated static pages |
 | Ruff / Ruff format | PASS; 197 Python files |
 | Strict mypy | PASS; 197 source files |
 | Восстановление schema boundary и регрессии booking/reservations | PASS: 64 passed / 14.96 s |
-| Полная suite | 4961d1a PASS: 847 passed / 4 skipped / 330.20 s; финальный guard требует свежего полного прогона |
-| CI точного SHA G | 4961d1a PASS: 850 passed / 1 skipped / 254.33 s; финальный guard требует нового CI |
-| Независимый обзор | Исходные 5 + P2 reselection закрыты; P1 extra permissive policy исправлен и представлен на повторную проверку |
+| Полная suite проверенного кода 95a0de4 | PASS: 858 passed / 4 skipped / 358.82 s |
+| CI точного SHA 95a0de4 | PASS: 861 passed / 1 skipped / 223.29 s, Docker gates обязательны |
+| Независимый обзор | PASS в пределах отчетов: исходный runtime/browser review + final guard delta review; все 7 findings закрыты |
 
 Логи этой сессии находятся в игнорируемом `handoff/package-g-review/`; учетные
 данные там не лежат. PostgreSQL 18.6 для проверки создан отдельно на loopback

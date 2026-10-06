@@ -148,12 +148,13 @@ MODULES: tuple[PlatformModule, ...] = (
         "Finance",
         _OPTIONAL,
         ("organization",),
-        Readiness.IMPLEMENTED,
+        Readiness.TECHNICALLY_VERIFIED,
         "Ledger foundation (ADR-0023): books, neutral chart, double entry, reversals, monthly "
-        "periods and currency-separated trial balances. Local checks do not promote readiness; "
-        "exact-SHA CI acceptance is required before configurations can enable finance. "
+        "periods and currency-separated trial balances. Technical acceptance: "
+        "docs/plan/evidence/2026-10-06-ledger/ACCEPTANCE.md (code 95a0de4). "
         "No invoices, payments, tax filing, payroll or currency conversion.",
-        "New books, account versions, entries, reversals and period events. Reads continue.",
+        "New books, account versions, entries, reversals and period events. Reads and "
+        "unresolved-command recovery continue.",
     ),
     _module("procurement", "Procurement", _OPTIONAL, ("counterparties", "finance")),
     _module("inventory", "Inventory and customer warehouses", _OPTIONAL, ("products_services",)),

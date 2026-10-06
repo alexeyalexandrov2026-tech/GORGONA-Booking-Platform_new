@@ -100,8 +100,12 @@ unapproved permissive policy on the eight ledger tables; SELECT/INSERT/ALL and
 public/runtime/member-role variants are covered. No production policy repair is
 automatic. Final evidence must correspond to the SHA containing this guard.
 [Current evidence and acceptance gates](../plan/evidence/2026-10-06-ledger/ACCEPTANCE.md).
-Finance and FIN-01 remain implemented while final independent review and exact-SHA
-CI are pending. This is not authorization for production migration or deployment.
+Finance and FIN-01 are technically verified in a separate acceptance commit,
+based on 95a0de4: full local 858 passed/4 skipped, exact-SHA CI 861 passed/1 skipped,
+earlier independent runtime/browser review and final independent guard-delta
+review. Positive API/browser readiness overrides are removed; publication uses the
+normal registry. The acceptance HEAD must also pass fresh CI. This is not
+authorization for production migration or deployment.
 
 Later packages (invoices and payments H, materials J, provider events K) post through
 this ledger instead of keeping their own money records. Currency conversion, group

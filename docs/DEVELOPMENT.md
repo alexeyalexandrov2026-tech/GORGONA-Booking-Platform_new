@@ -6,8 +6,10 @@ Migration 0020 adds legal-entity books, neutral starter accounts, integer minor-
 double entry, reversals, period events and currency-separated trial balance.
 Company-wide owner/manager permissions are finance.read/manage/close (map v5);
 no branch, delegation or platform support access. /ledger uses real API responses.
-The finance registry is implemented, disabled for publication until its acceptance
-gates pass; test-only readiness promotion lives under tests/integration/ledger_support.py.
+Finance is technically verified on evidence code 95a0de4 and may be enabled by a
+new published configuration; existing configurations are unchanged. API/browser
+tests use the production registry. ledger_support.py only removes acceptance in
+the negative publication-gate test. It never promotes runtime readiness.
 
 API prefix /v1/businesses/{id}/ledger: GET overview; GET/PUT books/{book};
 GET accounts, GET/PUT accounts/{account}; GET entries, GET/PUT entries/{entry};

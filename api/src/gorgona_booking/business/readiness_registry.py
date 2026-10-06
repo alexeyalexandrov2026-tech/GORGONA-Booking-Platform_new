@@ -150,12 +150,18 @@ SCENARIOS: tuple[ScenarioReadiness, ...] = (
     _planned("CORE-04", "Shared resource occupancy across modules is not implemented."),
     ScenarioReadiness(
         id="FIN-01",
-        status=Readiness.IMPLEMENTED,
+        status=Readiness.TECHNICALLY_VERIFIED,
+        code_version="95a0de4ac9f5aa3c96b054c5504f59115b0e4b69",
         schema_version=20,
         scope="Ledger foundation: entity-owned books, balanced double entry, immutable history, "
         "reversals, monthly closing and currency-separated trial balances. "
-        "Exact-SHA CI and independent review are still required for technical acceptance.",
-        evidence=("docs/plan/evidence/2026-10-06-ledger/ACCEPTANCE.md",),
+        "Technical evidence includes exact-SHA CI and independent review. "
+        "No invoices, payments, tax filing, payroll, FX or production approval.",
+        evidence=(
+            "docs/plan/evidence/2026-10-06-ledger/ACCEPTANCE.md",
+            "docs/plan/evidence/2026-10-06-ledger/INDEPENDENT_REVIEW_95a0de4.md",
+        ),
+        verified_on=date(2026, 10, 6),
     ),
     _planned("FIN-02", "No accepted payment integration."),
     _planned("FIN-03", "No financial obligations, reserves or partial payouts."),

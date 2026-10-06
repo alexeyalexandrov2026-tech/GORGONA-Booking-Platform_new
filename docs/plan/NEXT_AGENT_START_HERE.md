@@ -11,12 +11,13 @@
 
 Миграция 0020, книги/счета/проводки/сторно/периоды/ведомость, API и /ledger
 реализованы. Воспроизведен и закрыт SQL-обход баланса после раннего SET CONSTRAINTS.
-Все пять первоначальных замечаний независимого обзора исправлены; повторный обзор
-выполняется. Focused: 57 Python, 4 browser desktop/mobile, 68 web unit PASS.
-Добавлены recovery после reload/nav и безопасная отмена позднего запроса.
-Статус finance и FIN-01 — implemented: техническую приемку нельзя переносить
-с CI плана на новый код. Полный прогон выполняется; независимый обзор и exact-SHA CI
-еще не завершены. Обычный реестр не разрешает включение finance до приемки.
+Все 7 найденных замечаний независимых обзоров закрыты, включая extra permissive
+policies. Проверенный код `95a0de4`: full local 858 passed/4 skipped, CI 861 passed/
+1 skipped с Docker; независимый final guard code/unit review PASS в своих пределах.
+Finance/FIN-01 — technically_verified отдельным коммитом приемки. API/browser
+публикуют finance через обычный реестр без положительного override; focused68
+Python и4 browser PASS. Recovery после reload/nav и safe cancel сохраняются.
+Проверить свежий exact-SHA CI приемочного HEAD в [draft PR #12](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/12).
 Без merge, deployment и промышленных миграций.
 
 ## Актуально: этап 2 — план согласован владельцем 2026-10-06 (1A, 2A, 3A, 4B)

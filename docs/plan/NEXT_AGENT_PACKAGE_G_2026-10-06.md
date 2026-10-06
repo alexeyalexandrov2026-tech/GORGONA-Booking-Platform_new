@@ -5,6 +5,8 @@
 - Ветка: `codex/package-g-ledger-review`, база `151472a68d736ef21f68550ec36674eb36efc23c`.
 - Checkout: `C:\Users\alexa\.codex\worktrees\package-g-ledger-review\Gorgona Booking`.
 - Репозиторий: `alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new`.
+- Draft [PR #12](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/12)
+  в `claude/stage2-finance-plan`; проверенный код `95a0de4ac9f5aa3c96b054c5504f59115b0e4b69`.
 - Прежний `gorgona-e2-documents` сохранен; его незакоммиченный вариант G не подменять.
 
 Прочитать [приемку и границы](evidence/2026-10-06-ledger/ACCEPTANCE.md),
@@ -34,21 +36,25 @@ Resolve сверяет фактический результат, cancel сох�
 Токены/суммы/описания/тело в storage не записываются. Новая вкладка/браузер
 вне этой гарантии; source_id хозяйственной операции решает дедупликацию намерения.
 
-Модуль и FIN-01 пока **implemented**. Для окончательной технической приемки
-нужны полный свежий прогон, независимый обзор, exact-SHA CI и коммит приемки.
-В обычном реестре finance нельзя включить. Только clearly test-only fixtures
-повышают его readiness для проверок реальных API/БД/browser flows.
-Не переносить этот override в runtime и не объявлять промышленную готовность.
+Модуль и FIN-01 **technically_verified** отдельным коммитом приемки на evidence
+`95a0de4`: полный local PASS, независимый обзор PASS в своих пределах, exact-SHA
+CI PASS. Finance включается только новой публикацией конфигурации; старые
+настройки сами не меняются. Положительный promotion override удален из API/browser
+fixtures. Отрицательный тест временно снимает technical acceptance и доказывает
+запрет публикации. Промышленная готовность/развертывание не заявляются.
 
 ## Проверки
 
-Точные результаты — в приемке. Focused: 57 Python (22 contracts, 34 SQL/API,
-1 browser harness с 4 desktop/mobile сценариями), контролируемые SQL-гонки;
-68 web-unit; Ruff/format/mypy 197 файлов; production web build.
-Полный прогон окончательного дерева выполняется в этой сессии.
+Точные результаты — в приемке. `95a0de4`: полный local **858 passed / 4 skipped /
+358.82 s**, CI **861 passed / 1 skipped / 223.29 s** с обязательными Docker gates.
+После повышения реестра: focused **68 Python**, включая 4 desktop/mobile browser,
+без положительного promotion override. Web unit 68; Ruff/format/mypy 197 файлов;
+production web build PASS. Свежий CI приемочного HEAD проверять в PR #12 Checks.
 Последний browser harness: оба viewport + Axe + OIDC/PKCE + реальная БД,
 retry ответа PUT, reload recovery, safe cancel/delayed request, сторно и периоды PASS.
-Первичный независимый обзор: 2 P1 + 3 P2, все исправлены; повторный выполняется.
+Всего независимые обзоры нашли 3 P1 + 4 P2, все закрыты. Финальный guard diff
+проверен новым агентом статически/21 unit, без самостоятельного PG rerun;
+runtime guard proof — отдельные full local/CI. Все отчеты сохранены рядом с приемкой.
 Первый полный прогон имел только устаревший configuration locator; он исправлен
 и проверен в обоих viewport. Результат итоговой suite не брать из старого прогона.
 
@@ -67,10 +73,9 @@ retry ответа PUT, reload recovery, safe cancel/delayed request, сторн
 
 ## Следующий шаг
 
-Закончить оставшиеся gates G и зафиксировать доказанный статус; не повышать
-readiness автоматически от наличия кода. Затем план/ADR пакета H в пределах
+Сверить exact-SHA CI последнего приемочного HEAD, затем план/ADR пакета H в пределах
 этапа 2: счета и внешний платеж, подтвержденный человеком, без провайдера до
-его допуска. Не начинать H вместо незавершенной приемки G.
+его допуска. Не переносить техническую приемку G на H или production.
 
 Без merge/deploy/production migration/Azure/provider activation. Не подменять
 checksum прежней 0020 в уже мигрировавшей БД; сначала выяснить фактическую историю.

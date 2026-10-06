@@ -9,12 +9,15 @@ own checkout under .codex/worktrees/package-g-ledger-review/Gorgona Booking.
 The original gorgona-e2-documents and owner checkout are preserved.
 Ledger books/accounts/double entry/reversals/periods/trial balance and real API/UI
 are implemented. The early-SET-CONSTRAINTS balance bypass was reproduced and fixed.
-All five initial independent findings are fixed; follow-up review is running.
-Fresh focused: 57 Python tests, including 4 desktop/mobile browser flows, and
-68 web unit tests PASS. Reload recovery and permanent safe cancellation prevent
+All seven independent findings are closed, including unexpected permissive SQL policies.
+Evidence code 95a0de4: full local 858 passed/4 skipped, exact-SHA CI 861 passed/1 skipped
+with required Docker gates; independent final guard-delta code/unit review PASS.
+Fresh accepted-registry focused: 68 Python and 4 desktop/mobile browser flows,
+without positive readiness overrides; 68 web unit tests PASS. Recovery and safe cancellation prevent
 the delayed original from running after an unresolved request is cancelled.
-Finance remains implemented until independent review and exact-SHA CI acceptance;
-only explicit test fixtures temporarily promote readiness. Full final suite is running.
+Finance/FIN-01 are technically verified by a separate acceptance commit. A new
+configuration publication enables finance; no existing configuration is changed.
+Check the fresh acceptance HEAD CI in draft PR #12; evidence names source SHA and review boundaries.
 No merge, deployment, production migration, providers or Azure changes.
 Older continuation sections below are historical for their own code versions.
 

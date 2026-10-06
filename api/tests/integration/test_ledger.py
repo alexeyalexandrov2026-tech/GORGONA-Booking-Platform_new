@@ -1,7 +1,4 @@
-"""FIN-01 against real PostgreSQL; finance readiness override is TEST ONLY.
-
-The production registry remains implemented until exact-SHA CI acceptance.
-"""
+"""FIN-01 against real PostgreSQL and the accepted production module registry."""
 
 import asyncio
 from collections.abc import Mapping
@@ -26,7 +23,7 @@ from gorgona_booking.db.provisioning import (
 from tests.integration import test_management_api as shared
 from tests.integration.booking_support import BookingWorld
 from tests.integration.configuration_support import Config
-from tests.integration.ledger_support import allow_finance_in_test
+from tests.integration.ledger_support import mark_finance_implemented_in_test
 from tests.integration.seed import FakeUser, seed_user
 from tests.integration.test_delegations import Parties
 from tests.support.fake_idp import FakeIdp
@@ -81,10 +78,7 @@ async def enabled(
     manager_a: FakeUser,
     idp: FakeIdp,
     app_pool: RuntimePool,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> LedgerWorld:
-    # Tests prove the implementation before its independent CI readiness promotion.
-    allow_finance_in_test(monkeypatch)
     config = Config(client, idp)
     await config.profile(manager_a, world.a.tenant_id, 0, [1])
     await config.publish(manager_a, world.a.tenant_id, 0, ["booking_resources", "finance"])
@@ -388,12 +382,17 @@ async def test_history_is_immutable_and_cross_tenant_rows_invisible(
             assert rows == []
 
 
-async def test_production_registry_does_not_enable_unaccepted_finance(
+async def test_registry_refuses_finance_when_technical_acceptance_is_removed(
     client: httpx.AsyncClient,
     world: BookingWorld,
     manager_a: FakeUser,
     idp: FakeIdp,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    accepted_module = modules.MODULES_BY_ID["finance"]
+    assert accepted_module.readiness == Readiness.TECHNICALLY_VERIFIED
+    assert accepted_module.enableable
+    mark_finance_implemented_in_test(monkeypatch)
     assert modules.MODULES_BY_ID["finance"].readiness == Readiness.IMPLEMENTED
     assert not modules.MODULES_BY_ID["finance"].enableable
     config = Config(client, idp)

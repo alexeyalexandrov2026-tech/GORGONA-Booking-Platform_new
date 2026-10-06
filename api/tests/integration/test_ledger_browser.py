@@ -1,4 +1,4 @@
-"""Real OIDC/PKCE + Chromium + ledger API + PostgreSQL; readiness override TEST ONLY."""
+"""Real OIDC/PKCE + Chromium + ledger API + PostgreSQL with the accepted registry."""
 
 import json
 import os
@@ -15,7 +15,6 @@ from gorgona_booking.db.provisioning import add_membership, owner_tenant_transac
 from tests.integration.booking_support import BookingWorld
 from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.customer_support import seed_customer_setup
-from tests.integration.ledger_support import allow_finance_in_test
 from tests.integration.live_server import free_port, live_server
 from tests.integration.seed import seed_user
 from tests.integration.test_management_browser import _browser_env, _management_app, _provider
@@ -26,7 +25,6 @@ def test_real_ledger_browser_oidc_pkce_and_database(
     world: BookingWorld,
     owner_conn: psycopg.Connection,
     test_database: ProvisionedDatabase,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     if os.environ.get("GBA_REQUIRE_BROWSER") != "1":
         pytest.skip("BLOCKED: ledger browser requires GBA_REQUIRE_BROWSER=1")
@@ -34,7 +32,6 @@ def test_real_ledger_browser_oidc_pkce_and_database(
     assert (web / "out/ledger/index.html").exists(), "build web first"
     npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
     assert npm is not None
-    allow_finance_in_test(monkeypatch)
     seed_customer_setup(owner_conn, world)
     app_port, idp_port = free_port(), free_port()
     origin, issuer = f"http://127.0.0.1:{app_port}", f"http://127.0.0.1:{idp_port}"
