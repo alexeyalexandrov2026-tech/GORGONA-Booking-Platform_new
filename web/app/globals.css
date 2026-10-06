@@ -846,27 +846,35 @@ footer {
   border-bottom: 1px solid var(--line);
   overflow-wrap: anywhere;
 }
-.counterparties fieldset {
+.counterparties fieldset,
+.documents fieldset {
   min-width: 0;
   margin: 16px 0;
   padding: 16px;
   border: 1px solid var(--line);
 }
-.counterparties legend {
+.counterparties legend,
+.documents legend {
   font-weight: 600;
 }
-.counterparties label:has(input[type="checkbox"]) {
+.counterparties label:has(input[type="checkbox"]),
+.documents label:has(input[type="checkbox"]) {
   display: flex;
   align-items: center;
   gap: 10px;
   margin: 12px 0;
 }
-.counterparties input[type="checkbox"] {
+.counterparties input[type="checkbox"],
+.documents input[type="checkbox"] {
   width: auto;
   margin: 0;
 }
-.counterparties button {
+.counterparties button,
+.documents button {
   margin: 8px 8px 8px 0;
+}
+.documents input[type="file"] {
+  max-width: 100%;
 }
 
 @media (max-width: 760px) {

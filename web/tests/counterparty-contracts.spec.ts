@@ -183,3 +183,15 @@ test("every supported route selects a contract and unsupported methods fail clos
     managementResponseSchema(`${base}/anything-else`, "GET"),
   ).toThrow();
 });
+
+test("display names are limited in code points like the server", () => {
+  const emoji = "\u{1F600}";
+  expect(
+    counterpartySchema.safeParse({ ...card, display_name: emoji.repeat(200) })
+      .success,
+  ).toBe(true);
+  expect(
+    counterpartySchema.safeParse({ ...card, display_name: emoji.repeat(201) })
+      .success,
+  ).toBe(false);
+});

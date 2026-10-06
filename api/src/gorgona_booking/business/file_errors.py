@@ -17,3 +17,19 @@ class FileUnreadableError(DomainError):
 
 class FileActiveContentError(DomainError):
     code = "FILE_ACTIVE_CONTENT"
+
+
+class UnsupportedMediaTypeError(DomainError):
+    code = "UNSUPPORTED_MEDIA_TYPE"
+
+
+class FileScanningNotConfiguredError(DomainError):
+    code = "FILE_SCANNING_NOT_CONFIGURED"
+
+
+class FileIntegrityError(DomainError):
+    code = "FILE_INTEGRITY_FAILED"
+
+
+class InvalidFileNameError(DomainError):
+    code = "INVALID_FILE_NAME"

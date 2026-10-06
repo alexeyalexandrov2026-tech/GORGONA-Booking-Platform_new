@@ -15,13 +15,17 @@ const basis = z
   .max(2)
   .refine((v) => new Set(v).size === v.length);
 const envelope = { schema_version: z.literal(1), business_id: id };
+// The server limits names in Unicode code points, not UTF-16 units.
+const name = z
+  .string()
+  .refine((v) => Array.from(v).length >= 1 && Array.from(v).length <= 200);
 const subject = { ...envelope, counterparty_id: id };
 const summary = z
   .strictObject({
     counterparty_id: id,
     kind,
     revision,
-    display_name: z.string().min(1).max(200),
+    display_name: name,
     roles,
     state,
     merged_into: id.nullable(),
@@ -36,7 +40,7 @@ export const counterpartySchema = z
     ...subject,
     kind,
     revision,
-    display_name: z.string().min(1).max(200),
+    display_name: name,
     legal_name: z.string().nullable(),
     tax_id: z.string().nullable(),
     registration_number: z.string().nullable(),

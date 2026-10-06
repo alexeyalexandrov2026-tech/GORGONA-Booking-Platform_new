@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CounterpartyEditor } from "./counterparty-editor";
 import { CounterpartyRelationships } from "./counterparty-relationships";
+import { CounterpartyDocumentsPanel } from "./counterparty-documents";
 import {
   fetchCounterparties,
   fetchCounterparty,
@@ -543,6 +544,13 @@ export function Counterparties({ businessId }: { businessId: string }) {
           locked={locked}
           readLocked={busy || Boolean(pending) || Boolean(proposal)}
           busy={busy}
+        />
+      )}
+      {selected && (
+        <CounterpartyDocumentsPanel
+          key={`${selected.counterparty_id}:${selected.revision}`}
+          businessId={businessId}
+          counterpartyId={selected.counterparty_id}
         />
       )}
     </div>

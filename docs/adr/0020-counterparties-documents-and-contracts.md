@@ -1,5 +1,40 @@
 # ADR-0020 — Counterparties, documents and contracts
 
+## E2 implementation, 2026-10-05
+
+Documents, immutable files and counterparty links are implemented with migration
+0016 on branch `claude/package-e2-documents` (based on E2-A `4a6f63b`). Code
+`2ab24f3` passed exact push CI (run 37289072512); a separate acceptance commit
+promotes `documents` to `technically_verified` (registry version 1, explicit
+publication still required). Code-commit fixtures used the test-only override and
+proved the real `MODULE_NOT_READY` refusal; acceptance fixtures use the real registry.
+[Evidence](../plan/evidence/2026-10-05-documents/ACCEPTANCE.md).
+
+Clarifications made while implementing:
+
+- The early module check before the body is read is skipped only when the caller's
+  upload key already holds a stored result, so a completed upload can still be
+  replayed after the module is turned off; a new key is refused before any byte is
+  read. The final transaction (claim → module check → insert) remains the arbiter.
+- The guard checks 38 definitions and ten optional-module gate triggers (five E1,
+  four `documents`, plus the `counterparties` gate on document links); each trigger
+  is matched by name, timing, enabled state, function and exact argument, and must
+  have no WHEN clause and not be a constraint trigger (also for the booking gate).
+- An identical upload retried by the same user after its idempotency key expired
+  returns the stored file; any other reuse of a file identifier is a conflict.
+- Files are linked to document versions by a tenant-scoped foreign key, so another
+  business's file identifier is an unknown reference (422). Links require the latest
+  document version not archived and the latest counterparty version `active`; the
+  trigger takes the exclusive documents lock and the shared counterparties lock, so
+  it is ordered against merges and archiving. Unlinking a merged card is allowed.
+- A counterparty's documents include links to duplicates merged into it, mirroring
+  booking links. Downloads of any saved version are audited (`document_file.downloaded`
+  with document and revision only); an integrity failure answers 500
+  `FILE_INTEGRITY_FAILED` and is not audited as a download.
+- The web client hashes the chosen bytes before upload, sends exactly those bytes,
+  compares type, size and SHA-256 of the stored file, and verifies type, size,
+  `X-File-SHA256` and the computed SHA-256 before saving a download as an attachment.
+
 ## E2 security prerequisite, 2026-10-05
 
 [ADR-0021](0021-bounded-file-validation-profile.md) defines the bounded initial

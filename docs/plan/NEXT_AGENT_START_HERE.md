@@ -1,5 +1,15 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-05)
 
+## Актуально: E2 — документы и файлы
+
+Начните с [передачи E2](NEXT_AGENT_PACKAGE_E2_2026-10-05.md) и
+[доказательств](evidence/2026-10-05-documents/ACCEPTANCE.md). Ветка
+`claude/package-e2-documents` (worktree `gorgona-e2-documents`) от E2-A `4a6f63b`.
+Код `2ab24f3` прошел push CI; коммит приемки делает documents technically_verified.
+Проверьте CI финального SHA и создайте draft PR в codex/package-e2-file-validation
+(gh в этой сессии отсутствовал), затем E3 договоры и CORE-04. Основную копию
+владельца не изменять; разделы ниже исторические для своих SHA.
+
 ## Актуально: E2-A — валидатор файлов и CSP
 
 Начните с [передачи E2-A](NEXT_AGENT_E2_FILE_VALIDATION_2026-10-05.md) и

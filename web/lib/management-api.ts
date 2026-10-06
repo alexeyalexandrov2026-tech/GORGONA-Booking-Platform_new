@@ -665,10 +665,15 @@ export function setActiveSalonId(salonId: string | null): void {
   }
 }
 
-export async function managementFetch<T>(
+/**
+ * An authorized management request: allowlisted path, bearer token, timeout and
+ * the API error envelope. Returns only successful responses; the body is unread.
+ */
+export async function authorizedResponse(
   path: string,
   options?: RequestInit,
-): Promise<T> {
+  timeoutMs = 15000,
+): Promise<Response> {
   if (
     !/^\/v1\/(me$|(?:salons|businesses)\/[0-9a-f-]{36}(?:\/|\?|$))/i.test(path)
   )
@@ -683,13 +688,9 @@ export async function managementFetch<T>(
       "Your session expired. Please sign in again.",
     );
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...(options?.headers as Record<string, string>),
+    Authorization: `Bearer ${token}`,
   };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
 
   let response: Response;
   try {
@@ -699,8 +700,8 @@ export async function managementFetch<T>(
       cache: "no-store",
       credentials: "omit",
       signal: options?.signal
-        ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)])
-        : AbortSignal.timeout(15000),
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(timeoutMs)])
+        : AbortSignal.timeout(timeoutMs),
     });
   } catch {
     throw new ManagementApiError(
@@ -708,46 +709,70 @@ export async function managementFetch<T>(
       "We couldn’t reach the studio. Retry safely to check whether the request arrived.",
     );
   }
+  if (response.ok) return response;
 
-  const text = await response.text();
   let data: unknown;
   try {
+    const text = await response.text();
     data = text ? JSON.parse(text) : null;
   } catch {
     data = null;
   }
-
-  if (!response.ok) {
-    if (typeof data === "object" && data !== null && "error" in data) {
-      const err = (data as { error: { code: string; message: string } }).error;
-      throw new ManagementApiError(err.code, err.message, response.status);
-    }
-    if (response.status === 401) {
-      throw new ManagementApiError(
-        "AUTHENTICATION_REQUIRED",
-        "Staff authentication required. Please sign in with your access token.",
-        response.status,
-      );
-    }
-    if (response.status === 403) {
-      throw new ManagementApiError(
-        "PERMISSION_DENIED",
-        "You do not have permission for this salon action.",
-        response.status,
-      );
-    }
-    if (response.status === 503) {
-      throw new ManagementApiError(
-        "SERVICE_UNAVAILABLE",
-        "Authentication or database service is temporarily unavailable.",
-        response.status,
-      );
-    }
+  if (typeof data === "object" && data !== null && "error" in data) {
+    const err = (data as { error: { code: string; message: string } }).error;
+    throw new ManagementApiError(err.code, err.message, response.status);
+  }
+  if (response.status === 401) {
     throw new ManagementApiError(
-      "UNKNOWN_ERROR",
-      "The studio service is temporarily unavailable. Please try again.",
+      "AUTHENTICATION_REQUIRED",
+      "Staff authentication required. Please sign in with your access token.",
       response.status,
     );
+  }
+  if (response.status === 403) {
+    throw new ManagementApiError(
+      "PERMISSION_DENIED",
+      "You do not have permission for this salon action.",
+      response.status,
+    );
+  }
+  if (response.status === 503) {
+    throw new ManagementApiError(
+      "SERVICE_UNAVAILABLE",
+      "Authentication or database service is temporarily unavailable.",
+      response.status,
+    );
+  }
+  throw new ManagementApiError(
+    "UNKNOWN_ERROR",
+    "The studio service is temporarily unavailable. Please try again.",
+    response.status,
+  );
+}
+
+/** A JSON management request whose response must match its route's contract. */
+export async function managementFetch<T>(
+  path: string,
+  options?: RequestInit,
+): Promise<T> {
+  const response = await authorizedResponse(path, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options?.headers as Record<string, string>),
+    },
+  });
+  let data: unknown;
+  try {
+    const text = await response.text();
+    data = text ? JSON.parse(text) : null;
+  } catch (error) {
+    if (error instanceof SyntaxError) data = null;
+    else
+      throw new ManagementApiError(
+        "NETWORK_ERROR",
+        "We couldn’t reach the studio. Retry safely to check whether the request arrived.",
+      );
   }
 
   const parsed = managementResponseSchema(

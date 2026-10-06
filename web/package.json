@@ -13,13 +13,14 @@
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "test:e2e": "playwright test tests/booking.spec.ts",
-    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts tests/counterparty-contracts.spec.ts --project=desktop",
+    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts tests/counterparty-contracts.spec.ts tests/document-contracts.spec.ts --project=desktop",
     "test:management": "playwright test tests/management.spec.ts",
     "test:management:location": "playwright test tests/location-access.spec.ts",
     "test:management:delegation": "playwright test tests/delegation.spec.ts",
     "test:management:groups": "playwright test tests/groups.spec.ts",
     "test:management:configuration": "playwright test tests/configuration.spec.ts",
-    "test:management:counterparties": "playwright test tests/counterparties.spec.ts"
+    "test:management:counterparties": "playwright test tests/counterparties.spec.ts",
+    "test:management:documents": "playwright test tests/documents.spec.ts"
   },
   "dependencies": {
     "next": "16.3.7",

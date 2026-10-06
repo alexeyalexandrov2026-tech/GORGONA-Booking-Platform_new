@@ -1,5 +1,33 @@
 # Development
 
+## Documents and files (Package E2, 2026-10-05)
+
+Migration 0016 adds four FORCE-RLS insert-only tables: `document_files` (bytea,
+1 byte..10 MiB, PDF/PNG/JPEG, SHA-256 and size checked by the database),
+`documents`, `document_versions` and `document_counterparty_links` (event log).
+Update/delete triggers refuse rewrites; revisions and link sequences are contiguous
+and checked in SQL. Company-wide owner/manager only (permission map v4); no branch,
+delegation or platform-support access. Guard: 38 definitions, the booking gate and
+ten optional-module gates (links need both `documents` and `counterparties`).
+
+API base `/v1/businesses/{business_id}`: `documents` (q/archived/after/limit),
+`documents/{id}` (GET with revision, PUT with Idempotency-Key and expected_revision),
+`documents/{id}/versions` (before/limit), `documents/{id}/versions/{rev}/file`
+(verified attachment download), `document-files/{file_id}` (GET metadata; PUT raw
+body with `Content-Type`, percent-encoded `X-File-Name`, Idempotency-Key),
+`documents/{id}/counterparty-links` (GET; POST link/unlink with expected_sequence),
+`counterparties/{id}/documents` (includes merged duplicates). Uploads answer 503
+`FILE_SCANNING_NOT_CONFIGURED` in staging/production before reading the body; the
+list reports `file_uploads`. No file is scanned (`not_scanned`) or previewed.
+
+Documents is `technically_verified` after exact code CI (`2ab24f3`); fixtures
+publish it through the real registry. Baseline stays booking-only. Focused:
+`tests/integration/test_documents.py`, `tests/unit/test_document_contracts.py`,
+`tests/unit/test_file_validation.py`; browser harness `test_document_browser.py`
+(fresh `npm run build`, real OIDC/PKCE test IdP, HTTP and PostgreSQL) invokes
+`npm run test:management:documents` on desktop/mobile. Web contract cases are in
+`npm run test:unit`. Evidence: [E2 acceptance](plan/evidence/2026-10-05-documents/ACCEPTANCE.md).
+
 ## Bounded file profile and CSP (E2-A, 2026-10-05)
 
 `business/file_validation.py` returns frozen exact type/size/SHA/name/version
