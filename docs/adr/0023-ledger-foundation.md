@@ -93,6 +93,12 @@ effect and remains available when finance is disabled. No financial payload or t
 is persisted in browser storage; cross-browser intent deduplication still needs an
 explicit business operation ID. Trial balances validate each row equation as well
 as column totals. These decisions close all five initial independent review findings.
+Follow-up review found and closed entity reselection state loss. A further
+fault-injection check found that an extra permissive policy could OR away tenant
+isolation while preserving the approved policy name. Readiness now rejects any
+unapproved permissive policy on the eight ledger tables; SELECT/INSERT/ALL and
+public/runtime/member-role variants are covered. No production policy repair is
+automatic. Final evidence must correspond to the SHA containing this guard.
 [Current evidence and acceptance gates](../plan/evidence/2026-10-06-ledger/ACCEPTANCE.md).
 Finance and FIN-01 remain implemented while final independent review and exact-SHA
 CI are pending. This is not authorization for production migration or deployment.

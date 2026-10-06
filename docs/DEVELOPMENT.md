@@ -21,6 +21,10 @@ Ledger mutations require READ COMMITTED, including raw SQL; unsupported isolatio
 fails before writes. Entry and line deferred triggers enforce balance, and an
 original cannot receive extra lines after reversal. Schema readiness compares the
 approved function bodies exactly; meaningful SQL-literal whitespace is preserved.
+Unexpected permissive policies on any of the eight ledger tables also fail
+readiness and ledger requests with 503: PostgreSQL OR-combines such grants even
+when the approved tenant policy remains intact. Restoring the approved schema is
+an explicit operator action; the API never silently removes database policies.
 
 POST commands/{key}/resolve and /cancel accept a typed command reference scoped to
 the current user and business. Resolve also checks immutable records after ordinary

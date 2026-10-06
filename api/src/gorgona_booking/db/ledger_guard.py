@@ -50,6 +50,7 @@ LEDGER_PARAMETERS: tuple[object, ...] = tuple(
 )
 LEDGER_PARAMETERS += (_SOURCES["lock_ledger"], _SOURCES["ledger_period_closed"])
 LEDGER_PARAMETERS += (list(_TABLES), "(tenant_id=gba.current_tenant_id())")
+LEDGER_PARAMETERS += (list(_TABLES),)
 LEDGER_BOUNDARY = """
 and not exists (
     select 1 from (values __TRIGGERS__)
@@ -86,5 +87,14 @@ and not exists (
        or regexp_replace(pg_catalog.pg_get_expr(p.polqual, p.polrelid), '[[:space:]]', '', 'g')
           is distinct from %s
        or p.polwithcheck is distinct from p.polqual
+)
+-- Permissive policies combine with OR. An extra grant must not bypass tenant isolation
+-- while leaving the approved named policy untouched.
+and not exists (
+    select 1 from unnest(%s::text[]) expected(table_name)
+    join pg_catalog.pg_policy p
+      on p.polrelid = pg_catalog.to_regclass('gba.' || expected.table_name)
+    where p.polpermissive
+      and p.polname <> expected.table_name || '_tenant_isolation'
 )
 """.replace("__TRIGGERS__", ",".join("(%s,%s,%s::int,%s,%s::boolean,%s::text)" for _ in _TRIGGERS))

@@ -845,3 +845,50 @@ async def test_recovery_is_scoped_to_actor_and_continues_when_module_is_off(
     )
     assert unknown.status_code == 200, unknown.text
     assert unknown.json()["state"] == "cancelled"
+
+
+@pytest.mark.parametrize(
+    ("table", "command", "role"),
+    [
+        *[
+            (table, "SELECT", "public")
+            for table in (
+                "ledger_books",
+                "ledger_book_versions",
+                "ledger_accounts",
+                "ledger_account_versions",
+                "journal_entries",
+                "journal_lines",
+                "ledger_period_events",
+                "ledger_command_cancellations",
+            )
+        ],
+        ("ledger_books", "INSERT", "gba_runtime"),
+        ("journal_entries", "ALL", "gba_runtime"),
+        ("ledger_accounts", "SELECT", "gba_test_app"),
+    ],
+)
+async def test_extra_permissive_policy_fails_closed(
+    enabled: LedgerWorld,
+    owner_conn: psycopg.Connection,
+    table: str,
+    command: str,
+    role: str,
+) -> None:
+    # The approved tenant predicate still exists: another permissive policy can OR it away.
+    role_sql = sql.SQL("public") if role == "public" else sql.Identifier(role)
+    predicates = sql.SQL("with check (true)" if command == "INSERT" else "using (true)")
+    owner_conn.execute(
+        sql.SQL("create policy FAKE_extra_permission on gba.{} for {} to {} {}").format(
+            sql.Identifier(table), sql.SQL(command), role_sql, predicates
+        )
+    )
+    try:
+        assert (await enabled.client.get("/health/ready")).status_code == 503
+        response = await enabled.client.get(enabled.base, headers=enabled.auth)
+        assert response.status_code == 503, response.text
+    finally:
+        owner_conn.execute(
+            sql.SQL("drop policy FAKE_extra_permission on gba.{}").format(sql.Identifier(table))
+        )
+    assert (await enabled.client.get("/health/ready")).status_code == 200

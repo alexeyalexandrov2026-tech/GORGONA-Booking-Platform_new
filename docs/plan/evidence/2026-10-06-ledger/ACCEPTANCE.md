@@ -136,6 +136,31 @@ Draft [PR #12](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Plat
 импортирует определения непосредственно из ledger_guard; свежий local strict
 mypy по 197 файлам PASS. Ожидается CI нового коммита после UI исправления.
 
+Коммит `4961d1a4990c6d5af37a512fc414d1f7714399dc`: полный local PASS —
+**847 passed / 4 skipped / 330.20 s**. Три skips — Docker (локально не настроен),
+один — необязательное встраивание в отдельный внешний сайт.
+[CI 37495564576](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37495564576)
+точного SHA PASS: **850 passed / 1 skipped / 254.33 s**; Docker gates включены
+GBA_REQUIRE_CONTAINER=1 и прошли. Этот green не закрывает следующий дефект.
+
+Независимая последняя проверка обнаружила дополнительный P1: лишняя permissive
+SELECT policy оставляла утвержденную tenant policy неизменной, но открывала
+runtime чужую книгу, тогда как health/API readiness продолжали возвращать 200.
+HTTP-утечка чужого ответа не утверждается: доказан обход DB RLS и незамеченная
+порча границы. [Обзор 4961d1a](INDEPENDENT_REVIEW_4961d1a.md) сохраняет red и hashes.
+Семантика OR объединения permissive policies проверена в
+[PostgreSQL 18 CREATE POLICY](https://www.postgresql.org/docs/18/sql-createpolicy.html).
+
+Теперь guard отвергает любую лишнюю permissive policy на всех восьми таблицах
+учета. Он не удаляет политики автоматически и не изменяет production schema:
+readiness и ledger API отвечают 503 до восстановления утвержденной схемы.
+Новый собственный red: **1 failed / 34 deselected / 1.97 s** — health возвращал
+200 вместо 503. После исправления **66 passed / 20.64 s**: все ledger SQL/API,
+11 вариантов дополнительных политик (восемь таблиц; SELECT/INSERT/ALL;
+public/runtime/member role) и document/guard contracts. После finally удаления
+fault policy readiness снова 200. Fresh Ruff/format/strict mypy 197 файлов PASS.
+Окончательные полный прогон, CI нового SHA и независимая проверка guard предстоят.
+
 ## Свежая проверка
 
 | Проверка | Результат |
@@ -148,9 +173,9 @@ mypy по 197 файлам PASS. Ожидается CI нового коммит
 | Ruff / Ruff format | PASS; 197 Python files |
 | Strict mypy | PASS; 197 source files |
 | Восстановление schema boundary и регрессии booking/reservations | PASS: 64 passed / 14.96 s |
-| Полная suite окончательного дерева | RUNNING — результат будет записан после завершения |
-| CI точного SHA G | FAIL для 6735f88; strict import исправлен, новый CI предстоит |
-| Независимый обзор | Первичный: 2 P1 и 3 P2, исправлены; повторная независимая проверка выполняется с разрешения владельца |
+| Полная suite | 4961d1a PASS: 847 passed / 4 skipped / 330.20 s; финальный guard требует свежего полного прогона |
+| CI точного SHA G | 4961d1a PASS: 850 passed / 1 skipped / 254.33 s; финальный guard требует нового CI |
+| Независимый обзор | Исходные 5 + P2 reselection закрыты; P1 extra permissive policy исправлен и представлен на повторную проверку |
 
 Логи этой сессии находятся в игнорируемом `handoff/package-g-review/`; учетные
 данные там не лежат. PostgreSQL 18.6 для проверки создан отдельно на loopback
