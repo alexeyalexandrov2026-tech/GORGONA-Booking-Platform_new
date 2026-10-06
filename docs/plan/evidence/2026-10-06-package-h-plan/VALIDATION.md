@@ -35,13 +35,19 @@ closed by Proposed rules. It does not accept the product scope or implementation
 3. Credit counter-accounts require explicit current human treatment after later
    G reclassification; no automatic invoice recognition lineage is claimed.
 
-Reports are preserved byte-for-byte with SHA256:
+Original external reports and the initial working copies match the source
+SHA256 below. Git normalizes CRLF to LF under the existing `.gitattributes`;
+the separately measured Git-content hashes apply to committed/recloned reports.
+The original external reports remain unchanged outside the repository.
 
-- INITIAL_REVIEW.md: `4f496a273606c4e0548a3e94c7ebe439ef0b58927c88428b97615881fa266779`.
-- FINAL_REVIEW.md: `e2e73c845d37f1cff95f1d2ba2891456bc6141467d567b25ad56f800c7899754`.
+| Report | Original source SHA256 (CRLF) | Committed Git-content SHA256 (LF) |
+|---|---|---|
+| INITIAL_REVIEW.md | 4f496a273606c4e0548a3e94c7ebe439ef0b58927c88428b97615881fa266779 | a612a762be005e2f1ca04b23edbf40c7f9bedda1fc46c5d57a872d7f93726057 |
+| FINAL_REVIEW.md | e2e73c845d37f1cff95f1d2ba2891456bc6141467d567b25ad56f800c7899754 | 8104ea990547676d961908b81fdf9029a13390f602332db831c2e2669ac742a6 |
 
-The final report's four raw document hashes were matched before copying. The
-reviewer used its own unchanged checkout/branch; no DB or money tests were run.
+The final report's four raw proposal-document hashes were matched before copying;
+those proposal files are LF and unchanged by normalization. The reviewer used its
+own unchanged checkout/branch; no DB or money tests were run.
 
 ## Exact documentation checks
 
@@ -50,7 +56,7 @@ Local Git/PowerShell plus a stdlib Python checker outside the repository:
 - `git -c core.excludesFile= diff --check`: PASS, exit 0 after final doc edits.
 - `git -c core.excludesFile= diff 5be6e7abd7b552903a4f4b2884b150c62532c17d --check`: PASS, exit 0 for the full H checkpoint.
 - Documentation checker: PASS, exit 0; all 13 changed Markdown files, added/changed local link targets, conflict/whitespace controls, 12 unique NOT TESTED acceptance cases, 15 existing source reuse references, Proposed ADR, unpromoted FIN-02/03 and no runtime/config diff.
-- Copied-report SHA256 and four reviewed proposal-document hashes: PASS, exact matches.
+- Original-source and normalized Git-content report SHA256, plus four reviewed proposal-document hashes: PASS, exact matches as recorded above.
 
 The local link check covers new/changed links only, not all historical document
 links, anchors, external reachability or legal/accounting-policy certification.
