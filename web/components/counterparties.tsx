@@ -371,7 +371,7 @@ export function Counterparties({ businessId }: { businessId: string }) {
         </p>
       )}
       {message && <p role="status">{message}</p>}
-      {pending && (
+      {pending && !busy && (
         <div className="warning">
           <p>
             The result of the last command is uncertain. Editing is paused until

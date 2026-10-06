@@ -45,12 +45,18 @@ test("contracts: drafts, attested agreement, amendment, termination and retained
     const keys: string[] = [];
     let first = 0;
     let lose = true;
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let arrived!: () => void;
+    const reached = new Promise<void>((resolve) => (arrived = resolve));
     const pattern = "**/v1/businesses/*/agreements/*";
     await page.route(pattern, async (route) => {
       if (route.request().method() !== "PUT") return route.continue();
       keys.push(route.request().headers()["idempotency-key"]!);
       if (lose) {
         lose = false;
+        arrived();
+        await held;
         first = (await route.fetch()).status();
         await route.abort("failed");
       } else await route.continue();
@@ -58,6 +64,12 @@ test("contracts: drafts, attested agreement, amendment, termination and retained
     await contracts
       .getByRole("button", { name: "Save contract draft" })
       .click();
+    // While the request is still in flight its result is not yet uncertain.
+    await reached;
+    await expect(
+      contracts.getByText(/result of the last contract command is uncertain/),
+    ).toHaveCount(0, { timeout: 1500 });
+    release();
     await contracts
       .getByRole("button", { name: "Retry same contract command" })
       .click();

@@ -355,7 +355,7 @@ export function Documents({ businessId }: { businessId: string }) {
         </p>
       )}
       {message && <p role="status">{message}</p>}
-      {pending && (
+      {pending && !busy && (
         <div className="warning">
           <p>
             The result of the last command is uncertain. Editing is paused until
@@ -366,7 +366,7 @@ export function Documents({ businessId }: { businessId: string }) {
           </button>
         </div>
       )}
-      {pendingUpload && (
+      {pendingUpload && !busy && (
         <div className="warning">
           <p>
             The upload result is uncertain. Retry the same upload to check

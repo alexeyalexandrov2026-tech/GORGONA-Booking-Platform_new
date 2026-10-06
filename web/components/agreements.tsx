@@ -243,7 +243,7 @@ export function CounterpartyAgreements({
         </p>
       )}
       {message && <p role="status">{message}</p>}
-      {pending && (
+      {pending && !busy && (
         <div className="warning">
           <p>
             The result of the last contract command is uncertain. Retry the same
