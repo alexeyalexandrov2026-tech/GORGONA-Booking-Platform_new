@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { counterpartyResponseSchema } from "./counterparty-contracts";
 import { documentResponseSchema } from "./document-contracts";
+import { agreementResponseSchema } from "./agreement-contracts";
 import { availabilitySchema } from "./contracts";
 import {
   businessSchema,
@@ -207,6 +208,8 @@ export function managementResponseSchema(
     if (counterparties) return counterparties;
     const documents = documentResponseSchema(business[1] ?? "", method);
     if (documents) return documents;
+    const agreements = agreementResponseSchema(business[1] ?? "", method);
+    if (agreements) return agreements;
     if (business[1] === "" && method === "GET") return businessSchema;
     if (business[1] === "/industry-catalog" && method === "GET")
       return industryCatalogSchema;
