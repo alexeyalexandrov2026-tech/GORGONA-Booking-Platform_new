@@ -21,19 +21,19 @@ create table gba.financial_document_versions (
     tenant_id uuid not null,
     book_id uuid not null,
     document_id uuid not null,
-    revision integer not null check (revision > 0),
-    state text not null check (state in ('draft', 'issued')),
-    direction text not null check (direction in ('receivable', 'payable')),
+    revision integer not null constraint financial_document_versions_revision_check check (revision > 0),
+    state text not null constraint financial_document_versions_state_check check (state in ('draft', 'issued')),
+    direction text not null constraint financial_document_versions_direction_check check (direction in ('receivable', 'payable')),
     counterparty_id uuid not null,
     counterparty_revision integer not null,
     currency text not null references gba.currencies(code),
     invoice_date date not null,
-    due_date date check (due_date is null or due_date >= invoice_date),
+    due_date date constraint financial_document_versions_due_date_check check (due_date is null or due_date >= invoice_date),
     control_account_id uuid not null,
-    title text not null check (length(btrim(title)) between 1 and 200 and title !~ '[[:cntrl:]]'),
-    number text not null check (length(btrim(number)) between 1 and 64 and number !~ '[[:cntrl:]]'),
-    principal_minor bigint not null check (principal_minor between 1 and 999999999999999999),
-    line_count smallint not null check (line_count between 1 and 199),
+    title text not null constraint financial_document_versions_title_check check (length(btrim(title)) between 1 and 200 and title !~ '[[:cntrl:]]'),
+    number text not null constraint financial_document_versions_number_check check (length(btrim(number)) between 1 and 64 and number !~ '[[:cntrl:]]'),
+    principal_minor bigint not null constraint financial_document_versions_principal_minor_check check (principal_minor between 1 and 999999999999999999),
+    line_count smallint not null constraint financial_document_versions_line_count_check check (line_count between 1 and 199),
     entry_id uuid,
     obligation_id uuid,
     issued_on date,
@@ -64,12 +64,12 @@ create table gba.financial_document_lines (
     book_id uuid not null,
     document_id uuid not null,
     revision integer not null,
-    line_no smallint not null check (line_no between 1 and 199),
+    line_no smallint not null constraint financial_document_lines_line_no_check check (line_no between 1 and 199),
     line_id uuid not null,
     counter_account_id uuid not null,
-    description text not null check (
+    description text not null constraint financial_document_lines_description_check check (
         length(btrim(description)) between 1 and 500 and description !~ '[[:cntrl:]]'),
-    amount_minor bigint not null check (amount_minor between 1 and 999999999999999999),
+    amount_minor bigint not null constraint financial_document_lines_amount_minor_check check (amount_minor between 1 and 999999999999999999),
     primary key (tenant_id, book_id, document_id, revision, line_no),
     unique (tenant_id, book_id, document_id, revision, line_id),
     foreign key (tenant_id, book_id, document_id, revision)
@@ -82,16 +82,16 @@ create table gba.financial_obligations (
     tenant_id uuid not null,
     book_id uuid not null,
     id uuid not null,
-    source_kind text not null check (source_kind = 'invoice'),
+    source_kind text not null constraint financial_obligations_source_kind_check check (source_kind = 'invoice'),
     source_id uuid not null,
     source_revision integer not null,
-    component text not null check (component = 'principal'),
+    component text not null constraint financial_obligations_component_check check (component = 'principal'),
     counterparty_id uuid not null,
     counterparty_revision integer not null,
-    direction text not null check (direction in ('receivable', 'payable')),
+    direction text not null constraint financial_obligations_direction_check check (direction in ('receivable', 'payable')),
     currency text not null references gba.currencies(code),
     control_account_id uuid not null,
-    principal_minor bigint not null check (principal_minor between 1 and 999999999999999999),
+    principal_minor bigint not null constraint financial_obligations_principal_minor_check check (principal_minor between 1 and 999999999999999999),
     created_by uuid not null references gba.users(id),
     created_at timestamptz not null default now(),
     created_transaction xid8 not null default pg_catalog.pg_current_xact_id(),
@@ -113,7 +113,7 @@ create table gba.financial_operation_entries (
     book_id uuid not null,
     document_id uuid not null,
     revision integer not null,
-    component text not null check (component = 'principal'),
+    component text not null constraint financial_operation_entries_component_check check (component = 'principal'),
     entry_id uuid not null,
     obligation_id uuid not null,
     created_transaction xid8 not null default pg_catalog.pg_current_xact_id(),
@@ -132,15 +132,16 @@ create table gba.financial_operation_entries (
 create table gba.financial_command_receipts (
     tenant_id uuid not null,
     actor_key text not null,
-    operation text not null check (operation in ('invoice_draft', 'invoice_issue')),
-    idempotency_key text not null check (idempotency_key ~ '^[A-Za-z0-9._:-]{8,255}$'),
-    request_hash text not null check (request_hash ~ '^[0-9a-f]{64}$'),
+    operation text not null constraint financial_command_receipts_operation_check check (operation in ('invoice_draft', 'invoice_issue')),
+    idempotency_key text not null constraint financial_command_receipts_idempotency_key_check check (idempotency_key ~ '^[A-Za-z0-9._:-]{8,255}$'),
+    request_hash text not null constraint financial_command_receipts_request_hash_check check (request_hash ~ '^[0-9a-f]{64}$'),
     book_id uuid not null,
     document_id uuid not null,
     revision integer not null,
     created_by uuid not null references gba.users(id),
     created_at timestamptz not null default now(),
-    check (actor_key = 'user:' || created_by::text),
+    constraint financial_command_receipts_actor_check
+        check (actor_key = 'user:' || created_by::text),
     primary key (tenant_id, actor_key, operation, idempotency_key),
     foreign key (tenant_id, book_id, document_id, revision)
         references gba.financial_document_versions(tenant_id, book_id, document_id, revision)
@@ -149,14 +150,15 @@ create table gba.financial_command_receipts (
 create table gba.financial_command_cancellations (
     tenant_id uuid not null,
     actor_key text not null,
-    operation text not null check (operation in ('invoice_draft', 'invoice_issue')),
-    idempotency_key text not null check (idempotency_key ~ '^[A-Za-z0-9._:-]{8,255}$'),
+    operation text not null constraint financial_command_cancellations_operation_check check (operation in ('invoice_draft', 'invoice_issue')),
+    idempotency_key text not null constraint financial_command_cancellations_idempotency_key_check check (idempotency_key ~ '^[A-Za-z0-9._:-]{8,255}$'),
     book_id uuid not null,
     document_id uuid not null,
-    revision integer not null check (revision >= 1 and (operation <> 'invoice_issue' or revision >= 2)),
+    revision integer not null constraint financial_command_cancellations_revision_check check (revision >= 1 and (operation <> 'invoice_issue' or revision >= 2)),
     cancelled_by uuid not null references gba.users(id),
     cancelled_at timestamptz not null default now(),
-    check (actor_key = 'user:' || cancelled_by::text),
+    constraint financial_command_cancellations_actor_check
+        check (actor_key = 'user:' || cancelled_by::text),
     primary key (tenant_id, actor_key, operation, idempotency_key),
     foreign key (tenant_id, book_id) references gba.ledger_books(tenant_id, id)
 );
@@ -363,6 +365,8 @@ begin
             select * into entry from gba.journal_entries e where e.tenant_id = tenant
                 and e.book_id = book and e.id = v.entry_id;
             if obligation.id is null or entry.id is null
+                or obligation.source_kind is distinct from 'invoice'
+                or obligation.component is distinct from 'principal'
                 or row(obligation.source_id,obligation.source_revision,obligation.counterparty_id,
                     obligation.counterparty_revision,obligation.direction,obligation.currency,
                     obligation.control_account_id,obligation.principal_minor,obligation.created_by,
@@ -374,7 +378,7 @@ begin
                 is distinct from row('invoice'::text,document::text,v.currency,v.issued_on,v.created_by)
                 or not exists (select 1 from gba.financial_operation_entries o
                     where o.tenant_id = tenant and o.book_id = book and o.document_id = document
-                    and o.revision = v.revision and o.entry_id = v.entry_id
+                    and o.revision = v.revision and o.component = 'principal' and o.entry_id = v.entry_id
                     and o.obligation_id = v.obligation_id and o.created_transaction = v.created_transaction)
             then
                 raise exception using errcode = 'check_violation', message = 'invoice obligation and journal lineage must match';
@@ -449,6 +453,7 @@ begin
           if not exists (
             select 1 from gba.financial_document_versions v where v.tenant_id = tenant and v.book_id = book
             and v.document_id = document and v.revision = new.revision and v.state = 'issued'
+            and new.component = 'principal'
             and v.entry_id = new.entry_id and v.obligation_id = new.obligation_id
             and v.created_transaction = new.created_transaction
         ) then
@@ -589,3 +594,31 @@ create policy financial_command_receipts_unrestricted_scope on gba.financial_com
     using (gba.current_location_id() is null) with check (gba.current_location_id() is null);
 create policy financial_command_cancellations_unrestricted_scope on gba.financial_command_cancellations as restrictive to gba_runtime
     using (gba.current_location_id() is null) with check (gba.current_location_id() is null);
+
+-- Approved PostgreSQL 18 CHECK deparse forms. These repository-owned predicates
+-- preserve literal contents; readiness never adopts definitions from a target DB.
+-- CHECK_APPROVAL {"table":"financial_document_versions","name":"financial_document_versions_revision_check","expression":"(revision > 0)"}
+-- CHECK_APPROVAL {"table":"financial_document_versions","name":"financial_document_versions_state_check","expression":"(state = ANY (ARRAY['draft'::text, 'issued'::text]))"}
+-- CHECK_APPROVAL {"table":"financial_document_versions","name":"financial_document_versions_direction_check","expression":"(direction = ANY (ARRAY['receivable'::text, 'payable'::text]))"}
+-- CHECK_APPROVAL {"table":"financial_document_versions","name":"financial_document_versions_due_date_check","expression":"((due_date IS NULL) OR (due_date >= invoice_date))"}
+-- CHECK_APPROVAL {"table":"financial_document_versions","name":"financial_document_versions_title_check","expression":"(((length(btrim(title)) >= 1) AND (length(btrim(title)) <= 200)) AND (title !~ '[[:cntrl:]]'::text))"}
+-- CHECK_APPROVAL {"table":"financial_document_versions","name":"financial_document_versions_number_check","expression":"(((length(btrim(number)) >= 1) AND (length(btrim(number)) <= 64)) AND (number !~ '[[:cntrl:]]'::text))"}
+-- CHECK_APPROVAL {"table":"financial_document_versions","name":"financial_document_versions_principal_minor_check","expression":"((principal_minor >= 1) AND (principal_minor <= '999999999999999999'::bigint))"}
+-- CHECK_APPROVAL {"table":"financial_document_versions","name":"financial_document_versions_line_count_check","expression":"((line_count >= 1) AND (line_count <= 199))"}
+-- CHECK_APPROVAL {"table":"financial_document_lines","name":"financial_document_lines_line_no_check","expression":"((line_no >= 1) AND (line_no <= 199))"}
+-- CHECK_APPROVAL {"table":"financial_document_lines","name":"financial_document_lines_description_check","expression":"(((length(btrim(description)) >= 1) AND (length(btrim(description)) <= 500)) AND (description !~ '[[:cntrl:]]'::text))"}
+-- CHECK_APPROVAL {"table":"financial_document_lines","name":"financial_document_lines_amount_minor_check","expression":"((amount_minor >= 1) AND (amount_minor <= '999999999999999999'::bigint))"}
+-- CHECK_APPROVAL {"table":"financial_obligations","name":"financial_obligations_source_kind_check","expression":"(source_kind = 'invoice'::text)"}
+-- CHECK_APPROVAL {"table":"financial_obligations","name":"financial_obligations_component_check","expression":"(component = 'principal'::text)"}
+-- CHECK_APPROVAL {"table":"financial_obligations","name":"financial_obligations_direction_check","expression":"(direction = ANY (ARRAY['receivable'::text, 'payable'::text]))"}
+-- CHECK_APPROVAL {"table":"financial_obligations","name":"financial_obligations_principal_minor_check","expression":"((principal_minor >= 1) AND (principal_minor <= '999999999999999999'::bigint))"}
+-- CHECK_APPROVAL {"table":"financial_operation_entries","name":"financial_operation_entries_component_check","expression":"(component = 'principal'::text)"}
+-- CHECK_APPROVAL {"table":"financial_command_receipts","name":"financial_command_receipts_operation_check","expression":"(operation = ANY (ARRAY['invoice_draft'::text, 'invoice_issue'::text]))"}
+-- CHECK_APPROVAL {"table":"financial_command_receipts","name":"financial_command_receipts_idempotency_key_check","expression":"(idempotency_key ~ '^[A-Za-z0-9._:-]{8,255}$'::text)"}
+-- CHECK_APPROVAL {"table":"financial_command_receipts","name":"financial_command_receipts_request_hash_check","expression":"(request_hash ~ '^[0-9a-f]{64}$'::text)"}
+-- CHECK_APPROVAL {"table":"financial_command_cancellations","name":"financial_command_cancellations_operation_check","expression":"(operation = ANY (ARRAY['invoice_draft'::text, 'invoice_issue'::text]))"}
+-- CHECK_APPROVAL {"table":"financial_command_cancellations","name":"financial_command_cancellations_idempotency_key_check","expression":"(idempotency_key ~ '^[A-Za-z0-9._:-]{8,255}$'::text)"}
+-- CHECK_APPROVAL {"table":"financial_command_cancellations","name":"financial_command_cancellations_revision_check","expression":"((revision >= 1) AND ((operation <> 'invoice_issue'::text) OR (revision >= 2)))"}
+-- CHECK_APPROVAL {"table":"financial_document_versions","name":"financial_versions_issued_refs","expression":"(((state = 'draft'::text) AND (entry_id IS NULL) AND (obligation_id IS NULL) AND (issued_on IS NULL) AND (attestation IS NULL)) OR ((state = 'issued'::text) AND (revision >= 2) AND (entry_id IS NOT NULL) AND (obligation_id IS NOT NULL) AND (issued_on IS NOT NULL) AND (attestation IS NOT NULL) AND (attestation = 'confirmed_account_treatment'::text)))"}
+-- CHECK_APPROVAL {"table":"financial_command_receipts","name":"financial_command_receipts_actor_check","expression":"(actor_key = ('user:'::text || (created_by)::text))"}
+-- CHECK_APPROVAL {"table":"financial_command_cancellations","name":"financial_command_cancellations_actor_check","expression":"(actor_key = ('user:'::text || (cancelled_by)::text))"}

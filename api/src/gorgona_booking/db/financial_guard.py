@@ -1,7 +1,10 @@
 """Approved H1 controls from packaged SQL; never learn expectations from a DB."""
 
+import json
 import re
 from importlib import resources
+
+from pydantic import BaseModel, ConfigDict, Field
 
 _SQL = (
     resources.files("gorgona_booking.db") / "migrations" / "0021_invoice_accrual.sql"
@@ -92,7 +95,28 @@ FINANCIAL_PARAMETERS += tuple(x for row in _COLUMNS for x in row)
 FINANCIAL_PARAMETERS += tuple(x for row in _PRIVATE for x in row)
 FINANCIAL_PARAMETERS += (list(FINANCIAL_TABLES),)
 FINANCIAL_PARAMETERS += (
-    "(source_kind=ANY(ARRAY['manual'::text,'opening'::text,'reversal'::text,'invoice'::text]))",
+    "(source_kind = ANY (ARRAY['manual'::text, 'opening'::text, "
+    "'reversal'::text, 'invoice'::text]))",
+)
+
+
+class _ApprovedCheck(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    table: str = Field(pattern=r"^[a-z_]+$")
+    name: str = Field(pattern=r"^[a-z_]+$")
+    expression: str = Field(min_length=1, max_length=2000)
+
+
+_CHECKS = tuple(
+    _ApprovedCheck.model_validate(json.loads(line.removeprefix("-- CHECK_APPROVAL ")))
+    for line in _SQL.splitlines()
+    if line.startswith("-- CHECK_APPROVAL ")
+)
+_CHECK_NAMES = set(re.findall(r"constraint (financial_[a-z_]+)\s+check \(", _SQL))
+if len(_CHECKS) != 25 or {row.name for row in _CHECKS} != _CHECK_NAMES:
+    raise RuntimeError("Every packaged H CHECK needs an explicit approved predicate")
+FINANCIAL_PARAMETERS += tuple(
+    value for row in _CHECKS for value in (row.table, row.name, row.expression)
 )
 FINANCIAL_BOUNDARY = (
     """
@@ -187,12 +211,21 @@ and exists (
     where c.conrelid='gba.journal_entries'::regclass
         and c.conname='journal_entries_source_kind_check'
         and c.contype='c' and c.convalidated
-        and regexp_replace(pg_catalog.pg_get_expr(c.conbin,c.conrelid),'[[:space:]]','','g')
-            = %s
+        and pg_catalog.pg_get_expr(c.conbin,c.conrelid) = %s
+)
+and not exists (
+    select 1 from (values __CHECKS__) expected(table_name,constraint_name,expression)
+    left join pg_catalog.pg_constraint c
+      on c.conrelid=pg_catalog.to_regclass('gba.'||expected.table_name)
+     and c.conname=expected.constraint_name
+    where c.oid is null or c.contype<>'c' or not c.convalidated
+       or c.connoinherit or not c.conislocal
+       or pg_catalog.pg_get_expr(c.conbin,c.conrelid) is distinct from expected.expression
 )
 """.replace("__TRIGGERS__", ",".join("(%s,%s,%s::int,%s,%s::boolean,%s::text)" for _ in _TRIGGERS))
     .replace("__KEYS__", ",".join("(%s,%s,%s::text[])" for _ in _KEYS))
     .replace("__FKS__", ",".join("(%s,%s::text[],%s,%s::text[],%s::boolean)" for _ in _FKS))
     .replace("__COLUMNS__", ",".join("(%s,%s,%s,%s::boolean)" for _ in _COLUMNS))
     .replace("__PRIVATE__", ",".join("(%s,%s)" for _ in _PRIVATE))
+    .replace("__CHECKS__", ",".join("(%s,%s,%s::text)" for _ in _CHECKS))
 )

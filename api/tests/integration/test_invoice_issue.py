@@ -13,6 +13,7 @@ from psycopg import sql
 from gorgona_booking.business import financial_documents, ledger, modules
 from gorgona_booking.business.financial_contracts import InvoiceDraftInput, InvoiceIssueInput
 from gorgona_booking.business.readiness_registry import Readiness
+from gorgona_booking.db import financial_guard
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction
 from gorgona_booking.db.provisioning import add_membership, owner_tenant_transaction
 from tests.integration import test_ledger as ledger_shared
@@ -30,6 +31,21 @@ idp = shared.idp
 manager_a = shared.manager_a
 manager_b = shared.manager_b
 enabled = ledger_shared.enabled
+
+
+async def test_approved_predicates_match_packaged_migration(
+    owner_conn: psycopg.Connection,
+) -> None:
+    mismatches = []
+    for approved in financial_guard._CHECKS:
+        row = owner_conn.execute(
+            "select pg_catalog.pg_get_expr(conbin,conrelid) from pg_catalog.pg_constraint "
+            "where conrelid=pg_catalog.to_regclass(%s) and conname=%s",
+            ("gba." + approved.table, approved.name),
+        ).fetchone()
+        if row is None or row[0] != approved.expression:
+            mismatches.append((approved.name, approved.expression, row))
+    assert mismatches == []
 
 
 @dataclass(frozen=True)
@@ -674,6 +690,58 @@ async def test_sql_history_stays_insert_only(
             "revoke insert(created_transaction) on gba.financial_document_versions "
             "from gba_runtime",
         ),
+        (
+            "alter table gba.financial_obligations "
+            "drop constraint financial_obligations_source_kind_check",
+            "alter table gba.financial_obligations "
+            "add constraint financial_obligations_source_kind_check "
+            "check (source_kind = 'invoice')",
+        ),
+        (
+            "alter table gba.financial_obligations "
+            "drop constraint financial_obligations_source_kind_check; "
+            "alter table gba.financial_obligations "
+            "add constraint financial_obligations_source_kind_check "
+            "check (source_kind in ('invoice','manual'))",
+            "alter table gba.financial_obligations "
+            "drop constraint financial_obligations_source_kind_check; "
+            "alter table gba.financial_obligations "
+            "add constraint financial_obligations_source_kind_check "
+            "check (source_kind = 'invoice')",
+        ),
+        (
+            "alter table gba.financial_obligations "
+            "drop constraint financial_obligations_source_kind_check; "
+            "alter table gba.financial_obligations "
+            "add constraint financial_obligations_source_kind_check "
+            "check (source_kind = 'invoice') not valid",
+            "alter table gba.financial_obligations "
+            "validate constraint financial_obligations_source_kind_check",
+        ),
+        (
+            "alter table gba.financial_command_cancellations "
+            "drop constraint financial_command_cancellations_revision_check; "
+            "alter table gba.financial_command_cancellations "
+            "add constraint financial_command_cancellations_revision_check "
+            "check (revision >= 1 and (operation <> 'invoice_issue ' or revision >= 2))",
+            "alter table gba.financial_command_cancellations "
+            "drop constraint financial_command_cancellations_revision_check; "
+            "alter table gba.financial_command_cancellations "
+            "add constraint financial_command_cancellations_revision_check "
+            "check (revision >= 1 and (operation <> 'invoice_issue' or revision >= 2))",
+        ),
+        (
+            "alter table gba.journal_entries "
+            "drop constraint journal_entries_source_kind_check; "
+            "alter table gba.journal_entries "
+            "add constraint journal_entries_source_kind_check "
+            "check (source_kind in ('manual','opening','reversal','invoice','invoice '))",
+            "alter table gba.journal_entries "
+            "drop constraint journal_entries_source_kind_check; "
+            "alter table gba.journal_entries "
+            "add constraint journal_entries_source_kind_check "
+            "check (source_kind in ('manual','opening','reversal','invoice'))",
+        ),
     ],
 )
 async def test_damaged_financial_controls_fail_readiness_with_503(
@@ -689,10 +757,84 @@ async def test_damaged_financial_controls_fail_readiness_with_503(
         )
         assert result.status_code == 503, result.text
         assert result.json()["error"]["code"] == "DATABASE_UNAVAILABLE"
+        readiness = await invoices.ledger.client.get("/health/ready")
+        assert readiness.status_code == 503, readiness.text
     finally:
         owner_conn.execute(restore)
     healthy = await invoices.ledger.client.get(invoices.ledger.base, headers=invoices.ledger.auth)
     assert healthy.status_code == 200, healthy.text
+    assert (await invoices.ledger.client.get("/health/ready")).status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("table", "column", "value", "constraint"),
+    [
+        (
+            "financial_obligations",
+            "source_kind",
+            "manual",
+            "financial_obligations_source_kind_check",
+        ),
+        (
+            "financial_obligations",
+            "component",
+            "fee",
+            "financial_obligations_component_check",
+        ),
+        (
+            "financial_operation_entries",
+            "component",
+            "fee",
+            "financial_operation_entries_component_check",
+        ),
+    ],
+)
+async def test_coupled_sql_rejects_wrong_origin_and_component_without_column_check(
+    invoices: InvoiceWorld,
+    owner_conn: psycopg.Connection,
+    table: str,
+    column: str,
+    value: str,
+    constraint: str,
+) -> None:
+    document = uuid7()
+    assert (await invoices.save(document=document)).status_code == 200
+    assert (await invoices.issue(document)).status_code == 200
+    approved = next(check for check in financial_guard._CHECKS if check.name == constraint)
+    owner_conn.execute(
+        sql.SQL("alter table gba.{} drop constraint {}").format(
+            sql.Identifier(table), sql.Identifier(constraint)
+        )
+    )
+    try:
+        # Independently exercise the coupled invariant with its column CHECK absent.
+        # The failed owner transaction also rolls back the temporary trigger disable.
+        with (  # noqa: PT012 - this transaction must roll back the temporary owner changes
+            pytest.raises(psycopg.errors.CheckViolation, match="journal lineage must match"),
+            owner_tenant_transaction(owner_conn, invoices.ledger.business),
+        ):
+            owner_conn.execute(
+                sql.SQL("alter table gba.{} disable trigger {}").format(
+                    sql.Identifier(table), sql.Identifier(table + "_immutable")
+                )
+            )
+            owner_conn.execute(
+                sql.SQL("update gba.{} set {}=%s where book_id=%s").format(
+                    sql.Identifier(table), sql.Identifier(column)
+                ),
+                (value, invoices.ledger.book),
+            )
+            owner_conn.execute(
+                "select gba.assert_invoice_consistent(%s,%s,%s)",
+                (invoices.ledger.business, invoices.ledger.book, document),
+            )
+    finally:
+        owner_conn.execute(
+            sql.SQL("alter table gba.{} add constraint {} check ({})").format(
+                sql.Identifier(table), sql.Identifier(constraint), sql.SQL(approved.expression)
+            )
+        )
+    assert (await invoices.ledger.client.get("/health/ready")).status_code == 200
 
 
 @pytest.mark.parametrize(
