@@ -109,6 +109,8 @@ class InvoiceDocumentView(Versioned):
             self.total, self.minor_units
         ):
             raise ValueError("Invoice total must equal the exact line amounts")
+        if self.state == "issued" and self.revision < 2:
+            raise ValueError("An issued version follows a saved draft")
         refs = (self.entry_id, self.obligation_id, self.issued_on, self.attestation)
         if self.state == "issued" and any(value is None for value in refs):
             raise ValueError("An issued invoice has its actual obligation and journal references")

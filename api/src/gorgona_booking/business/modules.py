@@ -162,8 +162,7 @@ MODULES: tuple[PlatformModule, ...] = (
         _OPTIONAL,
         ("finance", "counterparties"),
         next(scenario.status for scenario in SCENARIOS if scenario.id == "FIN-03"),
-        "Invoices and external settlements are not available yet. "
-        "This workflow cannot be enabled.",
+        "Invoices and external settlements are not available yet. This workflow cannot be enabled.",
         "New invoices, obligations, reserves and external confirmations. "
         "History, recovery and eligible non-money release must remain available.",
     ),

@@ -287,6 +287,16 @@ def test_invoice_view_validates_actual_totals_and_issued_references() -> None:
         "created_at": datetime.now(UTC).isoformat(),
     }
     assert InvoiceDocumentView.model_validate(data).total == "0.30"
+    issued = data | {
+        "state": "issued",
+        "entry_id": str(uuid7()),
+        "obligation_id": str(uuid7()),
+        "issued_on": "2026-10-06",
+        "attestation": "confirmed_account_treatment",
+    }
+    with pytest.raises(ValidationError):
+        InvoiceDocumentView.model_validate(issued)
+    assert InvoiceDocumentView.model_validate(issued | {"revision": 2}).state == "issued"
     for changes in (
         {"schema_version": True},
         {"minor_units": True},
