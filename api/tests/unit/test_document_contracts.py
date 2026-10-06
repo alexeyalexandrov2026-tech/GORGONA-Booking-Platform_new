@@ -13,6 +13,7 @@ from gorgona_booking.business.document_contracts import (
     UnlinkCounterpartyInput,
 )
 from gorgona_booking.db import schema_guard
+from gorgona_booking.db.financial_guard import FINANCIAL_BOUNDARY, FINANCIAL_PARAMETERS
 from gorgona_booking.db.ledger_guard import LEDGER_BOUNDARY, LEDGER_PARAMETERS
 
 
@@ -110,8 +111,9 @@ def test_downloads_are_attachments_with_an_ascii_fallback(name: str, fallback: s
 def test_guard_binds_one_parameter_per_placeholder() -> None:
     placeholders = schema_guard._ACCESS_BOUNDARY.count("%s")
     assert placeholders == 5 * len(schema_guard._DEFINITIONS) + 8 + 6 * 5 + 1
-    assert len(schema_guard._DEFINITIONS) == 50
+    assert len(schema_guard._DEFINITIONS) == 57
     assert LEDGER_BOUNDARY.count("%s") == len(LEDGER_PARAMETERS)
+    assert FINANCIAL_BOUNDARY.count("%s") == len(FINANCIAL_PARAMETERS)
     assert len(schema_guard._OCCUPANCY_TRIGGERS) == 5
     assert len(schema_guard._MODULE_TRIGGERS) == 19
     assert {module for _, _, module in schema_guard._MODULE_TRIGGERS} == {

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import {
   entrySchema,
+  entryListSchema,
   periodSchema,
   trialBalanceSchema,
   minorUnits,
@@ -44,6 +45,45 @@ const posted = {
     },
   ],
 };
+test("invoice origins require negotiated v2 and retain exact money checks", () => {
+  const invoice = { ...posted, schema_version: 2, source_kind: "invoice" };
+  expect(entrySchema.safeParse(invoice).success).toBe(true);
+  expect(entrySchema.safeParse({ ...invoice, schema_version: 1 }).success).toBe(
+    false,
+  );
+  expect(entrySchema.safeParse({ ...invoice, schema_version: 3 }).success).toBe(
+    false,
+  );
+  expect(
+    entrySchema.safeParse({ ...invoice, source_kind: "unknown" }).success,
+  ).toBe(false);
+  expect(entrySchema.safeParse({ ...invoice, total: "1.00" }).success).toBe(
+    false,
+  );
+  const summary = {
+    entry_id: invoice.entry_id,
+    entry_date: invoice.entry_date,
+    period: invoice.period,
+    currency: invoice.currency,
+    source_kind: invoice.source_kind,
+    source_id: invoice.source_id,
+    memo: invoice.memo,
+    total: invoice.total,
+    reverses_entry_id: invoice.reverses_entry_id,
+    reversed_by_entry_id: invoice.reversed_by_entry_id,
+    created_at: invoice.created_at,
+  };
+  const page = {
+    ...base,
+    schema_version: 2,
+    items: [summary],
+    next_cursor: null,
+  };
+  expect(entryListSchema.safeParse(page).success).toBe(true);
+  expect(
+    entryListSchema.safeParse({ ...page, schema_version: 1 }).success,
+  ).toBe(false);
+});
 test("ledger money remains exact beyond JavaScript safe integers", () => {
   expect(minorUnits("90071992547409.93", 2)).toBe(BigInt("9007199254740993"));
   expect(minorUnits("0.001", 3)).toBe(BigInt(1));

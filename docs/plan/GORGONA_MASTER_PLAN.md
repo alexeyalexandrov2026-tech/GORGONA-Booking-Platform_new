@@ -1,6 +1,18 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
-**H1, 6 октября:** после указания владельца продолжить опубликован план PR13
+**H1 backend checkpoint, 6 October:** reviewed source2d5a8f9 on
+codex/package-h1-persistence adds forward0021 and real invoice draft/history/
+atomic issue with one obligation and balanced G accrual. Journal read-v2 and
+permanent minimal recovery are implemented. [Draft PR15](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/15)
+targets foundation PR14. Root full953/4skip and independent47 PG/109 units PASS;
+H1-R01 closed. [Current handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md),
+[evidence](evidence/2026-10-06-h1-backend/VALIDATION.md).
+FIN-03/02 remain planned and finance_documents closed; H2 settlements, H3
+credits/refunds and H4 invoice UI/admission remain ahead. Local progression
+and draft publication are authorized; no production/provider acceptance.
+Earlier planning statements are historical for their SHA.
+
+**Historical H1 foundation, 6 октября:** после указания владельца продолжить опубликован план PR13
 и создана ветка codex/package-h-invoices. Контракты, денежная арифметика и
 закрытый finance_documents/registry2 проверены на source843d0b3. Это основа;
 полный H1 еще IN PROGRESS, FIN-03/02 planned. [Передача H1](NEXT_AGENT_PACKAGE_H1_2026-10-06.md),

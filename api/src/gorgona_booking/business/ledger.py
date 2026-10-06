@@ -11,7 +11,7 @@ is a reversal and a new entry. The database re-checks every rule.
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import date
-from typing import Any
+from typing import Any, Literal, overload
 from uuid import UUID, uuid7
 
 from psycopg.errors import (
@@ -38,9 +38,13 @@ from gorgona_booking.business.ledger_contracts import (
     Currency,
     EntryInput,
     EntryReceipt,
+    InvoicePosting,
     JournalEntryList,
+    JournalEntryListV2,
     JournalEntrySummary,
+    JournalEntrySummaryV2,
     JournalEntryView,
+    JournalEntryViewV2,
     JournalLine,
     LedgerAccount,
     LedgerAccountList,
@@ -108,6 +112,10 @@ class EntryReversedError(ConflictError):
 
 class AccountCodeTakenError(ConflictError):
     code = "LEDGER_ACCOUNT_CODE_TAKEN"
+
+
+class JournalUpgradeRequiredError(ConflictError):
+    code = "JOURNAL_VERSION_REQUIRED"
 
 
 class CommandCancelledError(ConflictError):
@@ -360,7 +368,7 @@ _FOREIGN_KEYS = {
 async def _writes(conn: RuntimeConnection) -> AsyncIterator[None]:
     """One savepoint of ledger inserts; database refusals become domain errors."""
     try:
-        async with module_writes(FINANCE_MODULE), conn.transaction():
+        async with module_writes(FINANCE_MODULE, "finance_documents"), conn.transaction():
             yield
             # Run the deferred balance check now, inside this command.
             await conn.execute(
@@ -793,8 +801,21 @@ _ENTRY_COLUMNS = (
 )
 
 
-def _entry_summary(row: tuple[Any, ...]) -> JournalEntrySummary:
-    return JournalEntrySummary(
+@overload
+def _entry_summary(
+    row: tuple[Any, ...], *, view_version: Literal[1] = 1
+) -> JournalEntrySummary: ...
+@overload
+def _entry_summary(row: tuple[Any, ...], *, view_version: Literal[2]) -> JournalEntrySummaryV2: ...
+def _entry_summary(
+    row: tuple[Any, ...], *, view_version: Literal[1, 2] = 1
+) -> JournalEntrySummary | JournalEntrySummaryV2:
+    if view_version == 1 and row[5] not in ("manual", "opening", "reversal"):
+        raise JournalUpgradeRequiredError(
+            "This journal needs view schema version 2", required_version=2
+        )
+    model = JournalEntrySummaryV2 if view_version == 2 else JournalEntrySummary
+    return model(
         entry_id=row[0],
         entry_date=row[1],
         period=month_text(row[2]),
@@ -809,9 +830,32 @@ def _entry_summary(row: tuple[Any, ...]) -> JournalEntrySummary:
     )
 
 
+@overload
 async def load_entry(
-    conn: RuntimeConnection, business_id: UUID, book_id: UUID, entry_id: UUID
-) -> JournalEntryView | None:
+    conn: RuntimeConnection,
+    business_id: UUID,
+    book_id: UUID,
+    entry_id: UUID,
+    *,
+    view_version: Literal[1] = 1,
+) -> JournalEntryView | None: ...
+@overload
+async def load_entry(
+    conn: RuntimeConnection,
+    business_id: UUID,
+    book_id: UUID,
+    entry_id: UUID,
+    *,
+    view_version: Literal[2],
+) -> JournalEntryViewV2 | None: ...
+async def load_entry(
+    conn: RuntimeConnection,
+    business_id: UUID,
+    book_id: UUID,
+    entry_id: UUID,
+    *,
+    view_version: Literal[1, 2] = 1,
+) -> JournalEntryView | JournalEntryViewV2 | None:
     row = await (
         await conn.execute(
             f"select {_ENTRY_COLUMNS} from gba.journal_entries e "  # noqa: S608 - fixed
@@ -832,7 +876,8 @@ async def load_entry(
             (business_id, entry_id),
         )
     ).fetchall()
-    return JournalEntryView(
+    model = JournalEntryViewV2 if view_version == 2 else JournalEntryView
+    return model(
         business_id=business_id,
         book_id=book_id,
         minor_units=scale,
@@ -847,7 +892,11 @@ async def load_entry(
             )
             for r in lines
         ),
-        **_entry_summary(tuple(row)).model_dump(),
+        **(
+            _entry_summary(tuple(row), view_version=2)
+            if view_version == 2
+            else _entry_summary(tuple(row))
+        ).model_dump(),
     )
 
 
@@ -860,6 +909,7 @@ async def _entry(
     return entry
 
 
+@overload
 async def list_entries(
     conn: RuntimeConnection,
     business_id: UUID,
@@ -868,9 +918,43 @@ async def list_entries(
     period: date | None,
     after: UUID | None,
     limit: int,
-) -> JournalEntryList:
+    view_version: Literal[1] = 1,
+) -> JournalEntryList: ...
+@overload
+async def list_entries(
+    conn: RuntimeConnection,
+    business_id: UUID,
+    book_id: UUID,
+    *,
+    period: date | None,
+    after: UUID | None,
+    limit: int,
+    view_version: Literal[2],
+) -> JournalEntryListV2: ...
+async def list_entries(
+    conn: RuntimeConnection,
+    business_id: UUID,
+    book_id: UUID,
+    *,
+    period: date | None,
+    after: UUID | None,
+    limit: int,
+    view_version: Literal[1, 2] = 1,
+) -> JournalEntryList | JournalEntryListV2:
     """Newest entry date first; a reversal is listed on its own date."""
     await require_book(conn, business_id, book_id)
+    if view_version == 1:
+        owned = await (
+            await conn.execute(
+                "select 1 from gba.journal_entries where tenant_id=%s and book_id=%s "
+                "and source_kind not in ('manual','opening','reversal') limit 1",
+                (business_id, book_id),
+            )
+        ).fetchone()
+        if owned:
+            raise JournalUpgradeRequiredError(
+                "This book needs journal view schema version 2", required_version=2
+            )
     rows = await (
         await conn.execute(
             f"select {_ENTRY_COLUMNS} from gba.journal_entries e "  # noqa: S608 - fixed
@@ -890,6 +974,14 @@ async def list_entries(
             },
         )
     ).fetchall()
+    if view_version == 2:
+        items_v2 = tuple(_entry_summary(tuple(row), view_version=2) for row in rows[:limit])
+        return JournalEntryListV2(
+            business_id=business_id,
+            book_id=book_id,
+            items=items_v2,
+            next_cursor=items_v2[-1].entry_id if len(rows) > limit else None,
+        )
     items = tuple(_entry_summary(tuple(row)) for row in rows[:limit])
     return JournalEntryList(
         business_id=business_id,
@@ -924,27 +1016,41 @@ async def _require_new_entry(conn: RuntimeConnection, business_id: UUID, entry_i
         raise OperationPostedError("This entry was already posted; reverse it to correct it")
 
 
-async def post_entry(
+async def append_invoice_journal(
     conn: RuntimeConnection,
     *,
     business_id: UUID,
     book_id: UUID,
     entry_id: UUID,
     user_id: UUID,
-    actor: str,
-    key: str,
-    body: EntryInput,
-) -> JournalEntryView:
-    """Post one balanced entry in one currency to an open month of the book."""
-    scope = IdempotencyScope(business_id, actor, _ENTRY, key)
-    request_hash = commands.fingerprint(
-        {"book_id": str(book_id), "entry_id": str(entry_id), **body.model_dump(mode="json")}
-    )
-    receipt = await _claim(conn, scope, request_hash, EntryReceipt)
-    if receipt is not None:
-        return await _entry(conn, business_id, book_id, receipt.entry_id)
+    body: InvoicePosting,
+) -> None:
+    """Append to G in the caller transaction; H must flush its complete lineage.
 
+    This does not claim a command or write an invoice receipt. SQL rejects an
+    arbitrary origin, incomplete lineage and later alterations independently.
+    """
+    await _lock(conn, business_id)
     await require_module(conn, business_id, FINANCE_MODULE)
+    await _append_journal(
+        conn,
+        business_id=business_id,
+        book_id=book_id,
+        entry_id=entry_id,
+        user_id=user_id,
+        body=body,
+    )
+
+
+async def _append_journal(
+    conn: RuntimeConnection,
+    *,
+    business_id: UUID,
+    book_id: UUID,
+    entry_id: UUID,
+    user_id: UUID,
+    body: EntryInput | InvoicePosting,
+) -> None:
     book = await require_book(conn, business_id, book_id)
     await _require_new_entry(conn, business_id, entry_id)
     scale = await _scale(conn, body.currency, "currency")
@@ -1020,6 +1126,37 @@ async def post_entry(
                 amounts,
             ),
         )
+
+
+async def post_entry(
+    conn: RuntimeConnection,
+    *,
+    business_id: UUID,
+    book_id: UUID,
+    entry_id: UUID,
+    user_id: UUID,
+    actor: str,
+    key: str,
+    body: EntryInput,
+) -> JournalEntryView:
+    """Post one balanced entry in one currency to an open month of the book."""
+    scope = IdempotencyScope(business_id, actor, _ENTRY, key)
+    request_hash = commands.fingerprint(
+        {"book_id": str(book_id), "entry_id": str(entry_id), **body.model_dump(mode="json")}
+    )
+    receipt = await _claim(conn, scope, request_hash, EntryReceipt)
+    if receipt is not None:
+        return await _entry(conn, business_id, book_id, receipt.entry_id)
+
+    await require_module(conn, business_id, FINANCE_MODULE)
+    await _append_journal(
+        conn,
+        business_id=business_id,
+        book_id=book_id,
+        entry_id=entry_id,
+        user_id=user_id,
+        body=body,
+    )
     await _audit(
         conn,
         business_id,
@@ -1060,6 +1197,15 @@ async def reverse_entry(
 
     await require_module(conn, business_id, FINANCE_MODULE)
     await require_book(conn, business_id, book_id)
+    origin = await (
+        await conn.execute(
+            "select source_kind from gba.journal_entries "
+            "where tenant_id=%s and book_id=%s and id=%s",
+            (business_id, book_id, entry_id),
+        )
+    ).fetchone()
+    if origin is not None and origin[0] == "invoice":
+        raise LedgerStateError("Correct this entry through its financial document")
     original = await load_entry(conn, business_id, book_id, entry_id)
     if original is None:
         raise NotFoundError("Journal entry not found")

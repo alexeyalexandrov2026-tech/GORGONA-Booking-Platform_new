@@ -1,5 +1,7 @@
 # Next agent handoff — Package G accepted, H1 foundation in progress
 
+> Historical foundation snapshot. Continue with the [current backend handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md) and [current prompt](NEXT_AGENT_PROMPT_H1_BACKEND_2026-10-06.md). This file's next H1 persistence step is now implemented on source2d5a8f9.
+
 Date: 2026-10-06. This is the current continuation document. Earlier handoffs
 and planning statements describe their own snapshots. The owner's latest
 request is to prepare this handoff, after approving H1 source publication.

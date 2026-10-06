@@ -75,7 +75,7 @@ export function fetchEntries(business: string, book: string, after?: string) {
   return read(
     business,
     entryListSchema,
-    `${base(business)}/books/${book}/entries${after ? `?after=${after}` : ""}`,
+    `${base(business)}/books/${book}/entries?schema_version=2${after ? `&after=${after}` : ""}`,
     book,
   );
 }
@@ -83,7 +83,7 @@ export async function fetchEntry(business: string, book: string, id: string) {
   const result = await read(
     business,
     entrySchema,
-    `${base(business)}/books/${book}/entries/${id}`,
+    `${base(business)}/books/${book}/entries/${id}?schema_version=2`,
     book,
   );
   if (result.entry_id !== id)

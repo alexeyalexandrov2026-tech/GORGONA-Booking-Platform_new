@@ -584,10 +584,25 @@ export function Ledger({
                       book.book_id,
                       entries.next_cursor!,
                     );
-                    setEntries({
-                      ...page,
-                      items: [...entries.items, ...page.items],
-                    });
+                    if (entries.schema_version !== page.schema_version) {
+                      setEntries(await fetchEntries(businessId, book.book_id));
+                    } else if (
+                      entries.schema_version === 1 &&
+                      page.schema_version === 1
+                    ) {
+                      setEntries({
+                        ...page,
+                        items: [...entries.items, ...page.items],
+                      });
+                    } else if (
+                      entries.schema_version === 2 &&
+                      page.schema_version === 2
+                    ) {
+                      setEntries({
+                        ...page,
+                        items: [...entries.items, ...page.items],
+                      });
+                    }
                   })
                 }
               >
@@ -611,7 +626,8 @@ export function Ledger({
                   </li>
                 ))}
               </ul>
-              {entry.source_kind !== "reversal" &&
+              {(entry.source_kind === "manual" ||
+                entry.source_kind === "opening") &&
                 !entry.reversed_by_entry_id && (
                   <form
                     aria-label="Reverse journal entry"

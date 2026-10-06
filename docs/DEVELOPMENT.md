@@ -1,6 +1,41 @@
 # Development
 
-## H1 foundation (2026-10-06)
+## H1 invoice backend, behind closed readiness (2026-10-06)
+
+[Current handoff](plan/NEXT_AGENT_H1_BACKEND_2026-10-06.md),
+[validation/changed files](plan/evidence/2026-10-06-h1-backend/VALIDATION.md) and
+[draft PR15](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/15).
+Source2d5a8f9 adds forward0021; do not change published migrations/checksums.
+FIN-03/02 stay planned. finance_documents needs current verified readiness
+and its own published selection with finance/counterparties dependencies.
+Positive invoice fixtures are test-only; existing G enablement cannot enable H.
+
+API prefix `/v1/businesses/{business_id}/financial-documents`:
+GET `/books/{book_id}/invoices`; GET `/books/{book_id}/invoices/{document_id}`
+(optionally `revision`); PUT the same document path for a draft; POST
+`/books/{book_id}/invoices/{document_id}/issue`; POST `/commands/{key}/resolve`
+and `/commands/{key}/cancel`. Company owner/manager finance.read/manage apply.
+Writes require Idempotency-Key and typed schema1 bodies; issue requires expected
+revision, date and confirmed_account_treatment. Control/counter accounts
+are explicit. One issue transaction couples exact immutable versions/lines,
+obligation, G journal/lineage, audit and permanent reference receipt.
+Read/history/recovery/cancel remain available OFF.
+
+Ledger GET entry/list explicitly accepts `schema_version=2`. V1 reads of H origins
+return JOURNAL_VERSION_REQUIRED; old write-v1 remains. G trial balance includes
+all entries, and API/SQL refuse generic reversal of invoice-origin records.
+Existing ledger client negotiates v2; this adds no invoice UI.
+H CHECK approvals use exact repository-owned PG18 predicates without stripping
+literal whitespace; missing/weakened/unvalidated/altered controls fail503.
+Scope restoration includes the0021 policy footer and all57 policy definitions.
+
+Focused real PG tests: `tests/integration/test_invoice_issue.py`; units:
+`tests/unit/test_financial_documents.py` and `test_ledger_contracts.py`.
+Use the current handoff's own-checkout/PYTHONPATH/private-cluster instructions.
+Root full953/4skip, Ruff/format/mypy204 and independent47 PG/109 units PASS;
+full H acceptance, H2–H4/provider/production remain separate.
+
+## Historical H1 foundation (2026-10-06)
 
 [Evidence](plan/evidence/2026-10-06-h1-foundation/VALIDATION.md) and
 [continuation](plan/NEXT_AGENT_PACKAGE_H1_2026-10-06.md) record the current source.

@@ -1,6 +1,21 @@
 # GORGONA — реестр реализации
 
-## Актуально H1: контракты и инварианты, 2026-10-06
+## Current H1 backend — bounded implementation, 2026-10-06
+
+Branch `codex/package-h1-persistence` from foundation18e3f5e, reviewed
+source2d5a8f9. [Draft PR15](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/15)
+targets PR14. [Handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md),
+[exact checks/changed files](evidence/2026-10-06-h1-backend/VALIDATION.md).
+Forward0021, typed invoice draft/history/issue, immutable principal obligation,
+atomic balanced G origin/lineage/audit/receipt, permanent recovery and negotiated
+journal-v2 are implemented behind closed finance_documents readiness.
+Root full953/4skip/378.14s; lint/format/mypy204 PASS. Independent H1-R01 closure:
+47 real PG and109 relevant units PASS, own checkout/cluster.
+FIN-03/FIN-02 remain planned; H2–H4 and complete H criteria remain NOT TESTED.
+G/FIN-01 retains technically_verified. No invoice UI, provider, funds, merge,
+deployment or production migration. Next coherent work is H2 settlement flow.
+
+## Historical H1 foundation: contracts and invariants, 2026-10-06
 
 Ветка codex/package-h-invoices, source843d0b3, parent925ae02/PR13.
 [Передача H1](NEXT_AGENT_PACKAGE_H1_2026-10-06.md),

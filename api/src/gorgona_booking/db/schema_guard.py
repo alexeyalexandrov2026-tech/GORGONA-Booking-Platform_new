@@ -5,6 +5,11 @@ the booking-module trigger of ADR-0019, which refuses new bookings when a publis
 configuration disables booking.
 """
 
+from gorgona_booking.db.financial_guard import (
+    FINANCIAL_BOUNDARY,
+    FINANCIAL_PARAMETERS,
+    FINANCIAL_TABLES,
+)
 from gorgona_booking.db.ledger_guard import LEDGER_BOUNDARY, LEDGER_PARAMETERS
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import DatabaseUnavailableError
@@ -362,6 +367,7 @@ _DEFINITIONS = [
             "business_configuration_modules",
             *_MODULE_TABLES,
             "ledger_command_cancellations",
+            *FINANCIAL_TABLES,
         )
     ],
     # Branch sessions read effective module states; only company-wide sessions write them.
@@ -510,6 +516,9 @@ async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
         parameters += [table, trigger, kind, function, columns, _compact(source)]
     parameters.append(_compact(_RESERVATION_ALLOCATED_SOURCE))
     parameters.extend(LEDGER_PARAMETERS)
-    row = await (await conn.execute(_ACCESS_BOUNDARY + LEDGER_BOUNDARY, parameters)).fetchone()
+    parameters.extend(FINANCIAL_PARAMETERS)
+    row = await (
+        await conn.execute(_ACCESS_BOUNDARY + LEDGER_BOUNDARY + FINANCIAL_BOUNDARY, parameters)
+    ).fetchone()
     if row is None or row[0] is not True:
         raise DatabaseUnavailableError("Required database access controls are not ready")

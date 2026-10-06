@@ -1,6 +1,28 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-06)
 
-## Актуально: передача H1 после публикации PR14
+## Current: H1 invoice backend and successor handoff
+
+Read [full handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md) and
+[copyable prompt](NEXT_AGENT_PROMPT_H1_BACKEND_2026-10-06.md).
+Branch `codex/package-h1-persistence`, own checkout
+`C:\Users\alexa\.codex\worktrees\package-h1-persistence\Gorgona Booking`.
+Reviewed source `2d5a8f917b69f1d52adea96aa8209722d1a24d42`; documentation delivery
+is a successor. [Draft PR15](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/15)
+targets foundation PR14. Read its exact HEAD/CI before continuing.
+
+Forward0021, immutable invoice draft/history/issue, principal obligation and
+atomic G accrual, permanent resolve/cancel recovery and journal read-v2 exist.
+H1-R01 independently closed; root full953 passed/4 skipped/378.14s,
+Ruff/format/mypy204 PASS; independent47 PG and109 relevant units PASS.
+[Evidence, changed files and limits](evidence/2026-10-06-h1-backend/VALIDATION.md).
+G/FIN-01 technically_verified; FIN-03/02 planned, finance_documents closed.
+Next: H2 manual new accruals and settlement/reserve/partial external confirmation;
+then H3 credits/refunds and H4 invoice UI/admission. No H acceptance/promotion.
+Owner/E2 dirty trees19/9 are preserved; own PG51456/reviewer51460 stopped.
+Local continuation/draft publication authorized; production/provider/merge is
+not authorized. All older instructions below describe their dated snapshots.
+
+## Historical: H1 foundation after PR14
 
 Сначала [полная передача следующему агенту](NEXT_AGENT_PACKAGE_H1_2026-10-06.md)
 и [готовый prompt](NEXT_AGENT_PROMPT_H1_2026-10-06.md).
