@@ -105,7 +105,8 @@ SCENARIOS: tuple[ScenarioReadiness, ...] = (
     ),
     _verified(
         "BASE-03",
-        "Confirmed booking value per currency is not reported as paid money; no ledger exists.",
+        "Confirmed booking value per currency is not reported as paid money; bookings do not "
+        "automatically post ledger entries.",
         9,
         "api/tests/unit/test_booking_metrics.py",
     ),
@@ -147,7 +148,21 @@ SCENARIOS: tuple[ScenarioReadiness, ...] = (
         "docs/plan/evidence/2026-10-04-delegation/ACCEPTANCE.md",
     ),
     _planned("CORE-04", "Shared resource occupancy across modules is not implemented."),
-    _planned("FIN-01", "No double-entry ledger, chart of accounts or period close."),
+    ScenarioReadiness(
+        id="FIN-01",
+        status=Readiness.TECHNICALLY_VERIFIED,
+        code_version="95a0de4ac9f5aa3c96b054c5504f59115b0e4b69",
+        schema_version=20,
+        scope="Ledger foundation: entity-owned books, balanced double entry, immutable history, "
+        "reversals, monthly closing and currency-separated trial balances. "
+        "Technical evidence includes exact-SHA CI and independent review. "
+        "No invoices, payments, tax filing, payroll, FX or production approval.",
+        evidence=(
+            "docs/plan/evidence/2026-10-06-ledger/ACCEPTANCE.md",
+            "docs/plan/evidence/2026-10-06-ledger/INDEPENDENT_REVIEW_95a0de4.md",
+        ),
+        verified_on=date(2026, 10, 6),
+    ),
     _planned("FIN-02", "No accepted payment integration."),
     _planned("FIN-03", "No financial obligations, reserves or partial payouts."),
     _planned("STOCK-01", "No owner-linked material documents or movements."),

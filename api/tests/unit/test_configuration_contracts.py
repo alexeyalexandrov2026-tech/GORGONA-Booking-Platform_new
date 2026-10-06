@@ -65,7 +65,7 @@ def test_commands_need_a_real_revision() -> None:
     draft = ConfigurationDraftInput(
         expected_version=0, profile_revision=1, module_ids=("finance", BOOKING_MODULE)
     )
-    # Planned modules are accepted in a draft; validation explains why they cannot publish.
+    # A draft accepts registered modules; validation enforces readiness before publication.
     assert draft.module_ids == ("finance", BOOKING_MODULE)
 
 
@@ -95,12 +95,14 @@ def test_module_registry_is_consistent() -> None:
         "counterparties",
         BOOKING_MODULE,
         "documents",
+        "finance",
     ]
     assert BASELINE_MODULE_IDS == (BOOKING_MODULE,)
 
 
 def test_selection_rules() -> None:
     assert selection_problems([BOOKING_MODULE]) == []
+    assert selection_problems(["finance"]) == []
     assert selection_problems([]) == []
     problems = selection_problems(["sales"])
     assert ("MODULE_NOT_READY", "sales") in {(p[0], p[1]) for p in problems}

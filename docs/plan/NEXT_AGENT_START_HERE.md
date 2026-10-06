@@ -1,5 +1,25 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-05)
 
+## Актуально: пакет G — финансовая основа, 2026-10-06
+
+Продолжать в собственной ветке `codex/package-g-ledger-review`, checkout
+`C:\Users\alexa\.codex\worktrees\package-g-ledger-review\Gorgona Booking`.
+База — принятый план этапа 2 `151472a`; прежняя копия с начатым G сохранена.
+[Передача G](NEXT_AGENT_PACKAGE_G_2026-10-06.md) и
+[свежая приемка](evidence/2026-10-06-ledger/ACCEPTANCE.md) имеют приоритет над
+историческими поручениями ниже.
+
+Миграция 0020, книги/счета/проводки/сторно/периоды/ведомость, API и /ledger
+реализованы. Воспроизведен и закрыт SQL-обход баланса после раннего SET CONSTRAINTS.
+Все 7 найденных замечаний независимых обзоров закрыты, включая extra permissive
+policies. Проверенный код `95a0de4`: full local 858 passed/4 skipped, CI 861 passed/
+1 skipped с Docker; независимый final guard code/unit review PASS в своих пределах.
+Finance/FIN-01 — technically_verified отдельным коммитом приемки. API/browser
+публикуют finance через обычный реестр без положительного override; focused68
+Python и4 browser PASS. Recovery после reload/nav и safe cancel сохраняются.
+Проверить свежий exact-SHA CI приемочного HEAD в [draft PR #12](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/12).
+Без merge, deployment и промышленных миграций.
+
 ## Актуально: этап 2 — план согласован владельцем 2026-10-06 (1A, 2A, 3A, 4B)
 
 [План этапа 2](STAGE2_PLAN_2026-10-06.md) и [ADR-0023 (Accepted)](../adr/0023-ledger-foundation.md):

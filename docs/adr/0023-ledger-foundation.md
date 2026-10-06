@@ -77,6 +77,36 @@ currencies are not mixed; a closed period forbids posting".
 
 ## Consequences
 
+### Local implementation — 2026-10-06
+
+Package G is implemented in codex/package-g-ledger-review (migration 0020,
+permission map v5, real ledger API and /ledger UI). The original uncommitted work
+is preserved separately. A reproduced early-SET-CONSTRAINTS balance bypass is
+closed by deferred triggers on both entries and lines. Readiness inspects the
+approved integrity and access definitions from the packaged migration.
+Mutations require READ COMMITTED to prevent stale month/account/module snapshots
+after lock waits. Extra original lines after reversal are rejected. Function source
+checks are exact, including SQL literals. A minimal session-scoped recovery reference
+and serialized resolve/cancel API preserve unknown outcomes across reload/navigation;
+permanent cancellation records reject delayed originals. Recovery has no financial
+effect and remains available when finance is disabled. No financial payload or token
+is persisted in browser storage; cross-browser intent deduplication still needs an
+explicit business operation ID. Trial balances validate each row equation as well
+as column totals. These decisions close all five initial independent review findings.
+Follow-up review found and closed entity reselection state loss. A further
+fault-injection check found that an extra permissive policy could OR away tenant
+isolation while preserving the approved policy name. Readiness now rejects any
+unapproved permissive policy on the eight ledger tables; SELECT/INSERT/ALL and
+public/runtime/member-role variants are covered. No production policy repair is
+automatic. Final evidence must correspond to the SHA containing this guard.
+[Current evidence and acceptance gates](../plan/evidence/2026-10-06-ledger/ACCEPTANCE.md).
+Finance and FIN-01 are technically verified in a separate acceptance commit,
+based on 95a0de4: full local 858 passed/4 skipped, exact-SHA CI 861 passed/1 skipped,
+earlier independent runtime/browser review and final independent guard-delta
+review. Positive API/browser readiness overrides are removed; publication uses the
+normal registry. The acceptance HEAD must also pass fresh CI. This is not
+authorization for production migration or deployment.
+
 Later packages (invoices and payments H, materials J, provider events K) post through
 this ledger instead of keeping their own money records. Currency conversion, group
 consolidation, year-end closing and imports are separate decisions. Production

@@ -143,7 +143,19 @@ MODULES: tuple[PlatformModule, ...] = (
         "New uploads, documents, versions and counterparty links. Reads, history and "
         "downloads continue.",
     ),
-    _module("finance", "Finance", _OPTIONAL, ("organization",)),
+    _module(
+        "finance",
+        "Finance",
+        _OPTIONAL,
+        ("organization",),
+        Readiness.TECHNICALLY_VERIFIED,
+        "Ledger foundation (ADR-0023): books, neutral chart, double entry, reversals, monthly "
+        "periods and currency-separated trial balances. Technical acceptance: "
+        "docs/plan/evidence/2026-10-06-ledger/ACCEPTANCE.md (code 95a0de4). "
+        "No invoices, payments, tax filing, payroll or currency conversion.",
+        "New books, account versions, entries, reversals and period events. Reads and "
+        "unresolved-command recovery continue.",
+    ),
     _module("procurement", "Procurement", _OPTIONAL, ("counterparties", "finance")),
     _module("inventory", "Inventory and customer warehouses", _OPTIONAL, ("products_services",)),
     _module("assets", "Assets and maintenance", _OPTIONAL, ("organization",)),

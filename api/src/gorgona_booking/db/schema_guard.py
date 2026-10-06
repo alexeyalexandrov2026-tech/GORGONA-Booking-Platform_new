@@ -5,6 +5,7 @@ the booking-module trigger of ADR-0019, which refuses new bookings when a publis
 configuration disables booking.
 """
 
+from gorgona_booking.db.ledger_guard import LEDGER_BOUNDARY, LEDGER_PARAMETERS
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import DatabaseUnavailableError
 
@@ -263,11 +264,21 @@ _DOCUMENT_TABLES = (
     "document_versions",
     "document_counterparty_links",
 )
-_MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES)
+_LEDGER_TABLES = (
+    "ledger_books",
+    "ledger_book_versions",
+    "ledger_accounts",
+    "ledger_account_versions",
+    "journal_entries",
+    "journal_lines",
+    "ledger_period_events",
+)
+_MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
 _MODULE_TRIGGERS = (
     *[(table, f"{table}_require_module", "counterparties") for table in _COUNTERPARTY_TABLES],
     *[(table, f"{table}_require_module", "documents") for table in _DOCUMENT_TABLES],
+    *[(table, f"{table}_require_module", "finance") for table in _LEDGER_TABLES],
     (
         "document_counterparty_links",
         "document_counterparty_links_require_counterparties",
@@ -350,6 +361,7 @@ _DEFINITIONS = [
             "business_configuration_versions",
             "business_configuration_modules",
             *_MODULE_TABLES,
+            "ledger_command_cancellations",
         )
     ],
     # Branch sessions read effective module states; only company-wide sessions write them.
@@ -407,7 +419,7 @@ and exists (
       and f.prorettype = 'pg_catalog.trigger'::regtype and f.prokind = 'f'
       and f.provolatile = 'v' and f.proparallel = 'u'
       and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
-      and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
+      and f.prosrc = %s
 ) and not exists (
     select 1 from unnest(%s::text[], %s::text[], %s::bytea[])
         required(table_name, trigger_name, arguments)
@@ -487,7 +499,7 @@ async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
     parameters: list[object] = [field for definition in _DEFINITIONS for field in definition]
     parameters += [_FUNCTION_SOURCE, _compact(_BOOKING_MODULE_SOURCE)]
     parameters += [
-        _compact(_OPTIONAL_MODULE_SOURCE),
+        _OPTIONAL_MODULE_SOURCE,
         [table for table, _, _ in _MODULE_TRIGGERS],
         [trigger for _, trigger, _ in _MODULE_TRIGGERS],
         [module.encode() + b"\x00" for _, _, module in _MODULE_TRIGGERS],
@@ -497,6 +509,7 @@ async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
     for table, trigger, kind, function, columns, source in _OCCUPANCY_TRIGGERS:
         parameters += [table, trigger, kind, function, columns, _compact(source)]
     parameters.append(_compact(_RESERVATION_ALLOCATED_SOURCE))
-    row = await (await conn.execute(_ACCESS_BOUNDARY, parameters)).fetchone()
+    parameters.extend(LEDGER_PARAMETERS)
+    row = await (await conn.execute(_ACCESS_BOUNDARY + LEDGER_BOUNDARY, parameters)).fetchone()
     if row is None or row[0] is not True:
         raise DatabaseUnavailableError("Required database access controls are not ready")

@@ -1,5 +1,48 @@
 # Development
 
+## Ledger foundation (package G, ADR-0023)
+
+Migration 0020 adds legal-entity books, neutral starter accounts, integer minor-unit
+double entry, reversals, period events and currency-separated trial balance.
+Company-wide owner/manager permissions are finance.read/manage/close (map v5);
+no branch, delegation or platform support access. /ledger uses real API responses.
+Finance is technically verified on evidence code 95a0de4 and may be enabled by a
+new published configuration; existing configurations are unchanged. API/browser
+tests use the production registry. ledger_support.py only removes acceptance in
+the negative publication-gate test. It never promotes runtime readiness.
+
+API prefix /v1/businesses/{id}/ledger: GET overview; GET/PUT books/{book};
+GET accounts, GET/PUT accounts/{account}; GET entries, GET/PUT entries/{entry};
+POST entries/{entry}/reverse; GET periods and periods/{YYYY-MM};
+POST periods/{YYYY-MM}/close or /reopen; GET trial-balance with period_from,
+period_to and optional currency. Lists use bounded cursors. Commands require an
+Idempotency-Key; book/account changes expect revision and period changes expect sequence.
+Amounts are decimal strings; no floats, payments or currency conversion.
+
+Ledger mutations require READ COMMITTED, including raw SQL; unsupported isolation
+fails before writes. Entry and line deferred triggers enforce balance, and an
+original cannot receive extra lines after reversal. Schema readiness compares the
+approved function bodies exactly; meaningful SQL-literal whitespace is preserved.
+Unexpected permissive policies on any of the eight ledger tables also fail
+readiness and ledger requests with 503: PostgreSQL OR-combines such grants even
+when the approved tenant policy remains intact. Restoring the approved schema is
+an explicit operator action; the API never silently removes database policies.
+
+POST commands/{key}/resolve and /cancel accept a typed command reference scoped to
+the current user and business. Resolve also checks immutable records after ordinary
+receipt expiry. Cancel serializes with posting and permanently seals an unresolved
+key; a delayed original returns LEDGER_COMMAND_CANCELLED. Recovery works when the
+finance module is disabled, since it creates no financial effect. The eighth ledger
+table is this insert-only RLS cancellation record. The UI persists only references
+in sessionStorage before dispatch, without tokens, amounts, memo or request body.
+Reload/navigation keeps writes blocked until recovery; closing the tab or using
+another browser is outside that reference lifetime. Use explicit business operation
+IDs to deduplicate the same intent across independent sessions.
+
+Current source/check outcomes and gates: [package G evidence](plan/evidence/2026-10-06-ledger/ACCEPTANCE.md).
+Web checks include test:management:ledger and ledger-contracts.spec.ts.
+Historical migrations must never be edited in a database that recorded their checksum.
+
 ## Staff resource reservations (Package F step 2, 2026-10-05)
 
 Migration 0019 adds `gba.resource_reservations` (FORCE RLS, branch scope by

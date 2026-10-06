@@ -5,7 +5,7 @@ Roles come from server-side memberships and platform roles, never from token cla
 
 from enum import StrEnum
 
-PERMISSIONS_VERSION = 4
+PERMISSIONS_VERSION = 5
 
 
 class Permission(StrEnum):
@@ -15,6 +15,9 @@ class Permission(StrEnum):
     COUNTERPARTIES_MANAGE = "counterparties.manage"
     DOCUMENTS_READ = "documents.read"
     DOCUMENTS_MANAGE = "documents.manage"
+    FINANCE_READ = "finance.read"
+    FINANCE_MANAGE = "finance.manage"
+    FINANCE_CLOSE = "finance.close"
     BOOKING_READ = "booking.read"
     BOOKING_WRITE = "booking.write"
     CATALOG_READ = "catalog.read"
@@ -43,6 +46,10 @@ _MANAGER = _FRONT_DESK | {
     Permission.COUNTERPARTIES_MANAGE,
     Permission.DOCUMENTS_READ,
     Permission.DOCUMENTS_MANAGE,
+    # Owner decision 2026-10-06: managers may also close and reopen periods.
+    Permission.FINANCE_READ,
+    Permission.FINANCE_MANAGE,
+    Permission.FINANCE_CLOSE,
     Permission.BUSINESS_MANAGE,
     Permission.CATALOG_MANAGE,
     Permission.STAFF_MANAGE,

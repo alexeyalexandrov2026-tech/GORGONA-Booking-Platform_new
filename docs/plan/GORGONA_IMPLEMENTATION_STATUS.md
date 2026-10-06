@@ -1,5 +1,29 @@
 # GORGONA — реестр реализации
 
+## Актуально G: финансовая основа FIN-01, 2026-10-06
+
+От принятого плана этапа 2 `151472a`, ветка `codex/package-g-ledger-review`.
+Собственная рабочая копия, прежний незакоммиченный вариант сохранен.
+Миграция 0020: книги юридических лиц, версии настроек/счетов, точные суммы,
+двойная запись, неизменяемая история, сторно и события закрытия/открытия месяцев.
+Реальные API и /ledger; права owner/manager всей компании, карта v5, FORCE RLS,
+module gates и проверка определений.
+
+Regression red→green подтвердил исправление SQL-обхода баланса. Пять замечаний
+независимого обзора исправлены: сторно/поздние строки, stale snapshot, точные SQL
+литералы, recovery после reload/nav и арифметика строки ведомости. Focused:
+68 Python + 4 desktop/mobile browser после приемки без promotion override;
+SQL-гонки с наблюдением lock; 68 web unit; статика 197 файлов и web build PASS.
+Дополнительная permissive policy теперь вызывает 503 на всех восьми таблицах.
+`95a0de4`: full local 858 passed/4 skipped; exact-SHA CI 861 passed/1 skipped,
+включая обязательный Docker. Независимые обзоры закрыли 3 P1 и 4 P2; final guard
+review — code/unit, PG runtime подтвержден отдельно local/CI. finance/FIN-01
+technically_verified отдельным коммитом приемки. Свежий CI приемочного HEAD —
+в [PR #12](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/12).
+[Приемка](evidence/2026-10-06-ledger/ACCEPTANCE.md),
+[передача](NEXT_AGENT_PACKAGE_G_2026-10-06.md). H–K и промышленная эксплуатация
+этой реализацией не закрываются.
+
 ## Актуально: этап 1 технически закрыт, 2026-10-06
 
 Ветка `claude/stage1-closure` поверх F (`ed7884e`, draft PR #11). CORE-01–04 PASS
