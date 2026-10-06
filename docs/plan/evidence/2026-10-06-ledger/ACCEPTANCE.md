@@ -120,6 +120,22 @@ immutable trigger стоят до marker. Дополнительно обнов�
 и runtime guard не ослаблялись. Свежая проверка affected schema/booking/reservation
 путей: **64 passed / 14.96 s**, после нее заново запущена вся suite.
 
+Третий полный прогон коммита `6735f88`: **1 failed / 846 passed / 4 skipped /
+328.89 s**. Независимый повторный browser review воспроизвел ту же ошибку и
+детерминированно подтвердил red: после полной загрузки выбрать текущее юрлицо
+еще раз — форма книги исчезала. Обработчик теперь не сбрасывает состояние при
+неизменном выборе; в recovery scenario добавлена проверка повторного выбора
+после загрузки. Первоначальные пять замечаний повторно прошли независимую SQL/API
+проверку; найденный дополнительный P2 проверяется отдельно.
+
+Draft [PR #12](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/12)
+нацелен на `claude/stage2-finance-plan`. Первый
+[CI 37494622944](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37494622944)
+для `6735f88` — FAIL: strict mypy отверг обращение теста к неэкспортированным
+импортам LEDGER_BOUNDARY/LEDGER_PARAMETERS через schema_guard. Тест теперь
+импортирует определения непосредственно из ledger_guard; свежий local strict
+mypy по 197 файлам PASS. Ожидается CI нового коммита после UI исправления.
+
 ## Свежая проверка
 
 | Проверка | Результат |
@@ -133,7 +149,7 @@ immutable trigger стоят до marker. Дополнительно обнов�
 | Strict mypy | PASS; 197 source files |
 | Восстановление schema boundary и регрессии booking/reservations | PASS: 64 passed / 14.96 s |
 | Полная suite окончательного дерева | RUNNING — результат будет записан после завершения |
-| CI точного SHA G | NOT TESTED — новый код еще не опубликован |
+| CI точного SHA G | FAIL для 6735f88; strict import исправлен, новый CI предстоит |
 | Независимый обзор | Первичный: 2 P1 и 3 P2, исправлены; повторная независимая проверка выполняется с разрешения владельца |
 
 Логи этой сессии находятся в игнорируемом `handoff/package-g-review/`; учетные

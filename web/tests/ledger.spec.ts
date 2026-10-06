@@ -197,6 +197,18 @@ test("unknown entry identity survives reload and safe cancellation rejects a del
     .selectOption({
       label: `FAKE_${testInfo.project.name.toUpperCase()} · FAKE ${testInfo.project.name} Ledger LLC`,
     });
+  await expect(
+    page.getByRole("form", { name: "Post journal entry" }),
+  ).toBeVisible();
+  const entitySelector = page.getByRole("combobox", {
+    name: "Legal entity",
+    exact: true,
+  });
+  // Reselect after loading: clearing the book here used to leave it hidden forever.
+  await entitySelector.selectOption(await entitySelector.inputValue());
+  await expect(
+    page.getByRole("form", { name: "Post journal entry" }),
+  ).toBeVisible();
   const fill = async () => {
     const form = page.getByRole("form", { name: "Post journal entry" });
     await form.getByLabel("Entry date", { exact: true }).fill("2026-10-03");

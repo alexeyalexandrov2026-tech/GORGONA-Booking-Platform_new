@@ -384,6 +384,7 @@ export function Ledger({
               value={entity}
               disabled={locked}
               onChange={(e) => {
+                if (e.target.value === entity) return;
                 setEntity(e.target.value);
                 setRecoveredBook(
                   overview.items.find(

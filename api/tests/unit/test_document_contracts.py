@@ -13,6 +13,7 @@ from gorgona_booking.business.document_contracts import (
     UnlinkCounterpartyInput,
 )
 from gorgona_booking.db import schema_guard
+from gorgona_booking.db.ledger_guard import LEDGER_BOUNDARY, LEDGER_PARAMETERS
 
 
 def body(**changes: object) -> dict[str, object]:
@@ -110,7 +111,7 @@ def test_guard_binds_one_parameter_per_placeholder() -> None:
     placeholders = schema_guard._ACCESS_BOUNDARY.count("%s")
     assert placeholders == 5 * len(schema_guard._DEFINITIONS) + 8 + 6 * 5 + 1
     assert len(schema_guard._DEFINITIONS) == 50
-    assert schema_guard.LEDGER_BOUNDARY.count("%s") == len(schema_guard.LEDGER_PARAMETERS)
+    assert LEDGER_BOUNDARY.count("%s") == len(LEDGER_PARAMETERS)
     assert len(schema_guard._OCCUPANCY_TRIGGERS) == 5
     assert len(schema_guard._MODULE_TRIGGERS) == 19
     assert {module for _, _, module in schema_guard._MODULE_TRIGGERS} == {
