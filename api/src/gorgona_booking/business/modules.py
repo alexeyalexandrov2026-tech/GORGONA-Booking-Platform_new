@@ -12,10 +12,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from gorgona_booking.business.readiness_registry import Readiness, at_least
+from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[1] = 1
+MODULE_REGISTRY_VERSION: Literal[2] = 2
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -155,6 +155,17 @@ MODULES: tuple[PlatformModule, ...] = (
         "No invoices, payments, tax filing, payroll or currency conversion.",
         "New books, account versions, entries, reversals and period events. Reads and "
         "unresolved-command recovery continue.",
+    ),
+    _module(
+        "finance_documents",
+        "Invoices and external settlements",
+        _OPTIONAL,
+        ("finance", "counterparties"),
+        next(scenario.status for scenario in SCENARIOS if scenario.id == "FIN-03"),
+        "Invoices and external settlements are not available yet. "
+        "This workflow cannot be enabled.",
+        "New invoices, obligations, reserves and external confirmations. "
+        "History, recovery and eligible non-money release must remain available.",
     ),
     _module("procurement", "Procurement", _OPTIONAL, ("counterparties", "finance")),
     _module("inventory", "Inventory and customer warehouses", _OPTIONAL, ("products_services",)),

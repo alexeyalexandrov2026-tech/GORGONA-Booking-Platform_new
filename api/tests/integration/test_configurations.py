@@ -129,7 +129,7 @@ async def test_lifecycle_keeps_every_version_and_replays(
         "documents",
         "finance",
     ]
-    assert len(catalog["modules"]) == 18
+    assert len(catalog["modules"]) == 19
     registry = (
         await config.client.get(
             f"/v1/businesses/{a}/readiness-registry", headers=config.auth(owner_a)
@@ -153,7 +153,7 @@ async def test_lifecycle_keeps_every_version_and_replays(
 
     validated = (await config.step(owner_a, a, 1, "validate", 1)).json()
     assert (validated["state"], validated["revision"]) == ("validated", 2)
-    assert validated["validation"] == {"registry_version": 1, "problems": [], "warnings": []}
+    assert validated["validation"] == {"registry_version": 2, "problems": [], "warnings": []}
     publish_key = str(uuid7())
     published = (await config.step(owner_a, a, 1, "publish", 2, key=publish_key)).json()
     assert (published["state"], published["revision"]) == ("published", 3)
@@ -283,7 +283,7 @@ async def test_invalid_configurations_are_explained(
         owner_conn.execute(
             "insert into gba.business_configuration_versions "
             "(tenant_id, version, profile_revision, registry_version, created_by) "
-            "values (%s, 3, 1, 2, %s)",
+            "values (%s, 3, 1, 1, %s)",
             (a, owner_a.user_id),
         )
     changed = await config.step(owner_a, a, 3, "validate", 1)
@@ -442,7 +442,7 @@ async def test_database_rules_hold_for_direct_sql(
     versions = "update gba.business_configuration_versions set "
     for statement, error in (
         (
-            versions + "registry_version = 2, revision = revision + 1 where version = 1",
+            versions + "registry_version = 3, revision = revision + 1 where version = 1",
             psycopg.errors.CheckViolation,
         ),
         (
@@ -645,3 +645,33 @@ async def test_configuration_is_company_wide_and_not_delegated(
         ).fetchone()
     assert audited is not None
     assert audited[0] >= 1
+
+
+async def test_registry_v2_preserves_published_v1_finance_and_blocks_unverified_h(
+    config: Config, world: BookingWorld, owner_a: FakeUser
+) -> None:
+    from gorgona_booking.business import configurations as config_service
+
+    a = world.a.tenant_id
+    await config.profile(owner_a, a, 0, [1])
+    # Simulate the previous server registry at publication time. All SQL, auth,
+    # configuration transitions and module states are real disposable fixtures.
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(config_service, "MODULE_REGISTRY_VERSION", 1)
+        await config.publish(owner_a, a, 0, [BOOKING, "finance", "counterparties"])
+    current = (await config.get(owner_a, a)).json()
+    assert current["registry_version"] == 2
+    assert current["published"]["registry_version"] == 1
+    assert "finance" in current["effective_module_ids"]
+    assert "finance_documents" not in current["effective_module_ids"]
+
+    drafted = await config.draft(owner_a, a, 1, ["finance", "counterparties", "finance_documents"])
+    assert drafted.status_code == 200, drafted.text
+    refused = await config.step(owner_a, a, 2, "validate", 1)
+    assert (refused.status_code, refused.json()["error"]["code"]) == (422, "CONFIGURATION_INVALID")
+    assert {
+        (p["code"], p["module_id"]) for p in refused.json()["error"]["details"]["problems"]
+    } == {("MODULE_NOT_READY", "finance_documents")}
+    after = (await config.get(owner_a, a)).json()
+    assert after["published"] == current["published"]
+    assert after["effective_module_ids"] == current["effective_module_ids"]

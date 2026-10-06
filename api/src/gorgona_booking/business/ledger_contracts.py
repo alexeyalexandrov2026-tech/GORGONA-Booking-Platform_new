@@ -31,7 +31,7 @@ _MAX_REVISION = 2_147_483_646
 _AMOUNT = re.compile(r"(0|[1-9][0-9]{0,17})(?:\.([0-9]{1,3}))?")
 
 
-def _line(value: str | None) -> str | None:
+def single_line_text(value: str | None) -> str | None:
     """Trimmed single-line text without C0, DEL or C1 controls (the database agrees)."""
     if value is None:
         return None
@@ -131,7 +131,7 @@ class AccountInput(Versioned):
     @field_validator("name")
     @classmethod
     def single_line(cls, value: str) -> str | None:
-        return _line(value)
+        return single_line_text(value)
 
 
 class LedgerAccount(Strict):
@@ -178,7 +178,7 @@ class EntryInput(Versioned):
     @field_validator("memo")
     @classmethod
     def single_line(cls, value: str | None) -> str | None:
-        return _line(value)
+        return single_line_text(value)
 
 
 class ReversalInput(Versioned):
@@ -189,7 +189,7 @@ class ReversalInput(Versioned):
     @field_validator("memo")
     @classmethod
     def single_line(cls, value: str | None) -> str | None:
-        return _line(value)
+        return single_line_text(value)
 
 
 class JournalLine(Strict):
@@ -239,7 +239,7 @@ class CloseInput(Versioned):
     @field_validator("reason")
     @classmethod
     def single_line(cls, value: str | None) -> str | None:
-        return _line(value)
+        return single_line_text(value)
 
 
 class ReopenInput(Versioned):
@@ -249,7 +249,7 @@ class ReopenInput(Versioned):
     @field_validator("reason")
     @classmethod
     def single_line(cls, value: str) -> str | None:
-        return _line(value)
+        return single_line_text(value)
 
 
 class PeriodEvent(Strict):
