@@ -1,5 +1,18 @@
 # Cloud Code handoff — GORGONA business platform
 
+## Current H planning — 2026-10-06
+
+Own branch codex/package-h-finance-plan from G head5be6e7a.
+Read [H handoff](docs/plan/NEXT_AGENT_PACKAGE_H_2026-10-06.md),
+[H plan](docs/plan/PACKAGE_H_PLAN_2026-10-06.md) and
+[ADR-0024 Proposed](docs/adr/0024-invoices-obligations-and-external-settlements.md).
+Docs only: typed invoices/obligations/settlement reserves, externally attested
+partial payments, credits/refund obligations and admission requests are proposed.
+No H money code/schema/provider activation; FIN-03/02 remain planned.
+Independent proposed-design review PASS; owner scope confirmation remains
+pending before code. [Review/check evidence](docs/plan/evidence/2026-10-06-package-h-plan/VALIDATION.md).
+G finance remains technically verified; its exact-SHA CI is not H validation.
+
 ## Current G continuation — 2026-10-06
 
 Read [package G handoff](docs/plan/NEXT_AGENT_PACKAGE_G_2026-10-06.md) and

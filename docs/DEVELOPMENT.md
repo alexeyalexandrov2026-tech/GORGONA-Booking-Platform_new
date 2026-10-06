@@ -1,5 +1,17 @@
 # Development
 
+## Package H planning (2026-10-06)
+
+[Plan](plan/PACKAGE_H_PLAN_2026-10-06.md) and
+[ADR-0024 Proposed](adr/0024-invoices-obligations-and-external-settlements.md)
+describe the next extension of G. No new dependency, service or migration has
+been added. FIN-03 is planned. Reuse current money/ledger/auth/commands and real
+test harnesses; extend closed source/recovery/view contracts explicitly. Do not
+turn an invoice state into paid money or automatic recognized revenue. Owner
+confirmation is pending; independent proposed-design review PASS.
+[Documentation and review evidence](plan/evidence/2026-10-06-package-h-plan/VALIDATION.md).
+No H runtime validation is claimed.
+
 ## Ledger foundation (package G, ADR-0023)
 
 Migration 0020 adds legal-entity books, neutral starter accounts, integer minor-unit

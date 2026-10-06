@@ -1,5 +1,17 @@
 # GORGONA — реестр реализации
 
+## Актуально H: архитектурный план, 2026-10-06
+
+От G `5be6e7a`, собственная ветка `codex/package-h-finance-plan`.
+[План H](PACKAGE_H_PLAN_2026-10-06.md),
+[ADR-0024 Proposed](../adr/0024-invoices-obligations-and-external-settlements.md),
+[reuse evidence](evidence/2026-10-06-package-h-plan/ARCHITECTURE_REUSE.md).
+Только документация; новых endpoints, money effects и migration0021 нет.
+FIN-03/FIN-02 planned; положительная provider capability не выдается. G принят
+отдельно и сохраняет свой статус. Независимый обзор предлагаемого дизайна
+PASS: H-D01/02/03 закрыты уточнениями. [Проверки и отчеты](evidence/2026-10-06-package-h-plan/VALIDATION.md).
+До кода подтвердить объем H, credit/refund и явный выбор счетов/признания.
+
 ## Актуально G: финансовая основа FIN-01, 2026-10-06
 
 От принятого плана этапа 2 `151472a`, ветка `codex/package-g-ledger-review`.
