@@ -19,7 +19,9 @@ failed/12 passed; local full 1053 passed/4 skipped/429.52s with mandatory Postgr
 ruff/format/mypy 211 PASS; web unchanged. Upgrade on a populated H2 database:
 only 0025 and 0026 applied, no row changed, 0 conflicting rows.
 [Validation](evidence/2026-10-07-h3-settlement-guards/VALIDATION.md),
-[handoff](NEXT_AGENT_H3_GUARDS_2026-10-07.md). Credits, refunds and corrections
+[handoff](NEXT_AGENT_H3_GUARDS_2026-10-07.md),
+[prompt](NEXT_AGENT_PROMPT_H3_GUARDS_2026-10-07.md). CI on code commits
+`24ee21b` and `372da57` PASS (push and pull_request runs). Credits, refunds and corrections
 are not implemented; FIN-03/FIN-02 remain planned.
 
 ## Current H2 backend — bounded published implementation, 2026-10-07
