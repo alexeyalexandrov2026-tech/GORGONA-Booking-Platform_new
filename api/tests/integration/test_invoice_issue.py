@@ -265,7 +265,7 @@ async def test_late_balanced_journal_pair_cannot_change_an_issued_invoice(
     assert (await invoices.save(document=document)).status_code == 200
     with pytest.raises(psycopg.errors.CheckViolation, match="complete issued lines"):  # noqa: PT012
         async with tenant_transaction(app_pool, invoices.ledger.business) as conn:
-            issued = await financial_documents.issue_invoice(
+            issued = await financial_documents.issue_document(
                 conn,
                 business_id=invoices.ledger.business,
                 book_id=invoices.ledger.book,
@@ -321,7 +321,7 @@ async def test_late_draft_line_after_same_transaction_issue_is_rechecked(
                 key=str(uuid7()),
                 body=body,
             )
-            await financial_documents.issue_invoice(
+            await financial_documents.issue_document(
                 conn,
                 business_id=invoices.ledger.business,
                 book_id=invoices.ledger.book,
@@ -690,31 +690,32 @@ async def test_sql_history_stays_insert_only(
             "revoke insert(created_transaction) on gba.financial_document_versions "
             "from gba_runtime",
         ),
+        # The approved predicates below are the forward 0022 forms of the 0021 controls.
         (
             "alter table gba.financial_obligations "
             "drop constraint financial_obligations_source_kind_check",
             "alter table gba.financial_obligations "
             "add constraint financial_obligations_source_kind_check "
-            "check (source_kind = 'invoice')",
+            "check (source_kind in ('invoice','manual'))",
         ),
         (
+            "alter table gba.financial_obligations "
+            "drop constraint financial_obligations_source_kind_check; "
+            "alter table gba.financial_obligations "
+            "add constraint financial_obligations_source_kind_check "
+            "check (source_kind in ('invoice','manual','credit_refund'))",
             "alter table gba.financial_obligations "
             "drop constraint financial_obligations_source_kind_check; "
             "alter table gba.financial_obligations "
             "add constraint financial_obligations_source_kind_check "
             "check (source_kind in ('invoice','manual'))",
-            "alter table gba.financial_obligations "
-            "drop constraint financial_obligations_source_kind_check; "
-            "alter table gba.financial_obligations "
-            "add constraint financial_obligations_source_kind_check "
-            "check (source_kind = 'invoice')",
         ),
         (
             "alter table gba.financial_obligations "
             "drop constraint financial_obligations_source_kind_check; "
             "alter table gba.financial_obligations "
             "add constraint financial_obligations_source_kind_check "
-            "check (source_kind = 'invoice') not valid",
+            "check (source_kind in ('invoice','manual')) not valid",
             "alter table gba.financial_obligations "
             "validate constraint financial_obligations_source_kind_check",
         ),
@@ -723,24 +724,27 @@ async def test_sql_history_stays_insert_only(
             "drop constraint financial_command_cancellations_revision_check; "
             "alter table gba.financial_command_cancellations "
             "add constraint financial_command_cancellations_revision_check "
-            "check (revision >= 1 and (operation <> 'invoice_issue ' or revision >= 2))",
+            "check (revision >= 1 and "
+            "(operation not in ('invoice_issue ','accrual_issue') or revision >= 2))",
             "alter table gba.financial_command_cancellations "
             "drop constraint financial_command_cancellations_revision_check; "
             "alter table gba.financial_command_cancellations "
             "add constraint financial_command_cancellations_revision_check "
-            "check (revision >= 1 and (operation <> 'invoice_issue' or revision >= 2))",
+            "check (revision >= 1 and "
+            "(operation not in ('invoice_issue','accrual_issue') or revision >= 2))",
         ),
         (
             "alter table gba.journal_entries "
             "drop constraint journal_entries_source_kind_check; "
             "alter table gba.journal_entries "
             "add constraint journal_entries_source_kind_check "
-            "check (source_kind in ('manual','opening','reversal','invoice','invoice '))",
+            "check (source_kind in "
+            "('manual','opening','reversal','invoice','accrual','invoice '))",
             "alter table gba.journal_entries "
             "drop constraint journal_entries_source_kind_check; "
             "alter table gba.journal_entries "
             "add constraint journal_entries_source_kind_check "
-            "check (source_kind in ('manual','opening','reversal','invoice'))",
+            "check (source_kind in ('manual','opening','reversal','invoice','accrual'))",
         ),
     ],
 )

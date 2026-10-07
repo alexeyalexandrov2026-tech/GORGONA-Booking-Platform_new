@@ -1,4 +1,8 @@
-"""Approved H1 controls from packaged SQL; never learn expectations from a DB."""
+"""Approved H controls from packaged SQL; never learn expectations from a DB.
+
+H migrations are read in order. A later packaged definition of a function or CHECK
+replaces the earlier approval, exactly as the forward migration replaces the object.
+"""
 
 import json
 import re
@@ -6,14 +10,21 @@ from importlib import resources
 
 from pydantic import BaseModel, ConfigDict, Field
 
-_SQL = (
-    resources.files("gorgona_booking.db") / "migrations" / "0021_invoice_accrual.sql"
-).read_text(encoding="utf-8")
+_MIGRATIONS = ("0021_invoice_accrual.sql", "0022_manual_accruals.sql")
+_PACKAGED = tuple(
+    (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
+    for name in _MIGRATIONS
+)
+_SQL = "\n".join(_PACKAGED)
 _G = (resources.files("gorgona_booking.db") / "migrations" / "0020_ledger.sql").read_text(
     encoding="utf-8"
 )
 _SOURCES = dict(
-    re.findall(r"create function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;", _G + _SQL, re.DOTALL)
+    re.findall(
+        r"create (?:or replace )?function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;",
+        _G + _SQL,
+        re.DOTALL,
+    )
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
 FINANCIAL_TABLES = tuple(_BLOCKS)
@@ -64,13 +75,15 @@ _FKS = tuple(
     )
     for cols, parent, other, deferred in re.findall(_FK_PATTERN, body)
 )
+_TYPES = r"(uuid|text|integer|smallint|bigint|date|timestamptz|xid8)"
 _COLUMNS = tuple(
     (t, name, kind, "not null" in rest)
     for t, body in _BLOCKS.items()
-    for name, kind, rest in re.findall(
-        r"^    (\w+)\s+(uuid|text|integer|smallint|bigint|date|timestamptz|xid8)\b([^\n]*)",
-        body,
-        re.MULTILINE,
+    for name, kind, rest in re.findall(rf"^    (\w+)\s+{_TYPES}\b([^\n]*)", body, re.MULTILINE)
+) + tuple(
+    (t, name, kind, "not null" in rest)
+    for t, name, kind, rest in re.findall(
+        rf"alter table gba\.(\w+) add column (\w+)\s+{_TYPES}\b([^\n;]*)", _SQL
     )
 )
 _PRIVATE = tuple(
@@ -94,10 +107,6 @@ FINANCIAL_PARAMETERS += tuple(x for row in _FKS for x in row)
 FINANCIAL_PARAMETERS += tuple(x for row in _COLUMNS for x in row)
 FINANCIAL_PARAMETERS += tuple(x for row in _PRIVATE for x in row)
 FINANCIAL_PARAMETERS += (list(FINANCIAL_TABLES),)
-FINANCIAL_PARAMETERS += (
-    "(source_kind = ANY (ARRAY['manual'::text, 'opening'::text, "
-    "'reversal'::text, 'invoice'::text]))",
-)
 
 
 class _ApprovedCheck(BaseModel):
@@ -107,14 +116,37 @@ class _ApprovedCheck(BaseModel):
     expression: str = Field(min_length=1, max_length=2000)
 
 
-_CHECKS = tuple(
-    _ApprovedCheck.model_validate(json.loads(line.removeprefix("-- CHECK_APPROVAL ")))
-    for line in _SQL.splitlines()
-    if line.startswith("-- CHECK_APPROVAL ")
+_MARK = "-- CHECK_APPROVAL "
+# 0021 widened this G constraint before approvals were packaged beside every CHECK.
+_H1_JOURNAL_SOURCES = _ApprovedCheck(
+    table="journal_entries",
+    name="journal_entries_source_kind_check",
+    expression=(
+        "(source_kind = ANY (ARRAY['manual'::text, 'opening'::text, "
+        "'reversal'::text, 'invoice'::text]))"
+    ),
 )
-_CHECK_NAMES = set(re.findall(r"constraint (financial_[a-z_]+)\s+check \(", _SQL))
-if len(_CHECKS) != 25 or {row.name for row in _CHECKS} != _CHECK_NAMES:
-    raise RuntimeError("Every packaged H CHECK needs an explicit approved predicate")
+
+
+def _approved_checks() -> tuple[_ApprovedCheck, ...]:
+    approved = {(_H1_JOURNAL_SOURCES.table, _H1_JOURNAL_SOURCES.name): _H1_JOURNAL_SOURCES}
+    unlisted = {_H1_JOURNAL_SOURCES.name}
+    for text in _PACKAGED:
+        rows = tuple(
+            _ApprovedCheck.model_validate(json.loads(line.removeprefix(_MARK)))
+            for line in text.splitlines()
+            if line.startswith(_MARK)
+        )
+        declared = set(re.findall(r"constraint (\w+)\s+check \(", text)) - unlisted
+        names = [row.name for row in rows]
+        if len(names) != len(set(names)) or set(names) != declared:
+            raise RuntimeError("Every packaged H CHECK needs one explicit approved predicate")
+        approved.update({(row.table, row.name): row for row in rows})
+        unlisted = set()
+    return tuple(approved.values())
+
+
+_CHECKS = _approved_checks()
 FINANCIAL_PARAMETERS += tuple(
     value for row in _CHECKS for value in (row.table, row.name, row.expression)
 )
@@ -205,13 +237,6 @@ and not exists (
     select 1 from unnest(%s::text[]) expected(table_name)
     where pg_catalog.has_table_privilege(
         'gba_runtime','gba.'||expected.table_name,'UPDATE,DELETE,TRUNCATE')
-)
-and exists (
-    select 1 from pg_catalog.pg_constraint c
-    where c.conrelid='gba.journal_entries'::regclass
-        and c.conname='journal_entries_source_kind_check'
-        and c.contype='c' and c.convalidated
-        and pg_catalog.pg_get_expr(c.conbin,c.conrelid) = %s
 )
 and not exists (
     select 1 from (values __CHECKS__) expected(table_name,constraint_name,expression)

@@ -116,9 +116,17 @@ const entryRecord = summary.extend({
     .min(2)
     .max(200),
 });
+// Finite v2 origins: G kinds plus journals owned by a financial document.
+const sourceKindV2 = z.enum([
+  "manual",
+  "opening",
+  "reversal",
+  "invoice",
+  "accrual",
+]);
 const entryRecordV2 = entryRecord.extend({
   schema_version: z.literal(2),
-  source_kind: z.enum(["manual", "opening", "reversal", "invoice"]),
+  source_kind: sourceKindV2,
 });
 const validEntry = (
   v: z.infer<typeof entryRecord> | z.infer<typeof entryRecordV2>,
@@ -149,9 +157,7 @@ const entryListRecord = z.strictObject({
   items: z.array(summary).max(100),
   next_cursor: id.nullable(),
 });
-const summaryV2 = summary.extend({
-  source_kind: z.enum(["manual", "opening", "reversal", "invoice"]),
-});
+const summaryV2 = summary.extend({ source_kind: sourceKindV2 });
 const entryListRecordV2 = entryListRecord.extend({
   schema_version: z.literal(2),
   items: z.array(summaryV2).max(100),

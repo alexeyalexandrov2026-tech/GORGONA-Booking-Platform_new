@@ -15,7 +15,9 @@ from gorgona_booking.business.ledger_contracts import CURRENCY_PATTERN, single_l
 
 Direction = Literal["receivable", "payable"]
 InvoiceState = Literal["draft", "issued"]
-FinancialCommandKind = Literal["invoice_draft", "invoice_issue"]
+# A manual accrual is the same immutable document shape with its own origin.
+DocumentKind = Literal["invoice", "manual_accrual"]
+FinancialCommandKind = Literal["invoice_draft", "invoice_issue", "accrual_draft", "accrual_issue"]
 _MAX_REVISION = 2_147_483_646
 _AMOUNT_PATTERN = r"^(0|[1-9][0-9]{0,17})(\.[0-9]{1,3})?$"
 
@@ -77,6 +79,7 @@ class InvoiceDocumentView(Versioned):
     business_id: UUID
     book_id: UUID
     document_id: UUID
+    kind: DocumentKind
     revision: StrictInt = Field(ge=1, le=_MAX_REVISION + 1)
     state: InvoiceState
     direction: Direction
@@ -135,7 +138,7 @@ class FinancialCommandReference(Versioned):
 
     @model_validator(mode="after")
     def possible_issue_revision(self) -> Self:
-        if self.operation == "invoice_issue" and self.revision < 2:
+        if self.operation in ("invoice_issue", "accrual_issue") and self.revision < 2:
             raise ValueError("An issued version follows a saved draft")
         return self
 

@@ -1,4 +1,4 @@
-"""H1 immutable invoice drafts and atomic, explicitly attested accruals.
+"""Immutable invoice and manual-accrual documents with atomic, attested accruals.
 
 No cash fact, provider action, reserve or automatic revenue recognition occurs.
 Commands, documents, obligations and G journal identity remain separate. The
@@ -7,7 +7,7 @@ caller owns the transaction; every completed effect is rechecked by SQL.
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Literal
+from typing import Literal, NamedTuple
 from uuid import UUID, uuid7
 
 from psycopg.errors import (
@@ -21,6 +21,7 @@ from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import IdempotencyKeyReusedError
 from gorgona_booking.business import commands, ledger, modules
 from gorgona_booking.business.financial_contracts import (
+    DocumentKind,
     FinancialCommandKind,
     FinancialCommandReference,
     FinancialCommandStatus,
@@ -33,7 +34,12 @@ from gorgona_booking.business.financial_contracts import (
     InvoiceSummary,
 )
 from gorgona_booking.business.financial_math import quantize_invoice
-from gorgona_booking.business.ledger_contracts import InvoicePosting, LineInput, from_minor
+from gorgona_booking.business.ledger_contracts import (
+    AccrualPosting,
+    InvoicePosting,
+    LineInput,
+    from_minor,
+)
 from gorgona_booking.business.module_gate import FINANCE_MODULE, module_writes, require_module
 from gorgona_booking.business.readiness_registry import at_least
 from gorgona_booking.db.pool import RuntimeConnection
@@ -48,6 +54,21 @@ FEATURE = "finance_documents"
 _OPERATIONS: dict[FinancialCommandKind, str] = {
     "invoice_draft": "business.finance.invoice_draft",
     "invoice_issue": "business.finance.invoice_issue",
+    "accrual_draft": "business.finance.accrual_draft",
+    "accrual_issue": "business.finance.accrual_issue",
+}
+
+
+class _Kind(NamedTuple):
+    draft: FinancialCommandKind
+    issue: FinancialCommandKind
+    obligation_source: Literal["invoice", "manual"]
+    label: str
+
+
+_KINDS: dict[DocumentKind, _Kind] = {
+    "invoice": _Kind("invoice_draft", "invoice_issue", "invoice", "Invoice"),
+    "manual_accrual": _Kind("accrual_draft", "accrual_issue", "manual", "Manual accrual"),
 }
 _CONSTRAINTS = ", ".join(
     "gba." + name
@@ -216,6 +237,7 @@ async def load_invoice(
     document_id: UUID,
     *,
     revision: int | None = None,
+    kind: DocumentKind = "invoice",
 ) -> InvoiceDocumentView | None:
     row = await (
         await conn.execute(
@@ -224,9 +246,11 @@ async def load_invoice(
             "c.minor_units,v.invoice_date,v.due_date,v.control_account_id,v.title,v.number,"
             "v.principal_minor,v.entry_id,v.obligation_id,v.issued_on,v.attestation,v.created_at "
             "from gba.financial_document_versions v join gba.currencies c on c.code=v.currency "
-            "where v.tenant_id=%s and v.book_id=%s and v.document_id=%s "
+            "join gba.financial_documents d on d.tenant_id=v.tenant_id and d.book_id=v.book_id "
+            "and d.id=v.document_id "
+            "where v.tenant_id=%s and v.book_id=%s and v.document_id=%s and d.kind=%s "
             "and (%s::integer is null or v.revision=%s) order by v.revision desc limit 1",
-            (business_id, book_id, document_id, revision, revision),
+            (business_id, book_id, document_id, kind, revision, revision),
         )
     ).fetchone()
     if row is None:
@@ -243,6 +267,7 @@ async def load_invoice(
         business_id=business_id,
         book_id=book_id,
         document_id=document_id,
+        kind=kind,
         revision=row[0],
         state=row[1],
         direction=row[2],
@@ -277,12 +302,13 @@ async def _invoice(
     conn: RuntimeConnection,
     business: UUID,
     receipt: FinancialReceipt,
+    kind: DocumentKind,
 ) -> InvoiceDocumentView:
     result = await load_invoice(
-        conn, business, receipt.book_id, receipt.document_id, revision=receipt.revision
+        conn, business, receipt.book_id, receipt.document_id, revision=receipt.revision, kind=kind
     )
     if result is None:
-        raise DatabaseUnavailableError("The stored invoice version is missing")
+        raise DatabaseUnavailableError("The stored financial document version is missing")
     return result
 
 
@@ -293,6 +319,7 @@ async def list_invoices(
     *,
     after: UUID | None,
     limit: int,
+    kind: DocumentKind = "invoice",
 ) -> InvoiceList:
     await ledger.require_book(conn, business_id, book_id)
     rows = await (
@@ -304,9 +331,9 @@ async def list_invoices(
             "select * from gba.financial_document_versions x where x.tenant_id=d.tenant_id "
             "and x.book_id=d.book_id and x.document_id=d.id order by x.revision desc limit 1"
             ") v on true join gba.currencies c on c.code=v.currency "
-            "where d.tenant_id=%s and d.book_id=%s and (%s::uuid is null or d.id>%s) "
-            "order by d.id limit %s",
-            (business_id, book_id, after, after, limit + 1),
+            "where d.tenant_id=%s and d.book_id=%s and d.kind=%s "
+            "and (%s::uuid is null or d.id>%s) order by d.id limit %s",
+            (business_id, book_id, kind, after, after, limit + 1),
         )
     ).fetchall()
     items = tuple(
@@ -402,6 +429,18 @@ async def _insert_version(
     )
 
 
+async def _document_exists(
+    conn: RuntimeConnection, business: UUID, book: UUID, document: UUID
+) -> bool:
+    row = await (
+        await conn.execute(
+            "select 1 from gba.financial_documents where tenant_id=%s and book_id=%s and id=%s",
+            (business, book, document),
+        )
+    ).fetchone()
+    return row is not None
+
+
 async def save_draft(
     conn: RuntimeConnection,
     *,
@@ -412,7 +451,9 @@ async def save_draft(
     actor: str,
     key: str,
     body: InvoiceDraftInput,
+    kind: DocumentKind = "invoice",
 ) -> InvoiceDocumentView:
+    spec = _KINDS[kind]
     digest = commands.fingerprint(
         {"book_id": str(book_id), "document_id": str(document_id), **body.model_dump(mode="json")}
     )
@@ -420,20 +461,22 @@ async def save_draft(
         conn,
         business=business_id,
         actor=actor,
-        operation="invoice_draft",
+        operation=spec.draft,
         key=key,
         request_hash=digest,
     )
     if prior is not None:
-        return await _invoice(conn, business_id, prior)
+        return await _invoice(conn, business_id, prior, kind)
     await _require_workflow(conn, business_id)
     await ledger.require_book(conn, business_id, book_id)
-    current = await load_invoice(conn, business_id, book_id, document_id)
+    current = await load_invoice(conn, business_id, book_id, document_id, kind=kind)
+    if current is None and await _document_exists(conn, business_id, book_id, document_id):
+        raise FinancialDocumentStateError("This identifier belongs to another financial document")
     actual = current.revision if current else 0
     if body.expected_revision != actual:
-        raise ConflictError("This invoice changed; reload before saving", revision=actual)
+        raise ConflictError(f"{spec.label} changed; reload before saving", revision=actual)
     if current is not None and current.state != "draft":
-        raise FinancialDocumentStateError("An issued invoice stays unchanged")
+        raise FinancialDocumentStateError(f"An issued {spec.label.lower()} stays unchanged")
     currency = await (
         await conn.execute("select minor_units from gba.currencies where code=%s", (body.currency,))
     ).fetchone()
@@ -444,9 +487,9 @@ async def save_draft(
     async with _writes(conn):
         if current is None:
             await conn.execute(
-                "insert into gba.financial_documents (tenant_id,book_id,id,created_by) "
-                "values (%s,%s,%s,%s)",
-                (business_id, book_id, document_id, user_id),
+                "insert into gba.financial_documents (tenant_id,book_id,id,created_by,kind) "
+                "values (%s,%s,%s,%s,%s)",
+                (business_id, book_id, document_id, user_id, kind),
             )
         await _insert_version(
             conn,
@@ -465,15 +508,15 @@ async def save_draft(
             business=business_id,
             actor=actor,
             user=user_id,
-            operation="invoice_draft",
+            operation=spec.draft,
             key=key,
             request_hash=digest,
             receipt=receipt,
         )
-    return await _invoice(conn, business_id, receipt)
+    return await _invoice(conn, business_id, receipt, kind)
 
 
-async def issue_invoice(
+async def issue_document(
     conn: RuntimeConnection,
     *,
     business_id: UUID,
@@ -483,7 +526,11 @@ async def issue_invoice(
     actor: str,
     key: str,
     body: InvoiceIssueInput,
+    kind: DocumentKind = "invoice",
 ) -> InvoiceDocumentView:
+    """Issue once: version, obligation, balanced G journal, link and receipt together."""
+    spec = _KINDS[kind]
+    posting = InvoicePosting if kind == "invoice" else AccrualPosting
     digest = commands.fingerprint(
         {"book_id": str(book_id), "document_id": str(document_id), **body.model_dump(mode="json")}
     )
@@ -491,20 +538,20 @@ async def issue_invoice(
         conn,
         business=business_id,
         actor=actor,
-        operation="invoice_issue",
+        operation=spec.issue,
         key=key,
         request_hash=digest,
     )
     if prior is not None:
-        return await _invoice(conn, business_id, prior)
+        return await _invoice(conn, business_id, prior, kind)
     await _require_workflow(conn, business_id)
-    current = await load_invoice(conn, business_id, book_id, document_id)
+    current = await load_invoice(conn, business_id, book_id, document_id, kind=kind)
     if current is None:
-        raise NotFoundError("Invoice not found")
+        raise NotFoundError(f"{spec.label} not found")
     if current.state != "draft":
-        raise FinancialDocumentStateError("This invoice was already issued")
+        raise FinancialDocumentStateError(f"{spec.label} was already issued")
     if current.revision != body.expected_revision:
-        raise ConflictError("This invoice changed; reload before issue", revision=current.revision)
+        raise ConflictError(f"{spec.label} changed; reload before issue", revision=current.revision)
     draft = InvoiceDraftInput(
         expected_revision=current.revision,
         direction=current.direction,
@@ -549,11 +596,12 @@ async def issue_invoice(
             "counterparty_id,"
             "counterparty_revision,direction,currency,control_account_id,"
             "principal_minor,created_by) "
-            "values (%s,%s,%s,'invoice',%s,%s,'principal',%s,%s,%s,%s,%s,%s,%s)",
+            "values (%s,%s,%s,%s,%s,%s,'principal',%s,%s,%s,%s,%s,%s,%s)",
             (
                 business_id,
                 book_id,
                 obligation,
+                spec.obligation_source,
                 document_id,
                 receipt.revision,
                 current.counterparty_id,
@@ -565,13 +613,13 @@ async def issue_invoice(
                 user_id,
             ),
         )
-        await ledger.append_invoice_journal(
+        await ledger.append_financial_journal(
             conn,
             business_id=business_id,
             book_id=book_id,
             entry_id=entry,
             user_id=user_id,
-            body=InvoicePosting(
+            body=posting(
                 entry_date=body.entry_date,
                 currency=current.currency,
                 source_id=str(document_id),
@@ -603,12 +651,12 @@ async def issue_invoice(
             business=business_id,
             actor=actor,
             user=user_id,
-            operation="invoice_issue",
+            operation=spec.issue,
             key=key,
             request_hash=digest,
             receipt=receipt,
         )
-    return await _invoice(conn, business_id, receipt)
+    return await _invoice(conn, business_id, receipt, kind)
 
 
 async def resolve_command(
