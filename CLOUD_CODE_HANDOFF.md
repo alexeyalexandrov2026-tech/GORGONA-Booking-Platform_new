@@ -6,15 +6,17 @@
 [copyable prompt](docs/plan/NEXT_AGENT_PROMPT_H2_2026-10-07.md),
 [changed files/checks/limits](docs/plan/evidence/2026-10-07-h2-settlements/VALIDATION.md).
 Branch codex/package-h2-settlements from the delivered H1 backend 75e809b.
-**Pushed 2026-10-07 at 5089b3a; the draft pull request is still to be opened.**
-The copyable prompt starts with that step.
+**Published in [draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16), target H1 PR15; no merge.**
+Original eight docs committed/pushed as75c36da; final docs are a successor.
+Read actual HEAD/origin/current-head CI in PR16. Source unchanged from54852b4.
 Forward 0022–0024 add manual accruals as new obligations, settlement documents
 with approval/reserve/sent/release/cancel, and externally attested partial
 confirmations that move exactly R→P with one balanced journal and a permanent
 external identity. PostgreSQL and the service both enforce P+C+R<=A at commit.
 Local full suite 1041 passed / 4 skipped / 459.51s, mandatory PostgreSQL 18.6 and browser;
-Ruff/format/mypy 211 PASS; web gates PASS. Push CI run 37571379933 was in
-progress when recorded: exact-head CI and Docker gates are NOT OBSERVED.
+Ruff/format/mypy211 and web gates PASS. Exact-checkpoint CI75c36da
+[37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) PASS:1044 passed/1 skipped/381.36s; all3 Docker/image,
+PG/browser, 69 web tests/2.3s and static211 PASS.
 Independent money/state review NOT DONE; HawkScan was not run.
 FIN-03/02 remain planned and finance_documents unavailable. H3 credits, refund
 obligations and corrections and H4 UI/admission remain unfinished.

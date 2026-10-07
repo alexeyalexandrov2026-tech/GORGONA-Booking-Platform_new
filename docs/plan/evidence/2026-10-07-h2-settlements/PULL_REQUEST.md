@@ -1,8 +1,9 @@
 # Draft pull request text — H2
 
-Not opened yet when this file was written (2026-10-07). Source branch
-`codex/package-h2-settlements`, target `codex/package-h1-persistence`, created
-as a draft. Do not merge it and do not enable auto-merge.
+Opened once as [draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16) on2026-10-07. Source
+`codex/package-h2-settlements`, target `codex/package-h1-persistence`.
+Do not open another PR, merge or enable auto-merge. Original docs checkpoint
+75c36da has [CI37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) PASS; final docs are a successor.
 
 ## Title
 
@@ -33,9 +34,16 @@ Journal read schema 2 now lists `invoice`, `accrual`, `payment`; write and read 
 
 Exact commands, per-slice numbers, red runs and failed attempts: `docs/plan/evidence/2026-10-07-h2-settlements/VALIDATION.md`. Handoff: `docs/plan/NEXT_AGENT_H2_2026-10-07.md`.
 
-## Not tested / not done
+## Observed publication CI
 
-- Exact-head CI and the three Docker gates had not run before publication; read them on this pull request.
+Draft PR16 targets H1 PR15. Docs checkpoint `75c36dac572c8420aa848d322717420d43555c87`:
+[CI37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) completed/success, **1044 passed/1 skipped/381.36s**.
+PostgreSQL18.6/OIDC/Chromium/all3 Docker/image, 69 web tests/2.3s, web
+typecheck/lint/format/build, Ruff/format211 and strict mypy211 PASS. Remaining
+skip is the optional separate tenant-site integration. Code is unchanged
+from54852b4; final documentation delivery requires its own current-head CI.
+
+## Not tested / not done
 - No independent money/state review; only the author's inline review.
 - HawkScan not run (no runtime or API key on the author machine).
 - Slice A has no recorded red run.

@@ -1,51 +1,34 @@
-# Copyable prompt — finish H2 publication, then continue H
+# Copyable prompt — verify published H2, then continue H
 
 Use the prompt below in the next agent's chat. These are continuation context
-and boundaries; inspect the current Git state before following dated evidence.
+and boundaries; inspect current Git/remote/PR state before action.
 
 ~~~text
-You continue GORGONA Package H2. Owner instruction: commit and push.
+Continue GORGONA Package H from the published H2 backend. Owner-requested H2
+commit/push and ONE draft PR are COMPLETE; do not repeat them.
 
-FIRST TASK — finish publication (commit, push, draft pull request)
+FIRST TASK — verify delivery and review H2 boundaries
 
 Checkout: C:\Users\alexa\Documents\ChatGPT\gorgona-h2-settlements
-Branch: codex/package-h2-settlements, parent 75e809b (codex/package-h1-persistence).
+Branch: codex/package-h2-settlements; parent75e809b, codex/package-h1-persistence.
 Repository: alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new.
-Do the publication steps in this checkout on this branch. No other executor
-uses it.
+Reviewed original eight Markdown changes committed/pushed as
+75c36dac572c8420aa848d322717420d43555c87. Draft PR16 is OPEN/DRAFT/unmerged, targets H1 PR15.
+Checkpoint CI37573680437 completed/success:1044 passed/1 skipped/381.36s, required real
+PostgreSQL18.6/OIDC/Chromium/all3 Docker/image, 69 web tests/2.3s, static211 PASS.
+A later documentation-only delivery records publication; inspect exact current
+HEAD/origin/PR16/current-head CI. Code is unchanged from54852b4.
+Full evidence: docs/plan/evidence/2026-10-07-h2-settlements/VALIDATION.md.
+Handoff: docs/plan/NEXT_AGENT_H2_2026-10-07.md.
+Do not create another H2 PR. First review the H2 money/state design and listed
+test gaps; independent review is NOT DONE. Then continue H3 in your own branch
+and checkout from the final H2 delivery when that continuation is requested.
 
-State recorded 2026-10-07: origin has the branch at 5089b3a (ordinary push,
-approved by the owner). No pull request exists. Push CI run 37571379933 was in
-progress, result not observed. The working tree holds an UNCOMMITTED
-documentation update that records the push: Markdown files only, no source.
-
-Do, in order, and report each step as PASS / FAIL / BLOCKED / NOT TESTED with
-exact SHAs:
-1. Re-observe: git status; git log --oneline 75e809b..HEAD; git ls-remote
-   --heads origin for both branches; the CI result for the pushed head.
-2. Review the uncommitted change with git diff. It must contain Markdown only.
-   Run git diff --check. Commit it as documentation only; message starts with
-   "docs(finance):".
-3. Ordinary git push of codex/package-h2-settlements. Never force.
-4. Open ONE draft pull request: codex/package-h2-settlements into
-   codex/package-h1-persistence. Title and description are in
-   docs/plan/evidence/2026-10-07-h2-settlements/PULL_REQUEST.md.
-   Do not merge. Do not enable auto-merge.
-5. Read exact-head CI for the pushed commit: PostgreSQL, browser, the three
-   Docker gates and the image. Record the pull request number and the observed
-   CI outcome with its run link in
-   docs/plan/evidence/2026-10-07-h2-settlements/VALIDATION.md and in the current
-   H2 sections of CLOUD_CODE_HANDOFF.md,
-   docs/plan/GORGONA_IMPLEMENTATION_STATUS.md,
-   docs/plan/NEXT_AGENT_START_HERE.md and docs/plan/NEXT_AGENT_H2_2026-10-07.md.
-   Commit as documentation only and push.
-6. If CI fails: diagnose and report first. A source fix needs fresh focused and
-   full local runs and updated evidence before another push.
-
-Not authorized: merge, force-push, rebase or amend of pushed commits, reset or
-clean, deployment, production migration, Azure, provider, funds or credential
-actions, any change of FIN-03/FIN-02 readiness. Keep credentials outside Git
-and never print them.
+Not authorized: merge/auto-merge, force-push, rebase/amend of published commits,
+reset/clean, deployment, production migration, Azure/provider/funds/credentials
+or FIN-03/FIN-02 readiness promotion. Keep all secrets outside Git/output.
+If a new CI fails, diagnose/report before changing source; source fixes require
+fresh affected/full validation and a new independent review where applicable.
 
 CONTEXT — what H2 is
 
@@ -74,9 +57,9 @@ Recovery for all families is in business/financial_commands.py.
 Local evidence: full suite 1041 passed / 4 skipped with mandatory real
 PostgreSQL 18.6 and OIDC/Chromium; Ruff/format/strict mypy on 211 files; web
 typecheck/lint/format/69 unit/build. Races are proven with observed pg_locks
-waits. NOT done: independent money/state review, HawkScan. Exact-head CI and
-Docker gates were NOT OBSERVED when this was written. Slice A has no recorded
-red run.
+waits. Publication checkpoint CI PASS:1044 passed/1 skipped/381.36s, all3 Docker/image;
+independent money/state review and HawkScan remain NOT DONE. Slice A has no
+recorded red run. Final exact-head CI is separate: inspect current PR16.
 
 G/FIN-01 remains technically_verified. FIN-03/FIN-02 remain planned and
 finance_documents non-enableable. Positive H fixtures override readiness only

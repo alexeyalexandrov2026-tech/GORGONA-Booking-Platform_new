@@ -5,8 +5,10 @@
 new obligations, settlement reserves and externally attested partial
 confirmations; [current handoff](NEXT_AGENT_H2_2026-10-07.md) and
 [direct evidence](evidence/2026-10-07-h2-settlements/VALIDATION.md). The branch
-was pushed on 2026-10-07; its draft pull request is still to be opened and its
-CI result is not yet observed. H3/H4 continue through new forward migrations.
+is in [draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16), target H1 PR15. Checkpoint75c36da
+[CI37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) PASS:1044 passed/1 skipped/381.36s with all3 Docker/image.
+Final docs are a successor; inspect current-head CI. Independent review still
+NOT DONE; H3/H4 continue through new forward migrations.
 ADR0024 remains formally Proposed; all twelve COMPLETE criteria below remain
 NOT TESTED and FIN-03/02 planned.
 

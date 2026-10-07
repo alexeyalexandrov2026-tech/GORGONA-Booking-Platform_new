@@ -12,15 +12,16 @@ Checkout: `C:\Users\alexa\Documents\ChatGPT\gorgona-h2-settlements`.
 Parent: `75e809b9d82b514fd9d2ae93122c23c0ae217e85`, the delivered H1 backend on
 `codex/package-h1-persistence`.
 
-**Publication state, 2026-10-07.** The owner approved the push. The branch is on
-origin at `5089b3a4afcdf169780621b76e7e0da6dfb80d08`, by an ordinary push without
-force. There is no pull request yet. The push started CI run
-[37571379933](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37571379933);
-it was in progress when this was written, so its result is NOT OBSERVED.
-The pull request target is `codex/package-h1-persistence` (draft
-[PR15](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/15)),
-which continues the stack G #12 → H plan #13 → foundation #14 → backend #15.
-Read the current state before any action. No merge or deployment is established.
+**Publication completed, 2026-10-07.** Ordinary docs commit/push75c36da:
+`75c36dac572c8420aa848d322717420d43555c87`. [Draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16)
+targets `codex/package-h1-persistence` (H1 PR15), OPEN/DRAFT/unmerged.
+Exact-checkpoint [CI37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) PASS:1044 passed/1 skipped/381.36s;
+all3 Docker/image, PostgreSQL18.6/browser, 69 web tests/2.3s and static211 PASS.
+The earlier5089b3a pushCI37571379933 also passed1044/1skip/371.35s.
+The final documentation delivery is a successor; read actual HEAD/origin and
+current-head CI in PR16/exported delivery state. Code is unchanged from54852b4.
+Stack: G12 → H plan13 → foundation14 → H1 backend15 → H2 backend16.
+Do not open another H2 PR, merge, enable auto-merge or alter readiness.
 
 The branch was created as `claude/package-h2-settlements` and renamed to
 `codex/package-h2-settlements` on 2026-10-07 at the owner's request, before any
@@ -30,27 +31,20 @@ For H3, create your own branch and checkout from the current HEAD of this
 branch. One executor edits each checkout and owns each disposable PostgreSQL
 cluster.
 
-## Immediate next step: finish publication
+## Publication steps completed; next agent starts with verification
 
-The owner asked that the next agent commit and push. Do these steps in this
-checkout on this branch. Do not rebase, amend pushed commits or force-push.
+The owner requested commit/push and one draft PR. The eight original Markdown
+changes were committed/pushed as75c36da; PR16 was opened once and attached.
+Its exact-checkpoint CI passed; this documentation update records those facts
+and is committed/pushed separately. No implementation code was changed.
 
-1. Re-observe: `git status`, `git log --oneline 75e809b..HEAD`, the remote
-   heads of both branches and the result of the CI run above.
-2. The working tree holds an uncommitted documentation update that records
-   the push: Markdown files only. Review it with `git diff`, run
-   `git diff --check`, and commit it as documentation only.
-3. Push the branch with an ordinary `git push`.
-4. Open one draft pull request from `codex/package-h2-settlements` into
-   `codex/package-h1-persistence`. Title and description are prepared in
-   [PULL_REQUEST.md](evidence/2026-10-07-h2-settlements/PULL_REQUEST.md).
-   Do not merge it and do not enable auto-merge.
-5. Read exact-head CI for the pushed commit. Record the pull request number
-   and the observed CI outcome with its run link in the validation file and
-   in the current H2 sections of the index documents. Commit as
-   documentation only and push.
-6. If CI fails, diagnose and report before changing source. A source fix needs
-   fresh focused and full local runs and updated evidence before another push.
+First inspect current Git/remote/PR16 HEAD and final-head CI. Do not repeat the
+publication or create a second PR. Then review the H2 money/state design and
+the four listed test gaps before full acceptance; H3 remains the next coherent
+implementation phase in a new branch/checkout. Keep the four owner/reviewer
+decisions below open. FIN-03/02 stay planned and finance_documents unavailable.
+Earlier authorization to publish H2 does not authorize merge/production/provider
+or funds actions.
 
 Read these in order:
 
@@ -103,11 +97,11 @@ Full local suite on the final tree: see the exact numbers in the
 [validation](evidence/2026-10-07-h2-settlements/VALIDATION.md). Mandatory real
 PostgreSQL 18.6 and OIDC/Chromium. Ruff, format and strict mypy pass on 211
 files. Web typecheck, lint, format, 69 unit tests and build pass.
+Observed exact-checkpoint CI75c36da also PASS:1044 passed/1 skipped/381.36s; all3 Docker/image
+checks and 69 web tests/2.3s. This is separate from the reported local evidence.
 
 Not done, and stated as such:
 
-- Exact-head CI and the Docker gates are NOT OBSERVED: the push run was still
-  in progress when this was written.
 - No independent money or state review. Only the author's inline review.
 - Slice A has no recorded red run.
 - HawkScan was not run: no `hawk` runtime and no API key on this machine.
@@ -120,8 +114,8 @@ promoted after H2.
 
 ## Decisions an owner or reviewer should confirm
 
-1. **Pull request.** The push is approved and done. The draft pull request is
-   still to be opened. Merging is not approved.
+1. **Publication.** [Draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16) is open; ordinary pushes are complete.
+   Merging and auto-merge remain unapproved.
 2. **Journal read schema 2 extended in place.** `accrual` and `payment` were
    added to schema 2 instead of creating schema 3. Reason: schema 2 has never
    been merged, deployed or enabled, and a stale schema 2 client fails loudly

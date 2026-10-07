@@ -16,14 +16,25 @@ and renamed on 2026-10-07 before any publication; commits unchanged. Own checkou
 This file is delivered in a documentation-only successor of `54852b4`. Read the
 current branch HEAD from Git; a source commit is not the delivery HEAD.
 
-**Publication state, 2026-10-07.** After the owner's explicit "push" the branch
-was pushed by an ordinary push; origin is at
-`5089b3a4afcdf169780621b76e7e0da6dfb80d08`. There is no pull request yet. The
-push started CI run
-[37571379933](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37571379933)
-(workflow `ci`, job `api`); it was still in its pytest step when this was
-recorded. Exact-head CI, including the three Docker gates and the production
-image, is therefore NOT OBSERVED. Every number below is local.
+**Publication completed, 2026-10-07.** The owner's eight Markdown changes were
+reviewed, checked and committed as documentation only in
+`75c36dac572c8420aa848d322717420d43555c87`, then pushed ordinarily.
+[Draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16) is OPEN/DRAFT/unmerged and targets
+`codex/package-h1-persistence` at75e809b. No second PR, merge or auto-merge.
+
+Observed exact-checkpoint [CI37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) completed/success:
+**1044 passed/1 skipped/381.36s**, PostgreSQL18.6, real OIDC/Chromium and all three Docker tests.
+69 web tests/2.3s, web typecheck/lint/format/build, production image,
+Ruff/format211 and strict mypy211 PASS. Remaining skip is the optional separate
+tenant-site integration. Earlier pushCI37571379933 on5089b3a independently
+completed/success:1044 passed/1 skipped/371.35s, web69/1.9s.
+
+This evidence update is a documentation-only successor of75c36da; code stays
+byte-identical to54852b4. Read actual final HEAD/origin and current-head CI in
+PR16. Its final outcome is also in the exported delivery state. The tracked
+checkpoint above does not claim CI on its own future documentation SHA.
+Local results below are historical author evidence; publication work did not
+rerun or alter source. Independent money/state review remains NOT DONE.
 
 This is a bounded H2 backend increment behind the closed `finance_documents`
 gate. G/FIN-01 remains technically verified. FIN-03 and FIN-02 remain `planned`;
@@ -89,8 +100,10 @@ external redacting runner, not a repository dependency; it sets
 | Preserved checkouts after the work, read with `git --no-optional-locks` | PASS: owner `2f16380` 19 changed paths, E2 `151472a` 9, G `5be6e7a` 0, foundation `18e3f5e` 0, H1 review `2d5a8f9` 0, H1 backend `75e809b` 0. |
 | Own cluster `51462` stopped with `pg_ctl -m fast stop`; loopback listeners afterwards | PASS: no server running for the H2 data directory; `51455` still listening and untouched. |
 | `git push -u origin codex/package-h2-settlements` after the owner's "push" | PASS: new remote branch at `5089b3a`; base `codex/package-h1-persistence` still at `75e809b`. No force. |
-| Push CI run 37571379933 on `5089b3a` | NOT OBSERVED: in progress when recorded. |
-| Draft pull request | NOT DONE: the connector was not signed in. [Prepared text](PULL_REQUEST.md); left for the next agent. |
+| Push CI run37571379933 on5089b3a | PASS:1044 passed/1 skipped/371.35s; all3 Docker tests/image, web69/1.9s and static211 PASS. |
+| Draft pull request | PASS: [PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16), OPEN/DRAFT/unmerged; target H1, current checkpoint75c36da. [Description](PULL_REQUEST.md). |
+| Exact-checkpoint PR CI37573680437 on75c36da | PASS:1044 passed/1 skipped/381.36s; PG/browser/all3 Docker/image, 69 web tests/2.3s, static211 PASS. |
+| Publication documentation gate | PASS: eight Markdown files, one added/changed local link from5089b3a, UTF-8, source unchanged from54852b4, full12 H criteria NOT TESTED, finance_documents non-enableable, own51462 stopped; staged/working/base diff checks exit0. Fresh check rerun after recording this row. |
 | Pattern scan of the added lines for credentials, DSNs, tokens, keys, the cluster port and user name | PASS: no match. Test references use `FAKE-…` values only. |
 
 The four skips in every full run are the three container tests
@@ -237,12 +250,10 @@ direct proof in this increment:
 | H-09 | OFF and withdrawn readiness for accrual, settlement and confirmation. | H3 effects. |
 | H-10 | None. | Admission metadata (H4). |
 | H-11 | None. | UI (H4). |
-| H-12 | Local full Python suite and web gates. | Exact-SHA CI with containers; independent review. |
+| H-12 | Local full Python/web gates and observed exact-checkpoint CI with all3 containers/image. | Independent money/state review and remaining H3/H4 scope. |
 
 ## Unverified boundaries
 
-- Exact-head GitHub CI, the three Docker gates and the production image: NOT
-  OBSERVED, the push run was in progress when this was recorded.
 - Independent money and state review: NOT DONE. Only the author's own inline
   review exists.
 - HawkScan: not run; there is no `hawk` runtime and no API key on this machine.

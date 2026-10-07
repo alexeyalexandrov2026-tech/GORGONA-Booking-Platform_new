@@ -6,21 +6,23 @@ Read [full handoff](NEXT_AGENT_H2_2026-10-07.md) and
 [copyable prompt](NEXT_AGENT_PROMPT_H2_2026-10-07.md).
 Branch `codex/package-h2-settlements`, own checkout
 `C:\Users\alexa\Documents\ChatGPT\gorgona-h2-settlements`, parent 75e809b
-(delivered H1 backend). **Pushed 2026-10-07 at 5089b3a; the draft pull request
-is still to be opened. The copyable prompt starts with that step.**
+(delivered H1 backend). **[Draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16) published;
+original eight docs committed/pushed as75c36da. Final docs are a successor.**
+Verify current HEAD/origin/CI; do not repeat publication or open a second PR.
 Read the actual HEAD and remote state before continuing.
 
 Forward 0022–0024 add manual accruals, settlement reserves and externally
 attested partial confirmations behind the closed finance_documents gate.
 Local full 1041 passed / 4 skipped / 459.51s; Ruff/format/mypy 211 PASS;
-web gates PASS. Push CI run 37571379933 was in progress when recorded:
-exact-head CI and Docker gates NOT OBSERVED; independent review NOT DONE.
+web gates PASS. Exact-checkpoint [CI37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) on75c36da
+PASS:1044 passed/1 skipped/381.36s, all3 Docker/image, PG/browser, 69 web tests/2.3s, static211.
+Independent money/state review NOT DONE.
 [Evidence, changed files and limits](evidence/2026-10-07-h2-settlements/VALIDATION.md).
 G/FIN-01 technically_verified; FIN-03/02 planned. Next: H3 credits, refund
 obligations and corrections; then H4 UI/admission. No H acceptance/promotion.
 Owner/E2 dirty trees 19/9 are preserved; own PG 51462 stopped.
 Production/provider/merge is not authorized. The owner approved the push on
-2026-10-07 and hands the remaining publication steps to the next agent.
+2026-10-07; publication is complete. Next agent verifies delivery/review, then H3.
 All older instructions below describe their dated snapshots.
 
 ## Historical: H1 invoice backend handoff
