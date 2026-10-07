@@ -1,8 +1,26 @@
 # Пакет H — счета, обязательства и подтвержденные внешние расчеты
 
-**Implementation checkpoint:** owner continuation authorized local H work and
+**Implementation checkpoint 2026-10-07:** H2 is implemented locally on
+`codex/package-h2-settlements` through forward 0022–0024: manual accruals as
+new obligations, settlement reserves and externally attested partial
+confirmations; [current handoff](NEXT_AGENT_H2_2026-10-07.md) and
+[direct evidence](evidence/2026-10-07-h2-settlements/VALIDATION.md). The branch
+is in [draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16), target H1 PR15. Checkpoint75c36da
+[CI37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) PASS:1044 passed/1 skipped/381.36s with all3 Docker/image.
+Final docs are a successor; inspect current-head CI.15e8d0c CI failed in the
+ledger browser and was diagnosed before the bounded two-web-file correction.
+Corrective source `15edbed1d608ada9d0901a7710c00eff28c23e71` fixes a diagnosed ledger refresh race in two web files;
+financial Python/SQL and frozen migrations are unchanged from54852b4. [CI37578255793](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37578255793) PASS:1044 passed/1 skipped/379.86s;
+all3 Docker/image, PG/browser, web69/2.3s and static211 PASS.
+Fresh local full:1041 passed/4 skipped/434.68s; focused browser1/17.95s.
+Bounded independent UI review PASS; full H2 money/state review remains NOT DONE.
+H3/H4 continue through new forward migrations.
+ADR0024 remains formally Proposed; all twelve COMPLETE criteria below remain
+NOT TESTED and FIN-03/02 planned.
+
+**Earlier checkpoint (H1):** owner continuation authorized local H work and
 draft publication. Source2d5a8f9 implements the bounded H1 invoice backend on
-forward0021, with a closed feature gate; [current handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md)
+forward0021, with a closed feature gate; [H1 handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md)
 and [direct evidence](evidence/2026-10-06-h1-backend/VALIDATION.md).
 H2/H3/H4 continue through new forward migrations without changing published
 checksums. ADR0024 remains formally Proposed; all twelve COMPLETE criteria

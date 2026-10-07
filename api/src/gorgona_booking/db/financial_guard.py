@@ -1,4 +1,8 @@
-"""Approved H1 controls from packaged SQL; never learn expectations from a DB."""
+"""Approved H controls from packaged SQL; never learn expectations from a DB.
+
+H migrations are read in order. A later packaged definition of a function or CHECK
+replaces the earlier approval, exactly as the forward migration replaces the object.
+"""
 
 import json
 import re
@@ -6,26 +10,70 @@ from importlib import resources
 
 from pydantic import BaseModel, ConfigDict, Field
 
-_SQL = (
-    resources.files("gorgona_booking.db") / "migrations" / "0021_invoice_accrual.sql"
-).read_text(encoding="utf-8")
+_MIGRATIONS = (
+    "0021_invoice_accrual.sql",
+    "0022_manual_accruals.sql",
+    "0023_settlements.sql",
+    "0024_external_payments.sql",
+)
+_PACKAGED = tuple(
+    (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
+    for name in _MIGRATIONS
+)
+_SQL = "\n".join(_PACKAGED)
 _G = (resources.files("gorgona_booking.db") / "migrations" / "0020_ledger.sql").read_text(
     encoding="utf-8"
 )
 _SOURCES = dict(
-    re.findall(r"create function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;", _G + _SQL, re.DOTALL)
+    re.findall(
+        r"create (?:or replace )?function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;",
+        _G + _SQL,
+        re.DOTALL,
+    )
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
 FINANCIAL_TABLES = tuple(_BLOCKS)
-_MONEY = tuple(t for t in FINANCIAL_TABLES if not t.startswith("financial_command_"))
+_DOCUMENT_TABLES = tuple(t for t in FINANCIAL_TABLES if t.startswith("financial_"))
+_SETTLEMENT_TABLES = tuple(t for t in FINANCIAL_TABLES if t.startswith("settlement_"))
+_PAYMENT_TABLES = tuple(t for t in FINANCIAL_TABLES if t.startswith("external_payment"))
+# Tables whose every insert needs the enabled workflow. Settlement events decide per
+# fact (a plain release or a cancel stays possible while the module is off).
+_MONEY = (
+    *(t for t in _DOCUMENT_TABLES if not t.startswith("financial_command_")),
+    "settlement_documents",
+    "settlement_allocations",
+    *_PAYMENT_TABLES,
+)
 _TRIGGERS = (
     *((t, f"{t}_immutable", 27, "reject_ledger_mutation", False) for t in FINANCIAL_TABLES),
     *((t, f"{t}_lock", 7, "lock_financial_record", False) for t in FINANCIAL_TABLES),
     *((t, f"{t}_require_workflow", 7, "require_financial_workflow", False) for t in _MONEY),
     *(
         (t, f"{t}_consistent", 5, "check_invoice_integrity", True)
-        for t in FINANCIAL_TABLES
+        for t in _DOCUMENT_TABLES
         if t != "financial_command_cancellations"
+    ),
+    *((t, f"{t}_consistent", 5, "check_settlement_integrity", True) for t in _SETTLEMENT_TABLES),
+    (
+        "settlement_allocations",
+        "settlement_allocations_check",
+        7,
+        "enforce_settlement_allocation",
+        False,
+    ),
+    ("settlement_events", "settlement_events_next", 7, "enforce_settlement_event", False),
+    *((t, f"{t}_consistent", 5, "check_payment_integrity", True) for t in _PAYMENT_TABLES),
+    ("external_payments", "external_payments_check", 7, "enforce_external_payment", False),
+    (
+        "external_payment_allocations",
+        "external_payment_allocations_check",
+        7,
+        "enforce_external_payment_allocation",
+        False,
+    ),
+    *(
+        (t, f"{t}_payment_consistent", 5, "check_payment_integrity", True)
+        for t in ("journal_entries", "journal_lines")
     ),
     (
         "financial_document_versions",
@@ -64,13 +112,15 @@ _FKS = tuple(
     )
     for cols, parent, other, deferred in re.findall(_FK_PATTERN, body)
 )
+_TYPES = r"(uuid|text|integer|smallint|bigint|date|timestamptz|xid8)"
 _COLUMNS = tuple(
     (t, name, kind, "not null" in rest)
     for t, body in _BLOCKS.items()
-    for name, kind, rest in re.findall(
-        r"^    (\w+)\s+(uuid|text|integer|smallint|bigint|date|timestamptz|xid8)\b([^\n]*)",
-        body,
-        re.MULTILINE,
+    for name, kind, rest in re.findall(rf"^    (\w+)\s+{_TYPES}\b([^\n]*)", body, re.MULTILINE)
+) + tuple(
+    (t, name, kind, "not null" in rest)
+    for t, name, kind, rest in re.findall(
+        rf"alter table gba\.(\w+) add column (\w+)\s+{_TYPES}\b([^\n;]*)", _SQL
     )
 )
 _PRIVATE = tuple(
@@ -83,8 +133,19 @@ FINANCIAL_PARAMETERS: tuple[object, ...] = tuple(
     for t, trigger, kind, function, deferred in _TRIGGERS
     for x in (t, trigger, kind, "gba." + function + "()", deferred, _SOURCES[function])
 )
+# Non-trigger functions the controls call: signature, result type and packaged source.
+_HELPERS = (
+    ("gba.assert_invoice_consistent(uuid,uuid,uuid)", "void", "assert_invoice_consistent"),
+    ("gba.assert_financial_workflow(uuid)", "void", "assert_financial_workflow"),
+    ("gba.settlement_phase(uuid,uuid,uuid)", "text", "settlement_phase"),
+    ("gba.obligation_balance(uuid,uuid,uuid)", "record", "obligation_balance"),
+    ("gba.assert_settlement_consistent(uuid,uuid,uuid)", "void", "assert_settlement_consistent"),
+    ("gba.assert_payment_consistent(uuid,uuid,uuid)", "void", "assert_payment_consistent"),
+)
+FINANCIAL_PARAMETERS += tuple(
+    x for signature, result, name in _HELPERS for x in (signature, result, _SOURCES[name])
+)
 FINANCIAL_PARAMETERS += (
-    _SOURCES["assert_invoice_consistent"],
     list(FINANCIAL_TABLES),
     "(tenant_id=gba.current_tenant_id())",
     list(FINANCIAL_TABLES),
@@ -94,10 +155,6 @@ FINANCIAL_PARAMETERS += tuple(x for row in _FKS for x in row)
 FINANCIAL_PARAMETERS += tuple(x for row in _COLUMNS for x in row)
 FINANCIAL_PARAMETERS += tuple(x for row in _PRIVATE for x in row)
 FINANCIAL_PARAMETERS += (list(FINANCIAL_TABLES),)
-FINANCIAL_PARAMETERS += (
-    "(source_kind = ANY (ARRAY['manual'::text, 'opening'::text, "
-    "'reversal'::text, 'invoice'::text]))",
-)
 
 
 class _ApprovedCheck(BaseModel):
@@ -107,14 +164,37 @@ class _ApprovedCheck(BaseModel):
     expression: str = Field(min_length=1, max_length=2000)
 
 
-_CHECKS = tuple(
-    _ApprovedCheck.model_validate(json.loads(line.removeprefix("-- CHECK_APPROVAL ")))
-    for line in _SQL.splitlines()
-    if line.startswith("-- CHECK_APPROVAL ")
+_MARK = "-- CHECK_APPROVAL "
+# 0021 widened this G constraint before approvals were packaged beside every CHECK.
+_H1_JOURNAL_SOURCES = _ApprovedCheck(
+    table="journal_entries",
+    name="journal_entries_source_kind_check",
+    expression=(
+        "(source_kind = ANY (ARRAY['manual'::text, 'opening'::text, "
+        "'reversal'::text, 'invoice'::text]))"
+    ),
 )
-_CHECK_NAMES = set(re.findall(r"constraint (financial_[a-z_]+)\s+check \(", _SQL))
-if len(_CHECKS) != 25 or {row.name for row in _CHECKS} != _CHECK_NAMES:
-    raise RuntimeError("Every packaged H CHECK needs an explicit approved predicate")
+
+
+def _approved_checks() -> tuple[_ApprovedCheck, ...]:
+    approved = {(_H1_JOURNAL_SOURCES.table, _H1_JOURNAL_SOURCES.name): _H1_JOURNAL_SOURCES}
+    unlisted = {_H1_JOURNAL_SOURCES.name}
+    for text in _PACKAGED:
+        rows = tuple(
+            _ApprovedCheck.model_validate(json.loads(line.removeprefix(_MARK)))
+            for line in text.splitlines()
+            if line.startswith(_MARK)
+        )
+        declared = set(re.findall(r"constraint (\w+)\s+check \(", text)) - unlisted
+        names = [row.name for row in rows]
+        if len(names) != len(set(names)) or set(names) != declared:
+            raise RuntimeError("Every packaged H CHECK needs one explicit approved predicate")
+        approved.update({(row.table, row.name): row for row in rows})
+        unlisted = set()
+    return tuple(approved.values())
+
+
+_CHECKS = _approved_checks()
 FINANCIAL_PARAMETERS += tuple(
     value for row in _CHECKS for value in (row.table, row.name, row.expression)
 )
@@ -138,13 +218,14 @@ and not exists (
         or f.prolang<>(select oid from pg_catalog.pg_language where lanname='plpgsql')
         or f.prosrc is distinct from expected.source
 )
-and exists (
-    select 1 from pg_catalog.pg_proc f
-    where f.oid=pg_catalog.to_regprocedure('gba.assert_invoice_consistent(uuid,uuid,uuid)')
-        and not f.prosecdef and f.proconfig is null and f.provolatile='v' and f.proparallel='u'
-        and f.pronargs=3 and f.prorettype='pg_catalog.void'::regtype
-        and f.prolang=(select oid from pg_catalog.pg_language where lanname='plpgsql')
-        and f.prosrc=%s
+and not exists (
+    select 1 from (values __HELPERS__) expected(signature,result,source)
+    left join pg_catalog.pg_proc f on f.oid=pg_catalog.to_regprocedure(expected.signature)
+    where f.oid is null or f.prosecdef or f.proconfig is not null or f.provolatile<>'v'
+        or f.proparallel<>'u' or f.prokind<>'f'
+        or f.prorettype is distinct from pg_catalog.to_regtype(expected.result)
+        or f.prolang<>(select oid from pg_catalog.pg_language where lanname='plpgsql')
+        or f.prosrc is distinct from expected.source
 )
 and not exists (
     select 1 from unnest(%s::text[]) expected(table_name)
@@ -206,13 +287,6 @@ and not exists (
     where pg_catalog.has_table_privilege(
         'gba_runtime','gba.'||expected.table_name,'UPDATE,DELETE,TRUNCATE')
 )
-and exists (
-    select 1 from pg_catalog.pg_constraint c
-    where c.conrelid='gba.journal_entries'::regclass
-        and c.conname='journal_entries_source_kind_check'
-        and c.contype='c' and c.convalidated
-        and pg_catalog.pg_get_expr(c.conbin,c.conrelid) = %s
-)
 and not exists (
     select 1 from (values __CHECKS__) expected(table_name,constraint_name,expression)
     left join pg_catalog.pg_constraint c
@@ -223,6 +297,7 @@ and not exists (
        or pg_catalog.pg_get_expr(c.conbin,c.conrelid) is distinct from expected.expression
 )
 """.replace("__TRIGGERS__", ",".join("(%s,%s,%s::int,%s,%s::boolean,%s::text)" for _ in _TRIGGERS))
+    .replace("__HELPERS__", ",".join("(%s,%s,%s::text)" for _ in _HELPERS))
     .replace("__KEYS__", ",".join("(%s,%s,%s::text[])" for _ in _KEYS))
     .replace("__FKS__", ",".join("(%s,%s::text[],%s,%s::text[],%s::boolean)" for _ in _FKS))
     .replace("__COLUMNS__", ",".join("(%s,%s,%s,%s::boolean)" for _ in _COLUMNS))

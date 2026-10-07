@@ -128,12 +128,36 @@ test("ledger: book, accounts, response loss, entry, report, reversal and periods
   await periods
     .getByRole("button", { name: "Read month", exact: true })
     .click();
-  await periods
-    .getByRole("button", { name: "Close month", exact: true })
-    .click();
-  await expect(
-    page.getByText("Ledger command saved.", { exact: true }),
-  ).toBeVisible();
+  // A saved command must keep reads locked until its book refresh has settled.
+  // Delay that actual GET so this invariant does not depend on network timing.
+  let releaseRefresh!: () => void;
+  const refreshGate = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
+  let refreshStarted = false;
+  const bookPattern = "**/ledger/books/*";
+  await page.route(bookPattern, async (route) => {
+    if (route.request().method() === "GET") {
+      refreshStarted = true;
+      await refreshGate;
+    }
+    await route.continue();
+  });
+  try {
+    await periods
+      .getByRole("button", { name: "Close month", exact: true })
+      .click();
+    await expect(
+      page.getByText("Ledger command saved.", { exact: true }),
+    ).toBeVisible();
+    await expect.poll(() => refreshStarted).toBe(true);
+    await expect(
+      periods.getByRole("button", { name: "Read month", exact: true }),
+    ).toBeDisabled();
+  } finally {
+    releaseRefresh();
+    await page.unrouteAll({ behavior: "wait" });
+  }
   await periods
     .getByRole("button", { name: "Read month", exact: true })
     .click();
@@ -150,6 +174,35 @@ test("ledger: book, accounts, response loss, entry, report, reversal and periods
   await expect(
     page.getByText("Ledger command saved.", { exact: true }),
   ).toBeVisible();
+  await periods
+    .getByRole("button", { name: "Read month", exact: true })
+    .click();
+  await expect(periods).toContainText("Month 2026-10: open");
+  // A failed book read keeps writes/read results locked, but allows a fresh retry.
+  let failRefresh = true;
+  await page.route(bookPattern, async (route) => {
+    if (route.request().method() === "GET" && failRefresh) {
+      failRefresh = false;
+      await route.abort("failed");
+      return;
+    }
+    await route.continue();
+  });
+  const refresh = page.getByRole("button", {
+    name: "Refresh ledger",
+    exact: true,
+  });
+  try {
+    await refresh.click();
+    await expect(page.locator(".ledger").getByRole("alert")).toBeVisible();
+    await expect(
+      periods.getByRole("button", { name: "Read month", exact: true }),
+    ).toBeDisabled();
+    await expect(refresh).toBeEnabled();
+  } finally {
+    await page.unrouteAll({ behavior: "wait" });
+  }
+  await refresh.click();
   await periods
     .getByRole("button", { name: "Read month", exact: true })
     .click();

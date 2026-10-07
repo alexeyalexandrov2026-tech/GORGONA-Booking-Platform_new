@@ -111,7 +111,7 @@ def test_downloads_are_attachments_with_an_ascii_fallback(name: str, fallback: s
 def test_guard_binds_one_parameter_per_placeholder() -> None:
     placeholders = schema_guard._ACCESS_BOUNDARY.count("%s")
     assert placeholders == 5 * len(schema_guard._DEFINITIONS) + 8 + 6 * 5 + 1
-    assert len(schema_guard._DEFINITIONS) == 57
+    assert len(schema_guard._DEFINITIONS) == 63
     assert LEDGER_BOUNDARY.count("%s") == len(LEDGER_PARAMETERS)
     assert FINANCIAL_BOUNDARY.count("%s") == len(FINANCIAL_PARAMETERS)
     assert len(schema_guard._OCCUPANCY_TRIGGERS) == 5

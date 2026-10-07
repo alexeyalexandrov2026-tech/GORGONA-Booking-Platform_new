@@ -1,6 +1,34 @@
 # GORGONA — реестр реализации
 
-## Current H1 backend — bounded implementation, 2026-10-06
+## Current H2 backend — bounded published implementation, 2026-10-07
+
+Branch `codex/package-h2-settlements` from the delivered H1 backend 75e809b.
+Published in [draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16), target H1 PR15; no merge.
+Original checkpoint75c36da; final docs are a successor. Read actual HEAD/origin/CI.
+Corrective source `15edbed1d608ada9d0901a7710c00eff28c23e71` fixes a diagnosed ledger refresh race in two web files;
+financial Python/SQL and frozen migrations are unchanged from54852b4. [CI37578255793](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37578255793) PASS:1044 passed/1 skipped/379.86s;
+all3 Docker/image, PG/browser, web69/2.3s and static211 PASS.
+Fresh local full:1041 passed/4 skipped/434.68s; focused browser1/17.95s.
+Bounded independent UI review PASS; full H2 money/state review remains NOT DONE.
+[Handoff](NEXT_AGENT_H2_2026-10-07.md),
+[exact checks/changed files](evidence/2026-10-07-h2-settlements/VALIDATION.md).
+Forward 0022–0024: manual accrual as a second document kind with one new
+obligation and a balanced G journal; settlement documents with approval,
+reserve, sent, release and cancel, no money on reserve; externally attested
+partial confirmations moving exactly R→P with one balanced journal and a
+permanent external identity bound to one payment. SQL and service both enforce
+nonnegative P/C/R and P+C+R<=A at commit.
+Historical author full1041/4/459.51s; fresh corrective full is above. Mandatory PostgreSQL/browser;
+lint/format/mypy 211 PASS; web typecheck/lint/format/69 unit/build PASS.
+Exact-checkpoint [CI37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) on75c36da PASS:
+1044 passed/1 skipped/381.36s, all3 Docker/image, PG/browser, 69 web tests/2.3s, static211.
+Independent money/state review NOT DONE.
+FIN-03/FIN-02 remain planned; H3–H4 and all twelve complete H criteria remain
+NOT TESTED. G/FIN-01 retains technically_verified. No H UI, provider, funds,
+merge, deployment or production migration. Next coherent work is H3 credits,
+refund obligations and corrections.
+
+## Historical H1 backend — bounded implementation, 2026-10-06
 
 Branch `codex/package-h1-persistence` from foundation18e3f5e, reviewed
 source2d5a8f9. [Draft PR15](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/15)

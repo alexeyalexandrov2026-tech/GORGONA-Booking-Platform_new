@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.business import commands
 from gorgona_booking.business.ledger_contracts import (
+    H_OWNED_SOURCE_KINDS,
     AccountInput,
     AccountReceipt,
     AccountType,
@@ -38,7 +39,7 @@ from gorgona_booking.business.ledger_contracts import (
     Currency,
     EntryInput,
     EntryReceipt,
-    InvoicePosting,
+    FinancialPosting,
     JournalEntryList,
     JournalEntryListV2,
     JournalEntrySummary,
@@ -1016,18 +1017,18 @@ async def _require_new_entry(conn: RuntimeConnection, business_id: UUID, entry_i
         raise OperationPostedError("This entry was already posted; reverse it to correct it")
 
 
-async def append_invoice_journal(
+async def append_financial_journal(
     conn: RuntimeConnection,
     *,
     business_id: UUID,
     book_id: UUID,
     entry_id: UUID,
     user_id: UUID,
-    body: InvoicePosting,
+    body: FinancialPosting,
 ) -> None:
     """Append to G in the caller transaction; H must flush its complete lineage.
 
-    This does not claim a command or write an invoice receipt. SQL rejects an
+    This does not claim a command or write a financial receipt. SQL rejects an
     arbitrary origin, incomplete lineage and later alterations independently.
     """
     await _lock(conn, business_id)
@@ -1049,7 +1050,7 @@ async def _append_journal(
     book_id: UUID,
     entry_id: UUID,
     user_id: UUID,
-    body: EntryInput | InvoicePosting,
+    body: EntryInput | FinancialPosting,
 ) -> None:
     book = await require_book(conn, business_id, book_id)
     await _require_new_entry(conn, business_id, entry_id)
@@ -1204,7 +1205,7 @@ async def reverse_entry(
             (business_id, book_id, entry_id),
         )
     ).fetchone()
-    if origin is not None and origin[0] == "invoice":
+    if origin is not None and origin[0] in H_OWNED_SOURCE_KINDS:
         raise LedgerStateError("Correct this entry through its financial document")
     original = await load_entry(conn, business_id, book_id, entry_id)
     if original is None:

@@ -64,6 +64,11 @@ export function Ledger({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [loadedBook, setLoadedBook] = useState<{
+    businessId: string;
+    bookId: string;
+    tick: number;
+  } | null>(null);
   const [periodText, setPeriodText] = useState("");
   const [period, setPeriod] = useState<LedgerPeriod | null>(null);
   const [reason, setReason] = useState("");
@@ -73,13 +78,20 @@ export function Ledger({
   const [to, setTo] = useState("");
   const [currency, setCurrency] = useState("");
   const [report, setReport] = useState<TrialBalance | null>(null);
-  const locked =
-    busy || loading || recovering || Boolean(pending) || Boolean(recovery);
-  const disabled = locked || !enabled;
   const currentEntity = overview?.items.find(
     (x) => x.legal_entity_id === entity,
   );
   const bookId = currentEntity?.book?.book_id;
+  const waitingForBook = Boolean(
+    bookId &&
+    (loadedBook?.businessId !== businessId ||
+      loadedBook?.bookId !== bookId ||
+      loadedBook?.tick !== tick),
+  );
+  const blocked =
+    busy || loading || recovering || Boolean(pending) || Boolean(recovery);
+  const locked = blocked || waitingForBook;
+  const disabled = locked || !enabled;
 
   useEffect(() => {
     let active = true;
@@ -194,6 +206,11 @@ export function Ledger({
           setEntry(null);
           setReport(null);
           setPeriod(null);
+          setLoadedBook({
+            businessId: data.saved.business_id,
+            bookId: data.saved.book_id,
+            tick,
+          });
         })
         .catch((e) => {
           if (active) setError(failure(e));
@@ -352,7 +369,7 @@ export function Ledger({
         </section>
       )}
       <button
-        disabled={locked}
+        disabled={blocked}
         onClick={() => {
           setError(null);
           setLoading(true);
@@ -362,6 +379,9 @@ export function Ledger({
         Refresh ledger
       </button>
       {loading && <p role="status">Loading ledger…</p>}
+      {waitingForBook && !loading && !error && (
+        <p role="status">Updating ledger book…</p>
+      )}
       {!enabled && overview && (
         <p>
           Finance is not enabled for this company. Existing records remain

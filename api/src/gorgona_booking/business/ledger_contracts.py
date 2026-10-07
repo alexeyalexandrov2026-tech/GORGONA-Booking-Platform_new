@@ -18,7 +18,9 @@ from gorgona_booking.business.contracts import Strict, Versioned
 AccountType = Literal["asset", "liability", "equity", "revenue", "expense"]
 Side = Literal["debit", "credit"]
 SourceKind = Literal["manual", "opening", "reversal"]
-SourceKindV2 = Literal["manual", "opening", "reversal", "invoice"]
+SourceKindV2 = Literal["manual", "opening", "reversal", "invoice", "accrual", "payment"]
+# Journals owned by a financial document; G never reverses them generically.
+H_OWNED_SOURCE_KINDS = ("invoice", "accrual", "payment")
 PeriodAction = Literal["closed", "reopened"]
 PeriodState = Literal["open", "closed"]
 ChartTemplate = Literal["starter", "empty"]
@@ -190,6 +192,23 @@ class InvoicePosting(_PostingFields):
 
     source_kind: Literal["invoice"] = "invoice"
     source_id: str = Field(pattern=SOURCE_ID_PATTERN)
+
+
+class AccrualPosting(_PostingFields):
+    """Manual-accrual posting; SQL requires the issued manual accrual lineage."""
+
+    source_kind: Literal["accrual"] = "accrual"
+    source_id: str = Field(pattern=SOURCE_ID_PATTERN)
+
+
+class PaymentPosting(_PostingFields):
+    """Externally attested payment; SQL requires its payment row and exact lines."""
+
+    source_kind: Literal["payment"] = "payment"
+    source_id: str = Field(pattern=SOURCE_ID_PATTERN)
+
+
+FinancialPosting = InvoicePosting | AccrualPosting | PaymentPosting
 
 
 class ReversalInput(Versioned):

@@ -1,6 +1,36 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current H1 backend and next-agent handoff — 2026-10-06
+## Current H2 backend and next-agent handoff — 2026-10-07
+
+[Full successor handoff](docs/plan/NEXT_AGENT_H2_2026-10-07.md),
+[copyable prompt](docs/plan/NEXT_AGENT_PROMPT_H2_2026-10-07.md),
+[changed files/checks/limits](docs/plan/evidence/2026-10-07-h2-settlements/VALIDATION.md).
+Branch codex/package-h2-settlements from the delivered H1 backend 75e809b.
+**Published in [draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16), target H1 PR15; no merge.**
+Original eight docs committed/pushed as75c36da; final docs are a successor.
+Read actual final HEAD/origin/current-head CI in PR16/exported delivery state.
+Corrective source `15edbed1d608ada9d0901a7710c00eff28c23e71` fixes a diagnosed ledger refresh race in two web files;
+financial Python/SQL and frozen migrations are unchanged from54852b4. [CI37578255793](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37578255793) PASS:1044 passed/1 skipped/379.86s;
+all3 Docker/image, PG/browser, web69/2.3s and static211 PASS.
+Fresh local full:1041 passed/4 skipped/434.68s; focused browser1/17.95s.
+Bounded independent UI review PASS; full H2 money/state review remains NOT DONE.
+Forward 0022–0024 add manual accruals as new obligations, settlement documents
+with approval/reserve/sent/release/cancel, and externally attested partial
+confirmations that move exactly R→P with one balanced journal and a permanent
+external identity. PostgreSQL and the service both enforce P+C+R<=A at commit.
+Historical author full suite1041/4/459.51s; fresh corrective results are above.
+Mandatory PostgreSQL18.6 and browser;
+Ruff/format/mypy211 and web gates PASS. Exact-checkpoint CI75c36da
+[37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) PASS:1044 passed/1 skipped/381.36s; all3 Docker/image,
+PG/browser, 69 web tests/2.3s and static211 PASS.
+Independent money/state review NOT DONE; HawkScan was not run.
+FIN-03/02 remain planned and finance_documents unavailable. H3 credits, refund
+obligations and corrections and H4 UI/admission remain unfinished.
+Owner/E2 dirty trees preserved; own cluster 51462 stopped.
+No merge/deploy/production/provider/funds action. The H1 section below is
+superseded for continuation; its evidence remains snapshot-specific.
+
+## Historical H1 backend handoff — 2026-10-06
 
 [Full successor handoff](docs/plan/NEXT_AGENT_H1_BACKEND_2026-10-06.md),
 [copyable prompt](docs/plan/NEXT_AGENT_PROMPT_H1_BACKEND_2026-10-06.md),

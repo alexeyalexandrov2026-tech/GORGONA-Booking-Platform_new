@@ -1,6 +1,7 @@
 """H1 invoice persistence against real disposable PostgreSQL and API auth."""
 
 import asyncio
+import re
 from dataclasses import dataclass
 from datetime import date
 from uuid import UUID, uuid7
@@ -46,6 +47,36 @@ async def test_approved_predicates_match_packaged_migration(
         if row is None or row[0] != approved.expression:
             mismatches.append((approved.name, approved.expression, row))
     assert mismatches == []
+
+
+def approved_check(table: str, name: str) -> str:
+    """DDL restoring one CHECK to its packaged, approved predicate."""
+    check = next(c for c in financial_guard._CHECKS if (c.table, c.name) == (table, name))
+    return (
+        f"alter table gba.{table} drop constraint if exists {name}; "
+        f"alter table gba.{table} add constraint {name} check ({check.expression})"
+    )
+
+
+def packaged_function(name: str) -> str:
+    """DDL restoring one function to its latest packaged definition."""
+    latest = None
+    for text in financial_guard._PACKAGED:
+        for match in re.finditer(
+            rf"create (?:or replace )?function gba\.{name}\(.*?\$\$;", text, re.DOTALL
+        ):
+            latest = match.group(0)
+    assert latest is not None, name
+    return latest.replace("create function", "create or replace function", 1)
+
+
+def widened_check(table: str, name: str, extra: str) -> str:
+    """DDL that keeps existing rows valid but admits one unapproved value."""
+    check = next(c for c in financial_guard._CHECKS if (c.table, c.name) == (table, name))
+    return (
+        f"alter table gba.{table} drop constraint {name}; "
+        f"alter table gba.{table} add constraint {name} check (({check.expression}) or {extra})"
+    )
 
 
 @dataclass(frozen=True)
@@ -265,7 +296,7 @@ async def test_late_balanced_journal_pair_cannot_change_an_issued_invoice(
     assert (await invoices.save(document=document)).status_code == 200
     with pytest.raises(psycopg.errors.CheckViolation, match="complete issued lines"):  # noqa: PT012
         async with tenant_transaction(app_pool, invoices.ledger.business) as conn:
-            issued = await financial_documents.issue_invoice(
+            issued = await financial_documents.issue_document(
                 conn,
                 business_id=invoices.ledger.business,
                 book_id=invoices.ledger.book,
@@ -321,7 +352,7 @@ async def test_late_draft_line_after_same_transaction_issue_is_rechecked(
                 key=str(uuid7()),
                 body=body,
             )
-            await financial_documents.issue_invoice(
+            await financial_documents.issue_document(
                 conn,
                 business_id=invoices.ledger.business,
                 book_id=invoices.ledger.book,
@@ -690,57 +721,43 @@ async def test_sql_history_stays_insert_only(
             "revoke insert(created_transaction) on gba.financial_document_versions "
             "from gba_runtime",
         ),
+        # Evolved controls restore from the packaged approval, so a later forward
+        # migration of the same CHECK needs no edit here.
         (
             "alter table gba.financial_obligations "
             "drop constraint financial_obligations_source_kind_check",
-            "alter table gba.financial_obligations "
-            "add constraint financial_obligations_source_kind_check "
-            "check (source_kind = 'invoice')",
+            approved_check("financial_obligations", "financial_obligations_source_kind_check"),
         ),
         (
-            "alter table gba.financial_obligations "
-            "drop constraint financial_obligations_source_kind_check; "
-            "alter table gba.financial_obligations "
-            "add constraint financial_obligations_source_kind_check "
-            "check (source_kind in ('invoice','manual'))",
-            "alter table gba.financial_obligations "
-            "drop constraint financial_obligations_source_kind_check; "
-            "alter table gba.financial_obligations "
-            "add constraint financial_obligations_source_kind_check "
-            "check (source_kind = 'invoice')",
+            widened_check(
+                "financial_obligations",
+                "financial_obligations_source_kind_check",
+                "source_kind = 'credit_refund'",
+            ),
+            approved_check("financial_obligations", "financial_obligations_source_kind_check"),
         ),
         (
-            "alter table gba.financial_obligations "
-            "drop constraint financial_obligations_source_kind_check; "
-            "alter table gba.financial_obligations "
-            "add constraint financial_obligations_source_kind_check "
-            "check (source_kind = 'invoice') not valid",
+            approved_check("financial_obligations", "financial_obligations_source_kind_check")
+            + " not valid",
             "alter table gba.financial_obligations "
             "validate constraint financial_obligations_source_kind_check",
         ),
         (
-            "alter table gba.financial_command_cancellations "
-            "drop constraint financial_command_cancellations_revision_check; "
-            "alter table gba.financial_command_cancellations "
-            "add constraint financial_command_cancellations_revision_check "
-            "check (revision >= 1 and (operation <> 'invoice_issue ' or revision >= 2))",
-            "alter table gba.financial_command_cancellations "
-            "drop constraint financial_command_cancellations_revision_check; "
-            "alter table gba.financial_command_cancellations "
-            "add constraint financial_command_cancellations_revision_check "
-            "check (revision >= 1 and (operation <> 'invoice_issue' or revision >= 2))",
+            widened_check(
+                "financial_command_cancellations",
+                "financial_command_cancellations_revision_check",
+                "operation = 'invoice_issue '",
+            ),
+            approved_check(
+                "financial_command_cancellations",
+                "financial_command_cancellations_revision_check",
+            ),
         ),
         (
-            "alter table gba.journal_entries "
-            "drop constraint journal_entries_source_kind_check; "
-            "alter table gba.journal_entries "
-            "add constraint journal_entries_source_kind_check "
-            "check (source_kind in ('manual','opening','reversal','invoice','invoice '))",
-            "alter table gba.journal_entries "
-            "drop constraint journal_entries_source_kind_check; "
-            "alter table gba.journal_entries "
-            "add constraint journal_entries_source_kind_check "
-            "check (source_kind in ('manual','opening','reversal','invoice'))",
+            widened_check(
+                "journal_entries", "journal_entries_source_kind_check", "source_kind = 'invoice '"
+            ),
+            approved_check("journal_entries", "journal_entries_source_kind_check"),
         ),
     ],
 )

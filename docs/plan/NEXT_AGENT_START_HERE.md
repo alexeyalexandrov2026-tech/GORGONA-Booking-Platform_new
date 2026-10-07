@@ -1,6 +1,36 @@
-# GORGONA — начните здесь (актуальное продолжение, 2026-10-06)
+# GORGONA — начните здесь (актуальное продолжение, 2026-10-07)
 
-## Current: H1 invoice backend and successor handoff
+## Current: H2 backend and successor handoff
+
+Read [full handoff](NEXT_AGENT_H2_2026-10-07.md) and
+[copyable prompt](NEXT_AGENT_PROMPT_H2_2026-10-07.md).
+Branch `codex/package-h2-settlements`, own checkout
+`C:\Users\alexa\Documents\ChatGPT\gorgona-h2-settlements`, parent 75e809b
+(delivered H1 backend). **[Draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16) published;
+original eight docs committed/pushed as75c36da. Final docs are a successor.**
+Verify current HEAD/origin/CI; do not repeat publication or open a second PR.
+Corrective source `15edbed1d608ada9d0901a7710c00eff28c23e71` fixes a diagnosed ledger refresh race in two web files;
+financial Python/SQL and frozen migrations are unchanged from54852b4. [CI37578255793](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37578255793) PASS:1044 passed/1 skipped/379.86s;
+all3 Docker/image, PG/browser, web69/2.3s and static211 PASS.
+Fresh local full:1041 passed/4 skipped/434.68s; focused browser1/17.95s.
+Bounded independent UI review PASS; full H2 money/state review remains NOT DONE.
+Read the actual HEAD and remote state before continuing.
+
+Forward 0022–0024 add manual accruals, settlement reserves and externally
+attested partial confirmations behind the closed finance_documents gate.
+Historical author full1041/4/459.51s; fresh corrective full above; Ruff/format/mypy211 PASS;
+web gates PASS. Exact-checkpoint [CI37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) on75c36da
+PASS:1044 passed/1 skipped/381.36s, all3 Docker/image, PG/browser, 69 web tests/2.3s, static211.
+Independent money/state review NOT DONE.
+[Evidence, changed files and limits](evidence/2026-10-07-h2-settlements/VALIDATION.md).
+G/FIN-01 technically_verified; FIN-03/02 planned. Next: H3 credits, refund
+obligations and corrections; then H4 UI/admission. No H acceptance/promotion.
+Owner/E2 dirty trees 19/9 are preserved; own PG 51462 stopped.
+Production/provider/merge is not authorized. The owner approved the push on
+2026-10-07; publication is complete. Next agent verifies delivery/review, then H3.
+All older instructions below describe their dated snapshots.
+
+## Historical: H1 invoice backend handoff
 
 Read [full handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md) and
 [copyable prompt](NEXT_AGENT_PROMPT_H1_BACKEND_2026-10-06.md).

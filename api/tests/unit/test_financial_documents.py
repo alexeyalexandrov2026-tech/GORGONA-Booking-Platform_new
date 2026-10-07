@@ -254,14 +254,22 @@ def test_financial_document_gate_follows_fin03_and_requires_explicit_configurati
     assert MODULES_BY_ID["finance"].enableable
 
 
-def test_financial_recovery_reference_rejects_an_impossible_issue_revision() -> None:
+@pytest.mark.parametrize("operation", ["invoice_issue", "accrual_issue"])
+def test_financial_recovery_reference_rejects_an_impossible_issue_revision(
+    operation: Any,
+) -> None:
     with pytest.raises(ValidationError):
         FinancialCommandReference(
-            operation="invoice_issue",
+            operation=operation,
             book_id=uuid7(),
             subject_id=uuid7(),
             revision=1,
         )
+    draft_operation = operation.replace("issue", "draft")
+    reference = FinancialCommandReference(
+        operation=draft_operation, book_id=uuid7(), subject_id=uuid7(), revision=1
+    )
+    assert reference.operation == draft_operation
 
 
 def test_invoice_view_validates_actual_totals_and_issued_references() -> None:
@@ -276,6 +284,7 @@ def test_invoice_view_validates_actual_totals_and_issued_references() -> None:
         "business_id": str(uuid7()),
         "book_id": str(uuid7()),
         "document_id": str(uuid7()),
+        "kind": "invoice",
         "revision": 1,
         "state": "draft",
         "minor_units": 2,
@@ -297,7 +306,10 @@ def test_invoice_view_validates_actual_totals_and_issued_references() -> None:
     with pytest.raises(ValidationError):
         InvoiceDocumentView.model_validate(issued)
     assert InvoiceDocumentView.model_validate(issued | {"revision": 2}).state == "issued"
+    accrual = InvoiceDocumentView.model_validate(data | {"kind": "manual_accrual"})
+    assert accrual.kind == "manual_accrual"
     for changes in (
+        {"kind": "credit_note"},
         {"schema_version": True},
         {"minor_units": True},
         {"total": "0.31"},
