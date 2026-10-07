@@ -19,7 +19,11 @@ from tests.integration import test_invoice_issue as invoice_shared
 from tests.integration.booking_support import BookingWorld
 from tests.integration.configuration_support import Config
 from tests.integration.seed import seed_user
-from tests.integration.test_invoice_issue import InvoiceWorld
+from tests.integration.test_invoice_issue import (
+    InvoiceWorld,
+    approved_check,
+    widened_check,
+)
 from tests.integration.test_ledger import LedgerWorld
 from tests.support.fake_idp import FakeIdp
 
@@ -573,44 +577,19 @@ async def test_two_accrual_issues_wait_on_real_lock_and_only_one_commits(
         assert row == (1,)
 
 
-_KIND_CHECK = (
-    "alter table gba.financial_documents add constraint financial_documents_kind_check "
-    "check (kind in ('invoice','manual_accrual'))"
-)
-_DROP_KIND_CHECK = (
-    "alter table gba.financial_documents drop constraint financial_documents_kind_check"
-)
-_JOURNAL_SOURCES = "'manual','opening','reversal','invoice','accrual'"
-_DROP_JOURNAL_CHECK = (
-    "alter table gba.journal_entries drop constraint journal_entries_source_kind_check"
-)
-_ADD_JOURNAL_CHECK = (
-    "alter table gba.journal_entries add constraint journal_entries_source_kind_check "
-    "check (source_kind in ({}))"
-)
-_DROP_RECEIPT_CHECK = (
-    "alter table gba.financial_command_receipts "
-    "drop constraint financial_command_receipts_operation_check"
-)
-_ADD_RECEIPT_CHECK = (
-    "alter table gba.financial_command_receipts "
-    "add constraint financial_command_receipts_operation_check check (operation in "
-    "('invoice_draft','invoice_issue','accrual_draft',{}))"
-)
+_KIND = ("financial_documents", "financial_documents_kind_check")
 
 
 @pytest.mark.parametrize(
     ("change", "restore"),
     [
-        (_DROP_KIND_CHECK, _KIND_CHECK),
         (
-            _DROP_KIND_CHECK
-            + "; alter table gba.financial_documents add constraint financial_documents_kind_check "
-            "check (kind in ('invoice','manual_accrual','credit_note'))",
-            _DROP_KIND_CHECK + "; " + _KIND_CHECK,
+            "alter table gba.financial_documents drop constraint financial_documents_kind_check",
+            approved_check(*_KIND),
         ),
+        (widened_check(*_KIND, "kind = 'credit_note'"), approved_check(*_KIND)),
         (
-            _DROP_KIND_CHECK + "; " + _KIND_CHECK + " not valid",
+            approved_check(*_KIND) + " not valid",
             "alter table gba.financial_documents "
             "validate constraint financial_documents_kind_check",
         ),
@@ -619,15 +598,20 @@ _ADD_RECEIPT_CHECK = (
             "alter table gba.financial_documents alter column kind set not null",
         ),
         (
-            _DROP_JOURNAL_CHECK + "; " + _ADD_JOURNAL_CHECK.format(_JOURNAL_SOURCES + ",'refund'"),
-            _DROP_JOURNAL_CHECK + "; " + _ADD_JOURNAL_CHECK.format(_JOURNAL_SOURCES),
+            widened_check(
+                "journal_entries", "journal_entries_source_kind_check", "source_kind = 'refund'"
+            ),
+            approved_check("journal_entries", "journal_entries_source_kind_check"),
         ),
         (
-            # Existing rows stay valid; only the approved literal list is altered.
-            _DROP_RECEIPT_CHECK
-            + "; "
-            + _ADD_RECEIPT_CHECK.format("'accrual_issue','accrual_issue '"),
-            _DROP_RECEIPT_CHECK + "; " + _ADD_RECEIPT_CHECK.format("'accrual_issue'"),
+            widened_check(
+                "financial_command_receipts",
+                "financial_command_receipts_operation_check",
+                "operation = 'accrual_issue '",
+            ),
+            approved_check(
+                "financial_command_receipts", "financial_command_receipts_operation_check"
+            ),
         ),
         (
             "create or replace function gba.enforce_invoice_origin() returns trigger "

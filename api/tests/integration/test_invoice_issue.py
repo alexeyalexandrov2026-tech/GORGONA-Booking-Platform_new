@@ -48,6 +48,24 @@ async def test_approved_predicates_match_packaged_migration(
     assert mismatches == []
 
 
+def approved_check(table: str, name: str) -> str:
+    """DDL restoring one CHECK to its packaged, approved predicate."""
+    check = next(c for c in financial_guard._CHECKS if (c.table, c.name) == (table, name))
+    return (
+        f"alter table gba.{table} drop constraint if exists {name}; "
+        f"alter table gba.{table} add constraint {name} check ({check.expression})"
+    )
+
+
+def widened_check(table: str, name: str, extra: str) -> str:
+    """DDL that keeps existing rows valid but admits one unapproved value."""
+    check = next(c for c in financial_guard._CHECKS if (c.table, c.name) == (table, name))
+    return (
+        f"alter table gba.{table} drop constraint {name}; "
+        f"alter table gba.{table} add constraint {name} check (({check.expression}) or {extra})"
+    )
+
+
 @dataclass(frozen=True)
 class InvoiceWorld:
     ledger: LedgerWorld
@@ -690,61 +708,43 @@ async def test_sql_history_stays_insert_only(
             "revoke insert(created_transaction) on gba.financial_document_versions "
             "from gba_runtime",
         ),
-        # The approved predicates below are the forward 0022 forms of the 0021 controls.
+        # Evolved controls restore from the packaged approval, so a later forward
+        # migration of the same CHECK needs no edit here.
         (
             "alter table gba.financial_obligations "
             "drop constraint financial_obligations_source_kind_check",
-            "alter table gba.financial_obligations "
-            "add constraint financial_obligations_source_kind_check "
-            "check (source_kind in ('invoice','manual'))",
+            approved_check("financial_obligations", "financial_obligations_source_kind_check"),
         ),
         (
-            "alter table gba.financial_obligations "
-            "drop constraint financial_obligations_source_kind_check; "
-            "alter table gba.financial_obligations "
-            "add constraint financial_obligations_source_kind_check "
-            "check (source_kind in ('invoice','manual','credit_refund'))",
-            "alter table gba.financial_obligations "
-            "drop constraint financial_obligations_source_kind_check; "
-            "alter table gba.financial_obligations "
-            "add constraint financial_obligations_source_kind_check "
-            "check (source_kind in ('invoice','manual'))",
+            widened_check(
+                "financial_obligations",
+                "financial_obligations_source_kind_check",
+                "source_kind = 'credit_refund'",
+            ),
+            approved_check("financial_obligations", "financial_obligations_source_kind_check"),
         ),
         (
-            "alter table gba.financial_obligations "
-            "drop constraint financial_obligations_source_kind_check; "
-            "alter table gba.financial_obligations "
-            "add constraint financial_obligations_source_kind_check "
-            "check (source_kind in ('invoice','manual')) not valid",
+            approved_check("financial_obligations", "financial_obligations_source_kind_check")
+            + " not valid",
             "alter table gba.financial_obligations "
             "validate constraint financial_obligations_source_kind_check",
         ),
         (
-            "alter table gba.financial_command_cancellations "
-            "drop constraint financial_command_cancellations_revision_check; "
-            "alter table gba.financial_command_cancellations "
-            "add constraint financial_command_cancellations_revision_check "
-            "check (revision >= 1 and "
-            "(operation not in ('invoice_issue ','accrual_issue') or revision >= 2))",
-            "alter table gba.financial_command_cancellations "
-            "drop constraint financial_command_cancellations_revision_check; "
-            "alter table gba.financial_command_cancellations "
-            "add constraint financial_command_cancellations_revision_check "
-            "check (revision >= 1 and "
-            "(operation not in ('invoice_issue','accrual_issue') or revision >= 2))",
+            widened_check(
+                "financial_command_cancellations",
+                "financial_command_cancellations_revision_check",
+                "operation = 'invoice_issue '",
+            ),
+            approved_check(
+                "financial_command_cancellations",
+                "financial_command_cancellations_revision_check",
+            ),
         ),
         (
-            "alter table gba.journal_entries "
-            "drop constraint journal_entries_source_kind_check; "
-            "alter table gba.journal_entries "
-            "add constraint journal_entries_source_kind_check "
-            "check (source_kind in "
-            "('manual','opening','reversal','invoice','accrual','invoice '))",
-            "alter table gba.journal_entries "
-            "drop constraint journal_entries_source_kind_check; "
-            "alter table gba.journal_entries "
-            "add constraint journal_entries_source_kind_check "
-            "check (source_kind in ('manual','opening','reversal','invoice','accrual'))",
+            widened_check(
+                "journal_entries", "journal_entries_source_kind_check", "source_kind = 'invoice '"
+            ),
+            approved_check("journal_entries", "journal_entries_source_kind_check"),
         ),
     ],
 )

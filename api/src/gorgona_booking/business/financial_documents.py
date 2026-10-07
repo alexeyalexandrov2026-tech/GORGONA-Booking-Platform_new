@@ -17,14 +17,11 @@ from psycopg.errors import (
     UniqueViolation,
 )
 
-from gorgona_booking.booking.idempotency import IdempotencyScope
-from gorgona_booking.booking.models import IdempotencyKeyReusedError
-from gorgona_booking.business import commands, ledger, modules
+from gorgona_booking.business import commands, financial_commands, ledger, modules
+from gorgona_booking.business.financial_commands import Reference
 from gorgona_booking.business.financial_contracts import (
     DocumentKind,
     FinancialCommandKind,
-    FinancialCommandReference,
-    FinancialCommandStatus,
     FinancialReceipt,
     InvoiceDocumentView,
     InvoiceDraftInput,
@@ -51,12 +48,6 @@ from gorgona_booking.errors import (
 )
 
 FEATURE = "finance_documents"
-_OPERATIONS: dict[FinancialCommandKind, str] = {
-    "invoice_draft": "business.finance.invoice_draft",
-    "invoice_issue": "business.finance.invoice_issue",
-    "accrual_draft": "business.finance.accrual_draft",
-    "accrual_issue": "business.finance.accrual_issue",
-}
 
 
 class _Kind(NamedTuple):
@@ -97,20 +88,8 @@ class FinancialDocumentStateError(ConflictError):
     code = "FINANCIAL_STATE_INVALID"
 
 
-class FinancialCommandCancelledError(ConflictError):
-    code = "FINANCIAL_COMMAND_CANCELLED"
-
-
-async def _lock(conn: RuntimeConnection, business: UUID) -> None:
-    try:
-        await conn.execute("select gba.lock_ledger(%s)", (business,))
-    except SerializationFailure as exc:
-        raise DatabaseUnavailableError(
-            "Financial writes require read committed transactions"
-        ) from exc
-
-
-async def _require_workflow(conn: RuntimeConnection, business: UUID) -> None:
+async def require_workflow(conn: RuntimeConnection, business: UUID) -> None:
+    """New H effects need the current registry readiness and every published module."""
     current = modules.MODULES_BY_ID[FEATURE]
     if not current.enableable or not at_least(current.readiness, modules.MINIMUM_READINESS):
         raise FinancialWorkflowNotReadyError(
@@ -144,6 +123,14 @@ async def _flush(conn: RuntimeConnection) -> None:
     await conn.execute("set constraints " + _CONSTRAINTS + " deferred")
 
 
+def _receipt(reference: Reference) -> FinancialReceipt:
+    return FinancialReceipt(
+        book_id=reference.book_id,
+        document_id=reference.subject_id,
+        revision=reference.revision,
+    )
+
+
 async def _claim(
     conn: RuntimeConnection,
     *,
@@ -153,37 +140,17 @@ async def _claim(
     key: str,
     request_hash: str,
 ) -> FinancialReceipt | None:
-    await _lock(conn, business)
-    cancelled = await (
-        await conn.execute(
-            "select 1 from gba.financial_command_cancellations "
-            "where tenant_id=%s and actor_key=%s and operation=%s and idempotency_key=%s",
-            (business, actor, operation, key),
-        )
-    ).fetchone()
-    if cancelled:
-        raise FinancialCommandCancelledError("This unresolved financial command was cancelled")
-    row = await (
-        await conn.execute(
-            "select request_hash,book_id,document_id,revision from gba.financial_command_receipts "
-            "where tenant_id=%s and actor_key=%s and operation=%s and idempotency_key=%s",
-            (business, actor, operation, key),
-        )
-    ).fetchone()
-    if row is not None and row[0] != request_hash:
-        raise IdempotencyKeyReusedError("This key was already used with another financial command")
-    scope = IdempotencyScope(business, actor, _OPERATIONS[operation], key)
-    cached = await commands.claim(conn, scope, request_hash, FinancialReceipt)
-    if row is None:
-        if cached is not None:
-            raise DatabaseUnavailableError("The financial command outcome is incomplete")
-        return None
-    receipt = FinancialReceipt(book_id=row[1], document_id=row[2], revision=row[3])
-    if cached is not None and cached != receipt:
-        raise DatabaseUnavailableError("The financial command references disagree")
-    if cached is None:
-        await commands.complete(conn, scope, receipt)
-    return receipt
+    reference = await financial_commands.claim(
+        conn,
+        business=business,
+        actor=actor,
+        operation=operation,
+        key=key,
+        request_hash=request_hash,
+        model=FinancialReceipt,
+        receipt=_receipt,
+    )
+    return None if reference is None else _receipt(reference)
 
 
 async def _complete(
@@ -197,36 +164,17 @@ async def _complete(
     request_hash: str,
     receipt: FinancialReceipt,
 ) -> None:
-    await _flush(conn)
-    await conn.execute(
-        "insert into gba.financial_command_receipts "
-        "(tenant_id,actor_key,operation,idempotency_key,request_hash,book_id,"
-        "document_id,revision,created_by) "
-        "values (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-        (
-            business,
-            actor,
-            operation,
-            key,
-            request_hash,
-            receipt.book_id,
-            receipt.document_id,
-            receipt.revision,
-            user,
-        ),
-    )
-    await _flush(conn)
-    await commands.audit(
+    await financial_commands.complete(
         conn,
-        business,
-        actor,
-        "finance." + operation,
-        "financial_document",
-        str(receipt.document_id),
-        {"book_id": str(receipt.book_id), "revision": receipt.revision},
-    )
-    await commands.complete(
-        conn, IdempotencyScope(business, actor, _OPERATIONS[operation], key), receipt
+        business=business,
+        actor=actor,
+        user=user,
+        operation=operation,
+        key=key,
+        request_hash=request_hash,
+        reference=Reference(receipt.book_id, receipt.document_id, receipt.revision),
+        receipt=receipt,
+        flush=_flush,
     )
 
 
@@ -467,7 +415,7 @@ async def save_draft(
     )
     if prior is not None:
         return await _invoice(conn, business_id, prior, kind)
-    await _require_workflow(conn, business_id)
+    await require_workflow(conn, business_id)
     await ledger.require_book(conn, business_id, book_id)
     current = await load_invoice(conn, business_id, book_id, document_id, kind=kind)
     if current is None and await _document_exists(conn, business_id, book_id, document_id):
@@ -544,7 +492,7 @@ async def issue_document(
     )
     if prior is not None:
         return await _invoice(conn, business_id, prior, kind)
-    await _require_workflow(conn, business_id)
+    await require_workflow(conn, business_id)
     current = await load_invoice(conn, business_id, book_id, document_id, kind=kind)
     if current is None:
         raise NotFoundError(f"{spec.label} not found")
@@ -657,77 +605,3 @@ async def issue_document(
             receipt=receipt,
         )
     return await _invoice(conn, business_id, receipt, kind)
-
-
-async def resolve_command(
-    conn: RuntimeConnection,
-    *,
-    business_id: UUID,
-    actor: str,
-    key: str,
-    body: FinancialCommandReference,
-) -> FinancialCommandStatus:
-    await _lock(conn, business_id)
-    # Validate the bounded key even when no ordinary receipt is retained.
-    IdempotencyScope(business_id, actor, _OPERATIONS[body.operation], key)
-    state: Literal["committed", "unresolved", "cancelled"] = "unresolved"
-    for table, found in (
-        ("financial_command_receipts", "committed"),
-        ("financial_command_cancellations", "cancelled"),
-    ):
-        row = await (
-            await conn.execute(
-                "select book_id,document_id,revision from gba."  # noqa: S608 - fixed finite tables
-                + table
-                + " where tenant_id=%s and actor_key=%s and operation=%s and idempotency_key=%s",
-                (business_id, actor, body.operation, key),
-            )
-        ).fetchone()
-        if row is not None:
-            if (row[0], row[1], row[2]) != (body.book_id, body.subject_id, body.revision):
-                raise InvalidReferenceError("This outcome belongs to another financial reference")
-            state = "committed" if found == "committed" else "cancelled"
-            break
-    return FinancialCommandStatus(
-        business_id=business_id, key=key, operation=body.operation, state=state
-    )
-
-
-async def cancel_command(
-    conn: RuntimeConnection,
-    *,
-    business_id: UUID,
-    user_id: UUID,
-    actor: str,
-    key: str,
-    body: FinancialCommandReference,
-) -> FinancialCommandStatus:
-    result = await resolve_command(conn, business_id=business_id, actor=actor, key=key, body=body)
-    if result.state != "unresolved":
-        return result
-    await ledger.require_book(conn, business_id, body.book_id)
-    await conn.execute(
-        "insert into gba.financial_command_cancellations "
-        "(tenant_id,actor_key,operation,idempotency_key,book_id,document_id,revision,cancelled_by) "
-        "values (%s,%s,%s,%s,%s,%s,%s,%s)",
-        (
-            business_id,
-            actor,
-            body.operation,
-            key,
-            body.book_id,
-            body.subject_id,
-            body.revision,
-            user_id,
-        ),
-    )
-    await commands.audit(
-        conn,
-        business_id,
-        actor,
-        "finance.command_cancelled",
-        "financial_command",
-        key,
-        {"book_id": str(body.book_id), "operation": body.operation},
-    )
-    return result.model_copy(update={"state": "cancelled"})

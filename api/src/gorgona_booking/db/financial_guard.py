@@ -10,7 +10,7 @@ from importlib import resources
 
 from pydantic import BaseModel, ConfigDict, Field
 
-_MIGRATIONS = ("0021_invoice_accrual.sql", "0022_manual_accruals.sql")
+_MIGRATIONS = ("0021_invoice_accrual.sql", "0022_manual_accruals.sql", "0023_settlements.sql")
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
     for name in _MIGRATIONS
@@ -28,16 +28,33 @@ _SOURCES = dict(
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
 FINANCIAL_TABLES = tuple(_BLOCKS)
-_MONEY = tuple(t for t in FINANCIAL_TABLES if not t.startswith("financial_command_"))
+_DOCUMENT_TABLES = tuple(t for t in FINANCIAL_TABLES if t.startswith("financial_"))
+_SETTLEMENT_TABLES = tuple(t for t in FINANCIAL_TABLES if t.startswith("settlement_"))
+# Tables whose every insert needs the enabled workflow. Settlement events decide per
+# fact (a plain release or a cancel stays possible while the module is off).
+_MONEY = (
+    *(t for t in _DOCUMENT_TABLES if not t.startswith("financial_command_")),
+    "settlement_documents",
+    "settlement_allocations",
+)
 _TRIGGERS = (
     *((t, f"{t}_immutable", 27, "reject_ledger_mutation", False) for t in FINANCIAL_TABLES),
     *((t, f"{t}_lock", 7, "lock_financial_record", False) for t in FINANCIAL_TABLES),
     *((t, f"{t}_require_workflow", 7, "require_financial_workflow", False) for t in _MONEY),
     *(
         (t, f"{t}_consistent", 5, "check_invoice_integrity", True)
-        for t in FINANCIAL_TABLES
+        for t in _DOCUMENT_TABLES
         if t != "financial_command_cancellations"
     ),
+    *((t, f"{t}_consistent", 5, "check_settlement_integrity", True) for t in _SETTLEMENT_TABLES),
+    (
+        "settlement_allocations",
+        "settlement_allocations_check",
+        7,
+        "enforce_settlement_allocation",
+        False,
+    ),
+    ("settlement_events", "settlement_events_next", 7, "enforce_settlement_event", False),
     (
         "financial_document_versions",
         "financial_versions_next",
@@ -96,8 +113,18 @@ FINANCIAL_PARAMETERS: tuple[object, ...] = tuple(
     for t, trigger, kind, function, deferred in _TRIGGERS
     for x in (t, trigger, kind, "gba." + function + "()", deferred, _SOURCES[function])
 )
+# Non-trigger functions the controls call: signature, result type and packaged source.
+_HELPERS = (
+    ("gba.assert_invoice_consistent(uuid,uuid,uuid)", "void", "assert_invoice_consistent"),
+    ("gba.assert_financial_workflow(uuid)", "void", "assert_financial_workflow"),
+    ("gba.settlement_phase(uuid,uuid,uuid)", "text", "settlement_phase"),
+    ("gba.obligation_balance(uuid,uuid,uuid)", "record", "obligation_balance"),
+    ("gba.assert_settlement_consistent(uuid,uuid,uuid)", "void", "assert_settlement_consistent"),
+)
+FINANCIAL_PARAMETERS += tuple(
+    x for signature, result, name in _HELPERS for x in (signature, result, _SOURCES[name])
+)
 FINANCIAL_PARAMETERS += (
-    _SOURCES["assert_invoice_consistent"],
     list(FINANCIAL_TABLES),
     "(tenant_id=gba.current_tenant_id())",
     list(FINANCIAL_TABLES),
@@ -170,13 +197,14 @@ and not exists (
         or f.prolang<>(select oid from pg_catalog.pg_language where lanname='plpgsql')
         or f.prosrc is distinct from expected.source
 )
-and exists (
-    select 1 from pg_catalog.pg_proc f
-    where f.oid=pg_catalog.to_regprocedure('gba.assert_invoice_consistent(uuid,uuid,uuid)')
-        and not f.prosecdef and f.proconfig is null and f.provolatile='v' and f.proparallel='u'
-        and f.pronargs=3 and f.prorettype='pg_catalog.void'::regtype
-        and f.prolang=(select oid from pg_catalog.pg_language where lanname='plpgsql')
-        and f.prosrc=%s
+and not exists (
+    select 1 from (values __HELPERS__) expected(signature,result,source)
+    left join pg_catalog.pg_proc f on f.oid=pg_catalog.to_regprocedure(expected.signature)
+    where f.oid is null or f.prosecdef or f.proconfig is not null or f.provolatile<>'v'
+        or f.proparallel<>'u' or f.prokind<>'f'
+        or f.prorettype is distinct from pg_catalog.to_regtype(expected.result)
+        or f.prolang<>(select oid from pg_catalog.pg_language where lanname='plpgsql')
+        or f.prosrc is distinct from expected.source
 )
 and not exists (
     select 1 from unnest(%s::text[]) expected(table_name)
@@ -248,6 +276,7 @@ and not exists (
        or pg_catalog.pg_get_expr(c.conbin,c.conrelid) is distinct from expected.expression
 )
 """.replace("__TRIGGERS__", ",".join("(%s,%s,%s::int,%s,%s::boolean,%s::text)" for _ in _TRIGGERS))
+    .replace("__HELPERS__", ",".join("(%s,%s,%s::text)" for _ in _HELPERS))
     .replace("__KEYS__", ",".join("(%s,%s,%s::text[])" for _ in _KEYS))
     .replace("__FKS__", ",".join("(%s,%s::text[],%s,%s::text[],%s::boolean)" for _ in _FKS))
     .replace("__COLUMNS__", ",".join("(%s,%s,%s,%s::boolean)" for _ in _COLUMNS))

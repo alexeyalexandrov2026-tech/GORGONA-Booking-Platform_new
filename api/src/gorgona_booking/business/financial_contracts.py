@@ -17,7 +17,20 @@ Direction = Literal["receivable", "payable"]
 InvoiceState = Literal["draft", "issued"]
 # A manual accrual is the same immutable document shape with its own origin.
 DocumentKind = Literal["invoice", "manual_accrual"]
-FinancialCommandKind = Literal["invoice_draft", "invoice_issue", "accrual_draft", "accrual_issue"]
+FinancialCommandKind = Literal[
+    "invoice_draft",
+    "invoice_issue",
+    "accrual_draft",
+    "accrual_issue",
+    "settlement_prepare",
+    "settlement_approve",
+    "settlement_reserve",
+    "settlement_sent",
+    "settlement_release",
+    "settlement_cancel",
+]
+# Commands that can create the first immutable row of their subject.
+_FIRST_COMMANDS = ("invoice_draft", "accrual_draft", "settlement_prepare")
 _MAX_REVISION = 2_147_483_646
 _AMOUNT_PATTERN = r"^(0|[1-9][0-9]{0,17})(\.[0-9]{1,3})?$"
 
@@ -137,9 +150,11 @@ class FinancialCommandReference(Versioned):
     revision: StrictInt = Field(ge=1, le=_MAX_REVISION + 1)
 
     @model_validator(mode="after")
-    def possible_issue_revision(self) -> Self:
-        if self.operation in ("invoice_issue", "accrual_issue") and self.revision < 2:
-            raise ValueError("An issued version follows a saved draft")
+    def possible_revision(self) -> Self:
+        if self.operation not in _FIRST_COMMANDS and self.revision < 2:
+            raise ValueError("This command follows an earlier saved fact")
+        if self.operation == "settlement_prepare" and self.revision != 1:
+            raise ValueError("A settlement is prepared once")
         return self
 
 

@@ -11,6 +11,7 @@ from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
+from gorgona_booking.business import financial_commands, settlements
 from gorgona_booking.business import financial_documents as service
 from gorgona_booking.business.financial_contracts import (
     DocumentKind,
@@ -20,6 +21,17 @@ from gorgona_booking.business.financial_contracts import (
     InvoiceDraftInput,
     InvoiceIssueInput,
     InvoiceList,
+)
+from gorgona_booking.business.settlement_contracts import (
+    ObligationList,
+    ObligationView,
+    SettlementAction,
+    SettlementActionInput,
+    SettlementCancelInput,
+    SettlementList,
+    SettlementPrepareInput,
+    SettlementReleaseInput,
+    SettlementView,
 )
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
@@ -140,6 +152,168 @@ def _document_routes(segment: str, kind: DocumentKind) -> None:
 _document_routes("invoices", "invoice")
 _document_routes("accruals", "manual_accrual")
 
+_SETTLEMENT = "/books/{book_id}/settlements/{settlement_id}"
+
+
+@router.get("/books/{book_id}/obligations")
+async def obligations(
+    business_id: UUID,
+    book_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    after: UUID | None = None,
+    limit: Limit = 50,
+) -> ObligationList:
+    async with _access(request, principal, business_id) as access:
+        return await settlements.list_obligations(
+            access.conn, business_id, book_id, after=after, limit=limit
+        )
+
+
+@router.get("/books/{book_id}/obligations/{obligation_id}")
+async def obligation(
+    business_id: UUID,
+    book_id: UUID,
+    obligation_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ObligationView:
+    async with _access(request, principal, business_id) as access:
+        result = await settlements.load_obligation(access.conn, business_id, book_id, obligation_id)
+        if result is None:
+            raise NotFoundError("Obligation not found")
+        return result
+
+
+@router.get("/books/{book_id}/settlements")
+async def settlement_list(
+    business_id: UUID,
+    book_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    after: UUID | None = None,
+    limit: Limit = 50,
+) -> SettlementList:
+    async with _access(request, principal, business_id) as access:
+        return await settlements.list_settlements(
+            access.conn, business_id, book_id, after=after, limit=limit
+        )
+
+
+@router.get(_SETTLEMENT)
+async def settlement(
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> SettlementView:
+    async with _access(request, principal, business_id) as access:
+        result = await settlements.load_settlement(access.conn, business_id, book_id, settlement_id)
+        if result is None:
+            raise NotFoundError("Settlement not found")
+        return result
+
+
+@router.put(_SETTLEMENT)
+async def settlement_prepare(
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    body: SettlementPrepareInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> SettlementView:
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await settlements.prepare(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            settlement_id=settlement_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+async def _settlement_act(
+    request: Request,
+    principal: CurrentPrincipal,
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    key: str,
+    action: SettlementAction,
+    body: SettlementActionInput,
+) -> SettlementView:
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await settlements.act(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            settlement_id=settlement_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=key,
+            action=action,
+            body=body,
+        )
+
+
+def _settlement_fact(action: SettlementAction) -> None:
+    """Approve, reserve and sent carry only the expected sequence."""
+
+    @router.post(f"{_SETTLEMENT}/{action}", name=f"settlement_{action}")
+    async def record(
+        business_id: UUID,
+        book_id: UUID,
+        settlement_id: UUID,
+        body: SettlementActionInput,
+        request: Request,
+        principal: CurrentPrincipal,
+        idempotency_key: MutationKey,
+    ) -> SettlementView:
+        return await _settlement_act(
+            request, principal, business_id, book_id, settlement_id, idempotency_key, action, body
+        )
+
+
+_settlement_fact("approve")
+_settlement_fact("reserve")
+_settlement_fact("sent")
+
+
+@router.post(f"{_SETTLEMENT}/release")
+async def settlement_release(
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    body: SettlementReleaseInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> SettlementView:
+    return await _settlement_act(
+        request, principal, business_id, book_id, settlement_id, idempotency_key, "release", body
+    )
+
+
+@router.post(f"{_SETTLEMENT}/cancel")
+async def settlement_cancel(
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    body: SettlementCancelInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> SettlementView:
+    return await _settlement_act(
+        request, principal, business_id, book_id, settlement_id, idempotency_key, "cancel", body
+    )
+
 
 @router.post("/commands/{key}/resolve")
 async def resolve(
@@ -150,7 +324,7 @@ async def resolve(
     principal: CurrentPrincipal,
 ) -> FinancialCommandStatus:
     async with _access(request, principal, business_id, lock=True) as access:
-        return await service.resolve_command(
+        return await financial_commands.resolve_command(
             access.conn, business_id=business_id, actor=principal.actor, key=key, body=body
         )
 
@@ -164,7 +338,7 @@ async def cancel(
     principal: CurrentPrincipal,
 ) -> FinancialCommandStatus:
     async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
-        return await service.cancel_command(
+        return await financial_commands.cancel_command(
             access.conn,
             business_id=business_id,
             user_id=principal.user_id,
