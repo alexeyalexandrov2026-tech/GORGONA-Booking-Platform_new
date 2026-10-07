@@ -13,8 +13,9 @@ and renamed on 2026-10-07 before any publication; commits unchanged. Own checkou
 | C | `aa95dde75896a774c7199e44f1559382f55e2499` | Externally attested partial confirmations; forward `0024`. |
 | C, test only | `54852b4b816be1aeec8025c1a22a967a7b135ad7` | One added direct-SQL test for the payment cap and external identity. No source or migration change. |
 
-This file is delivered in a documentation-only successor of `54852b4`. Read the
-current branch HEAD from Git; a source commit is not the delivery HEAD.
+Financial H2 source checkpoint is54852b4; subsequent UI correction is15edbed.
+This file is a documentation-only successor of the corrective source. Read
+the current branch HEAD from Git; a source commit is not the delivery HEAD.
 
 **Publication completed, 2026-10-07.** The owner's eight Markdown changes were
 reviewed, checked and committed as documentation only in
@@ -29,18 +30,81 @@ Ruff/format211 and strict mypy211 PASS. Remaining skip is the optional separate
 tenant-site integration. Earlier pushCI37571379933 on5089b3a independently
 completed/success:1044 passed/1 skipped/371.35s, web69/1.9s.
 
-This evidence update is a documentation-only successor of75c36da; code stays
-byte-identical to54852b4. Read actual final HEAD/origin and current-head CI in
-PR16. Its final outcome is also in the exported delivery state. The tracked
-checkpoint above does not claim CI on its own future documentation SHA.
-Local results below are historical author evidence; publication work did not
-rerun or alter source. Independent money/state review remains NOT DONE.
+The documentation-only successor15e8d0c was pushed and its exact CI failed.
+It was diagnosed/reported before a bounded UI correction15edbed. Financial
+Python/SQL remains byte-identical to54852b4; only two web files change. Fresh
+local/full/peer/CI evidence for the correction is recorded below. Read actual
+final HEAD/origin and current-head CI in PR16/exported delivery state. The
+tracked source checkpoint does not claim CI on its own future documentation
+SHA. Independent H2 money/state review remains NOT DONE.
 
 This is a bounded H2 backend increment behind the closed `finance_documents`
 gate. G/FIN-01 remains technically verified. FIN-03 and FIN-02 remain `planned`;
 the real registry cannot enable `finance_documents`. Positive H fixtures override
 readiness only in tests. H3 credits, refund obligations and corrections and H4
 UI and admission metadata are not implemented. ADR-0024 remains Proposed.
+
+## Publication correction — ledger book refresh
+
+Failed source/delivery head: `15e8d0cd2a58544b7c6fefa73a2c78ade63c1861`.
+[CI37574622979](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37574622979), job112640628374:
+**FAIL:1 failed/1043 passed/1 skipped/392.04s**, exit1. Web69/2.2s,
+Ruff/format/mypy211, PostgreSQL18.6, production image and all three Docker tests
+passed; only `tests/integration/test_ledger_browser.py::test_real_ledger_browser_oidc_pkce_and_database`
+failed. Desktop first read an open month instead of closed, then a late book
+refresh cleared the period result. That case left the month closed; the next
+desktop case received a cascading409. Both original mobile scenarios passed.
+
+Root cause: `execute()` cleared busy/pending and incremented `tick` before a
+separate `loadBook` effect finished. That effect later cleared period/report.
+A newer read could start in between and then be erased. The cause was reported
+before source changes; CI was not retried blindly.
+
+Corrective source: `15edbed1d608ada9d0901a7710c00eff28c23e71`, two files,83 insertions/10 deletions:
+
+- [ledger.tsx](../../../../web/components/ledger.tsx): typed loaded-business/book/tick
+  marker. Writes, selection and period/report reads stay locked until the active
+  refresh accepts book/accounts/entries and resets dependent state. Stale effect
+  callbacks cannot mark a new selection ready. Refresh remains usable after a
+  failed read; the UI shows updating/error state.
+- [ledger.spec.ts](../../../../web/tests/ledger.spec.ts): holds the actual GET
+  after Close month, asserts Read month disabled until release, then verifies
+  closed/open results; separately aborts one book GET and verifies retry. All
+  scenarios still use real API/database/OIDC on desktop and mobile. Cleanup uses
+  [Playwright unrouteAll behavior wait](https://playwright.dev/docs/api/class-page#page-unroute-all).
+
+No financial Python/SQL, frozen0022–0024, dependency, lockfile, permission,
+retry count or timeout change. No gate/acceptance/provider/production action.
+
+| Fresh corrective check | Exact observed outcome |
+|---|---|
+| Baseline real browser, held post-command GET (clean RED) | FAIL:1 Python wrapper failed/26.84s, exit1; desktop/mobile saw Read month enabled while GET held. |
+| `check_h2_root_ui.py pytest tests/integration/test_ledger_browser.py -q -p no:cacheprovider --basetemp <fresh> --tb=short` | PASS:1 passed/17.95s, exit0; all4 Playwright desktop/mobile cases pass. |
+| `check_h2_root_ui.py pytest -q -rs -p no:cacheprovider --basetemp <fresh> --tb=short` | PASS:1041 passed/4 skipped/434.68s, exit0, mandatory real PostgreSQL18.6/OIDC/Chromium. |
+| `npm run typecheck`, `lint`, `format:check`, `test:unit`, `build` | PASS, exit0;69 units/1.1s,18 routes. Type/lint/format rerun after final test-locator correction. |
+| `python -m ruff check .`, `ruff format --check .`, `mypy` from api with H2 PYTHONPATH | PASS, exit0;211 formatted files and no mypy issues in211 files. |
+| Separate bounded [design review](LEDGER_REFRESH_DESIGN_REVIEW.md) and [exact-source review](LEDGER_REFRESH_REVIEW_15EDBED.md) | PASS at15edbed for the UI source/build/browser correction only; full H2 money/state review NOT DONE. |
+| Corrective-source [CI37578255793](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37578255793), job112651898225 | PASS:1044 passed/1 skipped/379.86s; web69/2.3s, all3 Docker/image, PG/browser, web/static211 gates. |
+| Current corrective documentation gate after recording evidence | PASS:10 Markdown files,8 added/changed local links from5089b3a,UTF-8; working/staged/base diff checks exit0. Source unchanged from15edbed; financial backend unchanged from54852b4; only2 corrective web files. Full12 H criteria NOT TESTED; finance_documents non-enableable. Fresh gate rerun after this row. |
+| Owned corrective clusters stopped after checks | PASS:root51456 and reviewer51460 stopped; original H2 cluster51462 remains stopped. Other clusters untouched. |
+
+Root runner uses existing Python3.14 and H2 `PYTHONPATH`, private loopback PG18.6
+on51456 with400 connections; credentials stay in the private manifest and are
+redacted from logs. One executor per cluster, fresh basetemp, no shared fixture
+suite overlap. Local four skips are three Docker and optional tenant-site;
+Docker is verified remotely above. The independent report names its own exact
+checkout and isolated51460 runtime.
+
+Attempts excluded from PASS: initial regression harness had CP1251 output and
+route-cleanup errors; these were repaired before the clean RED. First post-fix
+run failed because a global alert locator also matched Next's empty route
+announcer; scoped to the ledger's real alert and rerun. These are recorded
+failed attempts, not accepted product verification. Reviewer dependency-junction
+build limitation and the safe alternate checkout are recorded in its report.
+
+This CI result is for the corrective source SHA, not a future docs SHA. Final
+delivery HEAD and exact-head CI are verified separately in PR16 and the exported
+delivery state. Publication review reports do not approve full H2 or FIN-03.
 
 ## Changed source and test files
 
@@ -101,9 +165,9 @@ external redacting runner, not a repository dependency; it sets
 | Own cluster `51462` stopped with `pg_ctl -m fast stop`; loopback listeners afterwards | PASS: no server running for the H2 data directory; `51455` still listening and untouched. |
 | `git push -u origin codex/package-h2-settlements` after the owner's "push" | PASS: new remote branch at `5089b3a`; base `codex/package-h1-persistence` still at `75e809b`. No force. |
 | Push CI run37571379933 on5089b3a | PASS:1044 passed/1 skipped/371.35s; all3 Docker tests/image, web69/1.9s and static211 PASS. |
-| Draft pull request | PASS: [PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16), OPEN/DRAFT/unmerged; target H1, current checkpoint75c36da. [Description](PULL_REQUEST.md). |
+| Draft pull request | PASS: [PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16), OPEN/DRAFT/unmerged; target H1, original checkpoint75c36da. [Description](PULL_REQUEST.md). |
 | Exact-checkpoint PR CI37573680437 on75c36da | PASS:1044 passed/1 skipped/381.36s; PG/browser/all3 Docker/image, 69 web tests/2.3s, static211 PASS. |
-| Publication documentation gate | PASS: eight Markdown files, one added/changed local link from5089b3a, UTF-8, source unchanged from54852b4, full12 H criteria NOT TESTED, finance_documents non-enableable, own51462 stopped; staged/working/base diff checks exit0. Fresh check rerun after recording this row. |
+| Original publication documentation gate, before UI correction | PASS:eight Markdown files, one added/changed local link from5089b3a, UTF-8, source unchanged from54852b4 at that checkpoint, full12 H criteria NOT TESTED, finance_documents non-enableable, own51462 stopped; diff checks exit0. |
 | Pattern scan of the added lines for credentials, DSNs, tokens, keys, the cluster port and user name | PASS: no match. Test references use `FAKE-…` values only. |
 
 The four skips in every full run are the three container tests

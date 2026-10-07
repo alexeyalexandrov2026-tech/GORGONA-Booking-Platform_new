@@ -9,11 +9,16 @@ Branch `codex/package-h2-settlements`, own checkout
 (delivered H1 backend). **[Draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16) published;
 original eight docs committed/pushed as75c36da. Final docs are a successor.**
 Verify current HEAD/origin/CI; do not repeat publication or open a second PR.
+Corrective source `15edbed1d608ada9d0901a7710c00eff28c23e71` fixes a diagnosed ledger refresh race in two web files;
+financial Python/SQL and frozen migrations are unchanged from54852b4. [CI37578255793](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37578255793) PASS:1044 passed/1 skipped/379.86s;
+all3 Docker/image, PG/browser, web69/2.3s and static211 PASS.
+Fresh local full:1041 passed/4 skipped/434.68s; focused browser1/17.95s.
+Bounded independent UI review PASS; full H2 money/state review remains NOT DONE.
 Read the actual HEAD and remote state before continuing.
 
 Forward 0022–0024 add manual accruals, settlement reserves and externally
 attested partial confirmations behind the closed finance_documents gate.
-Local full 1041 passed / 4 skipped / 459.51s; Ruff/format/mypy 211 PASS;
+Historical author full1041/4/459.51s; fresh corrective full above; Ruff/format/mypy211 PASS;
 web gates PASS. Exact-checkpoint [CI37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) on75c36da
 PASS:1044 passed/1 skipped/381.36s, all3 Docker/image, PG/browser, 69 web tests/2.3s, static211.
 Independent money/state review NOT DONE.

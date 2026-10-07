@@ -19,7 +19,12 @@ Exact-checkpoint [CI37573680437](https://github.com/alexeyalexandrov2026-tech/GO
 all3 Docker/image, PostgreSQL18.6/browser, 69 web tests/2.3s and static211 PASS.
 The earlier5089b3a pushCI37571379933 also passed1044/1skip/371.35s.
 The final documentation delivery is a successor; read actual HEAD/origin and
-current-head CI in PR16/exported delivery state. Code is unchanged from54852b4.
+current-head CI in PR16/exported delivery state.
+Corrective source `15edbed1d608ada9d0901a7710c00eff28c23e71` fixes a diagnosed ledger refresh race in two web files;
+financial Python/SQL and frozen migrations are unchanged from54852b4. [CI37578255793](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37578255793) PASS:1044 passed/1 skipped/379.86s;
+all3 Docker/image, PG/browser, web69/2.3s and static211 PASS.
+Fresh local full:1041 passed/4 skipped/434.68s; focused browser1/17.95s.
+Bounded independent UI review PASS; full H2 money/state review remains NOT DONE.
 Stack: G12 → H plan13 → foundation14 → H1 backend15 → H2 backend16.
 Do not open another H2 PR, merge, enable auto-merge or alter readiness.
 
@@ -36,7 +41,16 @@ cluster.
 The owner requested commit/push and one draft PR. The eight original Markdown
 changes were committed/pushed as75c36da; PR16 was opened once and attached.
 Its exact-checkpoint CI passed; this documentation update records those facts
-and is committed/pushed separately. No implementation code was changed.
+and was committed/pushed separately as15e8d0c. Its exact-head CI37574622979
+failed in the real ledger browser:1 failed/1043 passed/1 skipped/392.04s.
+The cause was diagnosed/reported before changing source. A late post-command
+book refresh cleared a newly read period, then the next case saw a closed-month
+409. Two web files were corrected as15edbed; a held-GET regression reproduced
+the baseline failure before the fix. Fresh full/local/CI and the bounded
+independent UI review passed as recorded above. No financial backend, migration,
+dependency, permission, retry count or timeout changed. The source checkpoint's
+exact CI result is recorded; final documentation HEAD needs its own CI.
+See [failure and correction evidence](evidence/2026-10-07-h2-settlements/VALIDATION.md#publication-correction--ledger-book-refresh).
 
 First inspect current Git/remote/PR16 HEAD and final-head CI. Do not repeat the
 publication or create a second PR. Then review the H2 money/state design and
@@ -97,8 +111,13 @@ Full local suite on the final tree: see the exact numbers in the
 [validation](evidence/2026-10-07-h2-settlements/VALIDATION.md). Mandatory real
 PostgreSQL 18.6 and OIDC/Chromium. Ruff, format and strict mypy pass on 211
 files. Web typecheck, lint, format, 69 unit tests and build pass.
-Observed exact-checkpoint CI75c36da also PASS:1044 passed/1 skipped/381.36s; all3 Docker/image
-checks and 69 web tests/2.3s. This is separate from the reported local evidence.
+Observed original checkpoint CI75c36da PASS:1044/1/381.36s, then15e8d0c FAIL as
+recorded above. Corrective15edbed [CI37578255793](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37578255793) PASS:1044 passed/1 skipped/379.86s; all3 Docker/image and
+web69/2.3s. Fresh local full:1041 passed/4 skipped/434.68s; independent UI review
+PASS at15edbed with a separate checkout/PG/browser.
+[Design review](evidence/2026-10-07-h2-settlements/LEDGER_REFRESH_DESIGN_REVIEW.md) and
+[exact-source review](evidence/2026-10-07-h2-settlements/LEDGER_REFRESH_REVIEW_15EDBED.md).
+This bounded UI review does not cover H2 financial Python/SQL/money/state.
 
 Not done, and stated as such:
 

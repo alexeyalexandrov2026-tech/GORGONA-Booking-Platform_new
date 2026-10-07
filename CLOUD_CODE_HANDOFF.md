@@ -8,12 +8,18 @@
 Branch codex/package-h2-settlements from the delivered H1 backend 75e809b.
 **Published in [draft PR16](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/16), target H1 PR15; no merge.**
 Original eight docs committed/pushed as75c36da; final docs are a successor.
-Read actual HEAD/origin/current-head CI in PR16. Source unchanged from54852b4.
+Read actual final HEAD/origin/current-head CI in PR16/exported delivery state.
+Corrective source `15edbed1d608ada9d0901a7710c00eff28c23e71` fixes a diagnosed ledger refresh race in two web files;
+financial Python/SQL and frozen migrations are unchanged from54852b4. [CI37578255793](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37578255793) PASS:1044 passed/1 skipped/379.86s;
+all3 Docker/image, PG/browser, web69/2.3s and static211 PASS.
+Fresh local full:1041 passed/4 skipped/434.68s; focused browser1/17.95s.
+Bounded independent UI review PASS; full H2 money/state review remains NOT DONE.
 Forward 0022–0024 add manual accruals as new obligations, settlement documents
 with approval/reserve/sent/release/cancel, and externally attested partial
 confirmations that move exactly R→P with one balanced journal and a permanent
 external identity. PostgreSQL and the service both enforce P+C+R<=A at commit.
-Local full suite 1041 passed / 4 skipped / 459.51s, mandatory PostgreSQL 18.6 and browser;
+Historical author full suite1041/4/459.51s; fresh corrective results are above.
+Mandatory PostgreSQL18.6 and browser;
 Ruff/format/mypy211 and web gates PASS. Exact-checkpoint CI75c36da
 [37573680437](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37573680437) PASS:1044 passed/1 skipped/381.36s; all3 Docker/image,
 PG/browser, 69 web tests/2.3s and static211 PASS.

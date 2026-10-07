@@ -16,12 +16,22 @@ Reviewed original eight Markdown changes committed/pushed as
 75c36dac572c8420aa848d322717420d43555c87. Draft PR16 is OPEN/DRAFT/unmerged, targets H1 PR15.
 Checkpoint CI37573680437 completed/success:1044 passed/1 skipped/381.36s, required real
 PostgreSQL18.6/OIDC/Chromium/all3 Docker/image, 69 web tests/2.3s, static211 PASS.
-A later documentation-only delivery records publication; inspect exact current
-HEAD/origin/PR16/current-head CI. Code is unchanged from54852b4.
+The next docs-only delivery15e8d0c failed CI37574622979:1 failed/1043 passed/1 skipped/392.04s
+(ledger book refresh race, diagnosed/reported before source change). Corrective
+source 15edbed1d608ada9d0901a7710c00eff28c23e71 changes only web/components/ledger.tsx and web/tests/ledger.spec.ts;
+financial Python/SQL, migrations and dependencies are unchanged from54852b4.
+Corrective CI37578255793 completed/success:1044 passed/1 skipped/379.86s;
+web69/2.3s, all3 Docker/image, PG/browser and static211 PASS.
+Fresh local full:1041 passed/4 skipped/434.68s; focused browser1/17.95s;
+bounded independent exact-source UI review PASS. A documentation-only successor
+records these observations. Inspect current HEAD/origin/PR16/current-head CI
+and the exported delivery state; do not confuse the source checkpoint with
+its final documentation SHA.
 Full evidence: docs/plan/evidence/2026-10-07-h2-settlements/VALIDATION.md.
 Handoff: docs/plan/NEXT_AGENT_H2_2026-10-07.md.
 Do not create another H2 PR. First review the H2 money/state design and listed
-test gaps; independent review is NOT DONE. Then continue H3 in your own branch
+test gaps; full independent H2 money/state review is NOT DONE (UI correction
+review is separate and PASS). Then continue H3 in your own branch
 and checkout from the final H2 delivery when that continuation is requested.
 
 Not authorized: merge/auto-merge, force-push, rebase/amend of published commits,
@@ -54,7 +64,7 @@ Journal read schema 2 lists invoice, accrual, payment; write/read schema 1 are
 unchanged. Generic G reversal refuses every H-owned kind in API and SQL.
 Recovery for all families is in business/financial_commands.py.
 
-Local evidence: full suite 1041 passed / 4 skipped with mandatory real
+Fresh corrective local evidence: full suite 1041 passed/4 skipped/434.68s, exit0, with mandatory real
 PostgreSQL 18.6 and OIDC/Chromium; Ruff/format/strict mypy on 211 files; web
 typecheck/lint/format/69 unit/build. Races are proven with observed pg_locks
 waits. Publication checkpoint CI PASS:1044 passed/1 skipped/381.36s, all3 Docker/image;
@@ -71,7 +81,7 @@ in place instead of schema 3; one person may prepare and approve; release frees
 the whole unconfirmed remainder; a structurally exact confirmation written by
 SQL alone commits without receipt or audit.
 
-THEN — H3, on your own new branch and checkout from the published H2 head
+WHEN REQUESTED — H3, on your own new branch and checkout from the published H2 head
 
 H3 is credits, refund obligations and guarded immutable corrections.
 Invoice100/paid70/credit50 means C30/refund20; never rewrite historical cash.
@@ -98,7 +108,10 @@ H plan. KA Nails and camera Local Gateway are separate projects.
 
 Preserve the owner checkout (19 dirty paths at 2f16380), the E2 checkout
 (9 dirty paths at 151472a), accepted G (5be6e7a), foundation (18e3f5e), H1
-review (2d5a8f9) and delivered H1 backend (75e809b) trees. One executor per
+historical review branches/reports (H1 source2d5a8f9) and delivered H1 backend
+(75e809b) trees. The bounded UI reviewer used a separate snapshot of15edbed;
+its build/browser report lists exact paths. Root corrective PG51456 and reviewer
+PG51460 are stopped after their runs; historical H2 PG51462 remains stopped. One executor per
 checkout and disposable PG cluster. Do not run shared fixture suites
 concurrently. The existing Python 3.14 venv can be reused, but set PYTHONPATH
 to your checkout; its editable source points to G. Node 24, PostgreSQL 18,
