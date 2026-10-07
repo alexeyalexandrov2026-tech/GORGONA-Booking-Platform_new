@@ -2,6 +2,7 @@
 
 import asyncio
 from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID, uuid7
 
 import httpx
@@ -114,6 +115,9 @@ class PaymentWorld:
         reference: str,
         *,
         allocated: int | None = None,
+        entry_date: str = "2026-10-02",
+        actual: str = "2026-10-02",
+        cash: UUID | None = None,
     ) -> None:
         """One receivable confirmation written by SQL alone, in the order the service uses."""
         business, book = self.ledger.business, self.ledger.book
@@ -130,7 +134,7 @@ class PaymentWorld:
                 "insert into gba.external_payments (tenant_id,book_id,id,settlement_id,sequence,"
                 "direction,currency,amount_minor,actual_external_date,entry_date,cash_account_id,"
                 "source_account_alias,external_reference,attestation,entry_id,created_by) "
-                "values (%s,%s,%s,%s,%s,'receivable','USD',%s,'2026-10-02','2026-10-02',%s,"
+                "values (%s,%s,%s,%s,%s,'receivable','USD',%s,%s,%s,%s,"
                 "'FAKE main bank account',%s,'manual_attestation',%s,%s)",
                 (
                     business,
@@ -139,7 +143,9 @@ class PaymentWorld:
                     settlement,
                     sequence,
                     minor,
-                    self.cash,
+                    actual,
+                    entry_date,
+                    cash or self.cash,
                     reference,
                     entry,
                     user,
@@ -154,15 +160,26 @@ class PaymentWorld:
             await conn.execute(
                 "insert into gba.journal_entries "
                 "(tenant_id,id,book_id,entry_date,currency,source_kind,source_id,created_by) "
-                "values (%s,%s,%s,'2026-10-02','USD','payment',%s,%s)",
-                (business, entry, book, str(payment), user),
+                "values (%s,%s,%s,%s,'USD','payment',%s,%s)",
+                (business, entry, book, entry_date, str(payment), user),
             )
             control = self.settlements.invoices.control
             await conn.execute(
                 "insert into gba.journal_lines "
                 "(tenant_id,entry_id,line_no,book_id,account_id,side,amount_minor) values "
                 "(%s,%s,1,%s,%s,'debit',%s),(%s,%s,2,%s,%s,'credit',%s)",
-                (business, entry, book, self.cash, minor, business, entry, book, control, minor),
+                (
+                    business,
+                    entry,
+                    book,
+                    cash or self.cash,
+                    minor,
+                    business,
+                    entry,
+                    book,
+                    control,
+                    minor,
+                ),
             )
 
 
@@ -452,6 +469,314 @@ async def test_replay_and_the_same_external_identity_post_money_once(
     )
     assert blocked.status_code == 409
     assert blocked.json()["error"]["code"] == "FINANCIAL_COMMAND_CANCELLED"
+    assert await payments.payment_journals(app_pool) == 1
+
+
+async def test_identity_variants_are_one_fact_and_distinct_references_stay_distinct(
+    payments: PaymentWorld,
+    app_pool: RuntimePool,
+) -> None:
+    world = payments.settlements
+    obligation = await world.obligation()
+    first = await world.reserved(obligation, "40.00")
+    payment = uuid7()
+    recorded = await payments.confirm(
+        first, 3, [(obligation, "40.00")], "40.00", "FAKE-TXN-77", payment=payment
+    )
+    assert recorded.status_code == 200, recorded.text
+    second = await world.reserved(obligation, "60.00")
+    # Letter case, full-width forms, Unicode spaces and invisible characters name one fact.
+    for alias, reference in (
+        ("FAKE main bank account", "fake-txn-77"),
+        ("FAKE main bank\u00a0account", "FAKE-TXN-77"),
+        ("FAKE main bank account", "FAKE-\u200dTXN-77"),
+        ("\uff26\uff21\uff2b\uff25 main bank account", "\uff26AKE-TXN-\uff17\uff17"),
+    ):
+        repeated = await payments.confirm(
+            second,
+            3,
+            [(obligation, "60.00")],
+            "60.00",
+            reference,
+            changes={"source_account_alias": alias},
+        )
+        assert repeated.status_code == 409, repeated.text
+        assert repeated.json()["error"]["code"] == "FINANCIAL_SOURCE_ALREADY_RECORDED"
+        assert repeated.json()["error"]["details"]["payment_id"] == str(payment)
+    # Interior whitespace keeps its meaning by default: three other real references.
+    for sequence, reference in enumerate(("FAKE TXN 77", "FAKETXN77", "FAKE  TXN 77"), 3):
+        distinct = await payments.confirm(
+            second, sequence, [(obligation, "20.00")], "20.00", reference
+        )
+        assert distinct.status_code == 200, distinct.text
+    assert await payments.payment_journals(app_pool) == 4
+    assert (await world.balance(obligation))["paid"] == "100.00"
+
+
+async def test_external_identity_key_keeps_meaningful_whitespace(
+    payments: PaymentWorld,
+    app_pool: RuntimePool,
+) -> None:
+    """The conservative rule: formatting look-alikes match, real differences never do."""
+    same = (
+        ("FAKE-TXN-77", "fake-txn-77"),
+        ("FAKE-TXN-77", "\uff26\uff21\uff2b\uff25-\uff34XN-\uff17\uff17"),
+        ("FAKE TXN 77", "FAKE\u00a0TXN\u300077"),
+        ("FAKE TXN 77", "FAKE\u2003TXN\u202f77"),
+        ("FAKE-TXN-77", "FAKE-\u200bTXN-77"),
+        ("FAKE-TXN-77", "FAKE\u00ad-TXN-77"),
+        ("FAKE-TXN-77", "\ufeffFAKE-TXN-77"),
+        ("FAKE-TXN-77", "FAKE-TXN-77\u2060"),
+        ("FAKE-TXN-77", "\u202eFAKE-TXN-77\u202c"),
+        ("FAKE-TXN-77", "FAKE-TXN-7\ufe0f7"),
+        ("FAKE-TXN-77", "FAKE-TXN-77\U000e0001"),
+        ("FAKE TXN 77", "FAKE TXN 77\u3000"),
+        # A zero-width character between a letter and its combining mark.
+        ("FAKE-\u00e9", "FAKE-e\u200d\u0301"),
+        ("FAKE-\u00e9", "FAKE-e\u034f\u0301"),
+        ("FAKE-\u00e9", "FAKE-E\u2060\u0301"),
+    )
+    distinct = (
+        ("FAKE-\u00e9", "FAKE-e"),
+        ("FAKE TXN 77", "FAKETXN77"),
+        ("FAKE TXN 77", "FAKE  TXN 77"),
+        ("AB 12", "A B12"),
+        ("FAKE-TXN-77", "FAKE TXN 77"),
+        ("FAKE-TXN-77", "FAKE-TXN-78"),
+        ("FAKE-TXN-77", "FAKE-TXN-771"),
+    )
+    async with tenant_transaction(app_pool, payments.ledger.business) as conn:
+        for pairs, expected in ((same, True), (distinct, False)):
+            for left, right in pairs:
+                row = await (
+                    await conn.execute(
+                        "select gba.external_identity_key(%s,'preserve')"
+                        "=gba.external_identity_key(%s,'preserve')",
+                        (left, right),
+                    )
+                ).fetchone()
+                assert row == (expected,), (left, right)
+    # No source declares non-semantic whitespace, so no other rule exists yet.
+    with pytest.raises(psycopg.errors.InvalidParameterValue, match="whitespace rule"):
+        async with tenant_transaction(app_pool, payments.ledger.business) as conn:
+            await conn.execute("select gba.external_identity_key('FAKE TXN 77','remove')")
+
+
+async def _relocate(owner_conn: psycopg.Connection, business: UUID, zone: str) -> None:
+    with owner_tenant_transaction(owner_conn, business):
+        owner_conn.execute(
+            "update gba.locations set timezone=%s where tenant_id=%s", (zone, business)
+        )
+
+
+async def test_business_timezone_decides_the_date_at_its_boundaries(
+    payments: PaymentWorld,
+    app_pool: RuntimePool,
+    owner_conn: psycopg.Connection,
+) -> None:
+    business = payments.ledger.business
+
+    async def business_date(instant: str) -> tuple[str, date]:
+        async with tenant_transaction(app_pool, business) as conn:
+            row = await (
+                await conn.execute(
+                    "select z,(%s::timestamptz at time zone z)::date "
+                    "from gba.business_timezone(%s) z",
+                    (instant, business),
+                )
+            ).fetchone()
+        assert row is not None
+        return row[0], row[1]
+
+    # UTC+14: 23:59:59 local is still the 7th; local midnight starts the 8th while
+    # UTC is still on the 7th.
+    await _relocate(owner_conn, business, "Pacific/Kiritimati")
+    assert await business_date("2026-10-07T09:59:59Z") == ("Pacific/Kiritimati", date(2026, 10, 7))
+    assert await business_date("2026-10-07T10:00:00Z") == ("Pacific/Kiritimati", date(2026, 10, 8))
+    # UTC-11: UTC has rolled over to the 8th; the business stays on the 7th until
+    # its own midnight at 11:00 UTC.
+    await _relocate(owner_conn, business, "Pacific/Pago_Pago")
+    assert await business_date("2026-10-08T00:00:00Z") == ("Pacific/Pago_Pago", date(2026, 10, 7))
+    assert await business_date("2026-10-08T10:59:59Z") == ("Pacific/Pago_Pago", date(2026, 10, 7))
+    assert await business_date("2026-10-08T11:00:00Z") == ("Pacific/Pago_Pago", date(2026, 10, 8))
+    # Locations in two zones: the latest local date decides, so Tokyo's own today is
+    # accepted at 15:00 UTC while UTC and Pago Pago are still on the 7th.
+    with owner_tenant_transaction(owner_conn, business):
+        owner_conn.execute(
+            "insert into gba.locations (tenant_id,name,timezone) "
+            "values (%s,'FAKE second zone','Asia/Tokyo')",
+            (business,),
+        )
+    assert await business_date("2026-10-07T14:59:59Z") == ("Asia/Tokyo", date(2026, 10, 7))
+    assert await business_date("2026-10-07T15:00:00Z") == ("Asia/Tokyo", date(2026, 10, 8))
+    # Without any location no zone is authoritative and UTC is the documented fallback.
+    async with tenant_transaction(app_pool, business) as conn:
+        row = await (await conn.execute("select gba.business_timezone(%s)", (uuid7(),))).fetchone()
+    assert row == ("UTC",)
+
+
+async def _clear_of_local_midnights() -> None:
+    """Keep the real clock away from the test zones' midnights (10:00 and 11:00 UTC)."""
+    now = datetime.now(UTC)
+    for hour in (10, 11):
+        midnight = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+        if timedelta(0) <= midnight - now < timedelta(minutes=2):
+            await asyncio.sleep((midnight - now).total_seconds() + 5)
+            return
+
+
+async def test_attested_external_date_is_bounded_by_the_business_today(
+    payments: PaymentWorld,
+    app_pool: RuntimePool,
+    owner_conn: psycopg.Connection,
+) -> None:
+    world = payments.settlements
+    business = payments.ledger.business
+    obligation = await world.obligation()
+    settlement = await world.reserved(obligation, "20.00")
+    await _clear_of_local_midnights()
+    now = datetime.now(UTC)
+    # At any real instant one of these zones is on another date than UTC.
+    assert any((now + timedelta(hours=offset)).date() != now.date() for offset in (14, -11))
+    for sequence, (zone, offset) in enumerate(
+        (("Pacific/Kiritimati", 14), ("Pacific/Pago_Pago", -11)), 3
+    ):
+        await _relocate(owner_conn, business, zone)
+        local_today = (now + timedelta(hours=offset)).date()
+        tomorrow = (local_today + timedelta(days=1)).isoformat()
+        future = await payments.confirm(
+            settlement,
+            sequence,
+            [(obligation, "10.00")],
+            "10.00",
+            f"FAKE-FUTURE-{offset}",
+            changes={"actual_external_date": tomorrow},
+        )
+        assert future.status_code == 422, future.text
+        error = future.json()["error"]
+        assert error["code"] == "LEDGER_DATE_INVALID"
+        assert (error["details"]["timezone"], error["details"]["today"]) == (
+            zone,
+            local_today.isoformat(),
+        )
+        with pytest.raises(psycopg.errors.CheckViolation, match="cannot be in the future"):
+            await payments.write_directly(
+                app_pool,
+                settlement,
+                sequence + 1,
+                obligation,
+                1000,
+                f"FAKE-SQL-FUTURE-{offset}",
+                actual=tomorrow,
+            )
+        # The business's own today is accepted, even where UTC is on another date.
+        today = await payments.confirm(
+            settlement,
+            sequence,
+            [(obligation, "10.00")],
+            "10.00",
+            f"FAKE-TODAY-{offset}",
+            changes={"actual_external_date": local_today.isoformat()},
+        )
+        assert today.status_code == 200, today.text
+    assert await payments.payment_journals(app_pool) == 2
+    assert (await world.balance(obligation))["paid"] == "20.00"
+
+
+async def test_cash_and_control_accounts_stay_disjoint_across_the_book(
+    payments: PaymentWorld,
+    app_pool: RuntimePool,
+) -> None:
+    world = payments.settlements
+    async with tenant_transaction(app_pool, payments.ledger.business) as conn:
+        chart = await ledger.list_accounts(
+            conn, payments.ledger.business, payments.ledger.book, after=None, limit=100
+        )
+    other_control = next(a.account_id for a in chart.items if a.code == "1300")
+    receivable = await world.obligation()
+    await world.obligation("50.00", control_account_id=str(other_control))
+    settlement = await world.reserved(receivable, "40.00")
+    # The control account of another obligation, not of this payment, is no cash account.
+    refused = await payments.confirm(
+        settlement,
+        3,
+        [(receivable, "40.00")],
+        "40.00",
+        "FAKE-DISJOINT-1",
+        changes={"cash_account_id": str(other_control)},
+    )
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["error"]["code"] == "FINANCIAL_STATE_INVALID"
+    with pytest.raises(psycopg.errors.CheckViolation, match="cannot be a financial control"):
+        await payments.write_directly(
+            app_pool, settlement, 4, receivable, 4000, "FAKE-DISJOINT-2", cash=other_control
+        )
+    paid = await payments.confirm(settlement, 3, [(receivable, "40.00")], "40.00", "FAKE-OK")
+    assert paid.status_code == 200, paid.text
+    # The other way round: an account that received external cash never becomes a control.
+    cash_as_control = await world.invoices.save(
+        body=world.invoices.draft_body(control_account_id=str(payments.cash))
+    )
+    assert cash_as_control.status_code == 409, cash_as_control.text
+    assert await payments.payment_journals(app_pool) == 1
+    assert (await world.balance(receivable))["paid"] == "40.00"
+
+
+async def test_payment_dates_follow_the_accrual_and_the_calendar(
+    payments: PaymentWorld,
+    app_pool: RuntimePool,
+) -> None:
+    world = payments.settlements
+    document = uuid7()
+    assert (await world.invoices.save(document=document)).status_code == 200
+    issued = await world.invoices.issue(document, entry_date="2026-10-05")
+    assert issued.status_code == 200, issued.text
+    obligation = UUID(issued.json()["obligation_id"])
+    settlement = await world.reserved(obligation, "40.00")
+    early = await payments.confirm(
+        settlement,
+        3,
+        [(obligation, "40.00")],
+        "40.00",
+        "FAKE-EARLY",
+        changes={"entry_date": "2026-10-04"},
+    )
+    assert early.status_code == 422, early.text
+    assert early.json()["error"]["code"] == "LEDGER_DATE_INVALID"
+    future = await payments.confirm(
+        settlement,
+        3,
+        [(obligation, "40.00")],
+        "40.00",
+        "FAKE-FUTURE",
+        changes={"entry_date": "2026-10-05", "actual_external_date": "2999-01-01"},
+    )
+    assert future.status_code == 422, future.text
+    assert future.json()["error"]["code"] == "LEDGER_DATE_INVALID"
+    with pytest.raises(psycopg.errors.CheckViolation, match="before the accrual it settles"):
+        await payments.write_directly(app_pool, settlement, 4, obligation, 4000, "FAKE-SQL-1")
+    with pytest.raises(psycopg.errors.CheckViolation, match="cannot be in the future"):
+        await payments.write_directly(
+            app_pool,
+            settlement,
+            4,
+            obligation,
+            4000,
+            "FAKE-SQL-2",
+            entry_date="2026-10-05",
+            actual="2999-01-01",
+        )
+    assert await payments.payment_journals(app_pool) == 0
+    # Money that arrived before the accrual is a fact; only its posting waits for it.
+    prepaid = await payments.confirm(
+        settlement,
+        3,
+        [(obligation, "40.00")],
+        "40.00",
+        "FAKE-PREPAID",
+        changes={"entry_date": "2026-10-05", "actual_external_date": "2026-09-30"},
+    )
+    assert prepaid.status_code == 200, prepaid.text
     assert await payments.payment_journals(app_pool) == 1
 
 
@@ -802,9 +1127,23 @@ async def test_sql_alone_cannot_exceed_the_reserve_repeat_an_identity_or_delete(
         await payments.write_directly(
             app_pool, settlement, 5, obligation, 1000, "FAKE-RAW-3", allocated=900
         )
-    with pytest.raises(psycopg.errors.UniqueViolation, match=_IDENTITY):
-        await payments.write_directly(app_pool, settlement, 5, obligation, 1000, "FAKE-RAW-1")
-    for table in ("external_payments", "external_payment_allocations"):
+    # The exact identity and every comparison-equal variant are one recorded fact.
+    for repeated in (
+        "FAKE-RAW-1",
+        "fake-raw-1",
+        "FAKE-\u200bRAW-1",
+        "\uff26\uff21\uff2b\uff25-RAW-1",
+    ):
+        with pytest.raises(psycopg.errors.UniqueViolation, match="identity is already recorded"):
+            await payments.write_directly(app_pool, settlement, 5, obligation, 1000, repeated)
+    for table in (
+        "external_payments",
+        "external_payment_allocations",
+        "settlement_documents",
+        "settlement_allocations",
+        "settlement_events",
+        "settlement_command_receipts",
+    ):
         with (
             pytest.raises(psycopg.errors.CheckViolation, match="kept unchanged"),
             owner_tenant_transaction(owner_conn, payments.ledger.business),
@@ -946,6 +1285,30 @@ _IDENTITY = "external_payments_identity"
         (
             "grant update on gba.external_payment_allocations to gba_runtime",
             "revoke update on gba.external_payment_allocations from gba_runtime",
+        ),
+        (
+            "alter table gba.settlement_allocations "
+            "drop constraint settlement_allocations_tenant_id_book_id_obligation_id_fkey",
+            "alter table gba.settlement_allocations "
+            "add constraint settlement_allocations_tenant_id_book_id_obligation_id_fkey "
+            "foreign key (tenant_id, book_id, obligation_id) "
+            "references gba.financial_obligations(tenant_id, book_id, id)",
+        ),
+        (
+            "alter table gba.external_payments drop constraint external_payments_currency_fkey",
+            "alter table gba.external_payments add constraint external_payments_currency_fkey "
+            "foreign key (currency) references gba.currencies(code)",
+        ),
+        (
+            "create or replace function gba.external_identity_key(value text, "
+            "whitespace_rule text) returns text language plpgsql as $$ begin return value; "
+            "end; $$",
+            packaged_function("external_identity_key"),
+        ),
+        (
+            "create or replace function gba.business_timezone(tenant uuid) returns text "
+            "language plpgsql as $$ begin return 'Pacific/Kiritimati'; end; $$",
+            packaged_function("business_timezone"),
         ),
         (
             "create or replace function gba.assert_payment_consistent(tenant uuid, book uuid, "

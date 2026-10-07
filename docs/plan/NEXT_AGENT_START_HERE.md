@@ -1,6 +1,27 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-07)
 
-## Current: H2 backend and successor handoff
+## Current: H3 settlement guards (draft PR17)
+
+Read [full handoff](NEXT_AGENT_H3_GUARDS_2026-10-07.md) and
+[copyable prompt](NEXT_AGENT_PROMPT_H3_GUARDS_2026-10-07.md).
+Branch `codex/package-h3-settlement-guards`, own checkout
+`C:\Users\alexa\Documents\ChatGPT\gorgona-h3-guards`, parent `e93ca5c`
+(published H2). **[Draft PR17](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/17)
+published** on PR16's branch; code commits `24ee21b` (forward 0025) and
+`372da57` (forward 0026, self-review corrections); a docs-only successor holds
+this handoff. CI on both code commits PASS (push and pull_request runs).
+Local full 1053 passed/4 skipped/429.52s with mandatory PostgreSQL/browser;
+ruff/format/mypy 211 PASS; upgrade 0024 → 0026 on a populated H2 database PASS.
+Fixes F1–F4 of the [independent H2 money/state review](evidence/2026-10-07-h2-settlements/INDEPENDENT_MONEY_STATE_REVIEW_e93ca5c.md):
+one identity per external fact, disjoint cash/control accounts, posting date
+and business-today bounds, column-level FK readiness.
+[Evidence and decisions](evidence/2026-10-07-h3-settlement-guards/VALIDATION.md).
+Next: independent review of this slice, owner decisions, HawkScan/Docker, then
+the rest of H3 (credits, refunds, corrections) from migration 0027. Nothing is
+merged; merge, deployment and readiness promotion are not authorized.
+Own PG 51470 stopped. Read the actual HEAD and remote state before continuing.
+
+## Historical: H2 backend and successor handoff
 
 Read [full handoff](NEXT_AGENT_H2_2026-10-07.md) and
 [copyable prompt](NEXT_AGENT_PROMPT_H2_2026-10-07.md).

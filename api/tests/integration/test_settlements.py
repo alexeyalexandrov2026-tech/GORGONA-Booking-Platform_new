@@ -642,6 +642,62 @@ async def test_reserve_replay_recovery_and_cancel_before_late_original(
     assert committed.json()["state"] == "committed"
 
 
+async def test_settlement_recovery_replay_and_cancel_work_while_finance_is_off(
+    settlements: SettlementWorld,
+    idp: FakeIdp,
+    owner_conn: psycopg.Connection,
+) -> None:
+    business = settlements.ledger.business
+    obligation = await settlements.obligation()
+    settlement = await settlements.approved(obligation, "70.00")
+    key = str(uuid7())
+    reserved = await settlements.act(settlement, "reserve", 2, key=key)
+    assert reserved.status_code == 200, reserved.text
+    config = Config(settlements.ledger.client, idp)
+    await config.publish(settlements.ledger.user, business, 2, ["booking_resources"])
+    with owner_tenant_transaction(owner_conn, business):
+        deleted = owner_conn.execute(
+            "delete from gba.idempotency_keys where tenant_id=%s "
+            "and operation='business.finance.settlement_reserve' and idempotency_key=%s",
+            (business, key),
+        )
+        assert deleted.rowcount == 1
+    commands = f"/v1/businesses/{business}/financial-documents/commands"
+    reference = {
+        "schema_version": 1,
+        "operation": "settlement_reserve",
+        "book_id": str(settlements.ledger.book),
+        "subject_id": str(settlement),
+        "revision": 3,
+    }
+    resolved = await settlements.ledger.client.post(
+        f"{commands}/{key}/resolve", json=reference, headers=settlements.ledger.auth
+    )
+    assert resolved.status_code == 200, resolved.text
+    assert resolved.json()["state"] == "committed"
+    replay = await settlements.act(settlement, "reserve", 2, key=key)
+    assert replay.status_code == 200, replay.text
+    assert replay.json() == reserved.json()
+    # A lost sent command is resolved and sealed while finance stays off.
+    late_key = str(uuid7())
+    late = {**reference, "operation": "settlement_sent", "revision": 4}
+    unknown = await settlements.ledger.client.post(
+        f"{commands}/{late_key}/resolve", json=late, headers=settlements.ledger.auth
+    )
+    assert unknown.status_code == 200, unknown.text
+    assert unknown.json()["state"] == "unresolved"
+    cancelled = await settlements.ledger.client.post(
+        f"{commands}/{late_key}/cancel", json=late, headers=settlements.ledger.headers()
+    )
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["state"] == "cancelled"
+    blocked = await settlements.act(settlement, "sent", 3, key=late_key)
+    assert blocked.status_code == 409, blocked.text
+    assert blocked.json()["error"]["code"] == "FINANCIAL_COMMAND_CANCELLED"
+    assert (await settlements.view(settlement))["status"] == "reserved"
+    assert (await settlements.balance(obligation))["reserved"] == "70.00"
+
+
 async def test_obligation_list_shows_invoice_and_manual_sources_with_balances(
     settlements: SettlementWorld,
 ) -> None:
