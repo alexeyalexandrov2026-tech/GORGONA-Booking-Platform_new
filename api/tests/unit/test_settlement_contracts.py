@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from gorgona_booking.business.financial_contracts import FinancialCommandReference
 from gorgona_booking.business.settlement_contracts import (
+    PaymentConfirmInput,
     SettlementActionInput,
     SettlementCancelInput,
     SettlementPrepareInput,
@@ -97,6 +98,7 @@ def test_settlement_recovery_references_are_minimal_and_possible() -> None:
         "settlement_approve",
         "settlement_reserve",
         "settlement_sent",
+        "settlement_confirm",
         "settlement_release",
         "settlement_cancel",
     ):
@@ -129,3 +131,42 @@ def test_phase_follows_the_strongest_recorded_fact() -> None:
     assert all(
         "released" not in states and "cancelled" not in states for states in _FOLLOWS.values()
     )
+
+
+def test_a_confirmation_is_a_manual_attestation_with_exact_allocations() -> None:
+    obligation = str(uuid7())
+    confirmation: dict[str, Any] = {
+        "expected_sequence": 3,
+        "amount": "40.00",
+        "actual_external_date": "2026-10-02",
+        "entry_date": "2026-10-02",
+        "cash_account_id": str(uuid7()),
+        "source_account_alias": " FAKE bank account ",
+        "external_reference": "FAKE-TXN-1",
+        "attestation": "manual_attestation",
+        "allocations": [{"obligation_id": obligation, "amount": "40.00"}],
+    }
+    body = PaymentConfirmInput.model_validate(confirmation)
+    assert body.source_account_alias == "FAKE bank account"
+    cases: tuple[dict[str, Any], ...] = (
+        {"attestation": "provider_verified"},
+        {"attestation": None},
+        {"external_reference": " "},
+        {"external_reference": "a\nb"},
+        {"source_account_alias": ""},
+        {"amount": 40},
+        {"amount": "40.0000"},
+        {"allocations": []},
+        {"allocations": [{"obligation_id": obligation, "amount": "20.00"}] * 2},
+        {"expected_sequence": 0},
+        {"provider_charge_id": "ch_FAKE"},
+        {"fx_rate": "1.1"},
+    )
+    for changes in cases:
+        with pytest.raises(ValidationError):
+            PaymentConfirmInput.model_validate(confirmation | changes)
+    for field in ("attestation", "external_reference", "source_account_alias", "entry_date"):
+        with pytest.raises(ValidationError):
+            PaymentConfirmInput.model_validate(
+                {key: value for key, value in confirmation.items() if key != field}
+            )

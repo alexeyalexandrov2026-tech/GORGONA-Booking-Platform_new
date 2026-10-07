@@ -1,9 +1,7 @@
 """H2 manual accruals: a new obligation and G accrual, never a link to an old entry."""
 
 import asyncio
-import re
 from dataclasses import dataclass
-from importlib import resources
 from uuid import UUID, uuid7
 
 import httpx
@@ -22,6 +20,7 @@ from tests.integration.seed import seed_user
 from tests.integration.test_invoice_issue import (
     InvoiceWorld,
     approved_check,
+    packaged_function,
     widened_check,
 )
 from tests.integration.test_ledger import LedgerWorld
@@ -34,16 +33,6 @@ manager_a = invoice_shared.manager_a
 manager_b = invoice_shared.manager_b
 enabled = invoice_shared.enabled
 invoices = invoice_shared.invoices
-
-_SQL = (
-    resources.files("gorgona_booking.db") / "migrations" / "0022_manual_accruals.sql"
-).read_text(encoding="utf-8")
-
-
-def _packaged_function(name: str) -> str:
-    match = re.search(rf"create or replace function gba\.{name}\(.*?\$\$;", _SQL, re.DOTALL)
-    assert match is not None, name
-    return match.group(0)
 
 
 @dataclass(frozen=True)
@@ -616,13 +605,13 @@ _KIND = ("financial_documents", "financial_documents_kind_check")
         (
             "create or replace function gba.enforce_invoice_origin() returns trigger "
             "language plpgsql as $$ begin return new; end; $$",
-            _packaged_function("enforce_invoice_origin"),
+            packaged_function("enforce_invoice_origin"),
         ),
         (
             "create or replace function gba.assert_invoice_consistent"
             "(tenant uuid, book uuid, document uuid) returns void "
             "language plpgsql as $$ begin return; end; $$",
-            _packaged_function("assert_invoice_consistent"),
+            packaged_function("assert_invoice_consistent"),
         ),
     ],
 )

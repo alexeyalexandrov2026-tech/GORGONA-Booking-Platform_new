@@ -123,6 +123,7 @@ const sourceKindV2 = z.enum([
   "reversal",
   "invoice",
   "accrual",
+  "payment",
 ]);
 const entryRecordV2 = entryRecord.extend({
   schema_version: z.literal(2),

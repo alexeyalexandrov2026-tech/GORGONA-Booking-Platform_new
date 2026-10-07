@@ -25,6 +25,8 @@ from gorgona_booking.business.financial_contracts import (
 from gorgona_booking.business.settlement_contracts import (
     ObligationList,
     ObligationView,
+    PaymentConfirmInput,
+    PaymentView,
     SettlementAction,
     SettlementActionInput,
     SettlementCancelInput,
@@ -313,6 +315,47 @@ async def settlement_cancel(
     return await _settlement_act(
         request, principal, business_id, book_id, settlement_id, idempotency_key, "cancel", body
     )
+
+
+@router.post(f"{_SETTLEMENT}/confirmations/{{payment_id}}")
+async def settlement_confirm(
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    payment_id: UUID,
+    body: PaymentConfirmInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> SettlementView:
+    """A human attests an external payment; this program sends no money."""
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await settlements.confirm(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            settlement_id=settlement_id,
+            payment_id=payment_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/books/{book_id}/payments/{payment_id}")
+async def payment(
+    business_id: UUID,
+    book_id: UUID,
+    payment_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> PaymentView:
+    async with _access(request, principal, business_id) as access:
+        result = await settlements.load_payment(access.conn, business_id, book_id, payment_id)
+        if result is None:
+            raise NotFoundError("Payment not found")
+        return result
 
 
 @router.post("/commands/{key}/resolve")

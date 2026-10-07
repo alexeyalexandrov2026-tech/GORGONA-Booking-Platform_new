@@ -10,7 +10,12 @@ from importlib import resources
 
 from pydantic import BaseModel, ConfigDict, Field
 
-_MIGRATIONS = ("0021_invoice_accrual.sql", "0022_manual_accruals.sql", "0023_settlements.sql")
+_MIGRATIONS = (
+    "0021_invoice_accrual.sql",
+    "0022_manual_accruals.sql",
+    "0023_settlements.sql",
+    "0024_external_payments.sql",
+)
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
     for name in _MIGRATIONS
@@ -30,12 +35,14 @@ _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DO
 FINANCIAL_TABLES = tuple(_BLOCKS)
 _DOCUMENT_TABLES = tuple(t for t in FINANCIAL_TABLES if t.startswith("financial_"))
 _SETTLEMENT_TABLES = tuple(t for t in FINANCIAL_TABLES if t.startswith("settlement_"))
+_PAYMENT_TABLES = tuple(t for t in FINANCIAL_TABLES if t.startswith("external_payment"))
 # Tables whose every insert needs the enabled workflow. Settlement events decide per
 # fact (a plain release or a cancel stays possible while the module is off).
 _MONEY = (
     *(t for t in _DOCUMENT_TABLES if not t.startswith("financial_command_")),
     "settlement_documents",
     "settlement_allocations",
+    *_PAYMENT_TABLES,
 )
 _TRIGGERS = (
     *((t, f"{t}_immutable", 27, "reject_ledger_mutation", False) for t in FINANCIAL_TABLES),
@@ -55,6 +62,19 @@ _TRIGGERS = (
         False,
     ),
     ("settlement_events", "settlement_events_next", 7, "enforce_settlement_event", False),
+    *((t, f"{t}_consistent", 5, "check_payment_integrity", True) for t in _PAYMENT_TABLES),
+    ("external_payments", "external_payments_check", 7, "enforce_external_payment", False),
+    (
+        "external_payment_allocations",
+        "external_payment_allocations_check",
+        7,
+        "enforce_external_payment_allocation",
+        False,
+    ),
+    *(
+        (t, f"{t}_payment_consistent", 5, "check_payment_integrity", True)
+        for t in ("journal_entries", "journal_lines")
+    ),
     (
         "financial_document_versions",
         "financial_versions_next",
@@ -120,6 +140,7 @@ _HELPERS = (
     ("gba.settlement_phase(uuid,uuid,uuid)", "text", "settlement_phase"),
     ("gba.obligation_balance(uuid,uuid,uuid)", "record", "obligation_balance"),
     ("gba.assert_settlement_consistent(uuid,uuid,uuid)", "void", "assert_settlement_consistent"),
+    ("gba.assert_payment_consistent(uuid,uuid,uuid)", "void", "assert_payment_consistent"),
 )
 FINANCIAL_PARAMETERS += tuple(
     x for signature, result, name in _HELPERS for x in (signature, result, _SOURCES[name])

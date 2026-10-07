@@ -1,9 +1,7 @@
 """H2 settlement documents: preparation, approval, reserve, release; no money moves."""
 
 import asyncio
-import re
 from dataclasses import dataclass
-from importlib import resources
 from uuid import UUID, uuid7
 
 import httpx
@@ -23,6 +21,7 @@ from tests.integration.test_counterparties import card
 from tests.integration.test_invoice_issue import (
     InvoiceWorld,
     approved_check,
+    packaged_function,
     widened_check,
 )
 from tests.integration.test_ledger import LedgerWorld
@@ -37,19 +36,6 @@ enabled = invoice_shared.enabled
 invoices = invoice_shared.invoices
 
 _MODULES = ["booking_resources", "finance", "counterparties", "finance_documents"]
-
-
-def _packaged(name: str) -> str:
-    text = (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
-    return text
-
-
-def _packaged_function(migration: str, name: str) -> str:
-    match = re.search(
-        rf"create (?:or replace )?function gba\.{name}\(.*?\$\$;", _packaged(migration), re.DOTALL
-    )
-    assert match is not None, name
-    return match.group(0).replace("create function", "create or replace function", 1)
 
 
 @dataclass(frozen=True)
@@ -814,12 +800,12 @@ _EVENT_KIND = ("settlement_events", "settlement_events_kind_check")
             "obligation uuid) returns table (principal_minor bigint, paid_minor bigint, "
             "credited_minor bigint, reserved_minor bigint) language plpgsql as $$ begin "
             "return query select 1::bigint, 0::bigint, 0::bigint, 0::bigint; end; $$",
-            _packaged_function("0023_settlements.sql", "obligation_balance"),
+            packaged_function("obligation_balance"),
         ),
         (
             "create or replace function gba.enforce_settlement_event() returns trigger "
             "language plpgsql as $$ begin return new; end; $$",
-            _packaged_function("0023_settlements.sql", "enforce_settlement_event"),
+            packaged_function("enforce_settlement_event"),
         ),
     ],
 )

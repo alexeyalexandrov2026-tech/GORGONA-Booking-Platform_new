@@ -114,6 +114,10 @@ def test_invoice_origin_is_an_explicit_v2_read_contract() -> None:
     item: dict[str, object] = payload["items"][0]  # type: ignore[index]
     accrual = {**payload, "items": [{**item, "source_kind": "accrual"}]}
     assert JournalEntryListV2.model_validate(accrual).items[0].source_kind == "accrual"
+    payment = {**payload, "items": [{**item, "source_kind": "payment"}]}
+    assert JournalEntryListV2.model_validate(payment).items[0].source_kind == "payment"
+    with pytest.raises(ValidationError):
+        JournalEntryList.model_validate({**payment, "schema_version": 1})
     with pytest.raises(ValidationError):
         JournalEntryListV2.model_validate({**payload, "items": [{**item, "source_kind": "refund"}]})
     with pytest.raises(ValidationError):

@@ -26,6 +26,7 @@ FinancialCommandKind = Literal[
     "settlement_approve",
     "settlement_reserve",
     "settlement_sent",
+    "settlement_confirm",
     "settlement_release",
     "settlement_cancel",
 ]

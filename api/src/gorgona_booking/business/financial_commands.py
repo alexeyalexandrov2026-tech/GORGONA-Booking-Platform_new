@@ -56,6 +56,7 @@ _FAMILIES: dict[FinancialCommandKind, _Family] = {
     "settlement_approve": _SETTLEMENTS,
     "settlement_reserve": _SETTLEMENTS,
     "settlement_sent": _SETTLEMENTS,
+    "settlement_confirm": _SETTLEMENTS,
     "settlement_release": _SETTLEMENTS,
     "settlement_cancel": _SETTLEMENTS,
 }

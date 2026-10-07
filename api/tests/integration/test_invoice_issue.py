@@ -1,6 +1,7 @@
 """H1 invoice persistence against real disposable PostgreSQL and API auth."""
 
 import asyncio
+import re
 from dataclasses import dataclass
 from datetime import date
 from uuid import UUID, uuid7
@@ -55,6 +56,18 @@ def approved_check(table: str, name: str) -> str:
         f"alter table gba.{table} drop constraint if exists {name}; "
         f"alter table gba.{table} add constraint {name} check ({check.expression})"
     )
+
+
+def packaged_function(name: str) -> str:
+    """DDL restoring one function to its latest packaged definition."""
+    latest = None
+    for text in financial_guard._PACKAGED:
+        for match in re.finditer(
+            rf"create (?:or replace )?function gba\.{name}\(.*?\$\$;", text, re.DOTALL
+        ):
+            latest = match.group(0)
+    assert latest is not None, name
+    return latest.replace("create function", "create or replace function", 1)
 
 
 def widened_check(table: str, name: str, extra: str) -> str:
