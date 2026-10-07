@@ -104,6 +104,67 @@ class PaymentWorld:
         assert row is not None
         return int(row[0])
 
+    async def write_directly(
+        self,
+        app_pool: RuntimePool,
+        settlement: UUID,
+        sequence: int,
+        obligation: UUID,
+        minor: int,
+        reference: str,
+        *,
+        allocated: int | None = None,
+    ) -> None:
+        """One receivable confirmation written by SQL alone, in the order the service uses."""
+        business, book = self.ledger.business, self.ledger.book
+        user = self.ledger.user.user_id
+        payment, entry = uuid7(), uuid7()
+        async with tenant_transaction(app_pool, business) as conn:
+            await conn.execute(
+                "insert into gba.settlement_events "
+                "(tenant_id,book_id,settlement_id,sequence,kind,created_by) "
+                "values (%s,%s,%s,%s,'confirmed',%s)",
+                (business, book, settlement, sequence, user),
+            )
+            await conn.execute(
+                "insert into gba.external_payments (tenant_id,book_id,id,settlement_id,sequence,"
+                "direction,currency,amount_minor,actual_external_date,entry_date,cash_account_id,"
+                "source_account_alias,external_reference,attestation,entry_id,created_by) "
+                "values (%s,%s,%s,%s,%s,'receivable','USD',%s,'2026-10-02','2026-10-02',%s,"
+                "'FAKE main bank account',%s,'manual_attestation',%s,%s)",
+                (
+                    business,
+                    book,
+                    payment,
+                    settlement,
+                    sequence,
+                    minor,
+                    self.cash,
+                    reference,
+                    entry,
+                    user,
+                ),
+            )
+            await conn.execute(
+                "insert into gba.external_payment_allocations "
+                "(tenant_id,book_id,payment_id,line_no,obligation_id,amount_minor) "
+                "values (%s,%s,%s,1,%s,%s)",
+                (business, book, payment, obligation, minor if allocated is None else allocated),
+            )
+            await conn.execute(
+                "insert into gba.journal_entries "
+                "(tenant_id,id,book_id,entry_date,currency,source_kind,source_id,created_by) "
+                "values (%s,%s,%s,'2026-10-02','USD','payment',%s,%s)",
+                (business, entry, book, str(payment), user),
+            )
+            control = self.settlements.invoices.control
+            await conn.execute(
+                "insert into gba.journal_lines "
+                "(tenant_id,entry_id,line_no,book_id,account_id,side,amount_minor) values "
+                "(%s,%s,1,%s,%s,'debit',%s),(%s,%s,2,%s,%s,'credit',%s)",
+                (business, entry, book, self.cash, minor, business, entry, book, control, minor),
+            )
+
 
 @pytest.fixture
 async def payments(invoices: InvoiceWorld, app_pool: RuntimePool) -> PaymentWorld:
@@ -720,6 +781,46 @@ async def test_late_journal_pair_cannot_change_a_confirmed_payment(
             await conn.execute("set constraints all immediate")
     assert (await world.view(settlement))["sequence"] == 3
     assert await payments.payment_journals(app_pool) == 0
+
+
+async def test_sql_alone_cannot_exceed_the_reserve_repeat_an_identity_or_delete(
+    payments: PaymentWorld,
+    app_pool: RuntimePool,
+    owner_conn: psycopg.Connection,
+) -> None:
+    world = payments.settlements
+    obligation = await world.obligation()
+    settlement = await world.reserved(obligation, "70.00")
+    # Control: the same rows are accepted without the service when they are exact.
+    await payments.write_directly(app_pool, settlement, 4, obligation, 4000, "FAKE-RAW-1")
+    view = await world.view(settlement)
+    assert (view["sequence"], view["status"]) == (4, "partially_confirmed")
+    assert (view["confirmed"], view["reserved"]) == ("40.00", "30.00")
+    with pytest.raises(psycopg.errors.CheckViolation, match="exceeds the reserved settlement line"):
+        await payments.write_directly(app_pool, settlement, 5, obligation, 3001, "FAKE-RAW-2")
+    with pytest.raises(psycopg.errors.CheckViolation, match="must equal the confirmed amount"):
+        await payments.write_directly(
+            app_pool, settlement, 5, obligation, 1000, "FAKE-RAW-3", allocated=900
+        )
+    with pytest.raises(psycopg.errors.UniqueViolation, match=_IDENTITY):
+        await payments.write_directly(app_pool, settlement, 5, obligation, 1000, "FAKE-RAW-1")
+    for table in ("external_payments", "external_payment_allocations"):
+        with (
+            pytest.raises(psycopg.errors.CheckViolation, match="kept unchanged"),
+            owner_tenant_transaction(owner_conn, payments.ledger.business),
+        ):
+            owner_conn.execute(
+                sql.SQL("delete from gba.{} where book_id=%s").format(sql.Identifier(table)),
+                (payments.ledger.book,),
+            )
+    balance = await world.balance(obligation)
+    assert (balance["paid"], balance["reserved"], balance["available"]) == (
+        "40.00",
+        "30.00",
+        "30.00",
+    )
+    assert (await world.view(settlement))["sequence"] == 4
+    assert await payments.payment_journals(app_pool) == 1
 
 
 async def test_off_and_withdrawn_readiness_block_confirmation_but_keep_history(
