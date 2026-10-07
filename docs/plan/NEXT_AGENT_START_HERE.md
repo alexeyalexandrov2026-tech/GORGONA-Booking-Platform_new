@@ -1,6 +1,26 @@
-# GORGONA — начните здесь (актуальное продолжение, 2026-10-06)
+# GORGONA — начните здесь (актуальное продолжение, 2026-10-07)
 
-## Current: H1 invoice backend and successor handoff
+## Current: H2 backend and successor handoff
+
+Read [full handoff](NEXT_AGENT_H2_2026-10-07.md) and
+[copyable prompt](NEXT_AGENT_PROMPT_H2_2026-10-07.md).
+Branch `claude/package-h2-settlements`, own checkout
+`C:\Users\alexa\Documents\ChatGPT\gorgona-h2-settlements`, parent 75e809b
+(delivered H1 backend). **Local only: not pushed, no pull request, no CI.**
+Read the actual HEAD and remote state before continuing.
+
+Forward 0022–0024 add manual accruals, settlement reserves and externally
+attested partial confirmations behind the closed finance_documents gate.
+Local full 1041 passed / 4 skipped / 459.51s; Ruff/format/mypy 211 PASS;
+web gates PASS. Exact-head CI, Docker gates and independent review NOT TESTED.
+[Evidence, changed files and limits](evidence/2026-10-07-h2-settlements/VALIDATION.md).
+G/FIN-01 technically_verified; FIN-03/02 planned. Next: H3 credits, refund
+obligations and corrections; then H4 UI/admission. No H acceptance/promotion.
+Owner/E2 dirty trees 19/9 are preserved; own PG 51462 stopped.
+Production/provider/merge is not authorized; ask the owner before any push.
+All older instructions below describe their dated snapshots.
+
+## Historical: H1 invoice backend handoff
 
 Read [full handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md) and
 [copyable prompt](NEXT_AGENT_PROMPT_H1_BACKEND_2026-10-06.md).

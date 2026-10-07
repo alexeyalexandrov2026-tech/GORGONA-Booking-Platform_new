@@ -1,8 +1,17 @@
 # Пакет H — счета, обязательства и подтвержденные внешние расчеты
 
-**Implementation checkpoint:** owner continuation authorized local H work and
+**Implementation checkpoint 2026-10-07:** H2 is implemented locally on
+`claude/package-h2-settlements` through forward 0022–0024: manual accruals as
+new obligations, settlement reserves and externally attested partial
+confirmations; [current handoff](NEXT_AGENT_H2_2026-10-07.md) and
+[direct evidence](evidence/2026-10-07-h2-settlements/VALIDATION.md). The branch
+is not pushed and has no CI run. H3/H4 continue through new forward migrations.
+ADR0024 remains formally Proposed; all twelve COMPLETE criteria below remain
+NOT TESTED and FIN-03/02 planned.
+
+**Earlier checkpoint (H1):** owner continuation authorized local H work and
 draft publication. Source2d5a8f9 implements the bounded H1 invoice backend on
-forward0021, with a closed feature gate; [current handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md)
+forward0021, with a closed feature gate; [H1 handoff](NEXT_AGENT_H1_BACKEND_2026-10-06.md)
 and [direct evidence](evidence/2026-10-06-h1-backend/VALIDATION.md).
 H2/H3/H4 continue through new forward migrations without changing published
 checksums. ADR0024 remains formally Proposed; all twelve COMPLETE criteria

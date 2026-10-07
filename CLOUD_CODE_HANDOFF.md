@@ -1,6 +1,26 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current H1 backend and next-agent handoff — 2026-10-06
+## Current H2 backend and next-agent handoff — 2026-10-07
+
+[Full successor handoff](docs/plan/NEXT_AGENT_H2_2026-10-07.md),
+[copyable prompt](docs/plan/NEXT_AGENT_PROMPT_H2_2026-10-07.md),
+[changed files/checks/limits](docs/plan/evidence/2026-10-07-h2-settlements/VALIDATION.md).
+Branch claude/package-h2-settlements from the delivered H1 backend 75e809b.
+**Local only: not pushed, no pull request, no CI run.**
+Forward 0022–0024 add manual accruals as new obligations, settlement documents
+with approval/reserve/sent/release/cancel, and externally attested partial
+confirmations that move exactly R→P with one balanced journal and a permanent
+external identity. PostgreSQL and the service both enforce P+C+R<=A at commit.
+Local full suite 1041 passed / 4 skipped / 459.51s, mandatory PostgreSQL 18.6 and browser;
+Ruff/format/mypy 211 PASS; web gates PASS. Exact-head CI, Docker gates and
+independent money/state review are NOT TESTED; HawkScan was not run.
+FIN-03/02 remain planned and finance_documents unavailable. H3 credits, refund
+obligations and corrections and H4 UI/admission remain unfinished.
+Owner/E2 dirty trees preserved; own cluster 51462 stopped.
+No merge/deploy/production/provider/funds action. The H1 section below is
+superseded for continuation; its evidence remains snapshot-specific.
+
+## Historical H1 backend handoff — 2026-10-06
 
 [Full successor handoff](docs/plan/NEXT_AGENT_H1_BACKEND_2026-10-06.md),
 [copyable prompt](docs/plan/NEXT_AGENT_PROMPT_H1_BACKEND_2026-10-06.md),
