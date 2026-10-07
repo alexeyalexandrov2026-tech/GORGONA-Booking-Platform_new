@@ -12,9 +12,12 @@ Checkout: `C:\Users\alexa\Documents\ChatGPT\gorgona-h2-settlements`.
 Parent: `75e809b9d82b514fd9d2ae93122c23c0ae217e85`, the delivered H1 backend on
 `codex/package-h1-persistence`.
 
-**The branch is local only.** It was not pushed. There is no pull request and
-no CI run. The owner chose local-only work and decides on publication. If it is
-published, the natural target is `codex/package-h1-persistence` (draft
+**Publication state, 2026-10-07.** The owner approved the push. The branch is on
+origin at `5089b3a4afcdf169780621b76e7e0da6dfb80d08`, by an ordinary push without
+force. There is no pull request yet. The push started CI run
+[37571379933](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37571379933);
+it was in progress when this was written, so its result is NOT OBSERVED.
+The pull request target is `codex/package-h1-persistence` (draft
 [PR15](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/15)),
 which continues the stack G #12 → H plan #13 → foundation #14 → backend #15.
 Read the current state before any action. No merge or deployment is established.
@@ -23,8 +26,31 @@ The branch was created as `claude/package-h2-settlements` and renamed to
 `codex/package-h2-settlements` on 2026-10-07 at the owner's request, before any
 publication. The commits are unchanged and the checkout folder keeps its name.
 
-Create your own branch and checkout from the current HEAD of this branch. One
-executor edits each checkout and owns each disposable PostgreSQL cluster.
+For H3, create your own branch and checkout from the current HEAD of this
+branch. One executor edits each checkout and owns each disposable PostgreSQL
+cluster.
+
+## Immediate next step: finish publication
+
+The owner asked that the next agent commit and push. Do these steps in this
+checkout on this branch. Do not rebase, amend pushed commits or force-push.
+
+1. Re-observe: `git status`, `git log --oneline 75e809b..HEAD`, the remote
+   heads of both branches and the result of the CI run above.
+2. The working tree holds an uncommitted documentation update that records
+   the push: Markdown files only. Review it with `git diff`, run
+   `git diff --check`, and commit it as documentation only.
+3. Push the branch with an ordinary `git push`.
+4. Open one draft pull request from `codex/package-h2-settlements` into
+   `codex/package-h1-persistence`. Title and description are prepared in
+   [PULL_REQUEST.md](evidence/2026-10-07-h2-settlements/PULL_REQUEST.md).
+   Do not merge it and do not enable auto-merge.
+5. Read exact-head CI for the pushed commit. Record the pull request number
+   and the observed CI outcome with its run link in the validation file and
+   in the current H2 sections of the index documents. Commit as
+   documentation only and push.
+6. If CI fails, diagnose and report before changing source. A source fix needs
+   fresh focused and full local runs and updated evidence before another push.
 
 Read these in order:
 
@@ -80,7 +106,8 @@ files. Web typecheck, lint, format, 69 unit tests and build pass.
 
 Not done, and stated as such:
 
-- No exact-head CI and no Docker gates: the branch is unpublished.
+- Exact-head CI and the Docker gates are NOT OBSERVED: the push run was still
+  in progress when this was written.
 - No independent money or state review. Only the author's inline review.
 - Slice A has no recorded red run.
 - HawkScan was not run: no `hawk` runtime and no API key on this machine.
@@ -93,8 +120,8 @@ promoted after H2.
 
 ## Decisions an owner or reviewer should confirm
 
-1. **Publication.** Push this branch and open a draft pull request, or keep it
-   local.
+1. **Pull request.** The push is approved and done. The draft pull request is
+   still to be opened. Merging is not approved.
 2. **Journal read schema 2 extended in place.** `accrual` and `payment` were
    added to schema 2 instead of creating schema 3. Reason: schema 2 has never
    been merged, deployed or enabled, and a stale schema 2 client fails loudly
@@ -141,8 +168,8 @@ commit. Remove positive readiness overrides only when that scope has passed.
 ## Working rules learned in H2
 
 - **Forward migrations.** Use `0025` and later. `0001`–`0021` are published and
-  byte-identical to the base. `0022`–`0024` are unpublished while this branch is
-  local; treat them as frozen once the branch is pushed.
+  byte-identical to the base. `0022`–`0024` are on origin since 2026-10-07; treat
+  them as frozen and change behavior only through later migrations.
 - **Guard composition.** Add the new migration to `_MIGRATIONS` in
   `db/financial_guard.py`. The latest `create or replace function` in migration
   order is the approved definition. Every packaged H CHECK needs exactly one

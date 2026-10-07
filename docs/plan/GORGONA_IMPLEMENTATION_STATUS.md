@@ -3,7 +3,7 @@
 ## Current H2 backend — bounded local implementation, 2026-10-07
 
 Branch `codex/package-h2-settlements` from the delivered H1 backend 75e809b.
-Local only: not pushed, no pull request, no CI run.
+Pushed 2026-10-07 at 5089b3a; the draft pull request is still to be opened.
 [Handoff](NEXT_AGENT_H2_2026-10-07.md),
 [exact checks/changed files](evidence/2026-10-07-h2-settlements/VALIDATION.md).
 Forward 0022–0024: manual accrual as a second document kind with one new
@@ -14,7 +14,8 @@ permanent external identity bound to one payment. SQL and service both enforce
 nonnegative P/C/R and P+C+R<=A at commit.
 Local full 1041 passed / 4 skipped / 459.51s with mandatory PostgreSQL/browser;
 lint/format/mypy 211 PASS; web typecheck/lint/format/69 unit/build PASS.
-NOT TESTED: exact-head CI, Docker gates, independent money/state review.
+Push CI run 37571379933 was in progress when recorded: exact-head CI and
+Docker gates NOT OBSERVED. Independent money/state review NOT DONE.
 FIN-03/FIN-02 remain planned; H3–H4 and all twelve complete H criteria remain
 NOT TESTED. G/FIN-01 retains technically_verified. No H UI, provider, funds,
 merge, deployment or production migration. Next coherent work is H3 credits,

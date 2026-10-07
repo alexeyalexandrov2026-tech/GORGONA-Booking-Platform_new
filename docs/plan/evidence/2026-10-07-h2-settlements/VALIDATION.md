@@ -16,10 +16,14 @@ and renamed on 2026-10-07 before any publication; commits unchanged. Own checkou
 This file is delivered in a documentation-only successor of `54852b4`. Read the
 current branch HEAD from Git; a source commit is not the delivery HEAD.
 
-**Publication state: local only.** Nothing was pushed. There is no pull request
-and no GitHub CI run for any H2 commit. Exact-head CI, including the three
-Docker gates and the production image, is NOT TESTED. The owner chose local-only
-work and decides on publication separately.
+**Publication state, 2026-10-07.** After the owner's explicit "push" the branch
+was pushed by an ordinary push; origin is at
+`5089b3a4afcdf169780621b76e7e0da6dfb80d08`. There is no pull request yet. The
+push started CI run
+[37571379933](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37571379933)
+(workflow `ci`, job `api`); it was still in its pytest step when this was
+recorded. Exact-head CI, including the three Docker gates and the production
+image, is therefore NOT OBSERVED. Every number below is local.
 
 This is a bounded H2 backend increment behind the closed `finance_documents`
 gate. G/FIN-01 remains technically verified. FIN-03 and FIN-02 remain `planned`;
@@ -84,6 +88,9 @@ external redacting runner, not a repository dependency; it sets
 | Local links added in the seven changed Markdown files; LF line endings; `git diff --check` of the documentation change | PASS: 48 links, none missing; exit 0. |
 | Preserved checkouts after the work, read with `git --no-optional-locks` | PASS: owner `2f16380` 19 changed paths, E2 `151472a` 9, G `5be6e7a` 0, foundation `18e3f5e` 0, H1 review `2d5a8f9` 0, H1 backend `75e809b` 0. |
 | Own cluster `51462` stopped with `pg_ctl -m fast stop`; loopback listeners afterwards | PASS: no server running for the H2 data directory; `51455` still listening and untouched. |
+| `git push -u origin codex/package-h2-settlements` after the owner's "push" | PASS: new remote branch at `5089b3a`; base `codex/package-h1-persistence` still at `75e809b`. No force. |
+| Push CI run 37571379933 on `5089b3a` | NOT OBSERVED: in progress when recorded. |
+| Draft pull request | NOT DONE: the connector was not signed in. [Prepared text](PULL_REQUEST.md); left for the next agent. |
 | Pattern scan of the added lines for credentials, DSNs, tokens, keys, the cluster port and user name | PASS: no match. Test references use `FAKE-…` values only. |
 
 The four skips in every full run are the three container tests
@@ -235,7 +242,7 @@ direct proof in this increment:
 ## Unverified boundaries
 
 - Exact-head GitHub CI, the three Docker gates and the production image: NOT
-  TESTED, the branch is not published.
+  OBSERVED, the push run was in progress when this was recorded.
 - Independent money and state review: NOT DONE. Only the author's own inline
   review exists.
 - HawkScan: not run; there is no `hawk` runtime and no API key on this machine.

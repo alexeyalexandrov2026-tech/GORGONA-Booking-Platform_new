@@ -5,7 +5,8 @@
 new obligations, settlement reserves and externally attested partial
 confirmations; [current handoff](NEXT_AGENT_H2_2026-10-07.md) and
 [direct evidence](evidence/2026-10-07-h2-settlements/VALIDATION.md). The branch
-is not pushed and has no CI run. H3/H4 continue through new forward migrations.
+was pushed on 2026-10-07; its draft pull request is still to be opened and its
+CI result is not yet observed. H3/H4 continue through new forward migrations.
 ADR0024 remains formally Proposed; all twelve COMPLETE criteria below remain
 NOT TESTED and FIN-03/02 planned.
 
