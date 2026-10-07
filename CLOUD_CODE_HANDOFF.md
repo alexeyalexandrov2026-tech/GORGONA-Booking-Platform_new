@@ -5,7 +5,7 @@
 [Full successor handoff](docs/plan/NEXT_AGENT_H2_2026-10-07.md),
 [copyable prompt](docs/plan/NEXT_AGENT_PROMPT_H2_2026-10-07.md),
 [changed files/checks/limits](docs/plan/evidence/2026-10-07-h2-settlements/VALIDATION.md).
-Branch claude/package-h2-settlements from the delivered H1 backend 75e809b.
+Branch codex/package-h2-settlements from the delivered H1 backend 75e809b.
 **Local only: not pushed, no pull request, no CI run.**
 Forward 0022–0024 add manual accruals as new obligations, settlement documents
 with approval/reserve/sent/release/cancel, and externally attested partial

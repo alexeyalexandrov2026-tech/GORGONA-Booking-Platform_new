@@ -2,7 +2,8 @@
 
 Base: `75e809b9d82b514fd9d2ae93122c23c0ae217e85`, the delivered H1 backend on
 `codex/package-h1-persistence`.
-Branch: `claude/package-h2-settlements`, own checkout
+Branch: `codex/package-h2-settlements`, created as `claude/package-h2-settlements`
+and renamed on 2026-10-07 before any publication; commits unchanged. Own checkout
 `C:\Users\alexa\Documents\ChatGPT\gorgona-h2-settlements`.
 
 | Slice | Source commit | Content |

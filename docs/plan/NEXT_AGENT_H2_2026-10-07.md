@@ -7,7 +7,7 @@ money transmission are not authorized.
 ## Start from this branch
 
 Repository: [GORGONA-Booking-Platform_new](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new).
-Implementation branch: `claude/package-h2-settlements`.
+Implementation branch: `codex/package-h2-settlements`.
 Checkout: `C:\Users\alexa\Documents\ChatGPT\gorgona-h2-settlements`.
 Parent: `75e809b9d82b514fd9d2ae93122c23c0ae217e85`, the delivered H1 backend on
 `codex/package-h1-persistence`.
@@ -19,9 +19,9 @@ published, the natural target is `codex/package-h1-persistence` (draft
 which continues the stack G #12 → H plan #13 → foundation #14 → backend #15.
 Read the current state before any action. No merge or deployment is established.
 
-The H1 handoff asked for a `codex/` branch. This branch uses `claude/` because
-it was written by a Claude session, as other branches in this repository are.
-Renaming is an owner decision.
+The branch was created as `claude/package-h2-settlements` and renamed to
+`codex/package-h2-settlements` on 2026-10-07 at the owner's request, before any
+publication. The commits are unchanged and the checkout folder keeps its name.
 
 Create your own branch and checkout from the current HEAD of this branch. One
 executor edits each checkout and owns each disposable PostgreSQL cluster.

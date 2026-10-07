@@ -1,7 +1,7 @@
 # Пакет H — счета, обязательства и подтвержденные внешние расчеты
 
 **Implementation checkpoint 2026-10-07:** H2 is implemented locally on
-`claude/package-h2-settlements` through forward 0022–0024: manual accruals as
+`codex/package-h2-settlements` through forward 0022–0024: manual accruals as
 new obligations, settlement reserves and externally attested partial
 confirmations; [current handoff](NEXT_AGENT_H2_2026-10-07.md) and
 [direct evidence](evidence/2026-10-07-h2-settlements/VALIDATION.md). The branch

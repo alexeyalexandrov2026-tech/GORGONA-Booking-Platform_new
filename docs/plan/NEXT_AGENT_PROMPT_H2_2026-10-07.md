@@ -10,7 +10,7 @@ C:\Users\alexa\Documents\ChatGPT\gorgona-h2-settlements\docs\plan\NEXT_AGENT_H2_
 and docs/plan/evidence/2026-10-07-h2-settlements/VALIDATION.md in that checkout.
 
 Repository: alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new.
-H2 branch: claude/package-h2-settlements, parent 75e809b (delivered H1 backend,
+H2 branch: codex/package-h2-settlements, parent 75e809b (delivered H1 backend,
 codex/package-h1-persistence, draft PR15 → PR14 → PR13 → G PR12).
 The H2 branch is LOCAL ONLY unless Git shows otherwise: not pushed, no pull
 request, no CI run. Read the actual current HEAD and remote state first.

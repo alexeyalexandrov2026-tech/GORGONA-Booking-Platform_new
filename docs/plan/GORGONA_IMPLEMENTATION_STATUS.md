@@ -2,7 +2,7 @@
 
 ## Current H2 backend — bounded local implementation, 2026-10-07
 
-Branch `claude/package-h2-settlements` from the delivered H1 backend 75e809b.
+Branch `codex/package-h2-settlements` from the delivered H1 backend 75e809b.
 Local only: not pushed, no pull request, no CI run.
 [Handoff](NEXT_AGENT_H2_2026-10-07.md),
 [exact checks/changed files](evidence/2026-10-07-h2-settlements/VALIDATION.md).

@@ -4,7 +4,7 @@
 
 Read [full handoff](NEXT_AGENT_H2_2026-10-07.md) and
 [copyable prompt](NEXT_AGENT_PROMPT_H2_2026-10-07.md).
-Branch `claude/package-h2-settlements`, own checkout
+Branch `codex/package-h2-settlements`, own checkout
 `C:\Users\alexa\Documents\ChatGPT\gorgona-h2-settlements`, parent 75e809b
 (delivered H1 backend). **Local only: not pushed, no pull request, no CI.**
 Read the actual HEAD and remote state before continuing.
