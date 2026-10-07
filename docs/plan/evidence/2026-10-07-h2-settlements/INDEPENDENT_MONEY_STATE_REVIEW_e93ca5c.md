@@ -135,9 +135,9 @@ were closed with tests. Exact runs are in the
 
 | Finding | Resolution |
 |---|---|
-| F1 | `gba.external_identity_key(value, rule)` (NFKC, invisible format characters removed, ends trimmed, Unicode lowercase via `pg_c_utf8`) is compared under the ledger lock in `enforce_external_payment` and in the service lookup; the exact unique constraint stays and the raw text is stored unchanged. Interior whitespace follows the source's rule; the only rule, `preserve`, keeps it, because manual attestations have no provider contract. |
+| F1 | `gba.external_identity_key(value, rule)` (invisible format characters removed first, then NFKC, Unicode lowercase via `pg_c_utf8`, NFKC again, ends trimmed; order corrected in `0026`) is compared under the ledger lock in `enforce_external_payment` and in the service lookup; the exact unique constraint stays and the raw text is stored unchanged. Interior whitespace follows the source's rule; the only rule, `preserve`, keeps it, because manual attestations have no provider contract. |
 | F2 | A cash account may not be the control account of any obligation in the book, and a document version may not take an account that already received external cash. |
-| F3 | `entry_date` must be on or after `issued_on` of every allocated obligation (SQL at commit and service); `actual_external_date` may not be later than today in the business time zone (the one zone of the business's locations, UTC as the documented fallback). |
+| F3 | `entry_date` must be on or after `issued_on` of every allocated obligation (SQL at commit and service); `actual_external_date` may not be later than today in the business time zone (the latest local date among the business's location zones since `0026`; UTC as the documented fallback without any location). |
 | F4 | `financial_guard` also approves column-level `references` (currency, created_by, …). |
 
 The owner corrected two first-version policies before publication: whitespace is

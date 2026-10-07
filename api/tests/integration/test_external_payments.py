@@ -531,8 +531,13 @@ async def test_external_identity_key_keeps_meaningful_whitespace(
         ("FAKE-TXN-77", "FAKE-TXN-7\ufe0f7"),
         ("FAKE-TXN-77", "FAKE-TXN-77\U000e0001"),
         ("FAKE TXN 77", "FAKE TXN 77\u3000"),
+        # A zero-width character between a letter and its combining mark.
+        ("FAKE-\u00e9", "FAKE-e\u200d\u0301"),
+        ("FAKE-\u00e9", "FAKE-e\u034f\u0301"),
+        ("FAKE-\u00e9", "FAKE-E\u2060\u0301"),
     )
     distinct = (
+        ("FAKE-\u00e9", "FAKE-e"),
         ("FAKE TXN 77", "FAKETXN77"),
         ("FAKE TXN 77", "FAKE  TXN 77"),
         ("AB 12", "A B12"),
@@ -594,15 +599,20 @@ async def test_business_timezone_decides_the_date_at_its_boundaries(
     assert await business_date("2026-10-08T00:00:00Z") == ("Pacific/Pago_Pago", date(2026, 10, 7))
     assert await business_date("2026-10-08T10:59:59Z") == ("Pacific/Pago_Pago", date(2026, 10, 7))
     assert await business_date("2026-10-08T11:00:00Z") == ("Pacific/Pago_Pago", date(2026, 10, 8))
-    # Locations in two zones: none is authoritative, UTC is the documented fallback.
+    # Locations in two zones: the latest local date decides, so Tokyo's own today is
+    # accepted at 15:00 UTC while UTC and Pago Pago are still on the 7th.
     with owner_tenant_transaction(owner_conn, business):
         owner_conn.execute(
             "insert into gba.locations (tenant_id,name,timezone) "
             "values (%s,'FAKE second zone','Asia/Tokyo')",
             (business,),
         )
-    assert await business_date("2026-10-07T23:59:59Z") == ("UTC", date(2026, 10, 7))
-    assert await business_date("2026-10-08T00:00:00Z") == ("UTC", date(2026, 10, 8))
+    assert await business_date("2026-10-07T14:59:59Z") == ("Asia/Tokyo", date(2026, 10, 7))
+    assert await business_date("2026-10-07T15:00:00Z") == ("Asia/Tokyo", date(2026, 10, 8))
+    # Without any location no zone is authoritative and UTC is the documented fallback.
+    async with tenant_transaction(app_pool, business) as conn:
+        row = await (await conn.execute("select gba.business_timezone(%s)", (uuid7(),))).fetchone()
+    assert row == ("UTC",)
 
 
 async def _clear_of_local_midnights() -> None:

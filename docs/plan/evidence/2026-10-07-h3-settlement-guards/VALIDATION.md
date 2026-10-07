@@ -12,14 +12,17 @@ closes its four listed test gaps and applies the owner's two policy corrections
 (source-aware whitespace for F1, business time zone for F3). Credits, refund
 obligations and guarded corrections (the rest of H3) are **not** implemented.
 Migrations `0001`–`0024` are untouched; behavior changes only through forward
-migration `0025`.
+migrations `0025` and `0026`. `0025` was published in draft PR17 and stays
+unchanged; `0026` corrects two defects that a review of this slice found (see
+[Self-review corrections](#self-review-corrections-0026)).
 
 ## Changed files
 
 | File | Change |
 |---|---|
 | `api/src/gorgona_booking/db/migrations/0025_settlement_guards.sql` | New. `gba.external_identity_key(text, text)`, `gba.business_timezone(uuid)`; replaced `enforce_financial_version`, `enforce_external_payment`, `assert_payment_consistent`. Pure ASCII, LF. SHA-256 `bb49694f81855ecbc0481db8e2eb7db0819f198322de210b5207d7bab1a1c3be`. |
-| `api/src/gorgona_booking/db/financial_guard.py` | `0025` in `_MIGRATIONS`; both new helpers approved; column-level `references` added to the approved FKs. |
+| `api/src/gorgona_booking/db/migrations/0026_settlement_guard_corrections.sql` | New. Replaces `gba.external_identity_key` (invisible characters removed before NFKC) and `gba.business_timezone` (latest local date among the locations). Pure ASCII, LF. SHA-256 `39a25c98eb812c578afc6d94be9bc23deb1186495fe65240e414a440a107433c`. |
+| `api/src/gorgona_booking/db/financial_guard.py` | `0025` and `0026` in `_MIGRATIONS`; both new helpers approved (latest source wins); column-level `references` added to the approved FKs. |
 | `api/src/gorgona_booking/business/settlements.py` | `confirm`: identity lookup through the comparison form, book-wide cash/control check, posting-date rule, external date bounded by the business today. |
 | `api/tests/integration/test_external_payments.py` | Identity, whitespace, time-zone boundary, cash/control and date tests; SQL-variant identity and settlement-row deletes in the SQL-alone test; four new readiness drift cases; date/cash parameters for the SQL-alone helper. |
 | `api/tests/integration/test_settlements.py` | Settlement recovery, replay and cancel while finance is OFF. |
@@ -35,11 +38,13 @@ No `web/` file changed.
 
 - **F1, identity.** Two external payments of one book and direction are the same
   fact when `gba.external_identity_key(value, rule)` of the alias and of the
-  reference are equal. The comparison form applies NFKC (full-width and other
-  compatibility forms, and every Unicode space, become their plain form),
-  removes default-ignorable invisible code points (zero-width, bidi controls,
-  variation selectors, tags, soft hyphen, fillers), trims the ends and
-  lowercases with `pg_c_utf8`. Interior whitespace follows the source's rule.
+  reference are equal. The comparison form first removes default-ignorable
+  invisible code points (zero-width, bidi controls, variation selectors, tags,
+  soft hyphen, fillers), then applies NFKC (full-width and other compatibility
+  forms, and every Unicode space, become their plain form), lowercases with
+  `pg_c_utf8`, applies NFKC again and trims the ends. Removing first matters: a
+  zero-width character between a letter and its combining mark would otherwise
+  block composition (`0026`). Interior whitespace follows the source's rule.
   The only rule is `preserve`, the conservative default: every interior space
   keeps its place and count, so `FAKE TXN 77`, `FAKE  TXN 77` and `FAKETXN77`
   are three identifiers. It applies because every H2 confirmation is a manual
@@ -58,12 +63,16 @@ No `web/` file changed.
   every allocated obligation (service 422 `LEDGER_DATE_INVALID`; SQL at commit).
   `actual_external_date` may be earlier (prepaid money is a fact) but not later
   than today in the business time zone. That zone comes from
-  `gba.business_timezone(tenant)`: the one IANA zone shared by all the
-  business's locations, each validated and governed by the confirmed timezone
-  fact. Ledger books and legal entities have no zone and H2 has no provider
-  zone, because every confirmation is a manual attestation. With no location, or
-  locations in several zones, no zone is authoritative and UTC is the documented
-  fallback. The service and the trigger evaluate the same SQL at the same
+  `gba.business_timezone(tenant)`: of the IANA zones of the business's
+  locations, each validated and governed by the confirmed timezone fact, the one
+  whose local date is the latest (ties by name), so no location's legitimate
+  today is refused and a date after every location's today is (`0026`; `0025`
+  fell back to UTC for several zones). Ledger books and legal entities have no
+  zone and H2 has no provider zone, because every confirmation is a manual
+  attestation. With no location no zone is authoritative and UTC is the
+  documented fallback. A location-scoped session sees fewer locations and can
+  only get an earlier or equal date, never a later one; finance routes are not
+  location-scoped. The service and the trigger evaluate the same SQL at the same
   transaction instant; the 422 carries `timezone` and `today`.
 - **F4, readiness.** The guard also approves column-level `references`
   (`currency`, `created_by`, …) of every H table, and both new helpers by source.
@@ -149,6 +158,28 @@ locally**) and the optional tenant-site test.
    the migration and the H3 application are deployed together.
 8. The kept database was dropped.
 
+## Self-review corrections (0026)
+
+After PR17 was opened (head `24ee21b`, CI green), a high-effort review of the
+slice's own diff by its author found five issues. It is not the independent
+review the merge still needs.
+
+| Finding | Outcome |
+|---|---|
+| Invisible characters were removed after NFKC: `FAKE-e` + ZWJ (or CGJ, or word joiner) + U+0301 never matched the recorded `FAKE-é`, so the same money fact could be recorded twice. | Fixed in `0026`: removal first, then NFKC, lowercase, NFKC, trim. Checked on PostgreSQL that no visible code point normalizes to an invisible one, so one removal suffices. |
+| With locations in several zones `0025` used UTC: an east-of-UTC business (Tokyo plus Seoul) had its legitimate local today refused for hours every day, and a west-of-UTC one could attest tomorrow every evening. | Fixed in `0026`: the latest local date among the locations decides; UTC only without any location. |
+| `business_timezone` reads `gba.locations` under the restrictive location-scope policy, so the zone depended on the caller. | Made fail-safe by the previous fix: a session that sees fewer locations gets an earlier or equal date, never a later one. Finance routes are not location-scoped. |
+| The identity check scans the book's payments of one direction, twice per row, under the ledger lock. | Not changed; decision 5 below. |
+| The guard's inline-FK pattern covers only `create table` columns, not `alter table ... add column ... references`. | Not changed: no migration uses that form yet; the next one that does must extend the pattern. |
+
+| Gate | Observed |
+|---|---|
+| Red: the changed identity and time-zone tests against `24ee21b` (without `0026`) in a throwaway worktree | 2 failed for the intended reasons: the ZWJ variant was not equal, and Tokyo plus Pago Pago gave `UTC` instead of `Asia/Tokyo` |
+| Affected suites, invoices and all unit tests with `0026` | 633 passed / 110.00s |
+| Ruff check / format --check / strict mypy | PASS / 211 files / 211 files |
+| Full suite, `GBA_REQUIRE_POSTGRES=1`, `GBA_REQUIRE_BROWSER=1` | **1053 passed / 4 skipped / 429.52s, exit 0** |
+| Upgrade 0024 → 0026 on a populated H2 database | only `0025` and `0026` applied (re-run: none), all checksums match, 42,349 rows unchanged, 0 conflicting rows; old-data case, zero-width and full-width variants refused, interior-space variant accepted; H3 guard READY, H2 guard REFUSED |
+
 Not done: CI (reported in the PR), an independent review of this slice,
 HawkScan (no `hawk` runtime or API key), local Docker gates, the twelve COMPLETE
 H cases. FIN-03/FIN-02 stay planned and `finance_documents` stays non-enableable.
@@ -163,9 +194,9 @@ H cases. FIN-03/FIN-02 stay planned and `finance_documents` stays non-enableable
    does not map it and a confusables table is out of scope.
 3. Only issued obligations make an account a control account for the cash
    check; a draft does not lock an account. The reverse check covers drafts too.
-4. "Today" for an attested date is the business time zone: the one zone of its
-   locations, else UTC. A business whose locations span zones gets UTC until a
-   book or business zone exists.
+4. "Today" for an attested date is the latest local date among the business's
+   location zones, else UTC. A book or business zone, once it exists, would
+   replace this rule.
 5. The identity check scans the book's payments of one direction under the
    ledger lock (linear in their number). An expression index needs an
    `IMMUTABLE` function and a guard extension and is left for later.

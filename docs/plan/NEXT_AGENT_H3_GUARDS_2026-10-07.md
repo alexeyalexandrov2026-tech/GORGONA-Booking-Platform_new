@@ -21,42 +21,45 @@ promotion remain unauthorized.
 An independent static money/state review of H2
 ([report](evidence/2026-10-07-h2-settlements/INDEPENDENT_MONEY_STATE_REVIEW_e93ca5c.md))
 found no break of `P + C + R <= A`, but three money-relevant gaps and one guard
-gap. They are fixed by forward migration `0025_settlement_guards.sql` and the
-service, with red → green evidence and an upgrade check on a populated `0024`
-database: [validation](evidence/2026-10-07-h3-settlement-guards/VALIDATION.md).
+gap. They are fixed by forward migrations `0025_settlement_guards.sql` and
+`0026_settlement_guard_corrections.sql` and the service, with red → green
+evidence and an upgrade check on a populated `0024` database:
+[validation](evidence/2026-10-07-h3-settlement-guards/VALIDATION.md). `0026`
+corrects two defects that a self-review found after PR17 was opened.
 
 - F1 one identity for an external fact (`gba.external_identity_key(value,
-  rule)`): NFKC, invisible format characters removed, ends trimmed, Unicode
-  lowercase. Interior whitespace is kept (`preserve`, the only rule) because
-  manual attestations have no provider contract; raw text is stored unchanged.
+  rule)`): invisible format characters removed first, then NFKC, Unicode
+  lowercase, NFKC again, ends trimmed. Interior whitespace is kept (`preserve`,
+  the only rule) because manual attestations have no provider contract; raw
+  text is stored unchanged.
 - F2 cash accounts and issued control accounts stay disjoint across the book.
 - F3 payment posting date on or after the accrual; the attested external date
   is not after today in the business time zone (`gba.business_timezone`: the
-  one zone of the business's locations, else UTC).
+  latest local date among the business's location zones, else UTC).
 - F4 readiness guard approves column-level `references` and both helpers.
 - The four H2 test gaps (FK drift, `opening` legacy entry, recovery while OFF,
   settlement-row deletes) now have tests.
 
-Final local full suite with mandatory PostgreSQL and browser: 1053 passed, 4 skipped, 445.56s
+Final local full suite with mandatory PostgreSQL and browser: 1053 passed, 4 skipped, 429.52s
 (3 container checks NOT TESTED locally, optional tenant site).
 
 ## Next steps, in order
 
-1. Exact-SHA CI of the published head, then an independent review of `0025`
-   and the `confirm` changes.
-2. Owner review of the five decisions in the validation file, above all the UTC
-   fallback for a business whose locations span time zones.
+1. Exact-SHA CI of the published head, then an independent review of `0025`,
+   `0026` and the `confirm` changes.
+2. Owner review of the five decisions in the validation file, above all the
+   latest-local-date rule for a business whose locations span time zones.
 3. Deploy note for later: the H2 application fails closed against a `0025`
    database, so migration and application go together.
 4. Then the rest of H3 on top of this branch: credits, refund obligations and
    guarded corrections, as described in the H2 handoff. New migrations start at
-   `0026`; `0025` becomes frozen once published.
+   `0027`; `0025` and `0026` are published and frozen.
 
 ## Working notes
 
 - Same rules as H2: add each migration to `_MIGRATIONS`; the latest packaged
   function wins; restore damaged functions with `packaged_function`.
-- `0025` creates no table, so it has no scope footer and the definition count
+- `0025` and `0026` create no table, so they have no scope footer and the definition count
   stays 63.
 - Keep SQL and test sources ASCII: write invisible or full-width characters as
   `\uXXXX` escapes (SQL regular expressions, Python strings). Tool inputs that
