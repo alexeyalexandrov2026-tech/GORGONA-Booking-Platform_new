@@ -1,5 +1,24 @@
 # GORGONA — реестр реализации
 
+## Current H3 slice: settlement guards after the H2 review, 2026-10-07
+
+Branch `codex/package-h3-settlement-guards` from published H2 `e93ca5c`, stacked
+on PR16; no merge. Read actual HEAD/origin/PR/CI. An independent static H2
+money/state
+[review](evidence/2026-10-07-h2-settlements/INDEPENDENT_MONEY_STATE_REVIEW_e93ca5c.md)
+found no cap break but gaps F1–F4; forward `0025_settlement_guards.sql` fixes them:
+one identity per external fact (NFKC, invisible characters removed, case-folded,
+interior whitespace preserved), disjoint cash and control accounts, posting date
+on or after the accrual and no external date after today in the business time
+zone (UTC fallback), and guard approval of column-level references. The four H2
+test gaps now have tests. Red on unmodified H2 source 6 failed/12 passed; local
+full 1053 passed/4 skipped/445.56s with mandatory PostgreSQL/browser; ruff/format/mypy 211
+PASS; web unchanged. 0024 → 0025 upgrade on a populated H2 database: only 0025
+applied, no row changed, 0 conflicting rows.
+[Validation](evidence/2026-10-07-h3-settlement-guards/VALIDATION.md),
+[handoff](NEXT_AGENT_H3_GUARDS_2026-10-07.md). Credits, refunds and corrections
+are not implemented; FIN-03/FIN-02 remain planned.
+
 ## Current H2 backend — bounded published implementation, 2026-10-07
 
 Branch `codex/package-h2-settlements` from the delivered H1 backend 75e809b.

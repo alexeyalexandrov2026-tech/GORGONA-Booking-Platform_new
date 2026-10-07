@@ -720,10 +720,31 @@ async def confirm(
     if current.status not in ("reserved", "sent", "partially_confirmed"):
         raise FinancialDocumentStateError(f"A {current.status} settlement cannot be confirmed")
     await require_workflow(conn, business_id)
+    # "Today" is the business's own date, decided by the same SQL the trigger uses at
+    # the same transaction instant; there is no provider time zone for an attestation.
+    today = await (
+        await conn.execute(
+            "select z,(pg_catalog.now() at time zone z)::date from gba.business_timezone(%s) z",
+            (business_id,),
+        )
+    ).fetchone()
+    if today is None:
+        raise DatabaseUnavailableError("The business time zone is unavailable")
+    if body.actual_external_date > today[1]:
+        raise ledger.LedgerDateError(
+            "An attested external date cannot be after today in the business time zone",
+            timezone=today[0],
+            today=today[1].isoformat(),
+        )
+    # Case, compatibility forms and invisible characters never make a new fact; a
+    # manual attestation has no provider contract, so interior whitespace is kept.
     recorded = await (
         await conn.execute(
             "select id from gba.external_payments where tenant_id=%s and book_id=%s "
-            "and direction=%s and source_account_alias=%s and external_reference=%s",
+            "and direction=%s and gba.external_identity_key(source_account_alias,'preserve')"
+            "=gba.external_identity_key(%s,'preserve') "
+            "and gba.external_identity_key(external_reference,'preserve')"
+            "=gba.external_identity_key(%s,'preserve')",
             (
                 business_id,
                 book_id,
@@ -751,20 +772,34 @@ async def confirm(
         amount = to_minor(body.amount, scale)
     except ValueError as exc:
         raise FinancialAmountError(str(exc), currency=current.currency) from exc
+    # Cash and control accounts stay disjoint across the book, not only in this payment.
+    control_as_cash = await (
+        await conn.execute(
+            "select 1 from gba.financial_obligations where tenant_id=%s and book_id=%s "
+            "and control_account_id=%s limit 1",
+            (business_id, book_id, body.cash_account_id),
+        )
+    ).fetchone()
+    if control_as_cash is not None:
+        raise FinancialDocumentStateError("The cash account cannot be a financial control account")
     rows = await (
         await conn.execute(
             "select a.obligation_id,o.control_account_id,a.amount_minor-coalesce(("
             "select sum(x.amount_minor) from gba.external_payment_allocations x "
             "join gba.external_payments p on p.tenant_id=x.tenant_id and p.book_id=x.book_id "
             "and p.id=x.payment_id where x.tenant_id=a.tenant_id and x.book_id=a.book_id "
-            "and x.obligation_id=a.obligation_id and p.settlement_id=a.settlement_id),0) "
+            "and x.obligation_id=a.obligation_id and p.settlement_id=a.settlement_id),0),"
+            "v.issued_on "
             "from gba.settlement_allocations a join gba.financial_obligations o "
             "on o.tenant_id=a.tenant_id and o.book_id=a.book_id and o.id=a.obligation_id "
+            "join gba.financial_document_versions v on v.tenant_id=o.tenant_id "
+            "and v.book_id=o.book_id and v.document_id=o.source_id "
+            "and v.revision=o.source_revision "
             "where a.tenant_id=%s and a.book_id=%s and a.settlement_id=%s",
             (business_id, book_id, settlement_id),
         )
     ).fetchall()
-    held = {row[0]: (row[1], int(row[2])) for row in rows}
+    held = {row[0]: (row[1], int(row[2]), row[3]) for row in rows}
     amounts: list[int] = []
     controls: list[UUID] = []
     for number, line in enumerate(body.allocations, 1):
@@ -776,12 +811,12 @@ async def confirm(
             value = to_minor(line.amount, scale)
         except ValueError as exc:
             raise FinancialAmountError(str(exc), line=number, currency=current.currency) from exc
-        control, remaining = held[line.obligation_id]
+        control, remaining, accrued = held[line.obligation_id]
         if value > remaining:
             raise FinancialCapError("Confirmation exceeds the reserved settlement line")
-        if control == body.cash_account_id:
-            raise FinancialDocumentStateError(
-                "The cash account cannot be an obligation control account"
+        if body.entry_date < accrued:
+            raise ledger.LedgerDateError(
+                "A payment cannot be posted before the accrual it settles", line=number
             )
         row = await (
             await conn.execute(

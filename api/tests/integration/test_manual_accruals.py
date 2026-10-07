@@ -252,13 +252,16 @@ async def test_document_kinds_never_cross_routes(accruals: AccrualWorld) -> None
     assert issued.json()["kind"] == "invoice"
 
 
+@pytest.mark.parametrize("legacy_kind", ["manual", "opening"])
 async def test_existing_manual_entry_is_never_linked_or_accrued_twice(
     accruals: AccrualWorld,
     app_pool: RuntimePool,
+    legacy_kind: str,
 ) -> None:
     legacy = uuid7()
     posted = await accruals.ledger.post(
-        accruals.ledger.entry(source_id="FAKE-LEGACY-ACCRUAL"), entry=legacy
+        accruals.ledger.entry(source_id="FAKE-LEGACY-ACCRUAL", source_kind=legacy_kind),
+        entry=legacy,
     )
     assert posted.status_code == 200, posted.text
     document = uuid7()
@@ -274,7 +277,7 @@ async def test_existing_manual_entry_is_never_linked_or_accrued_twice(
             )
         ).fetchall()
         assert sorted(kinds) == sorted(
-            [(legacy, "manual"), (UUID(issued.json()["entry_id"]), "accrual")]
+            [(legacy, legacy_kind), (UUID(issued.json()["entry_id"]), "accrual")]
         )
         linked = await (
             await conn.execute(

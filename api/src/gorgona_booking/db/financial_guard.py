@@ -15,6 +15,7 @@ _MIGRATIONS = (
     "0022_manual_accruals.sql",
     "0023_settlements.sql",
     "0024_external_payments.sql",
+    "0025_settlement_guards.sql",
 )
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
@@ -104,6 +105,9 @@ _FK_PATTERN = (
     r"foreign key\s*\(([^)]+)\)\s*references\s+gba\.(\w+)\s*\(([^)]+)\)"
     r"(\s+deferrable\s+initially\s+deferred)?"
 )
+_TYPES = r"(uuid|text|integer|smallint|bigint|date|timestamptz|xid8)"
+# A column-level `references` is a foreign key too (currency, created_by, ...).
+_INLINE_FK = rf"^    (\w+)\s+{_TYPES}\b[^\n]*?\breferences\s+gba\.(\w+)\s*\(([^)]+)\)"
 _FKS = tuple(
     (t, _columns(cols), parent, _columns(other), bool(deferred))
     for t, body in (
@@ -111,8 +115,11 @@ _FKS = tuple(
         *re.findall(r"alter table gba\.(\w+) add constraint ([^;]+);", _SQL, re.DOTALL),
     )
     for cols, parent, other, deferred in re.findall(_FK_PATTERN, body)
+) + tuple(
+    (t, [column], parent, _columns(other), False)
+    for t, body in _BLOCKS.items()
+    for column, _, parent, other in re.findall(_INLINE_FK, body, re.MULTILINE)
 )
-_TYPES = r"(uuid|text|integer|smallint|bigint|date|timestamptz|xid8)"
 _COLUMNS = tuple(
     (t, name, kind, "not null" in rest)
     for t, body in _BLOCKS.items()
@@ -141,6 +148,8 @@ _HELPERS = (
     ("gba.obligation_balance(uuid,uuid,uuid)", "record", "obligation_balance"),
     ("gba.assert_settlement_consistent(uuid,uuid,uuid)", "void", "assert_settlement_consistent"),
     ("gba.assert_payment_consistent(uuid,uuid,uuid)", "void", "assert_payment_consistent"),
+    ("gba.external_identity_key(text,text)", "text", "external_identity_key"),
+    ("gba.business_timezone(uuid)", "text", "business_timezone"),
 )
 FINANCIAL_PARAMETERS += tuple(
     x for signature, result, name in _HELPERS for x in (signature, result, _SOURCES[name])
