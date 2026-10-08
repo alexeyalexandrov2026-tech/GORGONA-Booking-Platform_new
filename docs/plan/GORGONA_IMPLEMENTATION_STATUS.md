@@ -1,6 +1,26 @@
 # GORGONA — реестр реализации
 
-## Current H3 slice: settlement guards after the H2 review, 2026-10-07
+## Current H3 slice: credit notes and refund obligations, 2026-10-07
+
+Branch `codex/package-h3-credits` from the PR17 head `c6c5d89`; no merge. Read
+actual HEAD/origin/PR/CI. Forward `0027_credit_notes.sql` adds credit notes
+against invoice and manual-accrual obligations: line by line, the unpaid
+balance credited first (C), the paid remainder a separate opposite-direction
+`credit_refund` obligation (100/70/50 → C 30, refund 20), one `credit` journal
+that G reverse refuses. No active reserve, line capacity, a reason exactly for
+another account, an explicit non-cash refund control exactly when a refund
+arises, posting not before the accrual; the service checks and SQL rechecks at
+commit. `gba.obligation_balance` now derives C. Code commit `76ed64e` pushed;
+no pull request yet (browser signed out). Local full 1099 passed/4
+skipped/513.90s with mandatory PostgreSQL/browser; ruff/format/mypy 214 PASS;
+web gates PASS; SQL mutation red; upgrade 0026 → 0027 on a populated database:
+only 0027 applied, no row changed.
+[Validation](evidence/2026-10-07-h3-credits/VALIDATION.md),
+[handoff](NEXT_AGENT_H3_CREDITS_2026-10-07.md),
+[prompt](NEXT_AGENT_PROMPT_H3_CREDITS_2026-10-07.md). Payment corrections and
+credit voids are not implemented; FIN-03/FIN-02 remain planned.
+
+## Previous H3 slice: settlement guards after the H2 review, 2026-10-07
 
 Branch `codex/package-h3-settlement-guards` from published H2 `e93ca5c`, stacked
 on PR16; no merge. Read actual HEAD/origin/PR/CI. An independent static H2

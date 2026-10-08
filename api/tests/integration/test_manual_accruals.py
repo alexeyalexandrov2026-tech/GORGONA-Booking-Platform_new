@@ -579,7 +579,7 @@ _KIND = ("financial_documents", "financial_documents_kind_check")
             "alter table gba.financial_documents drop constraint financial_documents_kind_check",
             approved_check(*_KIND),
         ),
-        (widened_check(*_KIND, "kind = 'credit_note'"), approved_check(*_KIND)),
+        (widened_check(*_KIND, "kind = 'debit_note'"), approved_check(*_KIND)),
         (
             approved_check(*_KIND) + " not valid",
             "alter table gba.financial_documents "
