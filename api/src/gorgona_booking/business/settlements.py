@@ -8,10 +8,16 @@ time, module state or a lost response, only by an explicit attested resolution.
 A confirmation records a fact a human attests about money that moved outside this
 program. It moves exactly its allocations from the reserve to confirmed money, posts
 one balanced G journal and binds a permanent external identity to one payment.
+
+A void or a correction is a new revision of that payment, never an edit: it reverses
+the journal of the version it replaces, returns those allocations to the reserve and,
+for a correction, confirms the replacement within that reserve. P and R follow the
+latest revision. A payment another fact depends on needs a separate reconciliation.
 """
 
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
+from datetime import date
 from typing import Any, Literal
 from uuid import UUID, uuid7
 
@@ -35,11 +41,13 @@ from gorgona_booking.business.financial_math import (
     FinancialAmountError,
     FinancialBalance,
     FinancialCapError,
+    correct_confirmation,
     reserve,
 )
 from gorgona_booking.business.financial_math import confirm as confirm_reserved
 from gorgona_booking.business.ledger_contracts import (
     LineInput,
+    PaymentCorrectionPosting,
     PaymentPosting,
     from_minor,
     to_minor,
@@ -51,7 +59,11 @@ from gorgona_booking.business.settlement_contracts import (
     ObligationView,
     PaymentAllocationView,
     PaymentConfirmInput,
+    PaymentCorrectInput,
+    PaymentRevisionView,
+    PaymentState,
     PaymentView,
+    PaymentVoidInput,
     SettlementAction,
     SettlementActionInput,
     SettlementAllocationView,
@@ -84,6 +96,10 @@ _CONSTRAINTS = ", ".join(
         "external_payments_consistent",
         "external_payment_allocations_consistent",
         "external_payments_entry_fk",
+        "external_payment_revisions_consistent",
+        "external_payment_revision_allocations_consistent",
+        "external_payment_revisions_reversal_fk",
+        "external_payment_revisions_entry_fk",
         "journal_entries_payment_consistent",
         "journal_lines_payment_consistent",
         "journal_entries_invoice_consistent",
@@ -108,6 +124,9 @@ _FOLLOWS: dict[SettlementEventKind, tuple[SettlementStatus, ...]] = {
     "confirmed": ("reserved", "sent"),
     "released": ("reserved", "sent"),
     "cancelled": ("prepared", "approved"),
+    # A released reserve is gone, so its payments can only be voided.
+    "payment_voided": ("reserved", "sent", "released"),
+    "payment_corrected": ("reserved", "sent"),
 }
 # Facts in the order gba.settlement_phase reads them: the strongest present wins.
 _PHASES: tuple[SettlementStatus, ...] = (
@@ -135,6 +154,12 @@ class FinancialOutcomeUnresolvedError(ConflictError):
 
 class FinancialSourceRecordedError(ConflictError):
     code = "FINANCIAL_SOURCE_ALREADY_RECORDED"
+
+
+class FinancialReconciliationRequiredError(ConflictError):
+    """Another recorded fact depends on this payment; nothing was changed."""
+
+    code = "FINANCIAL_RECONCILIATION_REQUIRED"
 
 
 async def _flush(conn: RuntimeConnection) -> None:
@@ -235,6 +260,48 @@ async def load_obligation(
     return ObligationView(business_id=business_id, book_id=book_id, **_obligation(row).model_dump())
 
 
+async def _effective(
+    conn: RuntimeConnection, business: UUID, book: UUID, settlement: UUID, bound: int
+) -> tuple[dict[int, UUID], dict[UUID, int]]:
+    """Payments by the event that recorded each version, and effective confirmed money
+    per obligation, as the facts stood after event `bound`."""
+    versions = await (
+        await conn.execute(
+            "select p.id,1,p.sequence from gba.external_payments p "
+            "where p.tenant_id=%s and p.book_id=%s and p.settlement_id=%s "
+            "union all select r.payment_id,r.revision,r.sequence "
+            "from gba.external_payment_revisions r "
+            "where r.tenant_id=%s and r.book_id=%s and r.settlement_id=%s",
+            (business, book, settlement) * 2,
+        )
+    ).fetchall()
+    allocated = await (
+        await conn.execute(
+            "select p.id,1,a.obligation_id,a.amount_minor from gba.external_payments p "
+            "join gba.external_payment_allocations a on a.tenant_id=p.tenant_id "
+            "and a.book_id=p.book_id and a.payment_id=p.id "
+            "where p.tenant_id=%s and p.book_id=%s and p.settlement_id=%s "
+            "union all select r.payment_id,r.revision,a.obligation_id,a.amount_minor "
+            "from gba.external_payment_revisions r "
+            "join gba.external_payment_revision_allocations a on a.tenant_id=r.tenant_id "
+            "and a.book_id=r.book_id and a.payment_id=r.payment_id and a.revision=r.revision "
+            "where r.tenant_id=%s and r.book_id=%s and r.settlement_id=%s",
+            (business, book, settlement) * 2,
+        )
+    ).fetchall()
+    payments: dict[int, UUID] = {}
+    latest: dict[UUID, int] = {}
+    for payment, revision, recorded in versions:
+        if recorded <= bound:
+            payments[recorded] = payment
+            latest[payment] = max(latest.get(payment, 0), revision)
+    confirmed: dict[UUID, int] = {}
+    for payment, revision, obligation, amount in allocated:
+        if latest.get(payment) == revision:
+            confirmed[obligation] = confirmed.get(obligation, 0) + amount
+    return payments, confirmed
+
+
 def _phase(kinds: Sequence[str]) -> SettlementStatus:
     return next(phase for phase in _PHASES if phase in kinds)
 
@@ -283,20 +350,7 @@ async def load_settlement(
     ).fetchall()
     if not events or not lines:
         return None
-    paid = await (
-        await conn.execute(
-            "select p.sequence,p.id,a.obligation_id,a.amount_minor from gba.external_payments p "
-            "join gba.external_payment_allocations a on a.tenant_id=p.tenant_id "
-            "and a.book_id=p.book_id and a.payment_id=p.id "
-            "where p.tenant_id=%s and p.book_id=%s and p.settlement_id=%s "
-            "and (%s::integer is null or p.sequence<=%s)",
-            (business_id, book_id, settlement_id, sequence, sequence),
-        )
-    ).fetchall()
-    payments = {row[0]: row[1] for row in paid}
-    confirmed: dict[UUID, int] = {}
-    for row in paid:
-        confirmed[row[2]] = confirmed.get(row[2], 0) + row[3]
+    payments, confirmed = await _effective(conn, business_id, book_id, settlement_id, events[-1][0])
     scale = document[3]
     phase = _phase([event[1] for event in events])
     held = phase in _HOLDING
@@ -363,8 +417,8 @@ async def list_settlements(
             "gba.settlement_phase(d.tenant_id,d.book_id,d.id),"
             "(select coalesce(sum(a.amount_minor),0) from gba.settlement_allocations a "
             "where a.tenant_id=d.tenant_id and a.book_id=d.book_id and a.settlement_id=d.id),"
-            "(select coalesce(sum(p.amount_minor),0) from gba.external_payments p "
-            "where p.tenant_id=d.tenant_id and p.book_id=d.book_id and p.settlement_id=d.id) "
+            "(select coalesce(sum(e.amount_minor),0) from "
+            "gba.effective_payment_allocations(d.tenant_id,d.book_id,null::uuid,d.id) e) "
             "from gba.settlement_documents d join gba.currencies c on c.code=d.currency "
             "where d.tenant_id=%s and d.book_id=%s and (%s::uuid is null or d.id>%s) "
             "order by d.id limit %s",
@@ -654,7 +708,57 @@ async def load_payment(
             (business_id, book_id, payment_id),
         )
     ).fetchall()
+    revised = await (
+        await conn.execute(
+            "select revision,sequence,kind,amount_minor,actual_external_date,entry_date,"
+            "cash_account_id,attestation,reason,evidence_source,reversal_entry_id,entry_id,"
+            "created_by,created_at from gba.external_payment_revisions "
+            "where tenant_id=%s and book_id=%s and payment_id=%s order by revision",
+            (business_id, book_id, payment_id),
+        )
+    ).fetchall()
+    revised_lines = await (
+        await conn.execute(
+            "select revision,obligation_id,amount_minor "
+            "from gba.external_payment_revision_allocations "
+            "where tenant_id=%s and book_id=%s and payment_id=%s order by revision,line_no",
+            (business_id, book_id, payment_id),
+        )
+    ).fetchall()
     scale = row[4]
+
+    def allocation(line: Sequence[Any]) -> PaymentAllocationView:
+        return PaymentAllocationView(obligation_id=line[0], amount=from_minor(line[1], scale))
+
+    revisions = tuple(
+        PaymentRevisionView(
+            revision=r[0],
+            sequence=r[1],
+            kind=r[2],
+            amount=None if r[3] is None else from_minor(r[3], scale),
+            actual_external_date=r[4],
+            entry_date=r[5],
+            cash_account_id=r[6],
+            attestation=r[7],
+            reason=r[8],
+            evidence_source=r[9],
+            reversal_entry_id=r[10],
+            entry_id=r[11],
+            recorded_by=r[12],
+            recorded_at=r[13],
+            allocations=tuple(allocation(x[1:]) for x in revised_lines if x[0] == r[0]),
+        )
+        for r in revised
+    )
+    original = tuple(allocation(line) for line in lines)
+    effective = revisions[-1].allocations if revisions else original
+    state: PaymentState = (
+        "confirmed"
+        if not revisions
+        else "voided"
+        if revisions[-1].kind == "voided"
+        else "corrected"
+    )
     return PaymentView(
         business_id=business_id,
         book_id=book_id,
@@ -674,11 +778,69 @@ async def load_payment(
         entry_id=row[12],
         recorded_by=row[13],
         recorded_at=row[14],
-        allocations=tuple(
-            PaymentAllocationView(obligation_id=line[0], amount=from_minor(line[1], scale))
-            for line in lines
-        ),
+        allocations=original,
+        state=state,
+        revision=revisions[-1].revision if revisions else 1,
+        effective_amount=from_minor(sum(to_minor(line.amount, scale) for line in effective), scale),
+        effective_allocations=effective,
+        revisions=revisions,
     )
+
+
+async def _require_attested_date(conn: RuntimeConnection, business: UUID, actual: date) -> None:
+    """No external date after the business's own today, decided by the same SQL the
+    trigger uses at the same instant; there is no provider time zone for an attestation."""
+    today = await (
+        await conn.execute(
+            "select z,(pg_catalog.now() at time zone z)::date from gba.business_timezone(%s) z",
+            (business,),
+        )
+    ).fetchone()
+    if today is None:
+        raise DatabaseUnavailableError("The business time zone is unavailable")
+    if actual > today[1]:
+        raise ledger.LedgerDateError(
+            "An attested external date cannot be after today in the business time zone",
+            timezone=today[0],
+            today=today[1].isoformat(),
+        )
+
+
+async def _require_cash_not_control(
+    conn: RuntimeConnection, business: UUID, book: UUID, cash: UUID
+) -> None:
+    """Cash and control accounts stay disjoint across the book, not only in one payment."""
+    control_as_cash = await (
+        await conn.execute(
+            "select 1 from gba.financial_obligations where tenant_id=%s and book_id=%s "
+            "and control_account_id=%s limit 1",
+            (business, book, cash),
+        )
+    ).fetchone()
+    if control_as_cash is not None:
+        raise FinancialDocumentStateError("The cash account cannot be a financial control account")
+
+
+async def _settlement_lines(
+    conn: RuntimeConnection, business: UUID, book: UUID, settlement: UUID
+) -> dict[UUID, tuple[UUID, int, int, date]]:
+    """Per obligation: control account, planned amount, effective confirmed amount of
+    this settlement and the date of the accrual it settles."""
+    rows = await (
+        await conn.execute(
+            "select a.obligation_id,o.control_account_id,a.amount_minor,coalesce(("
+            "select sum(e.amount_minor) from gba.effective_payment_allocations("
+            "a.tenant_id,a.book_id,a.obligation_id,a.settlement_id) e),0),v.issued_on "
+            "from gba.settlement_allocations a join gba.financial_obligations o "
+            "on o.tenant_id=a.tenant_id and o.book_id=a.book_id and o.id=a.obligation_id "
+            "join gba.financial_document_versions v on v.tenant_id=o.tenant_id "
+            "and v.book_id=o.book_id and v.document_id=o.source_id "
+            "and v.revision=o.source_revision "
+            "where a.tenant_id=%s and a.book_id=%s and a.settlement_id=%s",
+            (business, book, settlement),
+        )
+    ).fetchall()
+    return {row[0]: (row[1], int(row[2]), int(row[3]), row[4]) for row in rows}
 
 
 async def confirm(
@@ -720,22 +882,7 @@ async def confirm(
     if current.status not in ("reserved", "sent", "partially_confirmed"):
         raise FinancialDocumentStateError(f"A {current.status} settlement cannot be confirmed")
     await require_workflow(conn, business_id)
-    # "Today" is the business's own date, decided by the same SQL the trigger uses at
-    # the same transaction instant; there is no provider time zone for an attestation.
-    today = await (
-        await conn.execute(
-            "select z,(pg_catalog.now() at time zone z)::date from gba.business_timezone(%s) z",
-            (business_id,),
-        )
-    ).fetchone()
-    if today is None:
-        raise DatabaseUnavailableError("The business time zone is unavailable")
-    if body.actual_external_date > today[1]:
-        raise ledger.LedgerDateError(
-            "An attested external date cannot be after today in the business time zone",
-            timezone=today[0],
-            today=today[1].isoformat(),
-        )
+    await _require_attested_date(conn, business_id, body.actual_external_date)
     # Case, compatibility forms and invisible characters never make a new fact; a
     # manual attestation has no provider contract, so interior whitespace is kept.
     recorded = await (
@@ -772,34 +919,8 @@ async def confirm(
         amount = to_minor(body.amount, scale)
     except ValueError as exc:
         raise FinancialAmountError(str(exc), currency=current.currency) from exc
-    # Cash and control accounts stay disjoint across the book, not only in this payment.
-    control_as_cash = await (
-        await conn.execute(
-            "select 1 from gba.financial_obligations where tenant_id=%s and book_id=%s "
-            "and control_account_id=%s limit 1",
-            (business_id, book_id, body.cash_account_id),
-        )
-    ).fetchone()
-    if control_as_cash is not None:
-        raise FinancialDocumentStateError("The cash account cannot be a financial control account")
-    rows = await (
-        await conn.execute(
-            "select a.obligation_id,o.control_account_id,a.amount_minor-coalesce(("
-            "select sum(x.amount_minor) from gba.external_payment_allocations x "
-            "join gba.external_payments p on p.tenant_id=x.tenant_id and p.book_id=x.book_id "
-            "and p.id=x.payment_id where x.tenant_id=a.tenant_id and x.book_id=a.book_id "
-            "and x.obligation_id=a.obligation_id and p.settlement_id=a.settlement_id),0),"
-            "v.issued_on "
-            "from gba.settlement_allocations a join gba.financial_obligations o "
-            "on o.tenant_id=a.tenant_id and o.book_id=a.book_id and o.id=a.obligation_id "
-            "join gba.financial_document_versions v on v.tenant_id=o.tenant_id "
-            "and v.book_id=o.book_id and v.document_id=o.source_id "
-            "and v.revision=o.source_revision "
-            "where a.tenant_id=%s and a.book_id=%s and a.settlement_id=%s",
-            (business_id, book_id, settlement_id),
-        )
-    ).fetchall()
-    held = {row[0]: (row[1], int(row[2]), row[3]) for row in rows}
+    await _require_cash_not_control(conn, business_id, book_id, body.cash_account_id)
+    held = await _settlement_lines(conn, business_id, book_id, settlement_id)
     amounts: list[int] = []
     controls: list[UUID] = []
     for number, line in enumerate(body.allocations, 1):
@@ -811,8 +932,8 @@ async def confirm(
             value = to_minor(line.amount, scale)
         except ValueError as exc:
             raise FinancialAmountError(str(exc), line=number, currency=current.currency) from exc
-        control, remaining, accrued = held[line.obligation_id]
-        if value > remaining:
+        control, planned, confirmed, accrued = held[line.obligation_id]
+        if value > planned - confirmed:
             raise FinancialCapError("Confirmation exceeds the reserved settlement line")
         if body.entry_date < accrued:
             raise ledger.LedgerDateError(
@@ -916,3 +1037,353 @@ async def confirm(
             flush=_flush,
         )
     return await _view(conn, business_id, reference)
+
+
+def _mirror(side: str) -> Literal["debit", "credit"]:
+    return "credit" if side == "debit" else "debit"
+
+
+async def _require_no_dependents(
+    conn: RuntimeConnection, business: UUID, book: UUID, settlement: UUID, touched: list[UUID]
+) -> None:
+    """Refuse, without any effect, a payment another recorded fact depends on."""
+    credited = await (
+        await conn.execute(
+            "select credited_obligation_id from gba.financial_document_versions "
+            "where tenant_id=%s and book_id=%s and state='issued' "
+            "and credited_obligation_id=any(%s::uuid[]) limit 1",
+            (business, book, touched),
+        )
+    ).fetchone()
+    if credited is not None:
+        raise FinancialReconciliationRequiredError(
+            "An issued credit depends on this payment; reconcile it separately",
+            obligation_id=str(credited[0]),
+        )
+    # A refund is never undone to make a correction possible.
+    refund = await (
+        await conn.execute(
+            "select id from gba.financial_obligations where tenant_id=%s and book_id=%s "
+            "and id=any(%s::uuid[]) and source_kind='credit_refund' limit 1",
+            (business, book, touched),
+        )
+    ).fetchone()
+    if refund is not None:
+        raise FinancialReconciliationRequiredError(
+            "A refund payment is reconciled separately", obligation_id=str(refund[0])
+        )
+    sent = await (
+        await conn.execute(
+            "select a.settlement_id from gba.settlement_allocations a "
+            "where a.tenant_id=%s and a.book_id=%s and a.settlement_id<>%s "
+            "and a.obligation_id=any(%s::uuid[]) "
+            "and gba.settlement_phase(a.tenant_id,a.book_id,a.settlement_id)='sent' "
+            "and (select sum(x.amount_minor) from gba.settlement_allocations x "
+            "where x.tenant_id=a.tenant_id and x.book_id=a.book_id "
+            "and x.settlement_id=a.settlement_id)>(select coalesce(sum(e.amount_minor),0) "
+            "from gba.effective_payment_allocations(a.tenant_id,a.book_id,null::uuid,"
+            "a.settlement_id) e) limit 1",
+            (business, book, settlement, touched),
+        )
+    ).fetchone()
+    if sent is not None:
+        raise FinancialReconciliationRequiredError(
+            "A settlement with an unknown sent outcome depends on this payment",
+            settlement_id=str(sent[0]),
+        )
+
+
+async def _amend(
+    conn: RuntimeConnection,
+    *,
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    payment_id: UUID,
+    user_id: UUID,
+    actor: str,
+    key: str,
+    body: PaymentVoidInput,
+    correction: PaymentCorrectInput | None,
+) -> SettlementView:
+    operation: FinancialCommandKind = (
+        "settlement_payment_void" if correction is None else "settlement_payment_correct"
+    )
+    kind: SettlementEventKind = "payment_voided" if correction is None else "payment_corrected"
+    digest = commands.fingerprint(
+        {
+            "book_id": str(book_id),
+            "settlement_id": str(settlement_id),
+            "payment_id": str(payment_id),
+            **body.model_dump(mode="json"),
+        }
+    )
+    prior = await _claim(conn, business_id, actor, operation, key, digest)
+    if prior is not None:
+        return await _view(conn, business_id, prior)
+    current = await load_settlement(conn, business_id, book_id, settlement_id)
+    if current is None:
+        raise NotFoundError("Settlement not found")
+    if current.sequence != body.expected_sequence:
+        raise ConflictError(
+            "This settlement changed; reload before continuing", sequence=current.sequence
+        )
+    payment = await load_payment(conn, business_id, book_id, payment_id)
+    if payment is None or payment.settlement_id != settlement_id:
+        raise NotFoundError("Payment not found")
+    if payment.state == "voided":
+        raise FinancialDocumentStateError("A voided payment is final")
+    phase = _phase([event.kind for event in current.events])
+    if phase not in _FOLLOWS[kind]:
+        verb = "voided" if correction is None else "corrected"
+        raise FinancialDocumentStateError(f"A payment of a {phase} settlement cannot be {verb}")
+    if current.outcome_unresolved:
+        raise FinancialOutcomeUnresolvedError(
+            "Resolve the sent outcome of this settlement before correcting its payment"
+        )
+    await require_workflow(conn, business_id)
+    scale = current.minor_units
+    old = {
+        line.obligation_id: to_minor(line.amount, scale) for line in payment.effective_allocations
+    }
+    new: dict[UUID, int] = {}
+    for number, line in enumerate(correction.allocations if correction else (), 1):
+        try:
+            new[line.obligation_id] = to_minor(line.amount, scale)
+        except ValueError as exc:
+            raise FinancialAmountError(str(exc), line=number, currency=current.currency) from exc
+    touched = sorted(set(old) | set(new))
+    await _require_no_dependents(conn, business_id, book_id, settlement_id, touched)
+    latest = payment.revisions[-1] if payment.revisions else None
+    replaced, replaced_on = (
+        (payment.entry_id, payment.entry_date)
+        if latest is None
+        else (latest.entry_id, latest.entry_date)
+    )
+    if replaced is None:
+        raise DatabaseUnavailableError("The journal of the effective payment is missing")
+    if body.entry_date < replaced_on:
+        raise ledger.LedgerDateError(
+            "A correction cannot be posted before the version it replaces",
+            replaced_on=replaced_on.isoformat(),
+        )
+    amount = 0
+    controls: list[UUID] = []
+    if correction is not None:
+        await _require_attested_date(conn, business_id, correction.actual_external_date)
+        await _require_cash_not_control(conn, business_id, book_id, correction.cash_account_id)
+        try:
+            amount = to_minor(correction.amount, scale)
+        except ValueError as exc:
+            raise FinancialAmountError(str(exc), currency=current.currency) from exc
+        held = await _settlement_lines(conn, business_id, book_id, settlement_id)
+        for number, line in enumerate(correction.allocations, 1):
+            if line.obligation_id not in held:
+                raise FinancialDocumentStateError(
+                    "A correction allocates only to lines of its settlement"
+                )
+            control, planned, confirmed, accrued = held[line.obligation_id]
+            # The replaced allocation returns to this line before the replacement takes it.
+            if new[line.obligation_id] > planned - confirmed + old.get(line.obligation_id, 0):
+                raise FinancialCapError("Correction exceeds the reserved settlement line")
+            if body.entry_date < accrued:
+                raise ledger.LedgerDateError(
+                    "A payment cannot be posted before the accrual it settles", line=number
+                )
+            controls.append(control)
+        if sum(new.values()) != amount:
+            raise FinancialAmountError(
+                "Allocations must equal the corrected amount exactly", currency=current.currency
+            )
+    for obligation in touched:
+        row = await (
+            await conn.execute(
+                "select * from gba.obligation_balance(%s,%s,%s)",
+                (business_id, book_id, obligation),
+            )
+        ).fetchone()
+        if row is None:
+            raise DatabaseUnavailableError("A settled obligation is missing")
+        balance = _balance(row)
+        # A released reserve is not restored: the void only lowers P there.
+        if phase in _HOLDING and obligation in old:
+            balance = correct_confirmation(balance, old_minor=old[obligation], new_minor=0)
+        if obligation in new:
+            confirm_reserved(balance, new[obligation])
+    previous = await (
+        await conn.execute(
+            "select account_id,side,amount_minor from gba.journal_lines "
+            "where tenant_id=%s and entry_id=%s order by line_no",
+            (business_id, replaced),
+        )
+    ).fetchall()
+    revision = payment.revision + 1
+    reference = Reference(book_id, settlement_id, current.sequence + 1)
+    reversal = uuid7()
+    replacement = None if correction is None else uuid7()
+    cash_side: Literal["debit", "credit"] = (
+        "debit" if current.direction == "receivable" else "credit"
+    )
+    async with _writes(conn):
+        await _event(conn, business_id, reference, kind, user_id)
+        await conn.execute(
+            "insert into gba.external_payment_revisions (tenant_id,book_id,payment_id,revision,"
+            "settlement_id,sequence,kind,amount_minor,actual_external_date,cash_account_id,"
+            "entry_date,attestation,reason,evidence_source,reversal_entry_id,entry_id,created_by) "
+            "values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (
+                business_id,
+                book_id,
+                payment_id,
+                revision,
+                settlement_id,
+                reference.revision,
+                "voided" if correction is None else "corrected",
+                None if correction is None else amount,
+                None if correction is None else correction.actual_external_date,
+                None if correction is None else correction.cash_account_id,
+                body.entry_date,
+                body.attestation,
+                body.reason,
+                body.evidence_source,
+                reversal,
+                replacement,
+                user_id,
+            ),
+        )
+        if correction is not None:
+            await conn.execute(
+                "insert into gba.external_payment_revision_allocations "
+                "(tenant_id,book_id,payment_id,revision,line_no,obligation_id,amount_minor) "
+                "select %s,%s,%s,%s,l.n::smallint,l.obligation,l.amount "
+                "from unnest(%s::uuid[],%s::bigint[]) with ordinality as l(obligation,amount,n)",
+                (
+                    business_id,
+                    book_id,
+                    payment_id,
+                    revision,
+                    [line.obligation_id for line in correction.allocations],
+                    [new[line.obligation_id] for line in correction.allocations],
+                ),
+            )
+        await ledger.append_financial_journal(
+            conn,
+            business_id=business_id,
+            book_id=book_id,
+            entry_id=reversal,
+            user_id=user_id,
+            body=PaymentCorrectionPosting(
+                entry_date=body.entry_date,
+                currency=current.currency,
+                source_id=f"{payment_id}:{revision}:reversal",
+                lines=tuple(
+                    LineInput(
+                        account_id=line[0], side=_mirror(line[1]), amount=from_minor(line[2], scale)
+                    )
+                    for line in previous
+                ),
+            ),
+        )
+        if correction is not None and replacement is not None:
+            await ledger.append_financial_journal(
+                conn,
+                business_id=business_id,
+                book_id=book_id,
+                entry_id=replacement,
+                user_id=user_id,
+                body=PaymentCorrectionPosting(
+                    entry_date=body.entry_date,
+                    currency=current.currency,
+                    source_id=f"{payment_id}:{revision}:replacement",
+                    lines=(
+                        LineInput(
+                            account_id=correction.cash_account_id,
+                            side=cash_side,
+                            amount=from_minor(amount, scale),
+                        ),
+                        *(
+                            LineInput(
+                                account_id=control,
+                                side=_mirror(cash_side),
+                                amount=from_minor(new[line.obligation_id], scale),
+                            )
+                            for control, line in zip(controls, correction.allocations, strict=True)
+                        ),
+                    ),
+                ),
+            )
+        await financial_commands.complete(
+            conn,
+            business=business_id,
+            actor=actor,
+            user=user_id,
+            operation=operation,
+            key=key,
+            request_hash=digest,
+            reference=reference,
+            receipt=_receipt(reference),
+            flush=_flush,
+        )
+    return await _view(conn, business_id, reference)
+
+
+async def void_payment(
+    conn: RuntimeConnection,
+    *,
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    payment_id: UUID,
+    user_id: UUID,
+    actor: str,
+    key: str,
+    body: PaymentVoidInput,
+) -> SettlementView:
+    """Record an attested erroneous confirmation: no money moved under this identity.
+
+    The payment's journal is reversed and its allocations return to the reserve of a
+    held settlement (a released one only loses P). The identity stays bound to it.
+    """
+    return await _amend(
+        conn,
+        business_id=business_id,
+        book_id=book_id,
+        settlement_id=settlement_id,
+        payment_id=payment_id,
+        user_id=user_id,
+        actor=actor,
+        key=key,
+        body=body,
+        correction=None,
+    )
+
+
+async def correct_payment(
+    conn: RuntimeConnection,
+    *,
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    payment_id: UUID,
+    user_id: UUID,
+    actor: str,
+    key: str,
+    body: PaymentCorrectInput,
+) -> SettlementView:
+    """Replace the details of an erroneous attestation of the same external fact.
+
+    The replaced version is reversed and its allocations return to the reserve; the
+    replacement is confirmed within that reserve with its own journal, atomically.
+    """
+    return await _amend(
+        conn,
+        business_id=business_id,
+        book_id=book_id,
+        settlement_id=settlement_id,
+        payment_id=payment_id,
+        user_id=user_id,
+        actor=actor,
+        key=key,
+        body=body,
+        correction=body,
+    )

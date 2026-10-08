@@ -16,7 +16,15 @@ from gorgona_booking.business.financial_contracts import Direction
 from gorgona_booking.business.ledger_contracts import CURRENCY_PATTERN, single_line_text
 
 SettlementEventKind = Literal[
-    "prepared", "approved", "reserved", "sent", "confirmed", "released", "cancelled"
+    "prepared",
+    "approved",
+    "reserved",
+    "sent",
+    "confirmed",
+    "released",
+    "cancelled",
+    "payment_voided",
+    "payment_corrected",
 ]
 # partially_confirmed and confirmed are read from the payments of a held reserve.
 SettlementStatus = Literal[
@@ -31,6 +39,9 @@ SettlementStatus = Literal[
 ]
 SettlementAction = Literal["approve", "reserve", "sent", "release", "cancel"]
 Resolution = Literal["attested_no_payment"]
+# A void or correction states that the earlier attestation was wrong; never a refund.
+CorrectionAttestation = Literal["attested_erroneous_confirmation"]
+PaymentState = Literal["confirmed", "corrected", "voided"]
 ObligationSource = Literal["invoice", "manual", "credit_refund"]
 _MAX_SEQUENCE = 2_147_483_646
 _AMOUNT_PATTERN = r"^(0|[1-9][0-9]{0,17})(\.[0-9]{1,3})?$"
@@ -108,6 +119,39 @@ class PaymentConfirmInput(SettlementActionInput):
         return self
 
 
+class PaymentVoidInput(SettlementActionInput):
+    """An attested erroneous confirmation: no money moved under this external identity.
+
+    The identity stays bound to the payment; its journal is reversed on `entry_date`,
+    which must fall in an open period, and its allocations return to the reserve.
+    """
+
+    attestation: CorrectionAttestation
+    entry_date: date
+    reason: str = Field(min_length=1, max_length=500)
+    evidence_source: str = Field(min_length=1, max_length=200)
+
+    @field_validator("reason", "evidence_source")
+    @classmethod
+    def single_line(cls, value: str) -> str | None:
+        return single_line_text(value)
+
+
+class PaymentCorrectInput(PaymentVoidInput):
+    """The same external fact with corrected details; its identity never changes."""
+
+    amount: str = Field(min_length=1, max_length=24, pattern=_AMOUNT_PATTERN, strict=True)
+    actual_external_date: date
+    cash_account_id: UUID
+    allocations: tuple[SettlementAllocationInput, ...] = Field(min_length=1, max_length=50)
+
+    @model_validator(mode="after")
+    def one_line_per_obligation(self) -> Self:
+        if len({line.obligation_id for line in self.allocations}) != len(self.allocations):
+            raise ValueError("A correction names each obligation once")
+        return self
+
+
 class SettlementCancelInput(SettlementActionInput):
     reason: str | None = Field(default=None, min_length=1, max_length=500)
 
@@ -133,7 +177,7 @@ class SettlementEventView(Strict):
     resolution: Resolution | None
     reason: str | None
     evidence_source: str | None
-    # The external payment recorded by a confirmed fact.
+    # The external payment a confirmed, voided or corrected fact recorded.
     payment_id: UUID | None
 
 
@@ -192,8 +236,33 @@ class PaymentAllocationView(Strict):
     amount: str
 
 
+class PaymentRevisionView(Strict):
+    """A void or correction recorded after the original confirmation."""
+
+    revision: int = Field(ge=2)
+    sequence: int = Field(ge=1)
+    kind: Literal["voided", "corrected"]
+    amount: str | None
+    actual_external_date: date | None
+    entry_date: date
+    cash_account_id: UUID | None
+    attestation: CorrectionAttestation
+    reason: str
+    evidence_source: str
+    # The journal reversing the replaced version, and the replacement journal.
+    reversal_entry_id: UUID
+    entry_id: UUID | None
+    recorded_by: UUID
+    recorded_at: AwareDatetime
+    allocations: tuple[PaymentAllocationView, ...] = Field(max_length=50)
+
+
 class PaymentView(Versioned):
-    """A manually attested external fact; never a provider-verified payment."""
+    """A manually attested external fact; never a provider-verified payment.
+
+    The amount, dates, account, journal and allocations describe the original
+    confirmation; `effective_*` and `state` follow the latest revision.
+    """
 
     business_id: UUID
     book_id: UUID
@@ -214,6 +283,12 @@ class PaymentView(Versioned):
     recorded_by: UUID
     recorded_at: AwareDatetime
     allocations: tuple[PaymentAllocationView, ...] = Field(min_length=1, max_length=50)
+    state: PaymentState
+    revision: int = Field(ge=1)
+    effective_amount: str
+    # Empty once voided: a voided payment confirms nothing.
+    effective_allocations: tuple[PaymentAllocationView, ...] = Field(max_length=50)
+    revisions: tuple[PaymentRevisionView, ...]
 
 
 class ObligationSummary(Strict):

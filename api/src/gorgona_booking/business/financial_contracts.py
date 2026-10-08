@@ -31,6 +31,8 @@ FinancialCommandKind = Literal[
     "settlement_confirm",
     "settlement_release",
     "settlement_cancel",
+    "settlement_payment_void",
+    "settlement_payment_correct",
 ]
 # Commands that can create the first immutable row of their subject.
 _FIRST_COMMANDS = ("invoice_draft", "accrual_draft", "credit_draft", "settlement_prepare")
