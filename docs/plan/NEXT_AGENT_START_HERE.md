@@ -1,6 +1,29 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-07)
 
-## Current: H3 settlement guards (draft PR17)
+## Current: H3 credit notes (stacked on PR17)
+
+Read [full handoff](NEXT_AGENT_H3_CREDITS_2026-10-07.md) and
+[copyable prompt](NEXT_AGENT_PROMPT_H3_CREDITS_2026-10-07.md).
+Branch `codex/package-h3-credits`, own checkout
+`C:\Users\alexa\Documents\ChatGPT\gorgona-h3-credits`, parent `c6c5d89`
+(PR17 head). Code commit `76ed64e` (forward 0027) and a docs-only
+successor are pushed; **no pull request yet** (the browser pane was signed out):
+open exactly one draft PR with base `codex/package-h3-settlement-guards`.
+Forward `0027_credit_notes.sql`: credit notes against invoice and manual-accrual
+obligations; the unpaid part becomes C, the paid part a separate
+`credit_refund` obligation of the opposite direction (100/70/50 → C30/refund20);
+one `credit` journal; no active reserve, line capacity, explicit refund account
+and reason rules, enforced by the service and again by SQL at commit.
+Local full 1099 passed/4 skipped/513.90s with mandatory PostgreSQL/browser;
+ruff/format/mypy 214 PASS; web gates PASS; SQL mutation red; upgrade
+0026 → 0027 on a populated database PASS.
+[Evidence and decisions](evidence/2026-10-07-h3-credits/VALIDATION.md).
+Next: independent review of PR17 and this slice, owner decisions, then payment
+corrections and credit voids from migration 0028. Nothing is merged; merge,
+deployment and readiness promotion are not authorized. Own PG 51470 stopped.
+Read the actual HEAD and remote state before continuing.
+
+## Previous: H3 settlement guards (draft PR17)
 
 Read [full handoff](NEXT_AGENT_H3_GUARDS_2026-10-07.md) and
 [copyable prompt](NEXT_AGENT_PROMPT_H3_GUARDS_2026-10-07.md).
