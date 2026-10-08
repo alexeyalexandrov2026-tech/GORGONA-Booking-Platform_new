@@ -16,7 +16,8 @@ from uuid import UUID
 import psycopg
 
 from gorgona_booking.db.bootstrap import BootstrapSpec, bootstrap
-from gorgona_booking.db.migrate import apply_migrations
+from gorgona_booking.db.h3_upgrade import check_h3_upgrade
+from gorgona_booking.db.migrate import MigrationError, apply_migrations
 from gorgona_booking.db.pool import assert_safe_runtime_role
 from gorgona_booking.db.provisioning import grant_platform_admin, provision_user
 
@@ -46,6 +47,21 @@ def _migrate(_: argparse.Namespace) -> None:
     applied = apply_migrations(_require("GBA_MIGRATION_DATABASE_URL"))
     names = ", ".join(f"{m.version:04d}_{m.name}" for m in applied) or "nothing to apply"
     print(f"migrations applied: {names}")
+
+
+def _check_h3_upgrade(_: argparse.Namespace) -> None:
+    try:
+        result = check_h3_upgrade(_require("GBA_MIGRATION_DATABASE_URL"))
+    except MigrationError as exc:
+        raise SystemExit(str(exc)) from None
+    except psycopg.Error as exc:
+        # Only packaged preflight diagnostics are safe operator output.
+        primary = exc.diag.message_primary or ""
+        message = (
+            primary if primary.startswith("0030 preflight:") else f"database error {exc.sqlstate}"
+        )
+        raise SystemExit(f"H3 upgrade check refused: {message}") from None
+    print(f"H3 upgrade check PASS: 0030 checksum {result.checksum}; all changes rolled back")
 
 
 async def _check_runtime_role_async() -> None:
@@ -228,6 +244,9 @@ def main(argv: list[str] | None = None) -> None:
     commands.add_parser("migrate", help="apply pending migrations (owner DSN)").set_defaults(
         run=_migrate
     )
+    commands.add_parser(
+        "check-h3-upgrade", help="rehearse 0029 -> 0030 and always roll back (owner DSN)"
+    ).set_defaults(run=_check_h3_upgrade)
     commands.add_parser(
         "check-runtime-role", help="verify the API credential cannot bypass RLS"
     ).set_defaults(run=_check_runtime_role)

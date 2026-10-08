@@ -20,6 +20,7 @@ _MIGRATIONS = (
     "0027_credit_notes.sql",
     "0028_payment_corrections.sql",
     "0029_credit_voids.sql",
+    "0030_h3_forward_corrections.sql",
 )
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
@@ -153,6 +154,12 @@ _PRIVATE = tuple(
     for t, name, _, _ in _COLUMNS
     if name in ("created_at", "created_transaction", "cancelled_at")
 )
+# Approvals come from the packaged column contract, never a live database.
+# All H timestamps/transaction identities are supplied by PostgreSQL.
+_DEFAULTS = tuple(
+    (table, column, "pg_current_xact_id()" if column == "created_transaction" else "now()")
+    for table, column in _PRIVATE
+)
 FINANCIAL_PARAMETERS: tuple[object, ...] = tuple(
     x
     for t, trigger, kind, function, deferred in _TRIGGERS
@@ -175,6 +182,11 @@ _HELPERS = (
     ),
     ("gba.cash_account_used(uuid,uuid,uuid)", "boolean", "cash_account_used"),
     ("gba.credit_voided(uuid,uuid,uuid)", "boolean", "credit_voided"),
+    (
+        "gba.financial_mirror_original(uuid,uuid,uuid,text)",
+        "uuid",
+        "financial_mirror_original",
+    ),
 )
 FINANCIAL_PARAMETERS += tuple(
     x for signature, result, name in _HELPERS for x in (signature, result, _SOURCES[name])
@@ -188,6 +200,7 @@ FINANCIAL_PARAMETERS += tuple(x for row in _KEYS for x in row)
 FINANCIAL_PARAMETERS += tuple(x for row in _FKS for x in row)
 FINANCIAL_PARAMETERS += tuple(x for row in _COLUMNS for x in row)
 FINANCIAL_PARAMETERS += tuple(x for row in _PRIVATE for x in row)
+FINANCIAL_PARAMETERS += tuple(x for row in _DEFAULTS for x in row)
 FINANCIAL_PARAMETERS += (list(FINANCIAL_TABLES),)
 
 
@@ -260,6 +273,7 @@ and not exists (
         or f.prorettype is distinct from pg_catalog.to_regtype(expected.result)
         or f.prolang<>(select oid from pg_catalog.pg_language where lanname='plpgsql')
         or f.prosrc is distinct from expected.source
+        or not pg_catalog.has_function_privilege(current_user,f.oid,'EXECUTE')
 )
 and not exists (
     select 1 from unnest(%s::text[]) expected(table_name)
@@ -317,6 +331,15 @@ and not exists (
         'gba_runtime','gba.'||expected.table_name,expected.column_name,'INSERT')
 )
 and not exists (
+    select 1 from (values __DEFAULTS__) expected(table_name,column_name,expression)
+    left join pg_catalog.pg_attribute a
+        on a.attrelid=pg_catalog.to_regclass('gba.'||expected.table_name)
+        and a.attname=expected.column_name and not a.attisdropped
+    left join pg_catalog.pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+    where d.oid is null or
+        pg_catalog.pg_get_expr(d.adbin,d.adrelid) is distinct from expected.expression
+)
+and not exists (
     select 1 from unnest(%s::text[]) expected(table_name)
     where pg_catalog.has_table_privilege(
         'gba_runtime','gba.'||expected.table_name,'UPDATE,DELETE,TRUNCATE')
@@ -336,5 +359,6 @@ and not exists (
     .replace("__FKS__", ",".join("(%s,%s::text[],%s,%s::text[],%s::boolean)" for _ in _FKS))
     .replace("__COLUMNS__", ",".join("(%s,%s,%s,%s::boolean)" for _ in _COLUMNS))
     .replace("__PRIVATE__", ",".join("(%s,%s)" for _ in _PRIVATE))
+    .replace("__DEFAULTS__", ",".join("(%s,%s,%s::text)" for _ in _DEFAULTS))
     .replace("__CHECKS__", ",".join("(%s,%s,%s::text)" for _ in _CHECKS))
 )

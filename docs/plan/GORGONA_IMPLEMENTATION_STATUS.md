@@ -1,6 +1,24 @@
 # GORGONA — реестр реализации
 
-## Current H3 slice: credit voids, 2026-10-08 (H3 complete in code)
+## Current H3: independent-review corrections F1–F5, 2026-10-08
+
+Owner approved all five findings, including strictly verified historical mirrors
+on archived accounts. Branch `codex/h3-forward-corrections` from review commit
+`785fb7f`; separate draft PR targets `codex/package-h3-credit-voids`. Forward-only
+`0030_h3_forward_corrections.sql` adds Unicode caseless identity, causal revision
+ordering, the 198-line credit bound, exact historical mirror permission and
+readiness checks for helper execution/defaults. Published 0001–0029 are unchanged.
+
+The owner-side `gba-db check-h3-upgrade` rehearses the complete 0030 and always
+rolls back. Both rehearsal and migration refuse existing identity collisions,
+out-of-order payment events or oversized credits without changing financial
+facts. Archive flags remain unchanged; ordinary/replacement postings still
+require active accounts. [Validation and verification boundaries](evidence/2026-10-08-h3-forward-corrections/VALIDATION.md).
+Local PostgreSQL regressions/upgrade/security: 47 PASS; full core run 1182 PASS,
+4 SKIP before the operator command's final additions. Final-head CI is a separate
+delivery gate. FIN-03/FIN-02 remain planned; no merge or production authorization.
+
+## Previous H3 slice: credit voids, 2026-10-08 (historical snapshot)
 
 Branch `codex/package-h3-credit-voids` from the corrections head `1d96a64`; no
 merge. Forward `0029_credit_voids.sql`: an issued credit is voided by a new
