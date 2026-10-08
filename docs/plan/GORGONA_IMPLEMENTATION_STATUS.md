@@ -1,6 +1,20 @@
 # GORGONA — реестр реализации
 
-## Current H3 slice: payment corrections, 2026-10-08
+## Current H3 slice: credit voids, 2026-10-08 (H3 complete in code)
+
+Branch `codex/package-h3-credit-voids` from the corrections head `1d96a64`; no
+merge. Forward `0029_credit_voids.sql`: an issued credit is voided by a new
+immutable version that mirrors its journal (`credit_void`), undoes its C and
+cancels its untouched refund (C = A); paid or unknown-outcome refunds and credits
+another refunded credit relied on give `FINANCIAL_RECONCILIATION_REQUIRED`.
+Code commit `5ca2165` pushed; no pull request yet. Local full 1160 passed/4
+skipped/531.92s with mandatory PostgreSQL/browser; ruff/format/mypy PASS; web
+gates PASS; SQL mutation red; upgrade 0028 → 0029: only 0029 applied, no row or
+balance changed. [Validation](evidence/2026-10-08-h3-credit-voids/VALIDATION.md),
+[handoff](NEXT_AGENT_H3_VOIDS_2026-10-08.md). H4 is next; FIN-03/FIN-02 remain
+planned.
+
+## Previous H3 slice: payment corrections, 2026-10-08
 
 Branch `codex/package-h3-payment-corrections` from the credit-notes head
 `807ed59`; no merge. Read actual HEAD/origin/PR/CI. Forward
