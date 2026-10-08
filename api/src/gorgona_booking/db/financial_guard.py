@@ -17,6 +17,7 @@ _MIGRATIONS = (
     "0024_external_payments.sql",
     "0025_settlement_guards.sql",
     "0026_settlement_guard_corrections.sql",
+    "0027_credit_notes.sql",
 )
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")

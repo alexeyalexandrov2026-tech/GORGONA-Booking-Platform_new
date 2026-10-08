@@ -31,7 +31,7 @@ SettlementStatus = Literal[
 ]
 SettlementAction = Literal["approve", "reserve", "sent", "release", "cancel"]
 Resolution = Literal["attested_no_payment"]
-ObligationSource = Literal["invoice", "manual"]
+ObligationSource = Literal["invoice", "manual", "credit_refund"]
 _MAX_SEQUENCE = 2_147_483_646
 _AMOUNT_PATTERN = r"^(0|[1-9][0-9]{0,17})(\.[0-9]{1,3})?$"
 

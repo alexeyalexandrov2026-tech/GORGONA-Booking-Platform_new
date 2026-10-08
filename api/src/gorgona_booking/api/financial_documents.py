@@ -11,9 +11,13 @@ from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
-from gorgona_booking.business import financial_commands, settlements
+from gorgona_booking.business import credit_notes, financial_commands, settlements
 from gorgona_booking.business import financial_documents as service
 from gorgona_booking.business.financial_contracts import (
+    CreditDraftInput,
+    CreditIssueInput,
+    CreditList,
+    CreditNoteView,
     DocumentKind,
     FinancialCommandReference,
     FinancialCommandStatus,
@@ -153,6 +157,89 @@ def _document_routes(segment: str, kind: DocumentKind) -> None:
 
 _document_routes("invoices", "invoice")
 _document_routes("accruals", "manual_accrual")
+
+_CREDITS = "/books/{book_id}/credits"
+
+
+@router.get(_CREDITS)
+async def credit_list(
+    business_id: UUID,
+    book_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    after: UUID | None = None,
+    limit: Limit = 50,
+) -> CreditList:
+    async with _access(request, principal, business_id) as access:
+        return await credit_notes.list_credits(
+            access.conn, business_id, book_id, after=after, limit=limit
+        )
+
+
+@router.get(_CREDITS + "/{document_id}")
+async def credit(
+    business_id: UUID,
+    book_id: UUID,
+    document_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    revision: Revision = None,
+) -> CreditNoteView:
+    async with _access(request, principal, business_id) as access:
+        result = await credit_notes.load_credit(
+            access.conn, business_id, book_id, document_id, revision=revision
+        )
+        if result is None:
+            raise NotFoundError("Credit note version not found")
+        return result
+
+
+@router.put(_CREDITS + "/{document_id}")
+async def credit_draft(
+    business_id: UUID,
+    book_id: UUID,
+    document_id: UUID,
+    body: CreditDraftInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> CreditNoteView:
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await credit_notes.save_draft(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            document_id=document_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post(_CREDITS + "/{document_id}/issue")
+async def credit_issue(
+    business_id: UUID,
+    book_id: UUID,
+    document_id: UUID,
+    body: CreditIssueInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> CreditNoteView:
+    """The unpaid part becomes credit; the paid part a separate refund obligation."""
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await credit_notes.issue_credit(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            document_id=document_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
 
 _SETTLEMENT = "/books/{book_id}/settlements/{settlement_id}"
 
