@@ -1051,7 +1051,8 @@ async def _require_no_dependents(
         await conn.execute(
             "select credited_obligation_id from gba.financial_document_versions "
             "where tenant_id=%s and book_id=%s and state='issued' "
-            "and credited_obligation_id=any(%s::uuid[]) limit 1",
+            "and credited_obligation_id=any(%s::uuid[]) "
+            "and not gba.credit_voided(tenant_id,book_id,document_id) limit 1",
             (business, book, touched),
         )
     ).fetchone()

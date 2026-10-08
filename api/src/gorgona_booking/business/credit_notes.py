@@ -5,8 +5,11 @@ separate opposite-direction refund obligation that settles like any other obliga
 Historical cash and the original principal never change. Issue writes the version,
 the refund obligation, one balanced G journal and the receipt together under the
 ledger lock, and SQL rechecks the complete effect at commit. A credit needs every
-reserve of the credited obligation resolved first. Corrections and voids of a credit
-are not offered here.
+reserve of the credited obligation resolved first.
+
+A credit issued in error is voided by one more immutable version: its journal is
+mirrored, its C undone and its untouched refund obligation cancelled, atomically. A
+refund that was paid, is reserved or is out with an unknown outcome is not undone.
 """
 
 from collections.abc import AsyncIterator, Sequence
@@ -32,6 +35,7 @@ from gorgona_booking.business.financial_contracts import (
     CreditList,
     CreditNoteView,
     CreditSummary,
+    CreditVoidInput,
     FinancialReceipt,
 )
 from gorgona_booking.business.financial_documents import (
@@ -48,11 +52,13 @@ from gorgona_booking.business.financial_math import (
 from gorgona_booking.business.ledger_contracts import (
     MAX_MINOR,
     CreditPosting,
+    CreditVoidPosting,
     LineInput,
     from_minor,
     to_minor,
 )
 from gorgona_booking.business.module_gate import FINANCE_MODULE, module_writes
+from gorgona_booking.business.settlements import FinancialReconciliationRequiredError
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import (
     ConflictError,
@@ -77,10 +83,11 @@ _CONSTRAINTS = ", ".join(
         "journal_lines_balanced",
         "financial_versions_entry_fk",
         "financial_versions_obligation_fk",
+        "financial_versions_void_entry_fk",
     )
 )
 _KIND = "credit_note"
-_Operation = Literal["credit_draft", "credit_issue"]
+_Operation = Literal["credit_draft", "credit_issue", "credit_void"]
 
 
 class FinancialRefundAccountError(ConflictError):
@@ -204,7 +211,8 @@ async def load_credit(
             "v.counterparty_revision,v.currency,c.minor_units,v.invoice_date,v.due_date,"
             "v.control_account_id,v.title,v.number,v.principal_minor,v.entry_id,v.issued_on,"
             "v.attestation,v.applied_minor,v.refund_control_account_id,v.obligation_id,"
-            "v.created_at from gba.financial_document_versions v "
+            "v.created_at,v.void_entry_id,v.voided_on,v.void_reason,v.void_evidence_source "
+            "from gba.financial_document_versions v "
             "join gba.currencies c on c.code=v.currency "
             "join gba.financial_documents d on d.tenant_id=v.tenant_id and d.book_id=v.book_id "
             "and d.id=v.document_id "
@@ -250,6 +258,10 @@ async def load_credit(
         refund_control_account_id=row[18],
         refund_obligation_id=row[19],
         created_at=row[20],
+        void_entry_id=row[21],
+        voided_on=row[22],
+        void_reason=row[23],
+        void_evidence_source=row[24],
         lines=tuple(
             CreditLineInput(
                 line_id=line[0],
@@ -287,8 +299,8 @@ async def list_credits(
         await conn.execute(
             "select d.id,v.revision,v.state,v.credited_obligation_id,v.direction,"
             "v.counterparty_id,v.currency,c.minor_units,v.invoice_date,v.title,v.number,"
-            "v.principal_minor,v.applied_minor,v.entry_id,v.obligation_id,v.created_at "
-            "from gba.financial_documents d join lateral ("
+            "v.principal_minor,v.applied_minor,v.entry_id,v.obligation_id,v.created_at,"
+            "v.voided_on from gba.financial_documents d join lateral ("
             "select * from gba.financial_document_versions x where x.tenant_id=d.tenant_id "
             "and x.book_id=d.book_id and x.document_id=d.id order by x.revision desc limit 1"
             ") v on true join gba.currencies c on c.code=v.currency "
@@ -315,6 +327,7 @@ async def list_credits(
             entry_id=r[13],
             refund_obligation_id=r[14],
             created_at=r[15],
+            voided_on=r[16],
         )
         for r in rows[:limit]
     )
@@ -650,7 +663,8 @@ async def issue_credit(
             "join gba.financial_document_versions x on x.tenant_id=c.tenant_id "
             "and x.book_id=c.book_id and x.document_id=c.document_id and x.revision=c.revision "
             "where x.tenant_id=%s and x.book_id=%s and x.credited_obligation_id=%s "
-            "and x.state='issued' group by c.credited_line_id",
+            "and x.state='issued' and not gba.credit_voided(x.tenant_id,x.book_id,x.document_id) "
+            "group by c.credited_line_id",
             (business_id, book_id, current.credited_obligation_id),
         )
     ).fetchall()
@@ -769,4 +783,152 @@ async def issue_credit(
                 (business_id, book_id, document_id, reference.revision, entry, refund_obligation),
             )
         await _complete(conn, business_id, actor, user_id, "credit_issue", key, digest, reference)
+    return await _view(conn, business_id, reference)
+
+
+async def _require_untouched_refund(
+    conn: RuntimeConnection, business: UUID, book: UUID, refund: UUID
+) -> None:
+    """A refund is cancelled only while no money, reserve or unknown outcome touches it."""
+    balance = await _balance(conn, business, book, refund)
+    if balance.paid_minor:
+        raise FinancialReconciliationRequiredError(
+            "A paid refund is never undone; reconcile it separately", obligation_id=str(refund)
+        )
+    if not balance.reserved_minor:
+        return
+    sent = await (
+        await conn.execute(
+            "select a.settlement_id from gba.settlement_allocations a "
+            "where a.tenant_id=%s and a.book_id=%s and a.obligation_id=%s "
+            "and gba.settlement_phase(a.tenant_id,a.book_id,a.settlement_id)='sent' limit 1",
+            (business, book, refund),
+        )
+    ).fetchone()
+    if sent is not None:
+        raise FinancialReconciliationRequiredError(
+            "The refund was sent with an unknown outcome; reconcile it separately",
+            settlement_id=str(sent[0]),
+        )
+    raise FinancialDocumentStateError("Release the reserve of the refund before voiding its credit")
+
+
+async def void_credit(
+    conn: RuntimeConnection,
+    *,
+    business_id: UUID,
+    book_id: UUID,
+    document_id: UUID,
+    user_id: UUID,
+    actor: str,
+    key: str,
+    body: CreditVoidInput,
+) -> CreditNoteView:
+    """Void an issued credit once: mirror its journal, undo its C, cancel its refund."""
+    digest = commands.fingerprint(
+        {"book_id": str(book_id), "document_id": str(document_id), **body.model_dump(mode="json")}
+    )
+    prior = await _claim(conn, business_id, actor, "credit_void", key, digest)
+    if prior is not None:
+        return await _view(conn, business_id, prior)
+    current = await load_credit(conn, business_id, book_id, document_id)
+    if current is None:
+        raise NotFoundError("Credit note not found")
+    if current.revision != body.expected_revision:
+        raise ConflictError("Credit note changed; reload before voiding", revision=current.revision)
+    if current.state != "issued":
+        raise FinancialDocumentStateError("Only an issued credit note is voided, once")
+    await require_workflow(conn, business_id)
+    if current.entry_id is None or current.issued_on is None or current.applied is None:
+        raise DatabaseUnavailableError("The issued credit note is incomplete")
+    if body.entry_date < current.issued_on:
+        raise ledger.LedgerDateError(
+            "A credit void cannot be posted before the credit",
+            issued_on=current.issued_on.isoformat(),
+        )
+    if current.refund_obligation_id is not None:
+        await _require_untouched_refund(conn, business_id, book_id, current.refund_obligation_id)
+    # A later credit that refunded money relied on this credit's unpaid part.
+    if to_minor(current.applied, current.minor_units):
+        dependent = await (
+            await conn.execute(
+                "select document_id from gba.financial_document_versions "
+                "where tenant_id=%s and book_id=%s and credited_obligation_id=%s "
+                "and state='issued' and document_id<>%s and applied_minor<principal_minor "
+                "and not gba.credit_voided(tenant_id,book_id,document_id) limit 1",
+                (business_id, book_id, current.credited_obligation_id, document_id),
+            )
+        ).fetchone()
+        if dependent is not None:
+            raise FinancialReconciliationRequiredError(
+                "A refunded credit depends on this credit; reconcile it separately",
+                document_id=str(dependent[0]),
+            )
+    journal = await (
+        await conn.execute(
+            "select account_id,side,amount_minor from gba.journal_lines "
+            "where tenant_id=%s and entry_id=%s order by line_no",
+            (business_id, current.entry_id),
+        )
+    ).fetchall()
+    reference = Reference(book_id, document_id, current.revision + 1)
+    entry = uuid7()
+    async with _writes(conn):
+        await conn.execute(
+            "insert into gba.financial_document_versions "
+            "(tenant_id,book_id,document_id,revision,state,direction,counterparty_id,"
+            "counterparty_revision,currency,invoice_date,due_date,control_account_id,title,number,"
+            "principal_minor,line_count,credited_obligation_id,entry_id,obligation_id,issued_on,"
+            "attestation,applied_minor,refund_control_account_id,void_entry_id,voided_on,"
+            "void_reason,void_evidence_source,created_by) "
+            "select tenant_id,book_id,document_id,%s,'voided',direction,counterparty_id,"
+            "counterparty_revision,currency,invoice_date,due_date,control_account_id,title,number,"
+            "principal_minor,line_count,credited_obligation_id,entry_id,obligation_id,issued_on,"
+            "attestation,applied_minor,refund_control_account_id,%s,%s,%s,%s,%s "
+            "from gba.financial_document_versions "
+            "where tenant_id=%s and book_id=%s and document_id=%s and revision=%s",
+            (
+                reference.revision,
+                entry,
+                body.entry_date,
+                body.reason,
+                body.evidence_source,
+                user_id,
+                business_id,
+                book_id,
+                document_id,
+                current.revision,
+            ),
+        )
+        await conn.execute(
+            "insert into gba.financial_document_lines "
+            "(tenant_id,book_id,document_id,revision,line_no,line_id,credited_line_id,"
+            "counter_account_id,description,amount_minor,reason,reference_entry_id) "
+            "select tenant_id,book_id,document_id,%s,line_no,line_id,credited_line_id,"
+            "counter_account_id,description,amount_minor,reason,reference_entry_id "
+            "from gba.financial_document_lines "
+            "where tenant_id=%s and book_id=%s and document_id=%s and revision=%s",
+            (reference.revision, business_id, book_id, document_id, current.revision),
+        )
+        await ledger.append_financial_journal(
+            conn,
+            business_id=business_id,
+            book_id=book_id,
+            entry_id=entry,
+            user_id=user_id,
+            body=CreditVoidPosting(
+                entry_date=body.entry_date,
+                currency=current.currency,
+                source_id=str(document_id),
+                lines=tuple(
+                    LineInput(
+                        account_id=line[0],
+                        side="credit" if line[1] == "debit" else "debit",
+                        amount=from_minor(line[2], current.minor_units),
+                    )
+                    for line in journal
+                ),
+            ),
+        )
+        await _complete(conn, business_id, actor, user_id, "credit_void", key, digest, reference)
     return await _view(conn, business_id, reference)

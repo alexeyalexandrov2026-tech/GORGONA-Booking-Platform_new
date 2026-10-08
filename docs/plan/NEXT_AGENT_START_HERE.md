@@ -1,6 +1,23 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-08)
 
-## Current: H3 payment corrections (stacked on the credit notes)
+## Current: H3 credit voids — H3 complete in code (stacked on the corrections)
+
+Read [handoff and copyable prompt](NEXT_AGENT_H3_VOIDS_2026-10-08.md). Branch
+`codex/package-h3-credit-voids`, own checkout
+`C:\Users\alexa\Documents\ChatGPT\gorgona-h3-credit-voids`, parent `1d96a64`. Code
+commit `5ca2165` (forward 0029) and a docs-only successor are pushed; **no pull
+request yet** for credits, corrections or voids (browser signed out): open one
+draft PR per branch in stack order. An issued credit is voided by a new immutable
+version that mirrors its journal (`credit_void`), undoes its C and cancels its
+untouched refund; paid/unknown refunds and relied-on credits give
+`FINANCIAL_RECONCILIATION_REQUIRED`. Local full 1160 passed/4 skipped with
+mandatory PostgreSQL/browser; static and web gates PASS; SQL mutation red;
+upgrade 0028 → 0029 PASS. [Evidence](evidence/2026-10-08-h3-credit-voids/VALIDATION.md).
+Next: PRs, independent review of 0025–0029, owner decisions, then H4. Nothing is
+merged; merge, deployment and readiness promotion are not authorized. Own PG 51470
+stopped. Read the actual HEAD and remote state before continuing.
+
+## Previous: H3 payment corrections (stacked on the credit notes)
 
 Read [full handoff](NEXT_AGENT_H3_CORRECTIONS_2026-10-08.md) and
 [copyable prompt](NEXT_AGENT_PROMPT_H3_CORRECTIONS_2026-10-08.md).

@@ -54,6 +54,7 @@ _FAMILIES: dict[FinancialCommandKind, _Family] = {
     "accrual_issue": _DOCUMENTS,
     "credit_draft": _DOCUMENTS,
     "credit_issue": _DOCUMENTS,
+    "credit_void": _DOCUMENTS,
     "settlement_prepare": _SETTLEMENTS,
     "settlement_approve": _SETTLEMENTS,
     "settlement_reserve": _SETTLEMENTS,

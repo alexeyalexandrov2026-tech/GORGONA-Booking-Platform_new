@@ -18,6 +18,7 @@ from gorgona_booking.business.financial_contracts import (
     CreditIssueInput,
     CreditList,
     CreditNoteView,
+    CreditVoidInput,
     DocumentKind,
     FinancialCommandReference,
     FinancialCommandStatus,
@@ -232,6 +233,30 @@ async def credit_issue(
     """The unpaid part becomes credit; the paid part a separate refund obligation."""
     async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
         return await credit_notes.issue_credit(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            document_id=document_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/books/{book_id}/credits/{document_id}/void")
+async def credit_void(
+    business_id: UUID,
+    book_id: UUID,
+    document_id: UUID,
+    body: CreditVoidInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> CreditNoteView:
+    """A credit issued in error is mirrored; its untouched refund obligation is cancelled."""
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await credit_notes.void_credit(
             access.conn,
             business_id=business_id,
             book_id=book_id,
