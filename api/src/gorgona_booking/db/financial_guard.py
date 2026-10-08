@@ -19,6 +19,7 @@ _MIGRATIONS = (
     "0026_settlement_guard_corrections.sql",
     "0027_credit_notes.sql",
     "0028_payment_corrections.sql",
+    "0029_credit_voids.sql",
 )
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
@@ -173,6 +174,7 @@ _HELPERS = (
         "effective_payment_allocations",
     ),
     ("gba.cash_account_used(uuid,uuid,uuid)", "boolean", "cash_account_used"),
+    ("gba.credit_voided(uuid,uuid,uuid)", "boolean", "credit_voided"),
 )
 FINANCIAL_PARAMETERS += tuple(
     x for signature, result, name in _HELPERS for x in (signature, result, _SOURCES[name])

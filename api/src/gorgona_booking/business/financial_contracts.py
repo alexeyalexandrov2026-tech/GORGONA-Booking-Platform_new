@@ -15,6 +15,8 @@ from gorgona_booking.business.ledger_contracts import CURRENCY_PATTERN, single_l
 
 Direction = Literal["receivable", "payable"]
 InvoiceState = Literal["draft", "issued"]
+# Only a credit note can be voided, by one more immutable version.
+CreditState = Literal["draft", "issued", "voided"]
 # A manual accrual is the same immutable document shape with its own origin.
 DocumentKind = Literal["invoice", "manual_accrual"]
 FinancialCommandKind = Literal[
@@ -24,6 +26,7 @@ FinancialCommandKind = Literal[
     "accrual_issue",
     "credit_draft",
     "credit_issue",
+    "credit_void",
     "settlement_prepare",
     "settlement_approve",
     "settlement_reserve",
@@ -266,12 +269,28 @@ class CreditIssueInput(Versioned):
     refund_control_account_id: UUID | None = None
 
 
+class CreditVoidInput(Versioned):
+    """An attested credit issued in error; its untouched refund is cancelled with it."""
+
+    expected_revision: StrictInt = Field(ge=2, le=_MAX_REVISION)
+    # The posting date of the mirror journal; it must fall in an open period.
+    entry_date: date
+    attestation: Literal["attested_erroneous_credit"]
+    reason: str = Field(min_length=1, max_length=500)
+    evidence_source: str = Field(min_length=1, max_length=200)
+
+    @field_validator("reason", "evidence_source")
+    @classmethod
+    def single_line(cls, value: str) -> str:
+        return _required_text(value)
+
+
 class CreditNoteView(Versioned):
     business_id: UUID
     book_id: UUID
     document_id: UUID
     revision: StrictInt = Field(ge=1, le=_MAX_REVISION + 1)
-    state: InvoiceState
+    state: CreditState
     credited_obligation_id: UUID
     direction: Direction
     counterparty_id: UUID
@@ -295,6 +314,11 @@ class CreditNoteView(Versioned):
     refund_control_account_id: UUID | None
     refund_obligation_id: UUID | None
     created_at: AwareDatetime
+    # A voided credit keeps its issued facts and adds the mirror journal and its date.
+    void_entry_id: UUID | None = None
+    voided_on: date | None = None
+    void_reason: str | None = None
+    void_evidence_source: str | None = None
 
     @model_validator(mode="after")
     def issued_effect(self) -> Self:
@@ -309,6 +333,9 @@ class CreditNoteView(Versioned):
             raise ValueError("Credit total must equal the exact line amounts")
         issued = (self.entry_id, self.issued_on, self.attestation, self.applied, self.refund)
         refunded = (self.refund_control_account_id, self.refund_obligation_id)
+        voided = (self.void_entry_id, self.voided_on, self.void_reason, self.void_evidence_source)
+        if any((value is not None) != (self.state == "voided") for value in voided):
+            raise ValueError("Exactly a voided credit has its void journal, date and reason")
         if self.state == "draft":
             if any(value is not None for value in (*issued, *refunded)):
                 raise ValueError("A draft cannot claim an issued money effect")
@@ -338,7 +365,7 @@ def _minor_or_zero(amount: str | None, scale: int) -> int:
 class CreditSummary(Strict):
     document_id: UUID
     revision: StrictInt = Field(ge=1)
-    state: InvoiceState
+    state: CreditState
     credited_obligation_id: UUID
     direction: Direction
     counterparty_id: UUID
@@ -352,6 +379,7 @@ class CreditSummary(Strict):
     entry_id: UUID | None
     refund_obligation_id: UUID | None
     created_at: AwareDatetime
+    voided_on: date | None = None
 
 
 class CreditList(Versioned):

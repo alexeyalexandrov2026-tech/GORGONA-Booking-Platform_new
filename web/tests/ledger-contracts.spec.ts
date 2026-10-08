@@ -62,6 +62,7 @@ test("invoice origins require negotiated v2 and retain exact money checks", () =
     "payment",
     "credit",
     "payment_correction",
+    "credit_void",
   ]) {
     const owned = { ...invoice, source_kind };
     expect(entrySchema.safeParse(owned).success).toBe(true);

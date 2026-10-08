@@ -27,9 +27,17 @@ SourceKindV2 = Literal[
     "payment",
     "credit",
     "payment_correction",
+    "credit_void",
 ]
 # Journals owned by a financial document; G never reverses them generically.
-H_OWNED_SOURCE_KINDS = ("invoice", "accrual", "payment", "credit", "payment_correction")
+H_OWNED_SOURCE_KINDS = (
+    "invoice",
+    "accrual",
+    "payment",
+    "credit",
+    "payment_correction",
+    "credit_void",
+)
 PeriodAction = Literal["closed", "reopened"]
 PeriodState = Literal["open", "closed"]
 ChartTemplate = Literal["starter", "empty"]
@@ -231,8 +239,20 @@ class PaymentCorrectionPosting(_PostingFields):
     source_id: str = Field(pattern=SOURCE_ID_PATTERN)
 
 
+class CreditVoidPosting(_PostingFields):
+    """Mirror of a voided credit note; SQL requires its voided version and exact lines."""
+
+    source_kind: Literal["credit_void"] = "credit_void"
+    source_id: str = Field(pattern=SOURCE_ID_PATTERN)
+
+
 FinancialPosting = (
-    InvoicePosting | AccrualPosting | PaymentPosting | CreditPosting | PaymentCorrectionPosting
+    InvoicePosting
+    | AccrualPosting
+    | PaymentPosting
+    | CreditPosting
+    | PaymentCorrectionPosting
+    | CreditVoidPosting
 )
 
 
