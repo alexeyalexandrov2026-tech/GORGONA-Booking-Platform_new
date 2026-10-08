@@ -603,8 +603,7 @@ async def _require_refund_account(
             "where a.tenant_id=%s and a.book_id=%s and a.id=%s and a.type=%s and not v.archived "
             "and v.revision=(select max(x.revision) from gba.ledger_account_versions x "
             "where x.tenant_id=a.tenant_id and x.account_id=a.id) "
-            "and not exists (select 1 from gba.external_payments p where p.tenant_id=a.tenant_id "
-            "and p.book_id=a.book_id and p.cash_account_id=a.id)",
+            "and not gba.cash_account_used(a.tenant_id,a.book_id,a.id)",
             (business, book, account, kind),
         )
     ).fetchone()

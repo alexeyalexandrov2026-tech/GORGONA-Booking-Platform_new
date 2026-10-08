@@ -18,6 +18,7 @@ _MIGRATIONS = (
     "0025_settlement_guards.sql",
     "0026_settlement_guard_corrections.sql",
     "0027_credit_notes.sql",
+    "0028_payment_corrections.sql",
 )
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
@@ -72,6 +73,20 @@ _TRIGGERS = (
         "external_payment_allocations_check",
         7,
         "enforce_external_payment_allocation",
+        False,
+    ),
+    (
+        "external_payment_revisions",
+        "external_payment_revisions_check",
+        7,
+        "enforce_external_payment_revision",
+        False,
+    ),
+    (
+        "external_payment_revision_allocations",
+        "external_payment_revision_allocations_check",
+        7,
+        "enforce_external_payment_revision_allocation",
         False,
     ),
     *(
@@ -152,6 +167,12 @@ _HELPERS = (
     ("gba.assert_payment_consistent(uuid,uuid,uuid)", "void", "assert_payment_consistent"),
     ("gba.external_identity_key(text,text)", "text", "external_identity_key"),
     ("gba.business_timezone(uuid)", "text", "business_timezone"),
+    (
+        "gba.effective_payment_allocations(uuid,uuid,uuid,uuid)",
+        "record",
+        "effective_payment_allocations",
+    ),
+    ("gba.cash_account_used(uuid,uuid,uuid)", "boolean", "cash_account_used"),
 )
 FINANCIAL_PARAMETERS += tuple(
     x for signature, result, name in _HELPERS for x in (signature, result, _SOURCES[name])

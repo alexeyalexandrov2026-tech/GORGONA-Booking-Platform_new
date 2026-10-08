@@ -30,7 +30,9 @@ from gorgona_booking.business.settlement_contracts import (
     ObligationList,
     ObligationView,
     PaymentConfirmInput,
+    PaymentCorrectInput,
     PaymentView,
+    PaymentVoidInput,
     SettlementAction,
     SettlementActionInput,
     SettlementCancelInput,
@@ -418,6 +420,58 @@ async def settlement_confirm(
     """A human attests an external payment; this program sends no money."""
     async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
         return await settlements.confirm(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            settlement_id=settlement_id,
+            payment_id=payment_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post(f"{_SETTLEMENT}/confirmations/{{payment_id}}/void")
+async def settlement_payment_void(
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    payment_id: UUID,
+    body: PaymentVoidInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> SettlementView:
+    """A human attests that the confirmation was wrong; its identity stays bound."""
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await settlements.void_payment(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            settlement_id=settlement_id,
+            payment_id=payment_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post(f"{_SETTLEMENT}/confirmations/{{payment_id}}/correct")
+async def settlement_payment_correct(
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    payment_id: UUID,
+    body: PaymentCorrectInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> SettlementView:
+    """Replace the details of an erroneous attestation of the same external fact."""
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await settlements.correct_payment(
             access.conn,
             business_id=business_id,
             book_id=book_id,

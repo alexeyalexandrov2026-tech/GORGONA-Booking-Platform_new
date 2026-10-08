@@ -61,6 +61,8 @@ _FAMILIES: dict[FinancialCommandKind, _Family] = {
     "settlement_confirm": _SETTLEMENTS,
     "settlement_release": _SETTLEMENTS,
     "settlement_cancel": _SETTLEMENTS,
+    "settlement_payment_void": _SETTLEMENTS,
+    "settlement_payment_correct": _SETTLEMENTS,
 }
 _KEY = " where tenant_id=%s and actor_key=%s and operation=%s and idempotency_key=%s"
 

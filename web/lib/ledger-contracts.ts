@@ -125,6 +125,7 @@ const sourceKindV2 = z.enum([
   "accrual",
   "payment",
   "credit",
+  "payment_correction",
 ]);
 const entryRecordV2 = entryRecord.extend({
   schema_version: z.literal(2),

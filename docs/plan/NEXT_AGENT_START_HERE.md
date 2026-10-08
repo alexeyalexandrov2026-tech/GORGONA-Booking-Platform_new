@@ -1,6 +1,28 @@
-# GORGONA — начните здесь (актуальное продолжение, 2026-10-07)
+# GORGONA — начните здесь (актуальное продолжение, 2026-10-08)
 
-## Current: H3 credit notes (stacked on PR17)
+## Current: H3 payment corrections (stacked on the credit notes)
+
+Read [full handoff](NEXT_AGENT_H3_CORRECTIONS_2026-10-08.md) and
+[copyable prompt](NEXT_AGENT_PROMPT_H3_CORRECTIONS_2026-10-08.md).
+Branch `codex/package-h3-payment-corrections`, own checkout
+`C:\Users\alexa\Documents\ChatGPT\gorgona-h3-corrections`, parent `807ed59`
+(credit notes, itself on PR17). Code commit `238b157` (forward 0028) and a
+docs-only successor are pushed; **no pull request yet** for this branch nor for
+the credits branch (the browser pane was signed out): open exactly one draft PR
+per branch, credits first. Forward `0028_payment_corrections.sql`: a confirmed
+payment is voided or corrected by a new revision under a new settlement event;
+its identity stays bound forever; the replaced journal is mirrored
+(`payment_correction`), allocations return to the reserve and a correction
+confirms its replacement within it; effective P/R everywhere; issued credit,
+refund or unknown sent dependencies give `FINANCIAL_RECONCILIATION_REQUIRED`.
+Local evidence and decisions:
+[validation](evidence/2026-10-08-h3-payment-corrections/VALIDATION.md).
+Next: PRs, independent review of 0025–0028, owner decisions, then credit voids
+from migration 0029. Nothing is merged; merge, deployment and readiness
+promotion are not authorized. Own PG 51470 stopped. Read the actual HEAD and
+remote state before continuing.
+
+## Previous: H3 credit notes (stacked on PR17)
 
 Read [full handoff](NEXT_AGENT_H3_CREDITS_2026-10-07.md) and
 [copyable prompt](NEXT_AGENT_PROMPT_H3_CREDITS_2026-10-07.md).

@@ -384,6 +384,7 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (21, "-- Invoice branch scope:"),
                 (23, "-- Settlement branch scope:"),
                 (24, "-- Payment branch scope:"),
+                (28, "-- Correction branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker

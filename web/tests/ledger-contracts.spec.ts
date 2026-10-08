@@ -57,7 +57,12 @@ test("invoice origins require negotiated v2 and retain exact money checks", () =
   expect(
     entrySchema.safeParse({ ...invoice, source_kind: "unknown" }).success,
   ).toBe(false);
-  for (const source_kind of ["accrual", "payment", "credit"]) {
+  for (const source_kind of [
+    "accrual",
+    "payment",
+    "credit",
+    "payment_correction",
+  ]) {
     const owned = { ...invoice, source_kind };
     expect(entrySchema.safeParse(owned).success).toBe(true);
     expect(entrySchema.safeParse({ ...owned, schema_version: 1 }).success).toBe(

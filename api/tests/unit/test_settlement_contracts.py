@@ -101,6 +101,8 @@ def test_settlement_recovery_references_are_minimal_and_possible() -> None:
         "settlement_confirm",
         "settlement_release",
         "settlement_cancel",
+        "settlement_payment_void",
+        "settlement_payment_correct",
     ):
         with pytest.raises(ValidationError):
             FinancialCommandReference.model_validate(
@@ -125,12 +127,13 @@ def test_phase_follows_the_strongest_recorded_fact() -> None:
     assert _phase(["prepared", "approved", "reserved", "sent"]) == "sent"
     assert _phase(["prepared", "approved", "reserved", "sent", "released"]) == "released"
     assert _phase(["prepared", "cancelled"]) == "cancelled"
-    # A reserve is released from reserved or sent only; nothing follows a final fact.
+    # A reserve is released from reserved or sent only. Nothing follows a cancel; after a
+    # release only an erroneous payment can be voided, never corrected or confirmed.
     assert _FOLLOWS["released"] == ("reserved", "sent")
     assert _FOLLOWS["cancelled"] == ("prepared", "approved")
-    assert all(
-        "released" not in states and "cancelled" not in states for states in _FOLLOWS.values()
-    )
+    assert all("cancelled" not in states for states in _FOLLOWS.values())
+    assert [kind for kind, states in _FOLLOWS.items() if "released" in states] == ["payment_voided"]
+    assert _FOLLOWS["payment_corrected"] == ("reserved", "sent")
 
 
 def test_a_confirmation_is_a_manual_attestation_with_exact_allocations() -> None:
