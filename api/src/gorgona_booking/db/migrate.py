@@ -18,7 +18,8 @@ import psycopg
 
 _FILENAME = re.compile(r"^(?P<version>\d{4})_(?P<name>[a-z0-9_]+)\.sql$")
 # pg_advisory_lock key so concurrent deploys cannot interleave migrations.
-_LOCK_KEY = 0x6762615F6D6967
+MIGRATION_LOCK_KEY = 0x6762615F6D6967
+_LOCK_KEY = MIGRATION_LOCK_KEY
 
 
 class MigrationError(RuntimeError):
@@ -68,7 +69,7 @@ def apply_migrations(
             # Tables must be owned by the dedicated owner role, not a superuser.
             raise MigrationError("refusing to migrate as a superuser; use the owner role")
 
-        conn.execute("select pg_catalog.pg_advisory_lock(%s)", (_LOCK_KEY,))
+        conn.execute("select pg_catalog.pg_advisory_lock(%s)", (MIGRATION_LOCK_KEY,))
         try:
             conn.execute(
                 """
@@ -107,5 +108,5 @@ def apply_migrations(
                     )
                 applied_now.append(migration)
         finally:
-            conn.execute("select pg_catalog.pg_advisory_unlock(%s)", (_LOCK_KEY,))
+            conn.execute("select pg_catalog.pg_advisory_unlock(%s)", (MIGRATION_LOCK_KEY,))
     return applied_now

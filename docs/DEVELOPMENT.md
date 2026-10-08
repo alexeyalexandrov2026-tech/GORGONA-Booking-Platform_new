@@ -1,5 +1,46 @@
 # Development
 
+## H3 forward corrections and upgrade preflight (0030, 2026-10-08)
+
+Owner-approved F1–F5 corrections and their measured checks are recorded in
+[validation](plan/evidence/2026-10-08-h3-forward-corrections/VALIDATION.md).
+Published migrations 0001–0029 must retain their checksums. FIN-03/FIN-02 remain
+planned; these corrections do not enable `finance_documents`.
+
+For an authorized target at exactly the packaged 0001–0029, using the existing
+dedicated nonsuperuser owner credential in `GBA_MIGRATION_DATABASE_URL`:
+
+```powershell
+uv run gba-db check-h3-upgrade
+```
+
+This rehearses the complete packaged 0030 in a transaction with mandatory
+rollback. It takes the shared migration advisory lock and exclusive locks on
+four affected tables; schedule an authorized migration window because concurrent
+writes wait. It is not a lightweight read-only query. RLS and FORCE RLS remain
+enabled. Temporary owner-only SELECT policies provide an all-company conflict
+scan and disappear on rollback. The command never writes a migration receipt or
+changes financial facts. Output gives the exact checksum or a preflight refusal,
+without source identities or credentials.
+
+Stop if it reports canonical external-identity collisions, non-increasing payment
+revision event sequences or credit versions with more than 198 lines. Existing
+records require an explicit reconciliation decision; no automatic repair, merge,
+deduplication or unarchiving is provided. Repeat the rehearsal after an approved
+resolution. A successful rehearsal does not authorize production migration.
+With separate target authorization, apply through the existing owner command:
+
+```powershell
+uv run gba-db migrate
+```
+
+0030 repeats the same conflict scan under its locks, so intervening conflicts
+also refuse the real upgrade transaction. Ship the application and 0030 together:
+the old and new readiness guards reject the other's financial function contract.
+The archived-account exception resolves only an exact current-transaction credit
+void or historical payment reversal; replacement and ordinary journals still
+require active accounts, and no archive flag is modified.
+
 ## H1 invoice backend, behind closed readiness (2026-10-06)
 
 [Current handoff](plan/NEXT_AGENT_H1_BACKEND_2026-10-06.md),

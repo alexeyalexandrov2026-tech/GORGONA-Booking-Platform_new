@@ -1080,7 +1080,40 @@ async def _append_journal(
     ).fetchall()
     if len(accounts) != len(account_ids):
         raise InvalidReferenceError("Every line needs an account of this book", field="lines")
-    if any(archived for _, archived in accounts):
+    mirror = None
+    if body.source_kind in ("payment_correction", "credit_void"):
+        mirror = await (
+            await conn.execute(
+                "select gba.financial_mirror_original(%s,%s,%s,%s)",
+                (business_id, book_id, entry_id, body.source_kind),
+            )
+        ).fetchone()
+    original_id = mirror[0] if mirror is not None else None
+    if original_id is not None:
+        original = await (
+            await conn.execute(
+                "select e.currency,e.entry_date,l.line_no,l.account_id,l.side,l.amount_minor "
+                "from gba.journal_entries e join gba.journal_lines l "
+                "on l.tenant_id=e.tenant_id and l.book_id=e.book_id and l.entry_id=e.id "
+                "where e.tenant_id=%s and e.book_id=%s and e.id=%s order by l.line_no",
+                (business_id, book_id, original_id),
+            )
+        ).fetchall()
+        expected = [
+            (number, line.account_id, line.side, amount)
+            for number, (line, amount) in enumerate(zip(body.lines, amounts, strict=True), 1)
+        ]
+        mirrored = [
+            (row[2], row[3], "credit" if row[4] == "debit" else "debit", row[5]) for row in original
+        ]
+        if (
+            not original
+            or original[0][0] != body.currency
+            or original[0][1] > body.entry_date
+            or mirrored != expected
+        ):
+            raise LedgerStateError("A historical mirror must exactly reverse its original journal")
+    if any(archived for _, archived in accounts) and original_id is None:
         raise LedgerStateError("An archived account cannot receive new entries")
     if body.entry_date < book.accounting_start:
         raise LedgerDateError("The date is before the book's accounting start")

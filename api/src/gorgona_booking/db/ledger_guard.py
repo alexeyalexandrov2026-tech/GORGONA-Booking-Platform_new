@@ -10,7 +10,16 @@ from importlib import resources
 _SQL = (resources.files("gorgona_booking.db") / "migrations" / "0020_ledger.sql").read_text(
     encoding="utf-8"
 )
-_SOURCES = dict(re.findall(r"create function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;", _SQL, re.DOTALL))
+_FORWARD = (
+    resources.files("gorgona_booking.db") / "migrations" / "0030_h3_forward_corrections.sql"
+).read_text(encoding="utf-8")
+_SOURCES = dict(
+    re.findall(
+        r"create (?:or replace )?function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;",
+        _SQL + _FORWARD,
+        re.DOTALL,
+    )
+)
 _TABLES = (
     "ledger_books",
     "ledger_book_versions",
