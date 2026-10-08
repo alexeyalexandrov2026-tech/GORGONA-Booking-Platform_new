@@ -1,12 +1,16 @@
 # Пакет H — счета, обязательства и подтвержденные внешние расчеты
 
-**H3 checkpoint 2026-10-07:** settlement guards (forward 0025–0026, draft PR17)
-and credit notes (forward 0027, branch `codex/package-h3-credits` stacked on
-PR17): the unpaid part of a credit becomes C, the paid part a separate
-`credit_refund` obligation, one `credit` journal; see the
-[H3 credits handoff](NEXT_AGENT_H3_CREDITS_2026-10-07.md) and
-[evidence](evidence/2026-10-07-h3-credits/VALIDATION.md). Payment corrections and
-credit voids remain; all twelve COMPLETE criteria below remain NOT TESTED.
+**H3 checkpoint 2026-10-08:** settlement guards (forward 0025–0026, draft PR17),
+credit notes (forward 0027, branch `codex/package-h3-credits` stacked on PR17)
+and payment corrections (forward 0028, branch
+`codex/package-h3-payment-corrections` stacked on the credits): a void or a
+correction is a new revision of the same payment with its identity bound, a
+mirrored `payment_correction` journal and the reserve restored; dependent
+credits, refunds and unknown sent outcomes give
+`FINANCIAL_RECONCILIATION_REQUIRED`. See the
+[H3 corrections handoff](NEXT_AGENT_H3_CORRECTIONS_2026-10-08.md) and
+[evidence](evidence/2026-10-08-h3-payment-corrections/VALIDATION.md). Credit
+voids remain; all twelve COMPLETE criteria below remain NOT TESTED.
 
 **Implementation checkpoint 2026-10-07:** H2 is implemented locally on
 `codex/package-h2-settlements` through forward 0022–0024: manual accruals as

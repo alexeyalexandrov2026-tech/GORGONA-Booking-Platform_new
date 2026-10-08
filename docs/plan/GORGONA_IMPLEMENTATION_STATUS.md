@@ -1,6 +1,28 @@
 # GORGONA — реестр реализации
 
-## Current H3 slice: credit notes and refund obligations, 2026-10-07
+## Current H3 slice: payment corrections, 2026-10-08
+
+Branch `codex/package-h3-payment-corrections` from the credit-notes head
+`807ed59`; no merge. Read actual HEAD/origin/PR/CI. Forward
+`0028_payment_corrections.sql`: a confirmed external payment is voided or
+corrected by a new revision of the same payment under a new settlement event;
+its external identity stays bound forever; the replaced version's journal is
+mirrored by a `payment_correction` journal, its allocations return to the
+reserve of a held settlement (a released one only loses P) and a correction
+confirms its replacement within that reserve. Effective P/R
+(`gba.effective_payment_allocations`) everywhere. Issued credit, refund
+obligation or unknown sent dependencies give `FINANCIAL_RECONCILIATION_REQUIRED`
+without effects; the service checks and SQL rechecks at commit. Code commit
+`238b157` pushed; no pull request yet (browser signed out). Local results:
+full 1138 passed/4 skipped/493.79s with mandatory PostgreSQL/browser;
+ruff/format/mypy 216 PASS; web gates PASS; SQL mutation red; upgrade 0027 → 0028
+on a populated database: only 0028 applied, no row and no balance changed.
+[Validation](evidence/2026-10-08-h3-payment-corrections/VALIDATION.md),
+[handoff](NEXT_AGENT_H3_CORRECTIONS_2026-10-08.md),
+[prompt](NEXT_AGENT_PROMPT_H3_CORRECTIONS_2026-10-08.md). Credit voids are not
+implemented; FIN-03/FIN-02 remain planned.
+
+## Previous H3 slice: credit notes and refund obligations, 2026-10-07
 
 Branch `codex/package-h3-credits` from the PR17 head `c6c5d89`; no merge. Read
 actual HEAD/origin/PR/CI. Forward `0027_credit_notes.sql` adds credit notes
