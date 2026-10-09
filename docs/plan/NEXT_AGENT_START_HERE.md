@@ -15,9 +15,12 @@ caught; no money defect found.
 FIN-03 is `technically_verified` by the owner's decision of 2026-10-09; FIN-02
 remains planned. Exact-SHA CI for the acceptance commit `ec39622` is success
 (push 37887856597); its independent check is NOT DONE.
-Next after H acceptance: package I (shifts, swaps, timesheets), plan and ADR
-first. Merge, deployment and production migration are not authorized. Read the
-actual HEAD, remote, PR and CI state before continuing.
+Next after H acceptance: package I (shifts, shift changes, timesheets). Its
+[plan](PACKAGE_I_PLAN_2026-10-09.md) and
+[ADR-0025](../adr/0025-workforce-shifts-and-timesheets.md) are proposed on branch
+`codex/package-i-workforce-plan` and await the owner's approval; no package I
+code exists. Merge, deployment and production migration are not authorized. Read
+the actual HEAD, remote, PR and CI state before continuing.
 
 ## Historical: H3 credit voids — H3 complete in code (stacked on the corrections)
 
