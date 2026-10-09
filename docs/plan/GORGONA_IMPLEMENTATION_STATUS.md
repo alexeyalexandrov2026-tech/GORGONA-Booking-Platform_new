@@ -1,6 +1,28 @@
 # GORGONA — реестр реализации
 
-## Current H3: independent-review corrections F1–F5, 2026-10-08
+## Current H4/UI и admission, 2026-10-08
+
+Ветка `codex/package-h4-ui-admission` от parent PR21 `12875e8` добавляет
+Financial documents и metadata-only Provider admission в management workspace.
+Существующие H money APIs и G ledger переиспользованы; current credit
+counteraccount выбирается явно. Серверный overview сообщает фактический gate;
+production H остаётся закрытым. Новая forward-only 0031 не меняет прежние
+финансовые записи или миграции 0001–0030.
+
+Admission draft/submitted/withdrawn сохраняет неизменяемую историю, unverified
+evidence и capabilities=false; network/provider integration не реализуется.
+Tenant/book/roles, прямой SQL, version/recovery races и populated upgrade
+проверены в disposable PostgreSQL. Desktop/mobile actual OIDC/API/PG browser
+проверяет invoice/reserve/partial pay, потерю ответа/reload/retry,
+credit/refund/void и admission с Axe/overflow.
+
+[Точные результаты и границы](evidence/2026-10-08-h4-ui-admission/VALIDATION.md),
+[H-01–H-12 mapping](evidence/2026-10-08-h4-ui-admission/H_ACCEPTANCE_MATRIX.md),
+[передача](NEXT_AGENT_H4_UI_ADMISSION_2026-10-08.md). Full run/review/exact-SHA CI
+являются обязательными отдельными gates в evidence/новом Draft PR. FIN-03/FIN-02
+остаются planned; merge/deploy/production/provider operations не разрешены.
+
+## Previous H3: independent-review corrections F1–F5, 2026-10-08
 
 Owner approved all five findings, including strictly verified historical mirrors
 on archived accounts. Branch `codex/h3-forward-corrections` from review commit

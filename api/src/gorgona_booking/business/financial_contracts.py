@@ -173,6 +173,20 @@ class FinancialCommandStatus(Versioned):
     state: Literal["committed", "unresolved", "cancelled"]
 
 
+class FinancialWorkflowStatus(Versioned):
+    """Current write availability; observing it never enables the workflow."""
+
+    business_id: UUID
+    write_enabled: bool
+    blocked_reason: Literal["not_ready", "module_disabled"] | None
+
+    @model_validator(mode="after")
+    def consistent_gate(self) -> Self:
+        if self.write_enabled != (self.blocked_reason is None):
+            raise ValueError("Write availability must agree with its blocking reason")
+        return self
+
+
 class InvoiceSummary(Strict):
     document_id: UUID
     revision: StrictInt = Field(ge=1)

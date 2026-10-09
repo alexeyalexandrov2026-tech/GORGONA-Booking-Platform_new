@@ -1,6 +1,16 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
-**H1 backend checkpoint, 6 October:** reviewed source2d5a8f9 on
+**H4/UI checkpoint, 8 October:** branch `codex/package-h4-ui-admission` from
+F1–F5 parent PR21 `12875e8` adds Financial documents UI and provider admission
+metadata without activation. Reuses the existing H APIs/G ledger and adds only
+forward 0031. [Current evidence](evidence/2026-10-08-h4-ui-admission/VALIDATION.md),
+[H matrix](evidence/2026-10-08-h4-ui-admission/H_ACCEPTANCE_MATRIX.md),
+[handoff](NEXT_AGENT_H4_UI_ADMISSION_2026-10-08.md).
+FIN-03/FIN-02 remain planned; production H registry stays closed. Full tests,
+independent review and final exact-SHA CI are separate evidence gates. Earlier
+H checkpoint statements below are historical for their source/date.
+
+**Historical H1 backend checkpoint, 6 October:** reviewed source2d5a8f9 on
 codex/package-h1-persistence adds forward0021 and real invoice draft/history/
 atomic issue with one obligation and balanced G accrual. Journal read-v2 and
 permanent minimal recovery are implemented. [Draft PR15](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/pull/15)

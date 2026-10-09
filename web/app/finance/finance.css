@@ -1,0 +1,129 @@
+.financial-workspace {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+.financial-heading,
+.financial-toolbar,
+.financial-actions,
+.financial-tabs {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.financial-heading {
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+.financial-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+}
+.financial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 1rem;
+}
+.financial-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.6rem 0;
+  min-width: 0;
+}
+.financial-field input,
+.financial-field select {
+  width: 100%;
+  max-width: 100%;
+}
+.financial-workspace fieldset {
+  border: 1px solid #d2d6da;
+  padding: 1rem;
+  border-radius: 0.6rem;
+  min-width: 0;
+  margin: 1.25rem 0;
+}
+.financial-workspace legend {
+  font-weight: 600;
+}
+.financial-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+.financial-check input {
+  width: auto;
+  margin-top: 0.3rem;
+  flex: 0 0 auto;
+}
+.financial-line,
+.financial-detail {
+  border-top: 1px solid #d2d6da;
+  padding: 1rem 0;
+  margin-top: 1rem;
+}
+.financial-tabs {
+  margin: 1.5rem 0;
+}
+.financial-records {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.financial-records button {
+  text-align: left;
+  width: 100%;
+  white-space: normal;
+}
+.financial-table-scroll {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+.financial-workspace table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.financial-workspace th,
+.financial-workspace td {
+  padding: 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #d2d6da;
+}
+.financial-workspace small {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.3rem;
+  font-weight: normal;
+}
+.financial-workspace p,
+.financial-workspace li {
+  overflow-wrap: anywhere;
+}
+.financial-recovery {
+  border: 2px solid #8a6400;
+  padding: 1rem;
+  border-radius: 0.6rem;
+}
+.financial-capability {
+  padding: 0.75rem;
+  border-left: 3px solid #6a7680;
+}
+.financial-workspace button {
+  white-space: normal;
+}
+@media (max-width: 640px) {
+  .financial-heading {
+    align-items: flex-start;
+  }
+  .financial-actions > button,
+  .financial-tabs > button {
+    flex: 1 1 100%;
+  }
+  .financial-toolbar {
+    align-items: flex-start;
+  }
+}

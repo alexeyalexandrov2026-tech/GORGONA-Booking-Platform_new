@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { ledgerResponseSchema } from "./ledger-contracts";
+import { financialResponseSchema } from "./financial-contracts";
+import { admissionResponseSchema } from "./admission-contracts";
 import { counterpartyResponseSchema } from "./counterparty-contracts";
 import { documentResponseSchema } from "./document-contracts";
 import { agreementResponseSchema } from "./agreement-contracts";
@@ -203,6 +205,10 @@ export function managementResponseSchema(
   if (clean === "/v1/me") return me;
   const business = clean.match(/^\/v1\/businesses\/[0-9a-f-]{36}(.*)$/i);
   if (business) {
+    const financial = financialResponseSchema(business[1] ?? "", method);
+    if (financial) return financial;
+    const admission = admissionResponseSchema(business[1] ?? "", method);
+    if (admission) return admission;
     const ledger = ledgerResponseSchema(business[1] ?? "", method);
     if (ledger) return ledger;
     const counterparties = counterpartyResponseSchema(

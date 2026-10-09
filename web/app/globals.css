@@ -606,6 +606,7 @@ footer {
   background: #f7f3ed;
   border-bottom: 1px solid var(--line);
   padding: 0 32px;
+  overflow-x: auto;
 }
 .mgmt-nav-list {
   display: flex;

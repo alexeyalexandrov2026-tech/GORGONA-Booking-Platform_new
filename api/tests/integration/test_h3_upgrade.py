@@ -73,9 +73,16 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
         psycopg.connect(make_conninfo(source.admin_dsn, dbname=source.name)) as before,
         psycopg.connect(target.admin_dsn) as after,
     ):
-        tables = before.execute(
+        source_tables = before.execute(
             "select tablename from pg_catalog.pg_tables where schemaname='gba' order by tablename"
         ).fetchall()
+        target_tables = {
+            row[0]
+            for row in after.execute(
+                "select tablename from pg_catalog.pg_tables where schemaname='gba'"
+            )
+        }
+        tables = [row for row in source_tables if row[0] in target_tables]
         after.execute("set local session_replication_role=replica")
         after.execute(
             sql.SQL("truncate {} cascade").format(
@@ -168,16 +175,17 @@ async def test_nonempty_upgrade_keeps_all_rows_checksums_and_rls(
     assert preview.target_version == 30
     assert snapshot(previous_database) == before
     assert force_flags(previous_database) == [(True, True)] * 4
-    applied = apply_migrations(previous_database.owner_dsn)
+    h3_migrations = load_migrations()[:30]
+    applied = apply_migrations(previous_database.owner_dsn, h3_migrations)
     assert [migration.version for migration in applied] == [30]
-    assert apply_migrations(previous_database.owner_dsn) == []
+    assert apply_migrations(previous_database.owner_dsn, h3_migrations) == []
     assert snapshot(previous_database) == before
     assert force_flags(previous_database) == [(True, True)] * 4
     with psycopg.connect(previous_database.owner_dsn) as conn:
         checksums: dict[int, str] = dict(
             conn.execute("select version,checksum from public.gba_schema_migrations")
         )
-    assert checksums == {migration.version: migration.checksum for migration in load_migrations()}
+    assert checksums == {migration.version: migration.checksum for migration in h3_migrations}
 
 
 @pytest.mark.parametrize("conflict", ["identity", "event_order", "credit_lines"])
