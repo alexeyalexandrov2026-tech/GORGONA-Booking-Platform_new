@@ -23,6 +23,7 @@ from gorgona_booking.api import (
     legal_entities,
     members,
     platform,
+    provider_admission,
     reservations,
     salons,
     setup,
@@ -127,6 +128,7 @@ def create_app(
     app.include_router(agreements.router)
     app.include_router(ledger.router)
     app.include_router(financial_documents.router)
+    app.include_router(provider_admission.router)
     app.include_router(reservations.router)
     app.include_router(members.router)
     app.include_router(setup.router)

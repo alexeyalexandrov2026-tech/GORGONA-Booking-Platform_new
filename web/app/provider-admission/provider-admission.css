@@ -1,0 +1,61 @@
+.provider-admission {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+.provider-admission section {
+  margin-block: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 0.5rem;
+}
+.provider-admission label {
+  display: grid;
+  gap: 0.35rem;
+  margin-block: 0.75rem;
+}
+.provider-admission input,
+.provider-admission select,
+.provider-admission textarea {
+  width: 100%;
+  max-width: 36rem;
+  min-height: 2.75rem;
+  padding: 0.6rem;
+  border: 1px solid #64748b;
+  border-radius: 0.25rem;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+}
+.provider-admission button {
+  margin: 0.25rem 0.5rem 0.25rem 0;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid #64748b;
+  border-radius: 0.25rem;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+}
+.provider-admission button:disabled {
+  opacity: 0.6;
+}
+.provider-admission :focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+.provider-admission fieldset {
+  min-width: 0;
+}
+.provider-admission li,
+.provider-admission p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 40rem) {
+  .provider-admission {
+    padding: 0.5rem;
+  }
+  .provider-admission section {
+    padding: 0.75rem;
+  }
+}

@@ -13,7 +13,7 @@
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "test:e2e": "playwright test tests/booking.spec.ts",
-    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts tests/counterparty-contracts.spec.ts tests/document-contracts.spec.ts tests/agreement-contracts.spec.ts tests/reservation-contracts.spec.ts tests/ledger-contracts.spec.ts --project=desktop",
+    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts tests/counterparty-contracts.spec.ts tests/document-contracts.spec.ts tests/agreement-contracts.spec.ts tests/reservation-contracts.spec.ts tests/ledger-contracts.spec.ts --project=desktop tests/financial-contracts.spec.ts tests/admission-contracts.spec.ts",
     "test:management": "playwright test tests/management.spec.ts",
     "test:management:location": "playwright test tests/location-access.spec.ts",
     "test:management:delegation": "playwright test tests/delegation.spec.ts",
@@ -23,7 +23,9 @@
     "test:management:documents": "playwright test tests/documents.spec.ts",
     "test:management:agreements": "playwright test tests/agreements.spec.ts",
     "test:management:reservations": "playwright test tests/reservations.spec.ts",
-    "test:management:ledger": "playwright test tests/ledger.spec.ts"
+    "test:management:ledger": "playwright test tests/ledger.spec.ts",
+    "test:management:finance": "playwright test tests/finance.spec.ts --max-failures=1",
+    "test:management:admission": "playwright test tests/admission.spec.ts --max-failures=1"
   },
   "dependencies": {
     "next": "16.3.7",

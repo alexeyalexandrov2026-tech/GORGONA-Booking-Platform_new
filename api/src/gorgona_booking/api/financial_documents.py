@@ -2,7 +2,7 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Path, Query, Request
@@ -22,11 +22,13 @@ from gorgona_booking.business.financial_contracts import (
     DocumentKind,
     FinancialCommandReference,
     FinancialCommandStatus,
+    FinancialWorkflowStatus,
     InvoiceDocumentView,
     InvoiceDraftInput,
     InvoiceIssueInput,
     InvoiceList,
 )
+from gorgona_booking.business.modules import ModuleDisabledError
 from gorgona_booking.business.settlement_contracts import (
     ObligationList,
     ObligationView,
@@ -73,6 +75,23 @@ async def _access(
     ) as access:
         await assert_location_scope_ready(access.conn)
         yield access
+
+
+@router.get("/overview")
+async def overview(
+    business_id: UUID, request: Request, principal: CurrentPrincipal
+) -> FinancialWorkflowStatus:
+    async with _access(request, principal, business_id) as access:
+        blocked: Literal["not_ready", "module_disabled"] | None = None
+        try:
+            await service.require_workflow(access.conn, business_id)
+        except service.FinancialWorkflowNotReadyError:
+            blocked = "not_ready"
+        except ModuleDisabledError:
+            blocked = "module_disabled"
+        return FinancialWorkflowStatus(
+            business_id=business_id, write_enabled=blocked is None, blocked_reason=blocked
+        )
 
 
 def _document_routes(segment: str, kind: DocumentKind) -> None:

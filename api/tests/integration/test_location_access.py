@@ -1,5 +1,6 @@
 """Location grants exercised through real authentication, SQL and booking flows."""
 
+import re
 from datetime import UTC, datetime
 from uuid import UUID, uuid7
 from zoneinfo import ZoneInfo
@@ -13,6 +14,7 @@ from gorgona_booking.auth.principal import Principal
 from gorgona_booking.booking.service import BookingService
 from gorgona_booking.db.migrate import load_migrations
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction
+from gorgona_booking.db.provider_admission_guard import ADMISSION_TABLES, assert_admission_ready
 from gorgona_booking.db.provisioning import add_membership, owner_tenant_transaction
 from gorgona_booking.tenancy.authorization import authorized_tenant
 from tests.integration import test_management_api as shared
@@ -339,7 +341,10 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
     idp: FakeIdp,
     owner_conn: psycopg.Connection,
     damage: str,
+    app_pool: RuntimePool,
 ) -> None:
+    async with tenant_transaction(app_pool, world.a.tenant_id) as conn:
+        await assert_admission_ready(conn)
     headers = idp.bearer(branch_manager.subject, email=branch_manager.email)
     boundary = next(m.sql for m in load_migrations() if m.version == 9).partition(
         "-- A company owner can invite"
@@ -390,6 +395,15 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                     marker
                 )[2]
                 owner_conn.execute(scope[scope.index("\n") :].encode("utf-8"))
+            admission = next(m.sql for m in load_migrations() if m.version == 31)
+            policies = re.findall(
+                r"create policy provider_admission_\w+_unrestricted_scope\b.*?;",
+                admission,
+                re.DOTALL,
+            )
+            assert len(policies) == len(ADMISSION_TABLES)
+            for policy in policies:
+                owner_conn.execute(policy.encode("utf-8"))
         elif damage == "weakened_function":
             definition = boundary.partition("create policy locations_location_scope")[0]
             owner_conn.execute(
@@ -408,6 +422,9 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 "with check (gba.current_location_id() is null "
                 "or location_id = gba.current_location_id())"
             )
+
+    async with tenant_transaction(app_pool, world.a.tenant_id) as conn:
+        await assert_admission_ready(conn)
 
 
 async def test_owner_can_issue_immutable_branch_invitation_and_acceptance_keeps_scope(
