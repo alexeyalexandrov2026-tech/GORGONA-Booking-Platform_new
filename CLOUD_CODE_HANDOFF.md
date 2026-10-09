@@ -1,6 +1,25 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current package H technically accepted (FIN-03) — 2026-10-09
+## Current: package I started, plan and slice I0 — 2026-10-09
+
+[Handoff and copyable prompt](docs/plan/NEXT_AGENT_PACKAGE_I_2026-10-09.md),
+[progress against the master plan](docs/plan/PROJECT_PROGRESS_2026-10-09.md),
+[package I plan](docs/plan/PACKAGE_I_PLAN_2026-10-09.md),
+[ADR-0025](docs/adr/0025-workforce-shifts-and-timesheets.md),
+[slice I0 inventory](docs/plan/evidence/2026-10-09-i0-resource-kinds/INVENTORY.md).
+Package I (shifts, shift changes, timesheets; WORK-01) has a plan and ADR-0025.
+The owner did not approve them explicitly but delegated the choice of next
+steps, so the recommended options are working defaults. Slice I0 on
+`codex/package-i0-resource-kinds` changes no schema or source: seven tests pin
+what booking, reservations and staff setup do with resource kinds today, and the
+inventory lists what slice I1 must change with the planned `staff` kind. Full
+local run: PASS, 1238 passed / 4 skipped / 644.59 s. WORK-01 and the `workforce` module stay planned; no
+shift, change or timesheet code exists. The package I branches are local.
+Package H is described in the next section; its draft PR and the independent
+check of the acceptance commit are still open. No
+merge/deploy/production/provider/funds action.
+
+## Previous: package H technically accepted (FIN-03) — 2026-10-09
 
 [Handoff and copyable prompt](docs/plan/NEXT_AGENT_H_ACCEPTANCE_2026-10-09.md),
 [audit](docs/plan/evidence/2026-10-09-h-acceptance-audit/AUDIT.md),

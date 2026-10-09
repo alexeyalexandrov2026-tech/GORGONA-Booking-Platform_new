@@ -1,6 +1,22 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-09)
 
-## Current: package H technically accepted (FIN-03)
+## Current: package I started (plan and slice I0)
+
+Read the [handoff and copyable prompt](NEXT_AGENT_PACKAGE_I_2026-10-09.md) first,
+then the [package I plan](PACKAGE_I_PLAN_2026-10-09.md),
+[ADR-0025](../adr/0025-workforce-shifts-and-timesheets.md) and the
+[slice I0 inventory](evidence/2026-10-09-i0-resource-kinds/INVENTORY.md).
+[Progress against the master plan](PROJECT_PROGRESS_2026-10-09.md) gives the whole
+picture. Checkout `C:\Users\alexa\Documents\ChatGPT\gorgona-package-i`, branch
+`codex/package-i0-resource-kinds` on top of `codex/package-i-workforce-plan`;
+both are local. Slice I0 changes no schema or source. Next: slice I1 (staff
+profiles and the `staff` resource kind, skills, versioned shifts, assignments in
+the shared occupancy). WORK-01 stays planned. Package H keeps two open items: a
+draft PR for `codex/package-h-acceptance` and an independent check of `ec39622`.
+Merge, deployment and production migration are not authorized. Read the actual
+HEAD, remote, PR and CI state before continuing.
+
+## Previous: package H technically accepted (FIN-03)
 
 Read [handoff and copyable prompt](NEXT_AGENT_H_ACCEPTANCE_2026-10-09.md),
 [audit](evidence/2026-10-09-h-acceptance-audit/AUDIT.md) and
@@ -17,10 +33,13 @@ remains planned. Exact-SHA CI for the acceptance commit `ec39622` is success
 (push 37887856597); its independent check is NOT DONE.
 Next after H acceptance: package I (shifts, shift changes, timesheets). Its
 [plan](PACKAGE_I_PLAN_2026-10-09.md) and
-[ADR-0025](../adr/0025-workforce-shifts-and-timesheets.md) are proposed on branch
-`codex/package-i-workforce-plan` and await the owner's approval; no package I
-code exists. Merge, deployment and production migration are not authorized. Read
-the actual HEAD, remote, PR and CI state before continuing.
+[ADR-0025](../adr/0025-workforce-shifts-and-timesheets.md) are a working basis
+under the owner's delegation of 2026-10-09; the owner has not approved them
+explicitly. Slice I0 (tests only, no schema change) is on branch
+`codex/package-i0-resource-kinds`: [inventory](evidence/2026-10-09-i0-resource-kinds/INVENTORY.md)
+with a copyable prompt for slice I1. Slices I1–I4 are not started. Merge,
+deployment and production migration are not authorized. Read the actual HEAD,
+remote, PR and CI state before continuing.
 
 ## Historical: H3 credit voids — H3 complete in code (stacked on the corrections)
 

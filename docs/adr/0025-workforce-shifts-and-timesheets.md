@@ -1,8 +1,10 @@
 # ADR-0025 — Workforce: shifts, shift changes and versioned timesheets
 
-- Status: **Proposed (2026-10-09).** No implementation exists and none is implied
-  until the owner approves this record and the
-  [package I plan](../plan/PACKAGE_I_PLAN_2026-10-09.md).
+- Status: **Proposed (2026-10-09); not explicitly approved.** The owner delegated
+  the choice of next steps on 2026-10-09, so the recommended options are working
+  defaults for slice I0 of the
+  [package I plan](../plan/PACKAGE_I_PLAN_2026-10-09.md). Slice I0 changes no
+  schema. The owner can still change any choice before the slice it affects.
 - Scope: package I of the owner-approved stage 2; criterion WORK-01 ("a shift
   handover checks skills, conflicts and approval; a timesheet correction keeps the
   previous version").
