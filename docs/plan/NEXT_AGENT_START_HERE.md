@@ -1,6 +1,22 @@
-# GORGONA — начните здесь (актуальное продолжение, 2026-10-08)
+# GORGONA — начните здесь (актуальное продолжение, 2026-10-09)
 
-## Current: H3 credit voids — H3 complete in code (stacked on the corrections)
+## Current: package H after the independent audit
+
+Read [handoff and copyable prompt](NEXT_AGENT_H_ACCEPTANCE_2026-10-09.md),
+[audit](evidence/2026-10-09-h-acceptance-audit/AUDIT.md) and
+[acceptance candidate](evidence/2026-10-09-h-acceptance/ACCEPTANCE_CANDIDATE.md).
+Code of H1–H4: `319f144`, branch `codex/package-h4-ui-admission`, draft PR22 on
+PR21; draft PR15–PR22 are open and unmerged. Exact-SHA CI for `319f144` is
+success. Audit documents: branch `codex/package-h-acceptance`, checkout
+`C:\Users\alexa\Documents\ChatGPT\gorgona-h-acceptance`; local until the owner
+approves a push. Independent full run 1231 passed / 4 skipped; static and web
+gates PASS; four SQL guard mutations caught; no money defect found.
+FIN-03/FIN-02 remain planned; promotion needs the owner's direct decision.
+Next after H acceptance: package I (shifts, swaps, timesheets), plan and ADR
+first. Merge, deployment and production migration are not authorized. Read the
+actual HEAD, remote, PR and CI state before continuing.
+
+## Historical: H3 credit voids — H3 complete in code (stacked on the corrections)
 
 Read [handoff and copyable prompt](NEXT_AGENT_H3_VOIDS_2026-10-08.md). Branch
 `codex/package-h3-credit-voids`, own checkout

@@ -207,3 +207,13 @@ NOT TESTED: production data/conflicts, production migration, deployed browser,
 production credentials. Обычные проводки на архивных счетах по-прежнему
 запрещены; F4 permission для точных historical mirrors из 0030 не расширялась.
 Merge, production deployment/migration и CodeRabbit не запускались.
+
+## Дополнение 2026-10-09 — CI точного SHA
+
+Запись добавлена независимым аудитом; остальной текст документа не менялся.
+CI для `319f144`: [push 37876007880](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37876007880) и
+[pull_request 37876031010](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37876031010) — success.
+Шаги запуска: сборка web, PostgreSQL 18, сборка production-образа, ruff, mypy,
+pytest. Строка «Exact-head CI + containers: PENDING» выше отражает состояние до
+публикации. В таблице сборки web 19 маршрутов; «20 routes» включало строку
+легенды. [Аудит](../2026-10-09-h-acceptance-audit/AUDIT.md).

@@ -1,6 +1,31 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current H2 backend and next-agent handoff — 2026-10-07
+## Current package H after the independent audit — 2026-10-09
+
+[Handoff and copyable prompt](docs/plan/NEXT_AGENT_H_ACCEPTANCE_2026-10-09.md),
+[audit](docs/plan/evidence/2026-10-09-h-acceptance-audit/AUDIT.md),
+[acceptance candidate](docs/plan/evidence/2026-10-09-h-acceptance/ACCEPTANCE_CANDIDATE.md).
+H1–H4 are implemented at `319f144` on `codex/package-h4-ui-admission`:
+migrations 0021–0031, the H API and the Financial documents and Provider
+admission screens. Draft PR15–PR22 are stacked and open; nothing is merged.
+Exact-SHA CI for `319f144` is success (push 37876007880, pull_request
+37876031010); its steps build the web app and the production image and run
+PostgreSQL 18, Ruff, mypy and pytest.
+Independent audit on a separate checkout and cluster: full local suite
+1231 passed / 4 skipped / 662.06 s with mandatory PostgreSQL and browser;
+Ruff/format/mypy 230 and web gates PASS; four SQL guard mutations were all
+caught. No money defect was found. Findings A-01–A-11 are in the audit; the only
+P2 (provider admission is writable with `finance` alone) is closed by the
+owner's decision of 2026-10-09: no code change, H4 is not deployed before H
+acceptance, admission is accepted together with H.
+FIN-03/FIN-02 remain planned and `finance_documents` cannot be enabled;
+ADR-0024 remains Proposed. Promoting FIN-03 needs the owner's direct decision.
+The audit branch `codex/package-h-acceptance` holds documents only and is local
+until the owner approves a push.
+No merge/deploy/production/provider/funds action. The sections below are
+historical snapshots.
+
+## Historical H2 backend handoff — 2026-10-07
 
 [Full successor handoff](docs/plan/NEXT_AGENT_H2_2026-10-07.md),
 [copyable prompt](docs/plan/NEXT_AGENT_PROMPT_H2_2026-10-07.md),

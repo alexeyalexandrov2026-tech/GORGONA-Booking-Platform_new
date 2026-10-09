@@ -1,6 +1,27 @@
 # GORGONA — реестр реализации
 
-## Current H4/UI и admission, 2026-10-08
+## Current: пакет H после независимого аудита, 2026-10-09
+
+H1–H4 в коде на `319f144` (`codex/package-h4-ui-admission`, черновики PR15–PR22,
+ничего не слито). CI точного SHA — success. Независимый аудит в отдельной
+рабочей копии и на отдельном кластере PostgreSQL 18.6: полный прогон
+1231 passed / 4 skipped / 662.06 s с обязательными PostgreSQL и браузером;
+ruff/format/mypy 230 и web-проверки PASS; 94 web-теста; четыре мутации
+SQL-защит обнаружены тестами. Денежных дефектов не найдено.
+
+Находки A-01–A-11 записаны в [аудите](evidence/2026-10-09-h-acceptance-audit/AUDIT.md).
+Единственная P2 — реестр допуска провайдеров доступен при включённом `finance`
+без собственного замка — закрыта решением владельца 2026-10-09: код не
+меняется, H4 не развёртывается до приёмки H. Остальные находки — устаревшие
+документы и наблюдения.
+
+[Запись о приёмке, кандидат](evidence/2026-10-09-h-acceptance/ACCEPTANCE_CANDIDATE.md),
+[передача](NEXT_AGENT_H_ACCEPTANCE_2026-10-09.md). FIN-03/FIN-02 остаются
+planned; повышение FIN-03 — отдельное прямое решение владельца. ADR-0024 —
+Proposed. Merge, deployment, production-миграции и операции с провайдерами не
+разрешены. Ветка аудита `codex/package-h-acceptance` содержит только документы.
+
+## Previous H4/UI и admission, 2026-10-08
 
 Ветка `codex/package-h4-ui-admission` от parent PR21 `12875e8` добавляет
 Financial documents и metadata-only Provider admission в management workspace.
