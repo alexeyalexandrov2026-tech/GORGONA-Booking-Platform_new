@@ -104,7 +104,7 @@ async def _check_resources(
 ) -> None:
     rows = await (
         await conn.execute(
-            "select id, location_id, is_active from gba.resources where id = any(%s)",
+            "select id, location_id, is_active, kind from gba.resources where id = any(%s)",
             (resources,),
         )
     ).fetchall()
@@ -114,6 +114,8 @@ async def _check_resources(
         )
     if not all(row[2] for row in rows):
         raise ResourceUnavailableError("An inactive resource cannot be reserved")
+    if any(row[3] == "staff" for row in rows):
+        raise ResourceUnavailableError("Workforce resources are reserved only by shifts")
 
 
 async def create_reservation(

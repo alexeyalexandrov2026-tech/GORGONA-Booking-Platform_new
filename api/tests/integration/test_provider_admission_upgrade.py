@@ -69,9 +69,10 @@ async def test_nonempty_0030_upgrade_keeps_all_rows_and_prior_checksums(
         old: dict[int, str] = dict(
             owner.execute("select version,checksum from public.gba_schema_migrations")
         )
-    applied = apply_migrations(previous_admission_database.owner_dsn)
+    admission_migrations = load_migrations()[:31]
+    applied = apply_migrations(previous_admission_database.owner_dsn, admission_migrations)
     assert [migration.version for migration in applied] == [31]
-    assert apply_migrations(previous_admission_database.owner_dsn) == []
+    assert apply_migrations(previous_admission_database.owner_dsn, admission_migrations) == []
     after = snapshot(previous_admission_database)
     assert {table: after[table] for table in before} == before
     assert set(after) - set(before) == set(ADMISSION_TABLES)
@@ -81,4 +82,4 @@ async def test_nonempty_0030_upgrade_keeps_all_rows_and_prior_checksums(
             owner.execute("select version,checksum from public.gba_schema_migrations")
         )
     assert {version: current[version] for version in old} == old
-    assert current == {migration.version: migration.checksum for migration in load_migrations()}
+    assert current == {migration.version: migration.checksum for migration in admission_migrations}

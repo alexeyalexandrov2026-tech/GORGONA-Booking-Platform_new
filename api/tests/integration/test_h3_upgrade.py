@@ -83,6 +83,10 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
             )
         }
         tables = [row for row in source_tables if row[0] in target_tables]
+        target_version = after.execute(
+            "select max(version) from public.gba_schema_migrations"
+        ).fetchone()
+        assert target_version is not None
         after.execute("set local session_replication_role=replica")
         after.execute(
             sql.SQL("truncate {} cascade").format(
@@ -100,8 +104,22 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                 ).fetchall()
             ]
             names = sql.SQL(",").join(sql.Identifier(column) for column in columns)
+            # Historical upgrade fixtures exercise their own earlier schemas.
+            # I1 rows cannot be represented there; omit staff and their dependent
+            # resource rows instead of making the test order decide COPY success.
+            predicate = sql.SQL("")
+            if target_version[0] < 32:
+                if table == "resources":
+                    predicate = sql.SQL(" where t.kind <> 'staff'")
+                elif "resource_id" in columns:
+                    predicate = sql.SQL(
+                        " where not exists (select 1 from gba.resources r "
+                        "where r.tenant_id=t.tenant_id and r.id=t.resource_id and r.kind='staff')"
+                    )
             cursor = before.execute(
-                sql.SQL("select {} from {}").format(names, sql.Identifier("gba", table))
+                sql.SQL("select {} from {} t{}").format(
+                    names, sql.Identifier("gba", table), predicate
+                )
             )
             assert cursor.description is not None
             json_columns = {

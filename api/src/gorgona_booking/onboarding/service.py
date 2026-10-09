@@ -297,7 +297,8 @@ _FINGERPRINT_QUERIES = (
     "select host from gba.tenant_hosts where tenant_id = gba.current_tenant_id()",
     "select id, name, timezone from gba.locations",
     "select location_id, weekday, opens_minute, closes_minute from gba.business_hours",
-    "select id, location_id, kind, display_name, is_active from gba.resources",
+    "select id, location_id, kind, display_name, is_active from "
+    "gba.resources where kind <> 'staff'",
     "select id, code, name from gba.services",
     "select id, code, name, status, price_cents, currency, booking_duration_minutes, "
     "display_duration_min_minutes, display_duration_max_minutes, is_bookable "

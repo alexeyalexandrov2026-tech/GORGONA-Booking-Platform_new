@@ -1,0 +1,426 @@
+"""I1 package-owned schema approvals. Never learn approvals from the target database."""
+
+import re
+from collections import defaultdict
+from importlib import resources
+from typing import Any
+
+from gorgona_booking.db.pool import RuntimeConnection
+from gorgona_booking.errors import DatabaseUnavailableError
+
+_MIGRATIONS = resources.files("gorgona_booking.db") / "migrations"
+_SQL = (_MIGRATIONS / "0032_workforce.sql").read_text(encoding="utf-8")
+_BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
+WORKFORCE_TABLES = tuple(_BLOCKS)
+_FUNCTIONS = dict(
+    re.findall(
+        r"create (?:or replace )?function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;",
+        (_MIGRATIONS / "0015_counterparties.sql").read_text(encoding="utf-8") + _SQL,
+        re.DOTALL,
+    )
+)
+_TRIGGERS = tuple(
+    re.findall(
+        "create (constraint )?trigger (\\w+) (before|after) (update or "
+        "delete|insert|update) on gba\\.(\\w+)\\s*"
+        r"(deferrable initially deferred )?for each row execute function gba\.(\w+)\(([^)]*)\);",
+        _SQL,
+        re.DOTALL,
+    )
+)
+_DECLARED_TRIGGERS = set(re.findall(r"create (?:constraint )?trigger (\w+)", _SQL))
+if {trigger[1] for trigger in _TRIGGERS} != _DECLARED_TRIGGERS:
+    raise RuntimeError("Every I1 trigger must have an explicit packaged approval")
+# 0032 replaces this existing shared function. I1 also verifies its literal
+# semantics, rather than inheriting whitespace normalization from older guards.
+_TRIGGERS += (
+    (
+        "",
+        "resource_allocations_guard",
+        "before",
+        "insert or update or delete",
+        "resource_allocations",
+        "",
+        "guard_resource_allocation",
+        "",
+    ),
+)
+_INSERTS = {
+    table: set(columns.split(","))
+    for columns, table in re.findall(r"grant insert \(([^)]+)\) on gba\.(\w+)", _SQL)
+}
+_COLUMN_PATTERN = (
+    r"^    (\w+) (uuid\[\]|uuid|text|integer|boolean|timestamptz|xid8)(?=[\s,])([^\n]*)"
+)
+_COLUMNS = {
+    table: tuple(re.findall(_COLUMN_PATTERN, block, re.MULTILINE))
+    for table, block in _BLOCKS.items()
+}
+_KEYS = {
+    table: tuple(
+        (kind, tuple(x.strip() for x in columns.split(",")))
+        for kind, columns in re.findall(r"(primary key|unique) \(([^)]+)\)", block)
+    )
+    for table, block in _BLOCKS.items()
+}
+_FKS = {
+    table: tuple(
+        (
+            tuple(x.strip() for x in columns.split(",")),
+            parent,
+            tuple(x.strip() for x in targets.split(",")),
+        )
+        for columns, parent, targets in re.findall(
+            r"foreign key \(([^)]+)\)\s*references gba\.(\w+)\(([^)]+)\)", block
+        )
+    )
+    for table, block in _BLOCKS.items()
+}
+
+
+# Explicit PostgreSQL 18 deparse approvals of the reviewed packaged migration.
+# Compared with whitespace only: quoted identifiers, literals and parentheses stay.
+def _expression(value: str) -> str:
+    # Strip formatting only outside SQL string literals and quoted identifiers.
+    # Spaces inside a regex, advisory-lock namespace or name are significant.
+    return "".join(
+        part if part.startswith(("'", '"')) else re.sub(r"\s", "", part)
+        for part in re.split(r"""('(?:''|[^'])*'|"(?: "" | [^"] )*")""".replace(" ", ""), value)
+    )
+
+
+_CHECKS = {
+    "staff_skill_events_effective_check": "((isfinite(effective_at) AND (EXTRACT(epoch FROM "
+    "effective_at) >= ('-62104060800'::bigint)::numeric) "
+    "AND (EXTRACT(epoch FROM effective_at) < "
+    "('253370764800'::bigint)::numeric)))",
+    "staff_skill_events_revision_check": "((revision > 0))",
+    "work_shift_versions_assignment_check": "(((status = 'published'::text) OR (profile_id IS "
+    "NULL)))",
+    "work_shift_versions_interval_check": "((isfinite(starts_at) AND isfinite(ends_at) AND "
+    "(ends_at > starts_at) AND (EXTRACT(epoch FROM "
+    "starts_at) >= ('-62104060800'::bigint)::numeric) AND "
+    "(EXTRACT(epoch FROM ends_at) < "
+    "('253370764800'::bigint)::numeric) AND (ends_at <= "
+    "(starts_at + '31 days'::interval))))",
+    "work_shift_versions_position_check": '((((length(btrim("position")) >= 1) AND '
+    '(length(btrim("position")) <= 200)) AND ("position" '
+    "!~ '[[:cntrl:]]'::text)))",
+    "work_shift_versions_revision_check": "((revision > 0))",
+    "work_shift_versions_skills_check": "(((cardinality(required_skill_ids) <= 20) AND "
+    "(COALESCE(array_ndims(required_skill_ids), 1) = 1) AND "
+    "(array_position(required_skill_ids, NULL::uuid) IS "
+    "NULL)))",
+    "work_shift_versions_status_check": "((status = ANY (ARRAY['draft'::text, 'published'::text, "
+    "'cancelled'::text])))",
+    "work_skill_versions_name_check": "((((length(btrim(name)) >= 1) AND (length(btrim(name)) <= "
+    "200)) AND (name !~ '[[:cntrl:]]'::text)))",
+    "work_skill_versions_revision_check": "((revision > 0))",
+    "work_skills_code_check": "((code ~ '^[A-Z][A-Z0-9_]{0,63}$'::text))",
+}
+
+_POLICIES = {
+    "shift_assignments": (
+        "((gba.current_location_id() IS NULL) OR (EXISTS ( SELECT 1\n"
+        "   FROM gba.work_shifts s\n"
+        "  WHERE ((s.tenant_id = shift_assignments.tenant_id) AND (s.id = "
+        "shift_assignments.shift_id) AND (s.location_id = "
+        "gba.current_location_id())))))",
+        "((gba.current_location_id() IS NULL) OR (EXISTS ( SELECT 1\n"
+        "   FROM gba.work_shifts s\n"
+        "  WHERE ((s.tenant_id = shift_assignments.tenant_id) AND (s.id = "
+        "shift_assignments.shift_id) AND (s.location_id = "
+        "gba.current_location_id())))))",
+    ),
+    "staff_profiles": (
+        "((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))",
+        "((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))",
+    ),
+    "staff_resource_owners": (
+        "((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))",
+        "((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))",
+    ),
+    "staff_skill_events": (
+        "((gba.current_location_id() IS NULL) OR (EXISTS ( SELECT 1\n"
+        "   FROM gba.staff_profiles p\n"
+        "  WHERE ((p.tenant_id = staff_skill_events.tenant_id) AND (p.id = "
+        "staff_skill_events.profile_id) AND (p.location_id = "
+        "gba.current_location_id())))))",
+        "((gba.current_location_id() IS NULL) OR (EXISTS ( SELECT 1\n"
+        "   FROM gba.staff_profiles p\n"
+        "  WHERE ((p.tenant_id = staff_skill_events.tenant_id) AND (p.id = "
+        "staff_skill_events.profile_id) AND (p.location_id = "
+        "gba.current_location_id())))))",
+    ),
+    "work_shift_versions": (
+        "((gba.current_location_id() IS NULL) OR (EXISTS ( SELECT 1\n"
+        "   FROM gba.work_shifts s\n"
+        "  WHERE ((s.tenant_id = work_shift_versions.tenant_id) AND (s.id = "
+        "work_shift_versions.shift_id) AND (s.location_id = "
+        "gba.current_location_id())))))",
+        "((gba.current_location_id() IS NULL) OR (EXISTS ( SELECT 1\n"
+        "   FROM gba.work_shifts s\n"
+        "  WHERE ((s.tenant_id = work_shift_versions.tenant_id) AND (s.id = "
+        "work_shift_versions.shift_id) AND (s.location_id = "
+        "gba.current_location_id())))))",
+    ),
+    "work_shifts": (
+        "((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))",
+        "((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))",
+    ),
+    "work_skill_versions": ("true", "(gba.current_location_id() IS NULL)"),
+    "work_skills": ("true", "(gba.current_location_id() IS NULL)"),
+}
+
+_SHARED_CHECKS = {
+    (
+        "resources",
+        "resources_kind_valid",
+    ): "((kind = ANY (ARRAY['artist'::text, 'chair'::text, 'room'::text, 'staff'::text])))",
+    (
+        "resource_allocations",
+        "resource_allocations_source_kind",
+    ): "((source_kind = ANY (ARRAY['booking'::text, 'reservation'::text, 'shift'::text])))",
+}
+
+
+async def assert_workforce_ready(conn: RuntimeConnection) -> None:
+    try:
+        await _check(conn)
+    except (ValueError, KeyError) as exc:
+        raise DatabaseUnavailableError("Workforce schema protection is unavailable") from exc
+
+
+def _require(value: bool) -> None:
+    if not value:
+        raise ValueError("Workforce schema differs from packaged approvals")
+
+
+async def _catalog(
+    conn: RuntimeConnection, query: str, names: list[str]
+) -> dict[str, list[tuple[Any, ...]]]:
+    grouped: dict[str, list[tuple[Any, ...]]] = defaultdict(list)
+    for row in await (await conn.execute(query, (names,))).fetchall():
+        grouped[str(row[0])].append(tuple(row[1:]))
+    return grouped
+
+
+async def _check(conn: RuntimeConnection) -> None:
+    names = list(WORKFORCE_TABLES)
+    tables = await _catalog(
+        conn,
+        """
+        select c.relname,c.relrowsecurity,c.relforcerowsecurity,c.relkind,
+               has_table_privilege(current_user,c.oid,'SELECT'),
+               has_table_privilege(current_user,c.oid,'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'),
+               exists(select 1 from aclexplode(c.relacl) a where a.grantee=0)
+          from pg_class c where c.relnamespace='gba'::regnamespace and c.relname=any(%s)
+    """,
+        names,
+    )
+    policies = await _catalog(
+        conn,
+        """
+        select c.relname,p.polname,p.polpermissive,p.polcmd,
+               pg_get_expr(p.polqual,p.polrelid),pg_get_expr(p.polwithcheck,p.polrelid),
+               p.polroles=array[0::oid],
+               p.polroles=array[(select oid from pg_roles where rolname='gba_runtime')]
+          from pg_policy p join pg_class c on c.oid=p.polrelid
+         where c.relnamespace='gba'::regnamespace and c.relname=any(%s)
+    """,
+        names,
+    )
+    columns = await _catalog(
+        conn,
+        """
+        select c.relname,a.attname,format_type(a.atttypid,a.atttypmod),a.attnotnull,
+               pg_get_expr(d.adbin,d.adrelid),
+               has_column_privilege(current_user,a.attrelid,a.attnum,'INSERT'),
+               has_column_privilege(current_user,a.attrelid,a.attnum,'UPDATE'),
+               has_column_privilege(current_user,a.attrelid,a.attnum,'REFERENCES'),
+               exists(select 1 from aclexplode(a.attacl) acl where acl.grantee=0)
+          from pg_attribute a join pg_class c on c.oid=a.attrelid
+          left join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+         where c.relnamespace='gba'::regnamespace and c.relname=any(%s)
+           and a.attnum>0 and not a.attisdropped order by c.relname,a.attnum
+    """,
+        names,
+    )
+    constraints = await _catalog(
+        conn,
+        """
+        select cl.relname,c.conname,c.contype,c.convalidated,c.conenforced,
+               pg_get_constraintdef(c.oid),
+               array(select attname from pg_attribute where attrelid=c.conrelid
+                     and attnum=any(c.conkey) order by array_position(c.conkey,attnum)),
+               c.confrelid::regclass::text,
+               array(select attname from pg_attribute where attrelid=c.confrelid
+                     and attnum=any(c.confkey) order by array_position(c.confkey,attnum)),
+               c.condeferrable,c.condeferred,c.confupdtype,c.confdeltype,c.confmatchtype,c.connoinherit
+          from pg_constraint c join pg_class cl on cl.oid=c.conrelid
+         where cl.relnamespace='gba'::regnamespace and cl.relname=any(%s)
+    """,
+        [*names, "resources", "resource_allocations"],
+    )
+    trigger_tables = sorted({t[4] for t in _TRIGGERS})
+    triggers = await _catalog(
+        conn,
+        """
+        select cl.relname,t.tgname,t.tgtype,t.tgenabled,t.tgdeferrable,t.tginitdeferred,t.tgargs,
+               p.prosrc,p.prosecdef,p.proconfig,p.prorettype::regtype::text,t.tgqual,t.tgattr::text,
+               t.tgisinternal,(t.tgconstraint<>0),p.oid=to_regprocedure('gba.'||p.proname||'()'),
+               l.lanname,p.provolatile,p.proparallel,p.pronargs,p.prokind,p.proleakproof,p.proname
+          from pg_trigger t join pg_class cl on cl.oid=t.tgrelid join pg_proc p on p.oid=t.tgfoid
+          join pg_language l on l.oid=p.prolang
+         where cl.relnamespace='gba'::regnamespace and cl.relname=any(%s) and not t.tgisinternal
+    """,
+        trigger_tables,
+    )
+    for (table, name), definition in _SHARED_CHECKS.items():
+        actual_shared = next((row for row in constraints[table] if row[0] == name), None)
+        _require(actual_shared is not None)
+        if actual_shared is not None:
+            _require(actual_shared[1:4] == ("c", True, True))
+            _require(
+                _expression(actual_shared[4].removeprefix("CHECK ")) == _expression(definition)
+            )
+    for table in WORKFORCE_TABLES:
+        _require(tables[table] == [(True, True, "r", True, False, False)])
+        _require(len(policies[table]) == 2)
+        for name, permissive, cmd, using, check, public, runtime in policies[table]:
+            tenant = name == table + "_tenant_isolation"
+            _require(tenant or name == table + "_location_scope")
+            expected = (
+                ("(tenant_id = gba.current_tenant_id())",) * 2 if tenant else _POLICIES[table]
+            )
+            _require(permissive == tenant and cmd == "*" and public == tenant and runtime != tenant)
+            _require(
+                _expression(using) == _expression(expected[0])
+                and _expression(check) == _expression(expected[1])
+            )
+        _require(len(columns[table]) == len(_COLUMNS[table]))
+        for actual, (name, kind, tail) in zip(columns[table], _COLUMNS[table], strict=True):
+            default = (
+                "pg_current_xact_id()"
+                if name == "creation_xid"
+                else "now()"
+                if "default now()" in tail
+                else "uuidv7()"
+                if "default uuidv7()" in tail
+                else None
+            )
+            lock_column = table in ("work_skills", "work_shifts") and name == "id"
+            _require(
+                actual
+                == (
+                    name,
+                    "timestamp with time zone" if kind == "timestamptz" else kind,
+                    "not null" in tail,
+                    default,
+                    name in _INSERTS[table],
+                    lock_column,
+                    False,
+                    False,
+                )
+            )
+        actual_keys: set[tuple[str, tuple[str, ...]]] = set()
+        actual_fks: set[tuple[tuple[str, ...], str, tuple[str, ...]]] = set()
+        check_names = set()
+        for (
+            name,
+            kind,
+            valid,
+            enforced,
+            definition,
+            keys,
+            parent,
+            targets,
+            defer,
+            deferred,
+            up,
+            delete,
+            match,
+            noinherit,
+        ) in constraints[table]:
+            if not valid or not enforced or (kind == "c" and noinherit):
+                raise ValueError(
+                    f"Invalid constraint flags: {name} {kind} {valid} {enforced} {noinherit}"
+                )
+            if kind in ("p", "u"):
+                _require(not defer and not deferred)
+                actual_keys.add(("primary key" if kind == "p" else "unique", tuple(keys)))
+            elif kind == "f":
+                _require(not defer and not deferred and (up, delete, match) == ("a", "a", "s"))
+                actual_fks.add((tuple(keys), str(parent).removeprefix("gba."), tuple(targets)))
+            elif kind == "c":
+                check_names.add(name)
+                _require(
+                    name in _CHECKS
+                    and _expression(definition.removeprefix("CHECK ")) == _expression(_CHECKS[name])
+                )
+            elif kind == "t":
+                _require(name in {t[1] for t in _TRIGGERS if t[0] and t[4] == table})
+            else:
+                _require(kind == "n")
+        _require(actual_keys == set(_KEYS[table]))
+        inline = {
+            ((name,), parent, (target,))
+            for name, parent, target in re.findall(
+                r"^    (\w+) uuid not null references gba\.(\w+)\((\w+)\)",
+                _BLOCKS[table],
+                re.MULTILINE,
+            )
+        }
+        if actual_fks != set(_FKS[table]) | inline:
+            raise ValueError(
+                f"Unapproved FK for {table}: {actual_fks} expected {set(_FKS[table]) | inline}"
+            )
+        _require(check_names == {name for name in _CHECKS if name.startswith(table + "_")})
+        _require({t[0] for t in triggers[table]} == {t[1] for t in _TRIGGERS if t[4] == table})
+    for constraint, name, when, event, table, deferred, function, argument in _TRIGGERS:
+        actual_trigger = next((t[1:] for t in triggers[table] if t[0] == name), None)
+        _require(actual_trigger is not None)
+        if actual_trigger is None:
+            return
+        expected_type = (
+            31
+            if event == "insert or update or delete"
+            else 27
+            if event == "update or delete"
+            else 19
+            if event == "update"
+            else 7
+            if when == "before"
+            else 5
+        )
+        _require(
+            actual_trigger[:5]
+            == (
+                expected_type,
+                "O",
+                bool(deferred),
+                bool(deferred),
+                argument.strip("'").encode() + bytes([0]) if argument else b"",
+            )
+        )
+        _require(actual_trigger[5] == _FUNCTIONS[function])
+        _require(
+            actual_trigger[6:]
+            == (
+                False,
+                None,
+                "trigger",
+                None,
+                "",
+                False,
+                bool(constraint),
+                True,
+                "plpgsql",
+                "v",
+                "u",
+                0,
+                "f",
+                False,
+                function,
+            )
+        )

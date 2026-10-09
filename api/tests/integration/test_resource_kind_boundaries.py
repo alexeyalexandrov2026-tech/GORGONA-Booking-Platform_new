@@ -20,11 +20,13 @@ from gorgona_booking.booking.service import BookingService
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction
 from gorgona_booking.db.provisioning import owner_tenant_transaction
 from tests.integration import test_management_api as shared
+from tests.integration import test_workforce as workforce_shared
 from tests.integration.booking_support import BookingWorld, at
 from tests.integration.customer_support import customer_day
 from tests.integration.seed import FAKE_TIMEZONE, FakeUser
 from tests.integration.test_customer_api import customer_client, first_slot, hold, selection
 from tests.integration.test_resource_reservations import Reservations
+from tests.integration.test_workforce import Workforce
 from tests.support.fake_idp import FakeIdp
 
 pytestmark = pytest.mark.anyio
@@ -32,7 +34,80 @@ __all__ = ["customer_client"]
 client = shared.client
 idp = shared.idp
 manager_a = shared.manager_a
+workforce = workforce_shared.workforce
 ACTOR = "test:resource-kinds"
+
+
+async def test_staff_lookalike_never_enters_customer_or_management_booking(
+    workforce: Workforce,
+    owner_conn: psycopg.Connection,
+    world: BookingWorld,
+) -> None:
+    profile = await workforce.profile()
+    resource = str(profile["resource_id"])
+    with owner_tenant_transaction(owner_conn, world.a.tenant_id):
+        owner_conn.execute(
+            "insert into gba.resource_services (tenant_id,resource_id,service_id) "
+            "select %s,%s,id from gba.services",
+            (world.a.tenant_id, resource),
+        )
+        for weekday in range(1, 8):
+            owner_conn.execute(
+                "insert into gba.resource_hours "
+                "(tenant_id,resource_id,weekday,opens_minute,closes_minute) "
+                "values (%s,%s,%s,600,960)",
+                (world.a.tenant_id, resource, weekday),
+            )
+    # Public and management paths share the already seeded ASGI app.
+    public = workforce.client
+    public_headers = {"Host": world.a.host}
+    boot = await public.get("/v1/customer/bootstrap", headers=public_headers)
+    assert resource not in {a["id"] for a in boot.json()["artists"]}
+    for path, http, headers in (
+        ("/v1/customer/availability", public, public_headers),
+        (f"/v1/salons/{world.a.tenant_id}/availability", workforce.client, workforce.headers),
+    ):
+        response = await http.post(
+            path, json={**selection(world), "resource_id": resource}, headers=headers
+        )
+        assert response.status_code == 404, response.text
+    slots = await public.post(
+        "/v1/customer/availability", json=selection(world), headers=public_headers
+    )
+    slot = slots.json()["slots"][0]
+    body = selection(world)
+    body.pop("day")
+    body.update({"resource_id": resource, "start_at": slot["start_at"]})
+    held = await public.post(
+        "/v1/customer/holds",
+        headers={
+            **public_headers,
+            "Idempotency-Key": str(uuid7()),
+            "Booking-Token": secrets.token_urlsafe(32),
+        },
+        json=body,
+    )
+    assert held.status_code == 404, held.text
+
+    refused = await workforce.client.post(
+        f"/v1/salons/{world.a.tenant_id}/bookings",
+        headers=workforce.headers,
+        json={
+            "location_id": str(world.a.location_id),
+            "resource_id": resource,
+            "variant_id": str(world.catalog_a.base_variant_id),
+            "starts_at": slot["start_at"],
+            "customer_name": "FAKE Guest",
+            "customer_email": "guest@example.com",
+            "customer_phone": "+15550000000",
+        },
+    )
+    assert refused.status_code == 404, refused.text
+
+    with owner_tenant_transaction(owner_conn, world.a.tenant_id):
+        assert owner_conn.execute(
+            "select count(*) from gba.resource_allocations where resource_id=%s", (resource,)
+        ).fetchone() == (0,)
 
 
 def seed_kind(conn: psycopg.Connection, world: BookingWorld, kind: str) -> UUID:
@@ -276,7 +351,7 @@ async def test_the_staff_api_and_the_schema_know_three_resource_kinds(
     assert (await client.post(url, json=body("staff"), headers=headers)).status_code == 422
 
     with (
-        pytest.raises(psycopg.errors.CheckViolation, match="resources_kind_valid"),
+        pytest.raises(psycopg.errors.CheckViolation, match="staff resource requires its profile"),
         owner_tenant_transaction(owner_conn, world.a.tenant_id),
     ):
         owner_conn.execute(

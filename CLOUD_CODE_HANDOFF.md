@@ -1,6 +1,24 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current: package I started, plan and slice I0 — 2026-10-09
+## Current: I1 implemented and locally validated — 2026-10-09
+
+Branch codex/package-i1-workforce from I0 14190730. Forward0032 adds
+membership profiles sharing a stable user resource, versioned skills and shifts,
+atomic shared occupancy assignments, typed API, permission6 and fail-closed
+schema approval. [Evidence](docs/plan/evidence/2026-10-09-i1-workforce/VALIDATION.md),
+[independent review](docs/plan/evidence/2026-10-09-i1-workforce/INDEPENDENT_REVIEW.md).
+Focused 81/45.49s, Ruff/format/mypy 239 and web 94/build PASS; independent final
+code review PASS. Full project suite PASS: 1301 passed / 4 skipped / 772.12s.
+The first full run failed with DiskFull and remains preserved in the evidence.
+Three container tests and one external-site test remain NOT TESTED.
+WORK-01/CORE-04 unchanged;
+workforce remains closed outside test readiness overrides. No push/PR/CI,
+deployment, production migrations, cloud or provider action.
+I2 changes, I3 timesheets, I4 screens and acceptance remain. Staff home transfer
+is a separate lifecycle; unsafe moves fail closed. Inherited npm production
+dependency audit reports2 high nodes, not repaired by I1.
+
+## Previous: package I started, plan and slice I0 — 2026-10-09
 
 [Handoff and copyable prompt](docs/plan/NEXT_AGENT_PACKAGE_I_2026-10-09.md),
 [progress against the master plan](docs/plan/PROJECT_PROGRESS_2026-10-09.md),

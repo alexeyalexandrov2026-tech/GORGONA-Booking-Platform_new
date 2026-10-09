@@ -514,7 +514,8 @@ async def salon_overview(
 
         staff_count_row = await (
             await conn.execute(
-                "select count(*) from gba.resources where tenant_id = %s and is_active = true",
+                "select count(*) from gba.resources where tenant_id = %s and "
+                "is_active = true and kind <> 'staff'",
                 (salon_id,),
             )
         ).fetchone()
@@ -1338,7 +1339,7 @@ async def list_staff(
         rows = await (
             await access.conn.execute(
                 "select id, location_id, kind, display_name, is_active from gba.resources "
-                "order by display_name"
+                "where kind <> 'staff' order by display_name"
             )
         ).fetchall()
     return [
@@ -1398,7 +1399,8 @@ async def update_staff(
                 "update gba.resources set "
                 "display_name = coalesce(%s, display_name), "
                 "is_active = coalesce(%s, is_active) "
-                "where id = %s returning id, location_id, kind, display_name, is_active",
+                "where id = %s and kind <> 'staff' returning id, location_id, "
+                "kind, display_name, is_active",
                 (body.display_name, body.is_active, resource_id),
             )
         ).fetchone()
@@ -1425,7 +1427,8 @@ async def get_staff_schedule(
         conn = access.conn
         staff = await (
             await conn.execute(
-                "select id, display_name, is_active, location_id from gba.resources where id = %s",
+                "select id, display_name, is_active, location_id from "
+                "gba.resources where id = %s and kind <> 'staff'",
                 (resource_id,),
             )
         ).fetchone()
@@ -1479,7 +1482,8 @@ async def update_staff_schedule(
         conn = access.conn
         staff = await (
             await conn.execute(
-                "select id, display_name, is_active, location_id from gba.resources where id = %s",
+                "select id, display_name, is_active, location_id from "
+                "gba.resources where id = %s and kind <> 'staff'",
                 (resource_id,),
             )
         ).fetchone()
@@ -1542,7 +1546,8 @@ async def update_staff_services(
         conn = access.conn
         staff = await (
             await conn.execute(
-                "select id, display_name, is_active, location_id from gba.resources where id = %s",
+                "select id, display_name, is_active, location_id from "
+                "gba.resources where id = %s and kind <> 'staff'",
                 (resource_id,),
             )
         ).fetchone()

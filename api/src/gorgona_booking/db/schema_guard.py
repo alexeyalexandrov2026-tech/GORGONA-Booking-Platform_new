@@ -120,6 +120,33 @@ begin
                 message = 'the resource is booked in this interval';
         end if;
     end if;
+
+    if exists (select 1 from gba.resources r where r.tenant_id=new.tenant_id
+        and r.id=new.resource_id and (r.kind='staff') <> (new.source_kind='shift')) then
+        raise exception using errcode='23514', message='staff occupancy is only for shifts';
+    end if;
+    if new.source_kind='shift' then
+        if tg_op='INSERT' and not exists (
+            select 1 from gba.shift_assignments a join gba.work_shift_versions v
+              on v.tenant_id=a.tenant_id and v.shift_id=a.shift_id and v.revision=a.shift_revision
+              join gba.staff_profiles p on p.tenant_id=a.tenant_id and p.id=a.profile_id
+             where a.tenant_id=new.tenant_id and a.id=new.source_id
+               and p.resource_id=new.resource_id and v.profile_id=p.id and v.status='published'
+               and a.creation_xid=pg_current_xact_id() and v.creation_xid=a.creation_xid
+               and new.during=tstzrange(v.starts_at,v.ends_at,'[)') and new.state='confirmed'
+        ) then
+            raise exception using errcode='23514',
+                message='a shift allocation follows its exact assignment';
+        end if;
+        if tg_op='UPDATE' and new.state='released' and not exists (
+            select 1 from gba.shift_assignments a join gba.work_shift_versions v
+              on v.tenant_id=a.tenant_id and v.shift_id=a.shift_id and v.revision>a.shift_revision
+             where a.tenant_id=new.tenant_id and a.id=new.source_id
+        ) then
+            raise exception using errcode='23514',
+                message='a shift allocation is released by a new version';
+        end if;
+    end if;
     return new;
 end;
 """

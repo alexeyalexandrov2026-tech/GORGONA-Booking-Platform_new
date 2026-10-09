@@ -118,6 +118,17 @@ owner is asked to resolve the difference before I1.
 
 ## Limits
 
+I1 implementation note (2026-10-09): immutable membership profiles reference
+one stable resource per company/user, so revoke/re-invite cannot open another
+occupancy lane. An existing person's home transfer requires a separate audited
+lifecycle; same-home re-invite works and silent home moves fail closed. This
+does not introduce a second person record or change WORK-01/CORE-04 readiness.
+User-written timestamps use UTC bounds [0002-01-01,9999-01-01), with timezone
+padding for Python/Psycopg; window checks subtract durations rather than adding
+to max datetime. Own-schedule reads admit only that trusted user's cross-branch
+assignments after workforce.self authorization; other route scopes remain.
+[Evidence](../plan/evidence/2026-10-09-i1-workforce/VALIDATION.md).
+
 No payroll, rates, tips or commissions; no labour-law rules for overtime or
 breaks; no time off (unless the owner chooses it); no automatic scheduling or
 demand forecast; no notifications; no geolocation, kiosk or PIN clock; no offline

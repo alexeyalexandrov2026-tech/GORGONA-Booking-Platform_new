@@ -12,7 +12,10 @@
 пакет H технически принят). Ветка плана: `codex/package-i-workforce-plan`.
 Срез I0 — ветка `codex/package-i0-resource-kinds`,
 [перечень и результаты](evidence/2026-10-09-i0-resource-kinds/INVENTORY.md).
-Срезы I1–I4 не начаты.
+I1 реализован локально на codex/package-i1-workforce; полный прогон PASS:
+1301 passed / 4 skipped / 772.12s; сфокусированный 81 / 45.49s.
+[Доказательства и границы I1](evidence/2026-10-09-i1-workforce/VALIDATION.md).
+I2–I4 не начаты; готовность WORK-01 и CORE-04 не менялась.
 
 Связанные документы: [ADR-0025 (Proposed)](../adr/0025-workforce-shifts-and-timesheets.md),
 [план этапа 2](STAGE2_PLAN_2026-10-06.md), [мастер-план](GORGONA_MASTER_PLAN.md)

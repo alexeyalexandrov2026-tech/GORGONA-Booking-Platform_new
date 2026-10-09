@@ -16,6 +16,7 @@ from gorgona_booking.db.migrate import load_migrations
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction
 from gorgona_booking.db.provider_admission_guard import ADMISSION_TABLES, assert_admission_ready
 from gorgona_booking.db.provisioning import add_membership, owner_tenant_transaction
+from gorgona_booking.db.workforce_guard import WORKFORCE_TABLES, assert_workforce_ready
 from gorgona_booking.tenancy.authorization import authorized_tenant
 from tests.integration import test_management_api as shared
 from tests.integration.booking_support import BookingWorld
@@ -404,6 +405,13 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
             assert len(policies) == len(ADMISSION_TABLES)
             for policy in policies:
                 owner_conn.execute(policy.encode("utf-8"))
+            workforce = next(m.sql for m in load_migrations() if m.version == 32)
+            workforce_policies = re.findall(
+                r"create policy \w+_location_scope\b.*?;", workforce, re.DOTALL
+            )
+            assert len(workforce_policies) == len(WORKFORCE_TABLES)
+            for policy in workforce_policies:
+                owner_conn.execute(policy.encode("utf-8"))
         elif damage == "weakened_function":
             definition = boundary.partition("create policy locations_location_scope")[0]
             owner_conn.execute(
@@ -425,6 +433,7 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
 
     async with tenant_transaction(app_pool, world.a.tenant_id) as conn:
         await assert_admission_ready(conn)
+        await assert_workforce_ready(conn)
 
 
 async def test_owner_can_issue_immutable_branch_invitation_and_acceptance_keeps_scope(

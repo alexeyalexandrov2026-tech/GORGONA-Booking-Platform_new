@@ -47,12 +47,12 @@ async def set_audit_context(
 async def active_resource_location(conn: RuntimeConnection, resource_id: UUID) -> UUID:
     row = await (
         await conn.execute(
-            "select location_id, is_active from gba.resources where id = %s", (resource_id,)
+            "select location_id, is_active, kind from gba.resources where id = %s", (resource_id,)
         )
     ).fetchone()
     if row is None:
         raise NotFoundError("Resource not found", resource_id=str(resource_id))
-    if not row[1]:
+    if not row[1] or row[2] == "staff":
         raise ResourceUnavailableError("Resource is not available", resource_id=str(resource_id))
     return UUID(str(row[0]))
 
