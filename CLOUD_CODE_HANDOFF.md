@@ -23,8 +23,10 @@ code `319f144`. `finance_documents` is enableable by a company's own published
 configuration and the test-only readiness overrides are removed. Full local run
 on the acceptance tree: 1231 passed / 4 skipped / 666.05 s. ADR-0024 is
 Accepted. FIN-02 remains planned. Branch `codex/package-h-acceptance` holds the
-audit and the acceptance commit and is local until the owner approves a push;
-exact-SHA CI and an independent check of the acceptance commit are NOT DONE.
+audit `71359f9` and the acceptance commit `ec39622`; it was pushed on 2026-10-09
+by the owner's decision and exact-SHA CI for `ec39622` is success (push
+37887856597). No draft PR is open for it yet (GitHub sign-in needed); an
+independent check of the acceptance commit is NOT DONE.
 No merge/deploy/production/provider/funds action. The sections below are
 historical snapshots.
 

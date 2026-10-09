@@ -20,10 +20,11 @@ SQL-защит обнаружены тестами. Денежных дефек�
 [передача](NEXT_AGENT_H_ACCEPTANCE_2026-10-09.md). `finance_documents` включается
 опубликованной конфигурацией компании; тестовые подмены готовности сняты.
 Полный прогон на дереве коммита приёмки: 1231 passed / 4 skipped / 666.05 s.
-ADR-0024 — Accepted. FIN-02 остаётся planned. CI точного SHA и независимая
-проверка коммита приёмки — NOT DONE до публикации ветки
-`codex/package-h-acceptance`. Merge, deployment, production-миграции и операции
-с провайдерами не разрешены.
+ADR-0024 — Accepted. FIN-02 остаётся planned. Ветка
+`codex/package-h-acceptance` отправлена 2026-10-09 по решению владельца; CI
+точного SHA коммита приёмки `ec39622` — success (push 37887856597). Черновик PR
+поверх PR22 не открыт; независимая проверка коммита приёмки — NOT DONE. Merge,
+deployment, production-миграции и операции с провайдерами не разрешены.
 
 ## Previous H4/UI и admission, 2026-10-08
 
