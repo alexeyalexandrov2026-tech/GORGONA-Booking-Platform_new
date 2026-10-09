@@ -162,9 +162,13 @@ MODULES: tuple[PlatformModule, ...] = (
         _OPTIONAL,
         ("finance", "counterparties"),
         next(scenario.status for scenario in SCENARIOS if scenario.id == "FIN-03"),
-        "Invoices and external settlements are not available yet. This workflow cannot be enabled.",
-        "New invoices, obligations, reserves and external confirmations. "
-        "History, recovery and eligible non-money release must remain available.",
+        "Internal invoices and manual accruals, obligations with settlement reserves, manually "
+        "attested external payments with corrections, credit notes and refund obligations "
+        "(ADR-0024). Technical acceptance: "
+        "docs/plan/evidence/2026-10-09-h-acceptance/ACCEPTANCE.md (code 319f144). "
+        "No provider integration, network payments, tax invoices or currency conversion.",
+        "New invoices, accruals, obligations, reserves, external confirmations, corrections "
+        "and credits. History, recovery and eligible non-money release continue.",
     ),
     _module("procurement", "Procurement", _OPTIONAL, ("counterparties", "finance")),
     _module("inventory", "Inventory and customer warehouses", _OPTIONAL, ("products_services",)),

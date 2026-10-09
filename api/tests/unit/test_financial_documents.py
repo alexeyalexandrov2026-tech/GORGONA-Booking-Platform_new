@@ -236,20 +236,20 @@ def test_financial_document_gate_follows_fin03_and_requires_explicit_configurati
         MODULES_BY_ID,
         selection_problems,
     )
-    from gorgona_booking.business.readiness_registry import SCENARIOS
+    from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness
 
     assert MODULE_REGISTRY_VERSION == 2
     scenario = next(item for item in SCENARIOS if item.id == "FIN-03")
     financial = MODULES_BY_ID["finance_documents"]
+    assert scenario.status == Readiness.TECHNICALLY_VERIFIED
     assert financial.readiness == scenario.status
-    assert not financial.enableable
+    assert financial.enableable
     assert set(financial.depends_on) == {"finance", "counterparties"}
+    # Accepted is not enabled: a company still publishes it with its dependencies.
     assert "finance_documents" not in BASELINE_MODULE_IDS
-    assert ("MODULE_NOT_READY", "finance_documents") in [
-        (code, module_id)
-        for code, module_id, _ in selection_problems(
-            ("finance", "counterparties", "finance_documents")
-        )
+    assert selection_problems(("finance", "counterparties", "finance_documents")) == []
+    assert ("DEPENDENCY_MISSING", "finance_documents") in [
+        (code, module_id) for code, module_id, _ in selection_problems(("finance_documents",))
     ]
     assert MODULES_BY_ID["finance"].enableable
 

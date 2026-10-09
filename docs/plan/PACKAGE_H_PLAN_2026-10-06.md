@@ -1,5 +1,10 @@
 # Пакет H — счета, обязательства и подтвержденные внешние расчеты
 
+**Acceptance checkpoint 2026-10-09:** H1–H4 are implemented at `319f144` and FIN-03 is
+`technically_verified` by the owner's decision. The twelve criteria below were checked
+on that commit: [acceptance record](evidence/2026-10-09-h-acceptance/ACCEPTANCE.md).
+FIN-02 remains planned. Older checkpoint text describes its own date.
+
 **H3 checkpoint 2026-10-08:** settlement guards (forward 0025–0026, draft PR17),
 credit notes (forward 0027, branch `codex/package-h3-credits` stacked on PR17)
 and payment corrections (forward 0028, branch
@@ -264,18 +269,18 @@ test_access/approved требуют отдельной подтвержденн�
 
 | ID | Требуемая фактическая проверка | Результат до кода |
 |---|---|---|
-| H-01 | Invoice/manual accrual + obligation + balanced journal/control-account link + minimal receipt атомарны; rollback не оставляет частичный эффект; legacy G-entry не привязывается/не начисляется повторно автоматически | NOT TESTED |
-| H-02 | История issued invoice/credit/payment неизменяема; draft versions используют expected revision | NOT TESTED |
-| H-03 | Два документа одновременно резервируют 70 из A=100: ровно один принимает 70, второй отказывается; ожидание lock наблюдается в pg_locks | NOT TESTED |
-| H-04 | Два concurrent partial confirmations, release/confirm и credit/reserve сохраняют P+C+R<=A и не дают отрицательные counters | NOT TESTED |
-| H-05 | Idempotency replay, другой ключ с тем же external identity, reload/24h receipt expiry/cancel-before-late-original не повторяют деньги | NOT TESTED |
-| H-06 | Credit 100/paid70/credit50 дает C30/refund20; correction сохраняет external identity и effective P/C/R; реальный refund не отменяется ради correction; deferred→manual recognition→credit по явно выбранному счету дает согласованный G balance | NOT TESTED |
-| H-07 | Закрытый период запрещает все money effects H; права scope/tenant/book/currency/FK не смешиваются; H-owned ledger reverse запрещен | NOT TESTED |
-| H-08 | Direct SQL не обходит budget/source/history; повреждение утвержденных controls/readiness дает 503 | NOT TESTED |
-| H-09 | Finance OFF/FIN-03 unverified блокируют новые effects; read/recovery/non-money release остаются допустимыми | NOT TESTED |
-| H-10 | Admission metadata не включает capabilities; без проверенной интеграции нет network charge/refund/webhook handling | NOT TESTED |
-| H-11 | Desktop/mobile + real OIDC/API/PostgreSQL: invoice, reserve/partial pay, response loss/reload, credit/refund, truthful states, Axe/overflow | NOT TESTED |
-| H-12 | G regression + old/new journal contracts + full Python/web/build/container CI точного code SHA и независимый review | NOT TESTED |
+| H-01 | Invoice/manual accrual + obligation + balanced journal/control-account link + minimal receipt атомарны; rollback не оставляет частичный эффект; legacy G-entry не привязывается/не начисляется повторно автоматически | PASS 2026-10-09 |
+| H-02 | История issued invoice/credit/payment неизменяема; draft versions используют expected revision | PASS 2026-10-09 |
+| H-03 | Два документа одновременно резервируют 70 из A=100: ровно один принимает 70, второй отказывается; ожидание lock наблюдается в pg_locks | PASS 2026-10-09 |
+| H-04 | Два concurrent partial confirmations, release/confirm и credit/reserve сохраняют P+C+R<=A и не дают отрицательные counters | PASS 2026-10-09 |
+| H-05 | Idempotency replay, другой ключ с тем же external identity, reload/24h receipt expiry/cancel-before-late-original не повторяют деньги | PASS 2026-10-09 |
+| H-06 | Credit 100/paid70/credit50 дает C30/refund20; correction сохраняет external identity и effective P/C/R; реальный refund не отменяется ради correction; deferred→manual recognition→credit по явно выбранному счету дает согласованный G balance | PASS 2026-10-09 |
+| H-07 | Закрытый период запрещает все money effects H; права scope/tenant/book/currency/FK не смешиваются; H-owned ledger reverse запрещен | PASS 2026-10-09 |
+| H-08 | Direct SQL не обходит budget/source/history; повреждение утвержденных controls/readiness дает 503 | PASS 2026-10-09 |
+| H-09 | Finance OFF/FIN-03 unverified блокируют новые effects; read/recovery/non-money release остаются допустимыми | PASS 2026-10-09 |
+| H-10 | Admission metadata не включает capabilities; без проверенной интеграции нет network charge/refund/webhook handling | PASS 2026-10-09 |
+| H-11 | Desktop/mobile + real OIDC/API/PostgreSQL: invoice, reserve/partial pay, response loss/reload, credit/refund, truthful states, Axe/overflow | PASS 2026-10-09 |
+| H-12 | G regression + old/new journal contracts + full Python/web/build/container CI точного code SHA и независимый review | PASS 2026-10-09 |
 
 Baseline G свежо проверен через connected GitHub: CI
 [37499485016](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/37499485016)

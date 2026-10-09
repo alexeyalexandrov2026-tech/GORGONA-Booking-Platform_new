@@ -1,10 +1,10 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current package H after the independent audit — 2026-10-09
+## Current package H technically accepted (FIN-03) — 2026-10-09
 
 [Handoff and copyable prompt](docs/plan/NEXT_AGENT_H_ACCEPTANCE_2026-10-09.md),
 [audit](docs/plan/evidence/2026-10-09-h-acceptance-audit/AUDIT.md),
-[acceptance candidate](docs/plan/evidence/2026-10-09-h-acceptance/ACCEPTANCE_CANDIDATE.md).
+[acceptance record](docs/plan/evidence/2026-10-09-h-acceptance/ACCEPTANCE.md).
 H1–H4 are implemented at `319f144` on `codex/package-h4-ui-admission`:
 migrations 0021–0031, the H API and the Financial documents and Provider
 admission screens. Draft PR15–PR22 are stacked and open; nothing is merged.
@@ -18,10 +18,13 @@ caught. No money defect was found. Findings A-01–A-11 are in the audit; the on
 P2 (provider admission is writable with `finance` alone) is closed by the
 owner's decision of 2026-10-09: no code change, H4 is not deployed before H
 acceptance, admission is accepted together with H.
-FIN-03/FIN-02 remain planned and `finance_documents` cannot be enabled;
-ADR-0024 remains Proposed. Promoting FIN-03 needs the owner's direct decision.
-The audit branch `codex/package-h-acceptance` holds documents only and is local
-until the owner approves a push.
+**FIN-03 is `technically_verified` by the owner's decision of 2026-10-09** on
+code `319f144`. `finance_documents` is enableable by a company's own published
+configuration and the test-only readiness overrides are removed. Full local run
+on the acceptance tree: 1231 passed / 4 skipped / 666.05 s. ADR-0024 is
+Accepted. FIN-02 remains planned. Branch `codex/package-h-acceptance` holds the
+audit and the acceptance commit and is local until the owner approves a push;
+exact-SHA CI and an independent check of the acceptance commit are NOT DONE.
 No merge/deploy/production/provider/funds action. The sections below are
 historical snapshots.
 

@@ -146,20 +146,9 @@ class InvoiceWorld:
 
 
 @pytest.fixture
-async def invoices(
-    enabled: LedgerWorld, idp: FakeIdp, monkeypatch: pytest.MonkeyPatch, app_pool: RuntimePool
-) -> InvoiceWorld:
-    # TEST ONLY: H remains planned in the real registry. A separate negative
-    # test withdraws this override while the positive publication remains.
-    verified = tuple(
-        m.model_copy(update={"readiness": Readiness.TECHNICALLY_VERIFIED, "enableable": True})
-        if m.id == "finance_documents"
-        else m
-        for m in modules.MODULES
-    )
-    monkeypatch.setattr(modules, "MODULES", verified)
-    monkeypatch.setattr(modules, "MODULES_BY_ID", {m.id: m for m in verified})
-    monkeypatch.setattr(modules, "MODULE_CATALOG", modules.ModuleCatalog(modules=verified))
+async def invoices(enabled: LedgerWorld, idp: FakeIdp, app_pool: RuntimePool) -> InvoiceWorld:
+    # The accepted registry admits H; each company still enables it by publication.
+    # A separate negative test withdraws the acceptance while the publication remains.
     config = Config(enabled.client, idp)
     await config.publish(
         enabled.user,

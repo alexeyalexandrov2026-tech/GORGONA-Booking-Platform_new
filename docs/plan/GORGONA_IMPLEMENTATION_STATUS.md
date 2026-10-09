@@ -1,6 +1,6 @@
 # GORGONA — реестр реализации
 
-## Current: пакет H после независимого аудита, 2026-10-09
+## Current: пакет H принят технически (FIN-03), 2026-10-09
 
 H1–H4 в коде на `319f144` (`codex/package-h4-ui-admission`, черновики PR15–PR22,
 ничего не слито). CI точного SHA — success. Независимый аудит в отдельной
@@ -15,11 +15,15 @@ SQL-защит обнаружены тестами. Денежных дефек�
 меняется, H4 не развёртывается до приёмки H. Остальные находки — устаревшие
 документы и наблюдения.
 
-[Запись о приёмке, кандидат](evidence/2026-10-09-h-acceptance/ACCEPTANCE_CANDIDATE.md),
-[передача](NEXT_AGENT_H_ACCEPTANCE_2026-10-09.md). FIN-03/FIN-02 остаются
-planned; повышение FIN-03 — отдельное прямое решение владельца. ADR-0024 —
-Proposed. Merge, deployment, production-миграции и операции с провайдерами не
-разрешены. Ветка аудита `codex/package-h-acceptance` содержит только документы.
+**FIN-03 — `technically_verified` по решению владельца 2026-10-09**, код
+`319f144`: [запись о приёмке](evidence/2026-10-09-h-acceptance/ACCEPTANCE.md),
+[передача](NEXT_AGENT_H_ACCEPTANCE_2026-10-09.md). `finance_documents` включается
+опубликованной конфигурацией компании; тестовые подмены готовности сняты.
+Полный прогон на дереве коммита приёмки: 1231 passed / 4 skipped / 666.05 s.
+ADR-0024 — Accepted. FIN-02 остаётся planned. CI точного SHA и независимая
+проверка коммита приёмки — NOT DONE до публикации ветки
+`codex/package-h-acceptance`. Merge, deployment, production-миграции и операции
+с провайдерами не разрешены.
 
 ## Previous H4/UI и admission, 2026-10-08
 

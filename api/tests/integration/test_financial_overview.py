@@ -1,4 +1,4 @@
-"""The UI write gate reports actual readiness/publication, without enabling H."""
+"""The UI write gate reports actual readiness and publication; reading enables nothing."""
 
 from uuid import uuid7
 
@@ -31,16 +31,31 @@ async def test_overview_requires_authentication(client: httpx.AsyncClient) -> No
     assert (await client.get(path(uuid7()))).status_code == 401
 
 
-async def test_unverified_h_is_closed_even_with_g_enabled(enabled: LedgerWorld) -> None:
+async def test_accepted_h_stays_closed_until_published_and_when_acceptance_is_withdrawn(
+    enabled: LedgerWorld, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    feature = modules.MODULES_BY_ID["finance_documents"]
+    assert (feature.readiness, feature.enableable) == (Readiness.TECHNICALLY_VERIFIED, True)
+    # G is published for this company; the accepted H workflow is not.
     result = await enabled.client.get(path(enabled.business), headers=enabled.headers())
     assert result.status_code == 200, result.text
     assert result.json() == {
         "schema_version": 1,
         "business_id": str(enabled.business),
         "write_enabled": False,
-        "blocked_reason": "not_ready",
+        "blocked_reason": "module_disabled",
     }
-    assert modules.MODULES_BY_ID["finance_documents"].readiness == Readiness.PLANNED
+    monkeypatch.setitem(
+        modules.MODULES_BY_ID,
+        "finance_documents",
+        feature.model_copy(update={"enableable": False, "readiness": Readiness.PLANNED}),
+    )
+    withdrawn = await enabled.client.get(path(enabled.business), headers=enabled.headers())
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert (withdrawn.json()["write_enabled"], withdrawn.json()["blocked_reason"]) == (
+        False,
+        "not_ready",
+    )
 
 
 async def test_overview_tracks_publication_without_changing_it(

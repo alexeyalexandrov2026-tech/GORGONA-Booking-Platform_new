@@ -1,5 +1,18 @@
 # Development
 
+## H technical acceptance (FIN-03, 2026-10-09)
+
+FIN-03 is `technically_verified` on code `319f144` by the owner's decision:
+[acceptance record](plan/evidence/2026-10-09-h-acceptance/ACCEPTANCE.md),
+[independent audit](plan/evidence/2026-10-09-h-acceptance-audit/AUDIT.md).
+`finance_documents` is enableable. A company turns it on only by publishing a
+configuration that selects it with `finance` and `counterparties`. H tests use
+that real publication and no readiness override; each H suite keeps a test that
+withdraws the readiness and expects `MODULE_NOT_READY`. FIN-02 stays planned.
+Statements below that FIN-03 is planned describe their own dates. Published
+migrations 0001–0031 must retain their checksums. Production migration and
+deployment still need separate owner authorization.
+
 ## H3 forward corrections and upgrade preflight (0030, 2026-10-08)
 
 Owner-approved F1–F5 corrections and their measured checks are recorded in

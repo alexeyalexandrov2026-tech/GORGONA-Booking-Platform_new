@@ -1,11 +1,13 @@
 # ADR-0024 — Invoices, obligations and externally confirmed settlements
 
-- Status: **Proposed (2026-10-06)**; no implementation or acceptance is implied.
+- Status: **Accepted (2026-10-09)** as implemented, with the owner's FIN-03 technical
+  acceptance: [record](../plan/evidence/2026-10-09-h-acceptance/ACCEPTANCE.md).
+  Proposed on 2026-10-06; the text below keeps its original wording.
 - Scope: package H of the owner-approved stage 2; FIN-03 and the admission-record
   foundation of FIN-02. [Execution plan](../plan/PACKAGE_H_PLAN_2026-10-06.md).
 - Base: accepted G at 5be6e7abd7b552903a4f4b2884b150c62532c17d; ADR-0023.
-- Decision owners: unassigned; owner confirmation of the proposed package rules
-  is required before adding money-effect operations.
+- Decision owner: the product owner. Rules that were not discussed separately were
+  accepted as implemented; changing one needs a new slice and a forward migration.
 
 ## Context
 
@@ -169,6 +171,12 @@ independent review and a separate acceptance commit.
 FIN-03 remains planned until code exists, implemented while the feature gate is
 closed, technically_verified only after all H phases pass. FIN-02, provider
 production admission, pilot and jurisdiction-specific compliance remain separate.
+
+**Update 2026-10-09.** H1–H4 are implemented at `319f144`. Exact-SHA CI, the reviews
+listed in the acceptance record and an independent audit are recorded, and FIN-03 is
+`technically_verified` by the owner's decision. The paragraphs above describe the
+state at proposal time. FIN-02, provider production admission, pilot and
+jurisdiction-specific compliance remain separate.
 
 ## Sources and limits
 

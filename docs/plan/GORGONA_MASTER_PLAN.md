@@ -1,6 +1,15 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
-**H4/UI checkpoint, 8 October:** branch `codex/package-h4-ui-admission` from
+**H acceptance checkpoint, 9 October:** FIN-03 is `technically_verified` on code
+`319f144` by the owner's decision, after exact-SHA CI, the recorded reviews and an
+independent audit. [Acceptance](evidence/2026-10-09-h-acceptance/ACCEPTANCE.md),
+[audit](evidence/2026-10-09-h-acceptance-audit/AUDIT.md),
+[handoff](NEXT_AGENT_H_ACCEPTANCE_2026-10-09.md). `finance_documents` is enableable
+by a company's own published configuration. FIN-02 remains planned. No merge,
+deployment or production migration is authorized. Earlier H checkpoint statements
+below are historical for their source and date.
+
+**Historical H4/UI checkpoint, 8 October:** branch `codex/package-h4-ui-admission` from
 F1–F5 parent PR21 `12875e8` adds Financial documents UI and provider admission
 metadata without activation. Reuses the existing H APIs/G ledger and adds only
 forward 0031. [Current evidence](evidence/2026-10-08-h4-ui-admission/VALIDATION.md),

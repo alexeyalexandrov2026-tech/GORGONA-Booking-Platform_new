@@ -1,17 +1,19 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-09)
 
-## Current: package H after the independent audit
+## Current: package H technically accepted (FIN-03)
 
 Read [handoff and copyable prompt](NEXT_AGENT_H_ACCEPTANCE_2026-10-09.md),
 [audit](evidence/2026-10-09-h-acceptance-audit/AUDIT.md) and
-[acceptance candidate](evidence/2026-10-09-h-acceptance/ACCEPTANCE_CANDIDATE.md).
+[acceptance record](evidence/2026-10-09-h-acceptance/ACCEPTANCE.md).
 Code of H1–H4: `319f144`, branch `codex/package-h4-ui-admission`, draft PR22 on
 PR21; draft PR15–PR22 are open and unmerged. Exact-SHA CI for `319f144` is
-success. Audit documents: branch `codex/package-h-acceptance`, checkout
+success. Audit and acceptance commit: branch `codex/package-h-acceptance`, checkout
 `C:\Users\alexa\Documents\ChatGPT\gorgona-h-acceptance`; local until the owner
 approves a push. Independent full run 1231 passed / 4 skipped; static and web
 gates PASS; four SQL guard mutations caught; no money defect found.
-FIN-03/FIN-02 remain planned; promotion needs the owner's direct decision.
+FIN-03 is `technically_verified` by the owner's decision of 2026-10-09; FIN-02
+remains planned. The acceptance commit's own CI and independent check are NOT
+DONE until the branch is published.
 Next after H acceptance: package I (shifts, swaps, timesheets), plan and ADR
 first. Merge, deployment and production migration are not authorized. Read the
 actual HEAD, remote, PR and CI state before continuing.

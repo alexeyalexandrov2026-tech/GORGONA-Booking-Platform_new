@@ -1,7 +1,7 @@
 """Actual OIDC/PKCE, H financial/admission UI and PostgreSQL on desktop/mobile.
 
-The production H registry is tested closed first. Its positive override is confined
-to this disposable fixture; neither source registry nor deployed data is changed.
+The accepted registry is used as it is. The workflow is tested closed while the
+company has not published it, then enabled by a real publication in this fixture.
 """
 
 import os
@@ -14,8 +14,6 @@ import httpx
 import psycopg
 import pytest
 
-from gorgona_booking.business import modules
-from gorgona_booking.business.readiness_registry import Readiness
 from gorgona_booking.db.provisioning import add_membership, owner_tenant_transaction
 from tests.integration.booking_support import BookingWorld
 from tests.integration.conftest import ProvisionedDatabase
@@ -27,11 +25,10 @@ from tests.integration.test_management_browser import _browser_env, _management_
 from tests.support.fake_idp import FakeIdp
 
 
-def test_h4_real_browser_and_closed_production_gate(
+def test_h4_real_browser_closed_until_published_then_enabled(
     world: BookingWorld,
     owner_conn: psycopg.Connection,
     test_database: ProvisionedDatabase,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     if os.environ.get("GBA_REQUIRE_BROWSER") != "1":
         pytest.skip("BLOCKED: H4 browser requires GBA_REQUIRE_BROWSER=1")
@@ -127,18 +124,7 @@ def test_h4_real_browser_and_closed_production_gate(
             books.append(book)
         request("PUT", f"counterparties/{uuid7()}", card(display_name="FAKE Finance Customer"))
         browser("test:management:finance", "closed")
-        # Positive workflow testing only; no acceptance/readiness source mutation.
-        verified = tuple(
-            module.model_copy(
-                update={"readiness": Readiness.TECHNICALLY_VERIFIED, "enableable": True}
-            )
-            if module.id == "finance_documents"
-            else module
-            for module in modules.MODULES
-        )
-        monkeypatch.setattr(modules, "MODULES", verified)
-        monkeypatch.setattr(modules, "MODULES_BY_ID", {m.id: m for m in verified})
-        monkeypatch.setattr(modules, "MODULE_CATALOG", modules.ModuleCatalog(modules=verified))
+        # The company enables the accepted workflow by its own publication.
         publish(1, ["booking_resources", "finance", "counterparties", "finance_documents"])
         browser("test:management:finance", "enabled")
         browser("test:management:admission", "enabled")

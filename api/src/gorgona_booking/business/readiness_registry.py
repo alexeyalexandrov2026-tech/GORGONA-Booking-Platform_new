@@ -164,7 +164,22 @@ SCENARIOS: tuple[ScenarioReadiness, ...] = (
         verified_on=date(2026, 10, 6),
     ),
     _planned("FIN-02", "No accepted payment integration."),
-    _planned("FIN-03", "No financial obligations, reserves or partial payouts."),
+    ScenarioReadiness(
+        id="FIN-03",
+        status=Readiness.TECHNICALLY_VERIFIED,
+        code_version="319f144f9a234fbfc2cfef5f0aea2708d3870d7e",
+        schema_version=31,
+        scope="Internal invoices and manual accruals, obligations with settlement reserves under "
+        "the P + C + R <= A cap, manually attested external payments with corrections and voids, "
+        "credit notes with separate refund obligations. Technical evidence includes exact-SHA CI, "
+        "independent reviews and an independent audit. No provider integration, network payment, "
+        "tax or statutory invoice, FX or production approval.",
+        evidence=(
+            "docs/plan/evidence/2026-10-09-h-acceptance/ACCEPTANCE.md",
+            "docs/plan/evidence/2026-10-09-h-acceptance-audit/AUDIT.md",
+        ),
+        verified_on=date(2026, 10, 9),
+    ),
     _planned("STOCK-01", "No owner-linked material documents or movements."),
     _planned("WORK-01", "Weekly staff hours are not shifts, swaps or versioned timesheets."),
     _planned(

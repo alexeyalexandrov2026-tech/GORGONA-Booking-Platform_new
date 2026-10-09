@@ -128,6 +128,7 @@ async def test_lifecycle_keeps_every_version_and_replays(
         BOOKING,
         "documents",
         "finance",
+        "finance_documents",
     ]
     assert len(catalog["modules"]) == 19
     registry = (
@@ -647,10 +648,12 @@ async def test_configuration_is_company_wide_and_not_delegated(
     assert audited[0] >= 1
 
 
-async def test_registry_v2_preserves_published_v1_finance_and_blocks_unverified_h(
+async def test_registry_v2_preserves_published_v1_finance_and_admits_h_only_when_accepted(
     config: Config, world: BookingWorld, owner_a: FakeUser
 ) -> None:
     from gorgona_booking.business import configurations as config_service
+    from gorgona_booking.business import modules
+    from gorgona_booking.business.readiness_registry import Readiness
 
     a = world.a.tenant_id
     await config.profile(owner_a, a, 0, [1])
@@ -667,11 +670,31 @@ async def test_registry_v2_preserves_published_v1_finance_and_blocks_unverified_
 
     drafted = await config.draft(owner_a, a, 1, ["finance", "counterparties", "finance_documents"])
     assert drafted.status_code == 200, drafted.text
-    refused = await config.step(owner_a, a, 2, "validate", 1)
-    assert (refused.status_code, refused.json()["error"]["code"]) == (422, "CONFIGURATION_INVALID")
-    assert {
-        (p["code"], p["module_id"]) for p in refused.json()["error"]["details"]["problems"]
-    } == {("MODULE_NOT_READY", "finance_documents")}
-    after = (await config.get(owner_a, a)).json()
-    assert after["published"] == current["published"]
-    assert after["effective_module_ids"] == current["effective_module_ids"]
+    accepted = modules.MODULES_BY_ID["finance_documents"]
+    assert (accepted.readiness, accepted.enableable) == (Readiness.TECHNICALLY_VERIFIED, True)
+    # Without technical acceptance the same selection is refused and nothing changes.
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setitem(
+            modules.MODULES_BY_ID,
+            "finance_documents",
+            accepted.model_copy(update={"enableable": False, "readiness": Readiness.PLANNED}),
+        )
+        refused = await config.step(owner_a, a, 2, "validate", 1)
+        assert (refused.status_code, refused.json()["error"]["code"]) == (
+            422,
+            "CONFIGURATION_INVALID",
+        )
+        assert {
+            (p["code"], p["module_id"]) for p in refused.json()["error"]["details"]["problems"]
+        } == {("MODULE_NOT_READY", "finance_documents")}
+        after = (await config.get(owner_a, a)).json()
+        assert after["published"] == current["published"]
+        assert after["effective_module_ids"] == current["effective_module_ids"]
+    # The accepted workflow is enabled only by this explicit publication.
+    validated = await config.step(owner_a, a, 2, "validate", 1)
+    assert validated.status_code == 200, validated.text
+    published = await config.step(owner_a, a, 2, "publish", 2)
+    assert published.status_code == 200, published.text
+    final = (await config.get(owner_a, a)).json()
+    assert final["published"]["registry_version"] == 2
+    assert "finance_documents" in final["effective_module_ids"]
