@@ -527,6 +527,7 @@ async def list_shifts(
     after: UUID | None,
     limit: int,
     user: UUID | None,
+    open_only: bool = False,
 ) -> ShiftList:
     rows = await (
         await conn.execute(
@@ -543,8 +544,10 @@ async def list_shifts(
             "and a.shift_id=s.id and a.shift_revision=v.revision "
             "where s.tenant_id=%s and v.starts_at<%s and v.ends_at>%s "
             "and (%s::uuid is null or s.id>%s) "
-            "and (%s::uuid is null or m.user_id=%s) order by s.id limit %s",
-            (business, ends, starts, after, after, user, user, limit + 1),
+            "and (%s::uuid is null or m.user_id=%s) "
+            "and (not %s or (v.status='published' and v.profile_id is null)) "
+            "order by s.id limit %s",
+            (business, ends, starts, after, after, user, user, open_only, limit + 1),
         )
     ).fetchall()
     items = tuple(

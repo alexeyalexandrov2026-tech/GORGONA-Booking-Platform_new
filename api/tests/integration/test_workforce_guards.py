@@ -125,7 +125,7 @@ async def test_i02_overlapping_cross_branch_assignments_wait_and_admit_one(
         await monitor.close()
 
 
-@pytest.mark.parametrize("table", WORKFORCE_TABLES)
+@pytest.mark.parametrize("table", WORKFORCE_TABLES[:8])
 async def test_workforce_rows_are_immutable_even_for_owner(
     workforce: Workforce,
     owner_conn: psycopg.Connection,

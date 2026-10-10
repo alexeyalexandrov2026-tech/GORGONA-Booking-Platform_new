@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 import httpx
 import psycopg
 import pytest
+from psycopg import sql
 
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.auth.principal import Principal
@@ -405,12 +406,21 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
             assert len(policies) == len(ADMISSION_TABLES)
             for policy in policies:
                 owner_conn.execute(policy.encode("utf-8"))
-            workforce = next(m.sql for m in load_migrations() if m.version == 32)
+            workforce = "\n".join(m.sql for m in load_migrations() if m.version in (32, 33))
             workforce_policies = re.findall(
                 r"create policy \w+_location_scope\b.*?;", workforce, re.DOTALL
             )
             assert len(workforce_policies) == len(WORKFORCE_TABLES)
             for policy in workforce_policies:
+                # Child policies can depend on the parent relation rather than
+                # the dropped helper itself, so CASCADE may leave them intact.
+                declaration = re.match(r"create policy (\w+) on gba\.(\w+)", policy)
+                assert declaration is not None
+                owner_conn.execute(
+                    sql.SQL("drop policy if exists {} on gba.{}").format(
+                        sql.Identifier(declaration[1]), sql.Identifier(declaration[2])
+                    )
+                )
                 owner_conn.execute(policy.encode("utf-8"))
         elif damage == "weakened_function":
             definition = boundary.partition("create policy locations_location_scope")[0]

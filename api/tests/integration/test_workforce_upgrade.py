@@ -8,6 +8,7 @@ from gorgona_booking.db.pool import create_runtime_pool, tenant_transaction
 from gorgona_booking.db.provisioning import owner_tenant_transaction
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.db.workforce_guard import WORKFORCE_TABLES, assert_workforce_ready
+from gorgona_booking.errors import DatabaseUnavailableError
 from tests.integration.booking_support import at
 from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.seed import seed_fake_catalog, seed_resource, seed_salon
@@ -48,13 +49,14 @@ async def test_nonempty_0031_upgrade_preserves_booking_occupancy_and_checksums(
             owner.execute("select version,checksum from public.gba_schema_migrations")
         )
     before = snapshot(database)
-    applied = apply_migrations(database.owner_dsn)
+    i1_migrations = load_migrations()[:32]
+    applied = apply_migrations(database.owner_dsn, i1_migrations)
     assert [m.version for m in applied] == [32]
-    assert apply_migrations(database.owner_dsn) == []
+    assert apply_migrations(database.owner_dsn, i1_migrations) == []
     after = snapshot(database)
     assert {table: after[table] for table in before} == before
-    assert set(after) - set(before) == set(WORKFORCE_TABLES)
-    assert all(after[table][0] == 0 for table in WORKFORCE_TABLES)
+    assert set(after) - set(before) == set(WORKFORCE_TABLES[:8])
+    assert all(after[table][0] == 0 for table in WORKFORCE_TABLES[:8])
     with psycopg.connect(database.owner_dsn) as owner:
         current: dict[int, str] = dict(
             owner.execute("select version,checksum from public.gba_schema_migrations")
@@ -65,6 +67,9 @@ async def test_nonempty_0031_upgrade_preserves_booking_occupancy_and_checksums(
     try:
         async with tenant_transaction(pool, salon.tenant_id) as conn:
             await assert_location_scope_ready(conn)
-            await assert_workforce_ready(conn)
+            # The CURRENT application requires I2 as well; a preserved I1-only
+            # upgrade remains a valid historical step, not current readiness.
+            with pytest.raises(DatabaseUnavailableError):
+                await assert_workforce_ready(conn)
     finally:
         await pool.close()

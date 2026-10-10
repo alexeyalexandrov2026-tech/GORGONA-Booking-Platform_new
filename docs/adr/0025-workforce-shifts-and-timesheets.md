@@ -118,6 +118,19 @@ owner is asked to resolve the difference before I1.
 
 ## Limits
 
+I2 implementation note (2026-10-10): forward0033 adds immutable requests,
+participant/required-skill snapshots and consent/decision events. Pickup has no
+outgoing employee: its recipient explicitly accepts, then a different manager
+user approves. Pickup is limited to home-branch open shifts; own existing
+cross-home handover/swap and history remain accessible. Cross-home approval
+requires company-wide management. I1 manual manager reassignment is retained;
+gba.user_id is trusted application context, not SQL-client authentication.
+Atomic swaps reuse I1 versions/assignments/shared allocations via one insert
+statement and an AFTER STATEMENT transition table; immediate exclusion remains.
+The trigger refuses hidden prior resources and verifies the complete release
+count before any new assignment. No dependency or readiness promotion.
+[Evidence](../plan/evidence/2026-10-10-i2-shift-changes/VALIDATION.md).
+
 I1 implementation note (2026-10-09): immutable membership profiles reference
 one stable resource per company/user, so revoke/re-invite cannot open another
 occupancy lane. An existing person's home transfer requires a separate audited

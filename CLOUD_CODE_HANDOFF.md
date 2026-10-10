@@ -1,6 +1,25 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current: I1 implemented and locally validated — 2026-10-09
+## Current: I2 implemented and locally validated — 2026-10-10
+
+Local branch codex/package-i2-shift-changes on I1
+69270cc8bfdfb763cc8f5fc9b7892b13db987bce. Forward0033 adds handover, swap and
+home-open pickup with explicit consent, manager approval, exact skill snapshots,
+atomic shared occupancy and original-event receipt replay. No new dependency.
+[Evidence](docs/plan/evidence/2026-10-10-i2-shift-changes/VALIDATION.md),
+[independent source review](docs/plan/evidence/2026-10-10-i2-shift-changes/INDEPENDENT_REVIEW.md).
+Focused156/114.89s plus six replacement-skill cases/7.48s, Ruff/format/mypy248,
+web94/build and corrected-source review PASS. Full suite PASS:
+1380 passed / 4 skipped / 738.66s. All ten races require observed pg_locks waits.
+Independent findings reproduced and fixed: hidden prior resource release under
+RLS and foreign self pickup. Migrations0001–0032 unchanged. WORK-01/CORE-04 and
+the workforce readiness lock remain unchanged. No push/PR; exact-SHA CI,
+containers (3 skip), external site (1 skip), deployment, production and load/soak
+NOT TESTED. Inherited production
+npm audit FAIL:2 high nodes. I3 timesheets, I4 screens and package acceptance
+remain; the FIN-03 acceptance check is a separate task. No CodeRabbit.
+
+## Previous: I1 implemented and locally validated — 2026-10-09
 
 Branch codex/package-i1-workforce from I0 14190730. Forward0032 adds
 membership profiles sharing a stable user resource, versioned skills and shifts,

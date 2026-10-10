@@ -1,4 +1,4 @@
-"""I1 package-owned schema approvals. Never learn approvals from the target database."""
+"""I1/I2 packaged schema approvals. Never learn approvals from the target database."""
 
 import re
 from collections import defaultdict
@@ -9,7 +9,10 @@ from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import DatabaseUnavailableError
 
 _MIGRATIONS = resources.files("gorgona_booking.db") / "migrations"
-_SQL = (_MIGRATIONS / "0032_workforce.sql").read_text(encoding="utf-8")
+_SQL = "\n".join(
+    (_MIGRATIONS / filename).read_text(encoding="utf-8")
+    for filename in ("0032_workforce.sql", "0033_shift_changes.sql")
+)
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
 WORKFORCE_TABLES = tuple(_BLOCKS)
 _FUNCTIONS = dict(
@@ -30,7 +33,7 @@ _TRIGGERS = tuple(
 )
 _DECLARED_TRIGGERS = set(re.findall(r"create (?:constraint )?trigger (\w+)", _SQL))
 if {trigger[1] for trigger in _TRIGGERS} != _DECLARED_TRIGGERS:
-    raise RuntimeError("Every I1 trigger must have an explicit packaged approval")
+    raise RuntimeError("Every workforce trigger must have an explicit packaged approval")
 # 0032 replaces this existing shared function. I1 also verifies its literal
 # semantics, rather than inheriting whitespace normalization from older guards.
 _TRIGGERS += (
@@ -117,6 +120,36 @@ _CHECKS = {
     "200)) AND (name !~ '[[:cntrl:]]'::text)))",
     "work_skill_versions_revision_check": "((revision > 0))",
     "work_skills_code_check": "((code ~ '^[A-Z][A-Z0-9_]{0,63}$'::text))",
+    "shift_change_events_action_check": (
+        "((action = ANY (ARRAY['propose'::text, 'accept'::text, 'approve'::text, "
+        "'decline'::text, 'withdraw'::text])))"
+    ),
+    "shift_change_events_revision_check": ("((revision > 0))"),
+    "shift_change_events_status_check": (
+        "((status = ANY (ARRAY['proposed'::text, 'accepted'::text, 'approved'::te"
+        "xt, 'declined'::text, 'withdrawn'::text])))"
+    ),
+    "shift_change_requests_kind_check": (
+        "((kind = ANY (ARRAY['handover'::text, 'swap'::text, 'pickup'::text])))"
+    ),
+    "shift_change_requests_revision_check": (
+        "(((shift_revision >= 1) AND (shift_revision <= 2147483646)))"
+    ),
+    "shift_change_requests_shape_check": (
+        "((((kind = 'swap'::text) AND (other_shift_id IS NOT NULL) AND (other_shi"
+        "ft_id <> shift_id) AND ((other_shift_revision >= 1) AND (other_shift_rev"
+        "ision <= 2147483646)) AND (other_location_id IS NOT NULL) AND (from_prof"
+        "ile_id IS NOT NULL) AND (from_assignment_id IS NOT NULL) AND (other_assi"
+        "gnment_id IS NOT NULL)) OR ((kind = 'handover'::text) AND (other_shift_i"
+        "d IS NULL) AND (other_shift_revision IS NULL) AND (other_location_id IS "
+        "NULL) AND (other_assignment_id IS NULL) AND (from_profile_id IS NOT NULL"
+        ") AND (from_assignment_id IS NOT NULL)) OR ((kind = 'pickup'::text) AND "
+        "(other_shift_id IS NULL) AND (other_shift_revision IS NULL) AND (other_l"
+        "ocation_id IS NULL) AND (other_assignment_id IS NULL) AND (from_profile_"
+        "id IS NULL) AND (from_assignment_id IS NULL))))"
+    ),
+    "shift_change_skill_snapshots_catalogue_check": ("((catalogue_revision > 0))"),
+    "shift_change_skill_snapshots_staff_check": ("((staff_revision >= 0))"),
 }
 
 _POLICIES = {
@@ -170,6 +203,42 @@ _POLICIES = {
     ),
     "work_skill_versions": ("true", "(gba.current_location_id() IS NULL)"),
     "work_skills": ("true", "(gba.current_location_id() IS NULL)"),
+    "shift_change_events": (
+        (
+            "(EXISTS ( SELECT 1\n   FROM gba.shift_change_requests r\n  WHERE ((r.tenan"
+            "t_id = shift_change_events.tenant_id) AND (r.id = shift_change_events.re"
+            "quest_id))))"
+        ),
+        (
+            "(EXISTS ( SELECT 1\n   FROM gba.shift_change_requests r\n  WHERE ((r.tenan"
+            "t_id = shift_change_events.tenant_id) AND (r.id = shift_change_events.re"
+            "quest_id))))"
+        ),
+    ),
+    "shift_change_requests": (
+        (
+            "((gba.current_location_id() IS NULL) OR ((location_id = gba.current_loca"
+            "tion_id()) AND ((other_location_id IS NULL) OR (other_location_id = gba."
+            "current_location_id()))))"
+        ),
+        (
+            "((gba.current_location_id() IS NULL) OR ((location_id = gba.current_loca"
+            "tion_id()) AND ((other_location_id IS NULL) OR (other_location_id = gba."
+            "current_location_id()))))"
+        ),
+    ),
+    "shift_change_skill_snapshots": (
+        (
+            "(EXISTS ( SELECT 1\n   FROM gba.shift_change_requests r\n  WHERE ((r.tenan"
+            "t_id = shift_change_skill_snapshots.tenant_id) AND (r.id = shift_change_"
+            "skill_snapshots.request_id))))"
+        ),
+        (
+            "(EXISTS ( SELECT 1\n   FROM gba.shift_change_requests r\n  WHERE ((r.tenan"
+            "t_id = shift_change_skill_snapshots.tenant_id) AND (r.id = shift_change_"
+            "skill_snapshots.request_id))))"
+        ),
+    ),
 }
 
 _SHARED_CHECKS = {
@@ -269,7 +338,8 @@ async def _check(conn: RuntimeConnection) -> None:
         select cl.relname,t.tgname,t.tgtype,t.tgenabled,t.tgdeferrable,t.tginitdeferred,t.tgargs,
                p.prosrc,p.prosecdef,p.proconfig,p.prorettype::regtype::text,t.tgqual,t.tgattr::text,
                t.tgisinternal,(t.tgconstraint<>0),p.oid=to_regprocedure('gba.'||p.proname||'()'),
-               l.lanname,p.provolatile,p.proparallel,p.pronargs,p.prokind,p.proleakproof,p.proname
+               l.lanname,p.provolatile,p.proparallel,p.pronargs,p.prokind,p.proleakproof,p.proname,
+               t.tgoldtable,t.tgnewtable
           from pg_trigger t join pg_class cl on cl.oid=t.tgrelid join pg_proc p on p.oid=t.tgfoid
           join pg_language l on l.oid=p.prolang
          where cl.relnamespace='gba'::regnamespace and cl.relname=any(%s) and not t.tgisinternal
@@ -309,7 +379,9 @@ async def _check(conn: RuntimeConnection) -> None:
                 if "default uuidv7()" in tail
                 else None
             )
-            lock_column = table in ("work_skills", "work_shifts") and name == "id"
+            lock_column = (
+                table in ("work_skills", "work_shifts", "shift_change_requests") and name == "id"
+            )
             _require(
                 actual
                 == (
@@ -383,7 +455,9 @@ async def _check(conn: RuntimeConnection) -> None:
         if actual_trigger is None:
             return
         expected_type = (
-            31
+            4
+            if name == "work_shift_versions_apply"
+            else 31
             if event == "insert or update or delete"
             else 27
             if event == "update or delete"
@@ -422,5 +496,7 @@ async def _check(conn: RuntimeConnection) -> None:
                 "f",
                 False,
                 function,
+                None,
+                "inserted_versions" if name == "work_shift_versions_apply" else None,
             )
         )
