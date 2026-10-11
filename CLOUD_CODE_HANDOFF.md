@@ -2,6 +2,10 @@
 
 ## Current: I3 implemented and locally validated — 2026-10-11
 
+Successor entry point: [I4 handoff and copyable prompt](docs/plan/NEXT_AGENT_PACKAGE_I4_2026-10-11.md).
+Verified I3 code commit: `ec9524aa77d0d26fee7253380d226f394cc587fd`.
+The handoff is a separate documentation change; I4 is not started here.
+
 Local branch codex/package-i3-timesheets on I2
 49276bf800eb929589785e192db489e17ac77fa7. Forward0034 adds own start/end/breaks,
 immutable corrections/decisions, last-approved effective time, stable-user
