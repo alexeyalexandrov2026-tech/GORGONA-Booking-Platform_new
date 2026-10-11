@@ -4,6 +4,9 @@ This is the author re-reading their own changes. It is **not** an independent
 review and does not replace one. A copyable request for an independent reviewer is
 in the [handoff](../../NEXT_AGENT_PACKAGE_I_REVIEW_2026-10-11.md).
 
+Question 1 below was answered by the owner on 2026-10-11; see
+[the setting's record](../2026-10-11-i4-shift-visibility/VALIDATION.md).
+
 ## Found and corrected
 
 | # | Finding | How it was found | Correction |

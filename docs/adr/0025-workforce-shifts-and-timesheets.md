@@ -118,6 +118,17 @@ owner is asked to resolve the difference before I1.
 
 ## Limits
 
+Branch setting note (2026-10-11, owner decision): whether staff of a branch see
+the published shifts of home-branch colleagues is a versioned branch setting
+(forward 0035, default visible). The owner, a manager or the manager of that
+branch changes it; SQL requires that authenticated author and orders the versions
+of one branch by one lock. While hidden, browsing a colleague's shifts is refused
+(403 COLLEAGUE_SHIFTS_HIDDEN) and a swap cannot be chosen on the screen. The swap
+command itself, a handover and an open-shift request are unchanged, and a
+participant reads the shift versions their own request names. No dependency or
+readiness change.
+[Evidence](../plan/evidence/2026-10-11-i4-shift-visibility/VALIDATION.md).
+
 I4 implementation note (2026-10-11): three management screens use the I1–I3 API
 and five added routes: own desk state and profile, a scoped staff directory with
 names, a home colleague's published shifts for a swap, and resolve/cancel of a

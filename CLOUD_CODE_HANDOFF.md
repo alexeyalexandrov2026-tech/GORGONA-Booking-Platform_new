@@ -1,6 +1,30 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current: I4 implemented and locally validated — 2026-10-11
+## Current: colleague-shift visibility is a branch setting; branch published — 2026-10-11
+
+Successor entry point: [package I after I4: open items and copyable prompts](docs/plan/NEXT_AGENT_PACKAGE_I_REVIEW_2026-10-11.md).
+Owner decision of 2026-10-11 on the first open choice of I4: staff see colleagues'
+published shifts by default, and the owner, a manager or the manager of that
+branch may hide them. Same branch codex/package-i4-workforce-screens on the I4
+record 5f0e58f; final code commit 419eda8097554c024cb76cde38fe901c386a5e29. Forward 0035
+adds append-only branch setting versions with an SQL guard for the author and one
+lock per branch; it is part of the packaged workforce approvals and of the
+branch-policy restore. New routes: GET/PUT /workforce/locations/{id}/settings and
+GET /workforce/my-changes/{id}/shifts (a participant reads the shifts their own
+request names, also while browsing is hidden). Schedule has a Privacy section; My
+shifts closes the swap choice and says why.
+[Evidence](docs/plan/evidence/2026-10-11-i4-shift-visibility/VALIDATION.md),
+[commands](docs/plan/evidence/2026-10-11-i4-shift-visibility/COMMANDS.md).
+PASS: complete suite 1500 passed / 4 skipped / 953.19s on 419eda8; real browser on desktop and phone
+1 / 103.56s; one race with an observed pg_locks wait; Ruff/format/mypy 263;
+web unit 102 and build 23 pages. The owner allowed publishing this branch: it is
+pushed; exact-commit CI of 5f0e58f is success (run 38132277248); CI of later heads
+is read on GitHub. No PR. Independent review NOT DONE. Containers, external site,
+HawkScan, load/soak, deployment/production NOT TESTED. Inherited production npm
+audit FAIL 2 high. WORK-01/CORE-04 and the workforce readiness lock are unchanged;
+migrations 0001–0034 are untouched. No CodeRabbit.
+
+## Previous: I4 implemented and locally validated — 2026-10-11
 
 Successor entry point: [package I after I4: open items and copyable prompts](docs/plan/NEXT_AGENT_PACKAGE_I_REVIEW_2026-10-11.md).
 Local branch codex/package-i4-workforce-screens on the I4 handoff

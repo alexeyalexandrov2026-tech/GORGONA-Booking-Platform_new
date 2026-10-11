@@ -10,6 +10,11 @@ Readiness is unchanged: WORK-01 and CORE-04 stay `planned`, and the `workforce`
 module stays closed outside test fixtures. Migrations `0001`–`0034` are untouched
 and no new migration was needed.
 
+Later on 2026-10-11 the owner decided the first choice listed below: it is now a
+branch setting, with migration `0035`. See
+[the setting's record](../2026-10-11-i4-shift-visibility/VALIDATION.md). The text
+below describes the tree at `f4a7395`.
+
 ## What was built
 
 | Part | Files |
