@@ -79,6 +79,7 @@ async def test_desk_names_own_profile_and_whether_new_actions_are_open(
             "location_id": str(changes.workforce.world.a.location_id),
             "user_id": str(changes.workforce.user.user_id),
         },
+        "colleague_shifts": "visible",
     }
     # A manager who takes no shifts has no profile; the desk still answers.
     manager = await _get(times, "/desk", changes.workforce.headers)

@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Request
 from pydantic import AwareDatetime
 
-from gorgona_booking.api.businesses import CurrentPrincipal
+from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.workforce import Limit, _access
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import workforce_desk as service
@@ -16,6 +16,8 @@ from gorgona_booking.business.workforce_desk_contracts import (
     CommandStatus,
     DeskView,
     DirectoryList,
+    LocationSettingInput,
+    LocationSettingView,
 )
 from gorgona_booking.errors import DomainError
 
@@ -58,6 +60,37 @@ async def get_colleague_shifts(
     async with _access(request, principal, business_id, Permission.WORKFORCE_SELF) as access:
         return await service.colleague_shifts(
             access.conn, business_id, principal.user_id, profile_id, starts, ends, after, limit
+        )
+
+
+@router.get("/locations/{location_id}/settings")
+async def get_location_setting(
+    business_id: UUID, location_id: UUID, request: Request, principal: CurrentPrincipal
+) -> LocationSettingView:
+    async with _access(request, principal, business_id) as access:
+        access.require_location(location_id)
+        return await service.load_location_setting(access.conn, business_id, location_id)
+
+
+@router.put("/locations/{location_id}/settings")
+async def put_location_setting(
+    business_id: UUID,
+    location_id: UUID,
+    body: LocationSettingInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> LocationSettingView:
+    async with _access(request, principal, business_id, Permission.WORKFORCE_MANAGE) as access:
+        access.require_location(location_id)
+        return await service.save_location_setting(
+            access.conn,
+            business_id,
+            location_id,
+            principal.user_id,
+            principal.actor,
+            idempotency_key,
+            body,
         )
 
 

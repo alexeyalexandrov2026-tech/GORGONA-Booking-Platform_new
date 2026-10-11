@@ -1,4 +1,4 @@
-"""I1-I3 packaged schema approvals. Never learn approvals from the target database."""
+"""I1-I4 packaged schema approvals. Never learn approvals from the target database."""
 
 import re
 from collections import defaultdict
@@ -11,7 +11,12 @@ from gorgona_booking.errors import DatabaseUnavailableError
 _MIGRATIONS = resources.files("gorgona_booking.db") / "migrations"
 _SQL = "\n".join(
     (_MIGRATIONS / filename).read_text(encoding="utf-8")
-    for filename in ("0032_workforce.sql", "0033_shift_changes.sql", "0034_timesheets.sql")
+    for filename in (
+        "0032_workforce.sql",
+        "0033_shift_changes.sql",
+        "0034_timesheets.sql",
+        "0035_work_location_settings.sql",
+    )
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
 WORKFORCE_TABLES = tuple(_BLOCKS)
@@ -201,6 +206,7 @@ _CHECKS = {
         "'declined'::text])))"
     ),
     "time_entry_state_revision_check": ("((last_revision > 0))"),
+    "work_location_setting_versions_revision_check": ("((revision > 0))"),
     "time_entry_state_shape_check": (
         "((((approved_revision IS NULL) AND (starts_at IS NULL) AND (ends_at IS N"
         "ULL)) OR ((approved_revision IS NOT NULL) AND (starts_at IS NOT NULL) AN"
@@ -313,6 +319,10 @@ _POLICIES = {
         ),
     ),
     "time_entry_state": (
+        ("((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))"),
+        ("((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))"),
+    ),
+    "work_location_setting_versions": (
         ("((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))"),
         ("((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))"),
     ),

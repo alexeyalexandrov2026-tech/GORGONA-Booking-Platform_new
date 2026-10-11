@@ -1,11 +1,16 @@
 """I4 screen-support contracts: identifiers and names only, never a command body."""
 
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, StrictBool
 
-from gorgona_booking.business.workforce_contracts import ProfileView, WorkforceModel
+from gorgona_booking.business.workforce_contracts import (
+    ProfileView,
+    RevisionInput,
+    WorkforceModel,
+)
 
 type WriteState = Literal["open", "module_disabled", "not_accepted"]
 type CommandOperation = Literal[
@@ -17,14 +22,33 @@ type CommandOperation = Literal[
     "change.event",
     "time.clock_in",
     "time.event",
+    "location_setting",
 ]
 type CommandState = Literal["committed", "unresolved", "cancelled"]
+type ShiftVisibility = Literal["visible", "hidden"]
 
 
 class DeskView(WorkforceModel):
     business_id: UUID
     writes: WriteState
     profile: ProfileView | None
+    # Whether the caller's home branch shows colleagues' published shifts.
+    colleague_shifts: ShiftVisibility
+
+
+class LocationSettingInput(RevisionInput):
+    colleague_shifts_visible: StrictBool
+
+
+class LocationSettingView(WorkforceModel):
+    """A branch setting; revision 0 is the default nobody has changed."""
+
+    business_id: UUID
+    location_id: UUID
+    revision: int
+    colleague_shifts_visible: bool
+    changed_by: UUID | None
+    changed_at: datetime | None
 
 
 class DirectoryEntry(WorkforceModel):

@@ -1,13 +1,17 @@
-"""I4 screen support: scoped reads and a reference-only outcome of a sent command.
+"""I4 screen support: scoped reads, a branch setting and command outcomes by key.
 
 A screen that lost a response asks for the outcome by the original key. The answer
 names no reason, name or time. Cancelling an unresolved key claims it in the shared
 receipt table, so the lost command can never commit after the person starts again.
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 from uuid import UUID
+
+import psycopg
 
 from gorgona_booking.booking import idempotency
 from gorgona_booking.booking.idempotency import IdempotencyScope
@@ -22,12 +26,110 @@ from gorgona_booking.business.workforce_desk_contracts import (
     DeskView,
     DirectoryEntry,
     DirectoryList,
+    LocationSettingInput,
+    LocationSettingView,
     WriteState,
 )
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import InvalidReferenceError, NotFoundError
+from gorgona_booking.tenancy.authorization import PermissionDeniedError
 
 _CANCELLED_STATUS = 410
+
+
+class ColleagueShiftsHiddenError(PermissionDeniedError):
+    code = "COLLEAGUE_SHIFTS_HIDDEN"
+
+
+@asynccontextmanager
+async def _writes(conn: RuntimeConnection, business: UUID) -> AsyncIterator[None]:
+    try:
+        async with workforce._writes(conn, business):
+            yield
+    except psycopg.errors.InsufficientPrivilege as exc:
+        raise PermissionDeniedError(
+            "Only the owner or a manager of this branch changes its settings"
+        ) from exc
+
+
+async def _shifts_visible(conn: RuntimeConnection, business: UUID, location: UUID) -> bool:
+    row = await (
+        await conn.execute(
+            "select colleague_shifts_visible from gba.work_location_setting_versions "
+            "where tenant_id=%s and location_id=%s order by revision desc limit 1",
+            (business, location),
+        )
+    ).fetchone()
+    # No version means the default nobody has changed: visible.
+    return True if row is None else bool(row[0])
+
+
+async def load_location_setting(
+    conn: RuntimeConnection, business: UUID, location: UUID, revision: int | None = None
+) -> LocationSettingView:
+    known = await (
+        await conn.execute(
+            "select 1 from gba.locations where tenant_id=%s and id=%s", (business, location)
+        )
+    ).fetchone()
+    if known is None:
+        raise NotFoundError("Location not found")
+    row = await (
+        await conn.execute(
+            "select revision,colleague_shifts_visible,created_by,created_at "
+            "from gba.work_location_setting_versions where tenant_id=%s and location_id=%s "
+            "and (%s::integer is null or revision=%s) order by revision desc limit 1",
+            (business, location, revision, revision),
+        )
+    ).fetchone()
+    if row is None and revision is not None:
+        raise NotFoundError("Setting version not found")
+    return LocationSettingView(
+        business_id=business,
+        location_id=location,
+        revision=0 if row is None else row[0],
+        colleague_shifts_visible=True if row is None else row[1],
+        changed_by=None if row is None else row[2],
+        changed_at=None if row is None else row[3],
+    )
+
+
+async def save_location_setting(
+    conn: RuntimeConnection,
+    business: UUID,
+    location: UUID,
+    user: UUID,
+    actor: str,
+    key: str,
+    body: LocationSettingInput,
+) -> LocationSettingView:
+    async with _writes(conn, business):
+        scope = IdempotencyScope(business, actor, "workforce.location_setting", key)
+        receipt = await commands.claim(
+            conn,
+            scope,
+            commands.fingerprint({"id": str(location), **body.model_dump(mode="json")}),
+            WorkforceReceipt,
+        )
+        if receipt is not None:
+            return await load_location_setting(conn, business, location, receipt.revision)
+        await load_location_setting(conn, business, location)
+        revision = body.expected_revision + 1
+        await conn.execute(
+            "insert into gba.work_location_setting_versions "
+            "(tenant_id,location_id,revision,colleague_shifts_visible,created_by) "
+            "values (%s,%s,%s,%s,%s)",
+            (business, location, revision, body.colleague_shifts_visible, user),
+        )
+        await workforce._finish(
+            conn,
+            business,
+            actor,
+            "location_setting",
+            scope,
+            WorkforceReceipt(subject_id=location, revision=revision),
+        )
+        return await load_location_setting(conn, business, location, revision)
 
 
 async def desk(conn: RuntimeConnection, business: UUID, user: UUID) -> DeskView:
@@ -47,7 +149,13 @@ async def desk(conn: RuntimeConnection, business: UUID, user: UUID) -> DeskView:
         )
     ).fetchone()
     profile = None if row is None else await workforce.load_profile(conn, business, row[0])
-    return DeskView(business_id=business, writes=writes, profile=profile)
+    visible = profile is None or await _shifts_visible(conn, business, profile.location_id)
+    return DeskView(
+        business_id=business,
+        writes=writes,
+        profile=profile,
+        colleague_shifts="visible" if visible else "hidden",
+    )
 
 
 async def directory(
@@ -96,23 +204,28 @@ async def colleague_shifts(
     after: UUID | None,
     limit: int,
 ) -> ShiftList:
-    """Published shifts a home-branch colleague holds: the other side of a swap."""
+    """Published shifts a home-branch colleague holds: the other side of a swap.
+
+    The home branch may hide them; then nothing about a colleague is read here.
+    """
     location = await shift_changes.home(conn, business, user)
-    row = None
-    if location is not None:
-        row = await (
-            await conn.execute(
-                "select m.user_id from gba.staff_profiles p join gba.memberships m "
-                "on m.tenant_id=p.tenant_id and m.id=p.membership_id "
-                "join gba.users u on u.id=p.user_id "
-                "where p.tenant_id=%s and p.id=%s and p.location_id=%s "
-                "and m.status='active' and u.status='active'",
-                (business, profile, location),
-            )
-        ).fetchone()
-    if location is None or row is None:
+    if location is None:
         raise NotFoundError("Colleague not found")
     await conn.execute("select set_config('gba.location_id',%s,true)", (str(location),))
+    if not await _shifts_visible(conn, business, location):
+        raise ColleagueShiftsHiddenError("Your branch does not show colleagues' shifts")
+    row = await (
+        await conn.execute(
+            "select m.user_id from gba.staff_profiles p join gba.memberships m "
+            "on m.tenant_id=p.tenant_id and m.id=p.membership_id "
+            "join gba.users u on u.id=p.user_id "
+            "where p.tenant_id=%s and p.id=%s and p.location_id=%s "
+            "and m.status='active' and u.status='active'",
+            (business, profile, location),
+        )
+    ).fetchone()
+    if row is None:
+        raise NotFoundError("Colleague not found")
     listed = await workforce.list_shifts(conn, business, starts, ends, after, limit, row[0])
     items = tuple(
         item
