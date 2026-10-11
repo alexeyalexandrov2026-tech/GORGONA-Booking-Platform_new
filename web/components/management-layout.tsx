@@ -27,6 +27,9 @@ const NAV_ITEMS = [
   { href: "/services/", label: "Services" },
   { href: "/staff/", label: "Staff" },
   { href: "/reservations/", label: "Reservations" },
+  { href: "/schedule/", label: "Schedule" },
+  { href: "/my-shifts/", label: "My shifts" },
+  { href: "/timesheets/", label: "Timesheets" },
   { href: "/clients/", label: "Clients" },
   { href: "/counterparties/", label: "Counterparties" },
   { href: "/documents/", label: "Documents" },
@@ -61,8 +64,9 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         (!locationLimited &&
           !delegation &&
           ["owner", "manager"].includes(membership?.role ?? ""))) &&
-      // Resource reservations are staff management, also within one branch.
-      (item.href !== "/reservations/" ||
+      // Resource reservations and the schedule are staff management, also within
+      // one branch. Own shifts and time belong to every member, never a delegate.
+      (!["/reservations/", "/schedule/"].includes(item.href) ||
         (!delegation && ["owner", "manager"].includes(membership?.role ?? ""))),
   );
   const navItems = delegation

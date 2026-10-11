@@ -1,0 +1,124 @@
+.workforce {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.workforce-card {
+  margin: 28px 0;
+  min-width: 0;
+}
+.workforce-tabs,
+.workforce-actions,
+.workforce-badges,
+.workforce-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.workforce-tabs {
+  margin: 20px 0;
+}
+.workforce-item h3,
+.workforce-item h4 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+.workforce-item p {
+  margin: 6px 0;
+}
+.workforce-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 1px solid #8c7f73;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: #fffdf9;
+  color: #28221e;
+}
+.workforce-approved,
+.workforce-published {
+  background: #e6f1e7;
+  border-color: #2f6b3a;
+  color: #1f4a28;
+}
+.workforce-proposed,
+.workforce-accepted,
+.workforce-draft,
+.workforce-open {
+  background: #fbf1dc;
+  border-color: #8a5a00;
+  color: #4a3000;
+}
+.workforce-declined,
+.workforce-cancelled,
+.workforce-withdrawn {
+  background: #f6e8e3;
+  border-color: #9a3529;
+  color: #70291f;
+}
+.workforce-flag {
+  background: #e8ecf6;
+  border-color: #33457a;
+  color: #24315a;
+}
+.workforce-effective {
+  border-left: 3px solid #33457a;
+  padding: 10px 14px;
+  background: #eef1f8;
+  color: #24315a;
+}
+.workforce .warning {
+  border-left: 3px solid #8a5a00;
+  padding: 14px 18px;
+  background: #fbf1dc;
+  color: #4a3000;
+}
+.workforce-recovery h2 {
+  margin-top: 0;
+}
+.workforce-panel {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 18px;
+  margin: 20px 0;
+  background: #fff;
+  min-width: 0;
+}
+.workforce-panel-head {
+  justify-content: space-between;
+}
+.workforce-panel-head h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.workforce-check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-weight: 400;
+}
+.workforce textarea {
+  display: block;
+  width: 100%;
+  min-height: 96px;
+  border: 1px solid #b3a69a;
+  border-radius: 3px;
+  background: #fffdf9;
+  padding: 12px 14px;
+  margin-top: 7px;
+  font: inherit;
+}
+.workforce fieldset.workforce-break {
+  border: 1px solid var(--line);
+  padding: 14px;
+  border-radius: 6px;
+  margin: 16px 0;
+}
+@media (max-width: 640px) {
+  .workforce-actions button,
+  .workforce-tabs button {
+    flex: 1 1 100%;
+  }
+}
