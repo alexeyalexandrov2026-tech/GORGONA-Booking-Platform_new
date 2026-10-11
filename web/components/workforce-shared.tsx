@@ -113,6 +113,7 @@ export function useWorkforceCommands(
   const pending = useRef<{ command: WorkforceCommand; done: string } | null>(
     null,
   );
+  const running = useRef(false);
   const latest = useRef(refresh);
   useEffect(() => {
     latest.current = refresh;
@@ -138,6 +139,8 @@ export function useWorkforceCommands(
   );
   const settle = useCallback(
     async (saved: WorkforceRecovery, cancel: boolean) => {
+      if (running.current) return;
+      running.current = true;
       setBusy(true);
       setError(null);
       try {
@@ -161,6 +164,7 @@ export function useWorkforceCommands(
       } catch (failure) {
         setError(explain(failure));
       } finally {
+        running.current = false;
         setBusy(false);
       }
     },
@@ -220,7 +224,9 @@ export function useWorkforceCommands(
     }
   }
   async function run(command: WorkforceCommand, done: string) {
-    if (busy || recovery) {
+    // A second activation before the screen re-renders is ignored, not queued.
+    if (running.current) return null;
+    if (recovery) {
       setError("Settle the earlier action before starting another.");
       return null;
     }
@@ -228,6 +234,7 @@ export function useWorkforceCommands(
       setError("Check the entered values and try again.");
       return null;
     }
+    running.current = true;
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -238,17 +245,20 @@ export function useWorkforceCommands(
       setError(explain(failure));
       return null;
     } finally {
+      running.current = false;
       setBusy(false);
     }
   }
   async function resend() {
     const again = pending.current;
-    if (!again || busy) return;
+    if (!again || running.current) return;
+    running.current = true;
     setBusy(true);
     setError(null);
     try {
       await send(again.command, again.done);
     } finally {
+      running.current = false;
       setBusy(false);
     }
   }
@@ -354,12 +364,13 @@ export function placeOf(
 /** Local wall-clock time of the record's own location, never the browser's. */
 export function moment(instant: string, zone: string): string {
   const local = businessDateTime(instant, zone);
-  return `${local.date} ${local.time}`;
+  return `${local.date} ${local.time}${zone === "UTC" ? " UTC" : ""}`;
 }
+/** A location outside the caller's view has no known timezone: UTC, said so. */
 export function span(starts: string, ends: string, zone: string): string {
   const from = businessDateTime(starts, zone);
   const to = businessDateTime(ends, zone);
-  return `${from.date} ${from.time}–${to.date === from.date ? "" : `${to.date} `}${to.time}`;
+  return `${from.date} ${from.time}–${to.date === from.date ? "" : `${to.date} `}${to.time}${zone === "UTC" ? " UTC" : ""}`;
 }
 export function worked(microseconds: number): string {
   const minutes = Math.floor(microseconds / 60_000_000);
