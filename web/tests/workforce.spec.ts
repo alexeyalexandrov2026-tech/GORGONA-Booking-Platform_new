@@ -144,6 +144,16 @@ async function fillShift(
       .selectOption({ label: shift.assignee });
   await form.getByRole("button", { name: "Save shift", exact: true }).click();
 }
+const SHOWN = "Staff see the published shifts of colleagues in this location";
+const OWN_ONLY = "Staff see only their own shifts and open shifts";
+const hiddenNote = (page: Page) =>
+  page
+    .getByRole("note")
+    .filter({ hasText: "does not show colleagues’ shifts" });
+async function openPrivacy(page: Page) {
+  await page.getByRole("button", { name: "Privacy", exact: true }).click();
+  return within(page, "Privacy");
+}
 async function showWeek(page: Page, day: string, company: boolean) {
   if (company)
     await page
@@ -169,6 +179,20 @@ test("workforce stays closed until it is accepted", async ({ page }) => {
   ).toBeVisible();
   await accessible(page);
   await fits(page);
+  // The privacy setting is readable and closed to change like everything else.
+  const untouched = await openPrivacy(page);
+  await expect(
+    untouched.getByText(
+      "Never changed: colleagues’ shifts are visible by default.",
+    ),
+  ).toBeVisible();
+  await expect(
+    untouched.getByRole("radio", { name: SHOWN, exact: true }),
+  ).toBeChecked();
+  await expect(
+    untouched.getByRole("radio", { name: OWN_ONLY, exact: true }),
+  ).toBeDisabled();
+  await accessible(page);
   await open(page, "Timesheets");
   await expect(
     page.getByText("You are not on the staff schedule yet", { exact: false }),
@@ -747,6 +771,34 @@ test("schedule, own shifts and timesheets with real gates, recovery and roles", 
   await expect(assignment.getByRole("listitem").last()).toContainText(
     `assigned to ${NAME[actor]}`,
   );
+  // The branch manager hides colleagues' shifts in their own location, by keyboard.
+  const privacy = await openPrivacy(page);
+  await expect(page.getByLabel("Location:", { exact: true })).toHaveCount(0);
+  const showChoice = privacy.getByRole("radio", { name: SHOWN, exact: true });
+  const hideChoice = privacy.getByRole("radio", {
+    name: OWN_ONLY,
+    exact: true,
+  });
+  const savePrivacy = privacy.getByRole("button", {
+    name: "Save privacy",
+    exact: true,
+  });
+  await expect(showChoice).toBeChecked();
+  await expect(savePrivacy).toBeDisabled();
+  await showChoice.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(hideChoice).toBeChecked();
+  await accessible(page);
+  await fits(page);
+  await savePrivacy.click();
+  await expect(statusOf(page)).toHaveText(
+    "Saved. Staff of this location now see only their own shifts and open shifts.",
+  );
+  await expect(
+    privacy.getByText(/^Version \d+: last changed by you on /),
+  ).toBeVisible();
+  await expect(hideChoice).toBeChecked();
+  await expect(savePrivacy).toBeDisabled();
   await open(page, "Timesheets");
   const team = within(page, "Team time records");
   await team
@@ -759,9 +811,44 @@ test("schedule, own shifts and timesheets with real gates, recovery and roles", 
     team.getByText("No records are waiting for a decision."),
   ).toBeVisible();
 
-  // --- A correction waits; the approved version stays in effect. ---
+  // --- Hidden shifts: no browsing and no swap; the rest still works. ---
   await signOut(page);
+  const restricted = page.waitForRequest(
+    (request) =>
+      request.url().includes("/workforce/desk") &&
+      request.headers()["authorization"] != null,
+  );
   await signIn(page, actor);
+  await open(page, "My shifts");
+  await page.getByLabel("Show four weeks from", { exact: true }).fill(day);
+  await expect(hiddenNote(page)).toBeVisible();
+  const lane = within(page, "Assigned to me");
+  await expect(
+    lane.getByRole("button", { name: /^Swap / }).first(),
+  ).toBeDisabled();
+  await expect(
+    lane.getByRole("button", { name: /^Hand over / }).first(),
+  ).toBeEnabled();
+  // A request still names both of its shifts to the people who take part in it.
+  await expect(
+    within(page, "My requests")
+      .getByRole("listitem")
+      .filter({ hasText: `Swap: ${tag} swap` }),
+  ).toContainText(`${tag} evening late`);
+  const browse = await page.request.get(
+    `${root}/colleagues/00000000-0000-4000-8000-000000000002/shifts?${window}`,
+    {
+      headers: {
+        authorization: (await restricted).headers()["authorization"]!,
+      },
+    },
+  );
+  expect(browse.status()).toBe(403);
+  expect((await browse.json()).error.code).toBe("COLLEAGUE_SHIFTS_HIDDEN");
+  await accessible(page);
+  await fits(page);
+
+  // --- A correction waits; the approved version stays in effect. ---
   await open(page, "Timesheets");
   const own = within(page, "My time records").getByRole("listitem");
   await expect(own).toContainText("Approved");
@@ -810,6 +897,19 @@ test("schedule, own shifts and timesheets with real gates, recovery and roles", 
     .getByRole("button", { name: "Decline this version", exact: true })
     .click();
   await expect(statusOf(page)).toContainText("Declined.");
+  // The manager shows colleagues' shifts again.
+  await open(page, "Schedule");
+  const reopened = await openPrivacy(page);
+  await expect(
+    reopened.getByRole("radio", { name: OWN_ONLY, exact: true }),
+  ).toBeChecked();
+  await reopened.getByRole("radio", { name: SHOWN, exact: true }).check();
+  await reopened
+    .getByRole("button", { name: "Save privacy", exact: true })
+    .click();
+  await expect(statusOf(page)).toHaveText(
+    "Saved. Staff of this location now see colleagues’ published shifts.",
+  );
 
   // --- The employee sees the decision, the whole history and the new shifts. ---
   await signOut(page);
@@ -847,6 +947,11 @@ test("schedule, own shifts and timesheets with real gates, recovery and roles", 
   await expect(
     mine.getByRole("heading", { name: new RegExp(`^${tag} morning `) }),
   ).toHaveCount(0);
+  // Shown again: the note is gone and a swap can be chosen.
+  await expect(hiddenNote(page)).toHaveCount(0);
+  await expect(
+    mine.getByRole("button", { name: /^Swap / }).first(),
+  ).toBeEnabled();
   const outcome = within(page, "My requests")
     .getByRole("listitem")
     .filter({ hasText: tag });
@@ -933,6 +1038,23 @@ test("a switched-off module keeps history and lets an open record close", async 
   ).toBeVisible();
   await expect(
     planned.getByRole("button", { name: new RegExp(`^Edit ${tag} morning `) }),
+  ).toBeDisabled();
+  await accessible(page);
+  // The privacy setting keeps its last version and cannot be changed while off.
+  const kept = await openPrivacy(page);
+  await expect(
+    kept.getByText(
+      new RegExp(`^Version \\d+: last changed by ${NAME.manager} on `),
+    ),
+  ).toBeVisible();
+  await expect(
+    kept.getByRole("radio", { name: SHOWN, exact: true }),
+  ).toBeChecked();
+  await expect(
+    kept.getByRole("radio", { name: OWN_ONLY, exact: true }),
+  ).toBeDisabled();
+  await expect(
+    kept.getByRole("button", { name: "Save privacy", exact: true }),
   ).toBeDisabled();
   await accessible(page);
 });

@@ -33,6 +33,8 @@ const REFUSALS: Record<string, string> = {
   WORKFORCE_SKILL_REQUIRED:
     "This person does not hold a required skill at the start of the shift.",
   PERMISSION_DENIED: "You do not have permission for this action.",
+  COLLEAGUE_SHIFTS_HIDDEN:
+    "Your location does not show colleagues’ shifts, so a swap cannot be chosen here.",
   TENANT_ACCESS_DENIED: "You do not have access to this business.",
   MODULE_DISABLED:
     "Scheduling is turned off for this business. New actions are unavailable.",

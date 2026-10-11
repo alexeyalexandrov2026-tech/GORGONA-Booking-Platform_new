@@ -8,6 +8,7 @@ import {
   commandStatusSchema,
   deskSchema,
   directoryListSchema,
+  locationSettingSchema,
   profileSchema,
   shiftListSchema,
   shiftSchema,
@@ -21,6 +22,7 @@ import {
   workforceCommandSchema,
   type Change,
   type CommandReference,
+  type LocationSetting,
   type Profile,
   type Shift,
   type Skill,
@@ -189,6 +191,36 @@ export async function fetchChangeHistory(
     exact(item.request_id, request);
   return part.items;
 }
+/** The shift versions a request names, read as one of its participants. */
+export async function fetchRequestShifts(
+  business: string,
+  request: Change,
+): Promise<Shift[]> {
+  const part = await read(
+    shiftListSchema,
+    `${base(business)}/my-changes/${request.request_id}/shifts`,
+  );
+  const named = new Map<string, number | null>([
+    [request.shift_id, request.expected_shift_revision],
+  ]);
+  if (request.other_shift_id)
+    named.set(request.other_shift_id, request.expected_other_shift_revision);
+  for (const item of owned(business, part.items))
+    exact(item.revision, named.get(item.shift_id) ?? -1);
+  return part.items;
+}
+export async function fetchLocationSetting(
+  business: string,
+  location: string,
+): Promise<LocationSetting> {
+  const result = await read(
+    locationSettingSchema,
+    `${base(business)}/locations/${location}/settings`,
+  );
+  exact(result.business_id, business);
+  exact(result.location_id, location);
+  return result;
+}
 export async function fetchTimeEntries(business: string, own: boolean) {
   const result = await every((after) =>
     read(
@@ -220,7 +252,7 @@ export async function fetchTimeHistory(
 }
 
 export type WorkforceResult =
-  Profile | Skill | StaffSkill | Shift | Change | TimeEntry;
+  Profile | Skill | StaffSkill | Shift | Change | TimeEntry | LocationSetting;
 /** Send one command under its key and accept only the exact expected version. */
 export async function executeWorkforceCommand(
   business: string,
@@ -296,6 +328,22 @@ export async function executeWorkforceCommand(
           ? 1
           : command.body.expected_revision + 1,
       );
+      return result;
+    }
+    case "location_setting": {
+      const result = await read(
+        locationSettingSchema,
+        `${root}/locations/${command.subject}/settings`,
+        send("PUT"),
+      );
+      exact(result.business_id, business);
+      exact(result.location_id, command.subject);
+      exact(result.revision, command.body.expected_revision + 1);
+      if (
+        result.colleague_shifts_visible !==
+        command.body.colleague_shifts_visible
+      )
+        throw invalid();
       return result;
     }
     case "time.clock_in":

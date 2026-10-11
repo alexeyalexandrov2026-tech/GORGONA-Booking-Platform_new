@@ -235,6 +235,8 @@ export const deskSchema = z
     business_id: id,
     writes: writeStateSchema,
     profile: profileSchema.nullable(),
+    // Whether the caller's home location shows colleagues' published shifts.
+    colleague_shifts: z.enum(["visible", "hidden"]),
   })
   .refine(
     (value) =>
@@ -256,6 +258,23 @@ export const directoryEntrySchema = z
       (value.profile_id === null) === (value.home_location_id === null),
   );
 export const directoryListSchema = page(directoryEntrySchema, "membership_id");
+/** A location setting; revision 0 is the default nobody has changed. */
+export const locationSettingSchema = z
+  .strictObject({
+    schema_version: v1,
+    business_id: id,
+    location_id: id,
+    revision: z.int().min(0).max(2147483647),
+    colleague_shifts_visible: z.boolean(),
+    changed_by: id.nullable(),
+    changed_at: instant.nullable(),
+  })
+  .refine(
+    (value) =>
+      (value.revision === 0) === (value.changed_by === null) &&
+      (value.changed_by === null) === (value.changed_at === null) &&
+      (value.revision > 0 || value.colleague_shifts_visible),
+  );
 
 export const commandOperationSchema = z.enum([
   "profile",
@@ -266,6 +285,7 @@ export const commandOperationSchema = z.enum([
   "change.event",
   "time.clock_in",
   "time.event",
+  "location_setting",
 ]);
 /** Identifiers only: what a sent command was expected to produce. */
 export const commandReferenceSchema = z.strictObject({
@@ -431,6 +451,15 @@ export const workforceCommandSchema = z.discriminatedUnion("operation", [
     ...sent,
     body: z.union([clockBody, correctionBody, decisionBody]),
   }),
+  z.strictObject({
+    operation: z.literal("location_setting"),
+    ...sent,
+    body: z.strictObject({
+      schema_version: v1,
+      expected_revision: expected,
+      colleague_shifts_visible: z.boolean(),
+    }),
+  }),
 ]);
 
 /** The version a command creates; the server stores the same pair in its receipt. */
@@ -476,6 +505,12 @@ const routes: [RegExp, string[], z.ZodType][] = [
   [/^\/(changes|my-changes)$/, ["GET"], changeListSchema],
   [new RegExp(`^/changes/${uuid}$`, "i"), ["GET", "PUT"], changeSchema],
   [new RegExp(`^/my-changes/${uuid}$`, "i"), ["GET"], changeSchema],
+  [new RegExp(`^/my-changes/${uuid}/shifts$`, "i"), ["GET"], shiftListSchema],
+  [
+    new RegExp(`^/locations/${uuid}/settings$`, "i"),
+    ["GET", "PUT"],
+    locationSettingSchema,
+  ],
   [new RegExp(`^/changes/${uuid}/events$`, "i"), ["POST"], changeSchema],
   [
     new RegExp(`^/(changes|my-changes)/${uuid}/history$`, "i"),
@@ -518,6 +553,7 @@ export type ChangeKind = z.infer<typeof changeKindSchema>;
 export type Colleague = z.infer<typeof colleagueSchema>;
 export type TimeEntry = z.infer<typeof timeSchema>;
 export type Desk = z.infer<typeof deskSchema>;
+export type LocationSetting = z.infer<typeof locationSettingSchema>;
 export type WriteState = z.infer<typeof writeStateSchema>;
 export type DirectoryEntry = z.infer<typeof directoryEntrySchema>;
 export type CommandReference = z.infer<typeof commandReferenceSchema>;

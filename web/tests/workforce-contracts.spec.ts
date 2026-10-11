@@ -5,6 +5,7 @@ import {
   commandStatusSchema,
   deskSchema,
   directoryListSchema,
+  locationSettingSchema,
   shiftListSchema,
   shiftSchema,
   timeHistorySchema,
@@ -249,11 +250,14 @@ test("desk, directory and command status are closed and scoped", () => {
       location_id: location,
       user_id: user,
     },
+    colleague_shifts: "hidden",
   };
   expect(deskSchema.safeParse(desk).success).toBe(true);
   expect(deskSchema.safeParse({ ...desk, profile: null }).success).toBe(true);
   rejects(deskSchema)(desk, [
     { writes: "closed" },
+    { colleague_shifts: "private" },
+    { colleague_shifts: undefined },
     { profile: { ...desk.profile, business_id: uuid(16) } },
     { payroll: true },
   ]);
@@ -296,6 +300,65 @@ test("desk, directory and command status are closed and scoped", () => {
   ]);
 });
 
+test("a location setting is versioned and its default is nobody's change", () => {
+  const untouched = {
+    schema_version: 1,
+    business_id: business,
+    location_id: location,
+    revision: 0,
+    colleague_shifts_visible: true,
+    changed_by: null,
+    changed_at: null,
+  };
+  const hidden = {
+    ...untouched,
+    revision: 2,
+    colleague_shifts_visible: false,
+    changed_by: user,
+    changed_at: "2031-06-02T10:00:00.123456Z",
+  };
+  expect(locationSettingSchema.safeParse(untouched).success).toBe(true);
+  expect(locationSettingSchema.safeParse(hidden).success).toBe(true);
+  rejects(locationSettingSchema)(hidden, [
+    { revision: 0 },
+    { revision: -1 },
+    { changed_by: null },
+    { changed_at: null },
+    { colleague_shifts_visible: "no" },
+    { reason: "FAKE" },
+  ]);
+  // The default is visible; a hidden default would be a change nobody made.
+  rejects(locationSettingSchema)(untouched, [
+    { colleague_shifts_visible: false },
+  ]);
+  const command = {
+    operation: "location_setting",
+    key: "FAKE-command-7",
+    subject: location,
+    body: {
+      schema_version: 1,
+      expected_revision: 2,
+      colleague_shifts_visible: true,
+    },
+  };
+  expect(commandReference(workforceCommandSchema.parse(command))).toEqual({
+    schema_version: 1,
+    operation: "location_setting",
+    subject_id: location,
+    revision: 3,
+    skill_id: null,
+  });
+  for (const body of [
+    { ...command.body, colleague_shifts_visible: "yes" },
+    { ...command.body, expected_revision: -1 },
+    { ...command.body, reason: "FAKE private" },
+    { schema_version: 1, expected_revision: 2 },
+  ])
+    expect(workforceCommandSchema.safeParse({ ...command, body }).success).toBe(
+      false,
+    );
+});
+
 test("every workforce route has exactly one response contract", () => {
   const root = `/v1/businesses/${business}/workforce`;
   const known: [string, string][] = [
@@ -319,6 +382,9 @@ test("every workforce route has exactly one response contract", () => {
     ["PUT", `/changes/${subject}`],
     ["POST", `/changes/${subject}/events`],
     ["GET", `/my-changes/${subject}/history`],
+    ["GET", `/my-changes/${subject}/shifts`],
+    ["GET", `/locations/${location}/settings`],
+    ["PUT", `/locations/${location}/settings`],
     ["GET", "/time-entries"],
     ["GET", "/my-time-entries"],
     ["PUT", `/time-entries/${subject}`],
@@ -337,6 +403,9 @@ test("every workforce route has exactly one response contract", () => {
     ["PUT", `/my-changes/${subject}`],
     ["PUT", `/my-time-entries/${subject}`],
     ["POST", "/desk"],
+    ["POST", `/locations/${location}/settings`],
+    ["GET", "/locations"],
+    ["PUT", `/my-changes/${subject}/shifts`],
     ["GET", "/payroll"],
     ["POST", "/commands/short/resolve"],
     ["POST", "/commands/FAKE-command-1/replay"],

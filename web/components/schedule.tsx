@@ -5,6 +5,7 @@ import {
   fetchChangeHistory,
   fetchChanges,
   fetchDirectory,
+  fetchLocationSetting,
   fetchShift,
   fetchShifts,
   fetchSkillHistory,
@@ -13,6 +14,7 @@ import {
 import type {
   Change,
   DirectoryEntry,
+  LocationSetting,
   Shift,
   ShiftStatus,
   Skill,
@@ -51,11 +53,12 @@ const ROLE: Record<DirectoryEntry["role"], string> = {
   front_desk: "Front desk",
   artist: "Staff",
 };
-type Tab = "shifts" | "staff" | "requests";
+type Tab = "shifts" | "staff" | "requests" | "privacy";
 const TABS: [Tab, string][] = [
   ["shifts", "Shifts"],
   ["staff", "Staff and skills"],
   ["requests", "Change requests"],
+  ["privacy", "Privacy"],
 ];
 interface ShiftForm {
   shift: Shift | null;
@@ -111,9 +114,23 @@ export function Schedule({
     items: Change[] | null;
   } | null>(null);
 
+  const [privacy, setPrivacy] = useState<LocationSetting | null>(null);
+  const [privacyError, setPrivacyError] = useState<string | null>(null);
+  const [choice, setChoice] = useState<boolean | null>(null);
+
   const locations = workspace?.locations;
   const selected =
     chosen || workspace?.location_id || workspace?.locations[0]?.id || "";
+  const loadPrivacy = useCallback(async () => {
+    if (!selected) return;
+    try {
+      setPrivacy(await fetchLocationSetting(businessId, selected));
+      setPrivacyError(null);
+    } catch (error) {
+      setPrivacy(null);
+      setPrivacyError(explain(error));
+    }
+  }, [businessId, selected]);
   const load = useCallback(async () => {
     const window = dayWindow(from, DAYS);
     const [listed, people, catalogue, requests] = await Promise.all([
@@ -153,8 +170,12 @@ export function Schedule({
   const refresh = useCallback(async () => {
     await reload();
     await load();
-  }, [reload, load]);
+    await loadPrivacy();
+  }, [reload, load, loadPrivacy]);
   const center = useWorkforceCommands(businessId, actorId, refresh);
+  useEffect(() => {
+    void Promise.resolve().then(loadPrivacy);
+  }, [loadPrivacy]);
   useEffect(() => {
     let active = true;
     void Promise.resolve()
@@ -203,6 +224,35 @@ export function Schedule({
   async function act(command: WorkforceCommand, done: string) {
     const result = await center.run(command, done);
     return result !== null;
+  }
+  // A setting read for another location is never shown for this one.
+  const current = privacy?.location_id === selected ? privacy : null;
+  const visible = choice ?? current?.colleague_shifts_visible ?? true;
+  const changer =
+    current?.changed_by === actorId
+      ? "you"
+      : (directory.find((entry) => entry.user_id === current?.changed_by)
+          ?.display_name ?? "another manager");
+  function savePrivacy(event: React.FormEvent) {
+    event.preventDefault();
+    if (!current || visible === current.colleague_shifts_visible) return;
+    void act(
+      {
+        operation: "location_setting",
+        key: crypto.randomUUID(),
+        subject: current.location_id,
+        body: {
+          schema_version: 1,
+          expected_revision: current.revision,
+          colleague_shifts_visible: visible,
+        },
+      },
+      visible
+        ? "Saved. Staff of this location now see colleagues’ published shifts."
+        : "Saved. Staff of this location now see only their own shifts and open shifts.",
+    ).then((saved) => {
+      if (saved) setChoice(null);
+    });
   }
   function openShift(shift: Shift | null) {
     const zone = zoneOf(locations, shift?.location_id ?? selected);
@@ -913,6 +963,71 @@ export function Schedule({
             )}
           </section>
         </>
+      )}
+      {!loading && tab === "privacy" && (
+        <section aria-label="Privacy" className="workforce-card">
+          <h2>Privacy</h2>
+          {workspace && workspace.location_id === null && (
+            <LocationFilter
+              locations={workspace.locations}
+              value={selected}
+              onChange={(value) => {
+                setChosen(value);
+                setChoice(null);
+              }}
+            />
+          )}
+          {privacyError && (
+            <p role="alert" className="error">
+              {privacyError}
+            </p>
+          )}
+          {!current ? (
+            !privacyError && <p aria-live="polite">Loading the setting…</p>
+          ) : (
+            <form onSubmit={savePrivacy}>
+              <fieldset disabled={center.blocked || !open}>
+                <legend>
+                  Colleagues’ shifts in {placeOf(locations, selected)}
+                </legend>
+                <label className="workforce-check">
+                  <input
+                    type="radio"
+                    name="colleague-shifts"
+                    checked={visible}
+                    onChange={() => setChoice(true)}
+                  />
+                  Staff see the published shifts of colleagues in this location
+                </label>
+                <label className="workforce-check">
+                  <input
+                    type="radio"
+                    name="colleague-shifts"
+                    checked={!visible}
+                    onChange={() => setChoice(false)}
+                  />
+                  Staff see only their own shifts and open shifts
+                </label>
+                <p>
+                  While colleagues’ shifts are hidden, a swap cannot be chosen
+                  in “My shifts”. A handover, a request for an open shift and
+                  the requests a person already takes part in still work.
+                </p>
+                <button
+                  type="submit"
+                  disabled={visible === current.colleague_shifts_visible}
+                >
+                  Save privacy
+                </button>
+              </fieldset>
+              <p>
+                {current.revision === 0 || !current.changed_at
+                  ? "Never changed: colleagues’ shifts are visible by default."
+                  : `Version ${current.revision}: last changed by ${changer} on ${moment(current.changed_at, zoneOf(locations, selected))}.`}
+              </p>
+            </form>
+          )}
+        </section>
       )}
       {!loading && tab === "requests" && (
         <section aria-label="Change requests" className="workforce-card">

@@ -251,6 +251,21 @@ def test_i4_real_browser_closed_then_enabled_then_switched_off(
             )
             == 2
         )
+        # Per project the branch manager hid colleagues' shifts and showed them again.
+        settings = owner_conn.execute(
+            "select location_id,revision,colleague_shifts_visible "
+            "from gba.work_location_setting_versions order by revision"
+        ).fetchall()
+        assert settings == [
+            (world.a.location_id, 1, False),
+            (world.a.location_id, 2, True),
+            (world.a.location_id, 3, False),
+            (world.a.location_id, 4, True),
+        ]
+        assert (
+            count("select count(*) from gba.audit_events where action='workforce.location_setting'")
+            == 4
+        )
         assert count("select count(*) from gba.staff_profiles") == 6
         assert count("select count(*) from gba.work_skills") == 2
     with owner_tenant_transaction(owner_conn, world.b.tenant_id):

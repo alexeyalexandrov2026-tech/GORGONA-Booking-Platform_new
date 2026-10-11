@@ -1,10 +1,12 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { ManagementApiError } from "../lib/management-api";
 import {
   fetchChangeHistory,
   fetchChanges,
   fetchColleagueShifts,
   fetchColleagues,
+  fetchRequestShifts,
   fetchShifts,
 } from "../lib/workforce-api";
 import type {
@@ -96,22 +98,21 @@ export function MyShifts({
     const map = new Map<string, Shift>();
     for (const item of [...own.items, ...vacant.items])
       map.set(item.shift_id, item);
-    // A request names a colleague's shift only by its id; read those shifts too.
-    const others = new Set<string>();
-    for (const request of requests.items)
-      for (const side of [request.from_profile_id, request.target_profile_id])
-        if (side && team.items.some((item) => item.profile_id === side))
-          others.add(side);
+    // A request names shifts only by id. Read exactly those as its participant:
+    // this works also where the location hides colleagues' other shifts.
+    const unnamed = latest(requests.items).filter((request) =>
+      [request.shift_id, request.other_shift_id].some(
+        (shift) => shift !== null && !map.has(shift),
+      ),
+    );
     const theirs = await Promise.allSettled(
-      [...others]
-        .slice(0, 10)
-        .map((side) =>
-          fetchColleagueShifts(businessId, side, window.starts, window.ends),
-        ),
+      unnamed
+        .slice(0, 20)
+        .map((request) => fetchRequestShifts(businessId, request)),
     );
     for (const part of theirs)
       if (part.status === "fulfilled")
-        for (const item of part.value.items)
+        for (const item of part.value)
           if (!map.has(item.shift_id)) map.set(item.shift_id, item);
     setShifts(soonest(own.items.filter((item) => item.status === "published")));
     setFree(soonest(vacant.items));
@@ -138,6 +139,7 @@ export function MyShifts({
   }, [load]);
 
   const open = desk?.writes === "open";
+  const hidden = desk?.colleague_shifts === "hidden";
   const others = colleagues.filter((item) => item.profile_id !== profileId);
   const person = (profile: string | null) =>
     profile === null
@@ -169,7 +171,14 @@ export function MyShifts({
       );
       setProposing({ ...next, theirs: soonest(listed.items) });
     } catch (error) {
-      setProposing({ ...next, theirs: [] });
+      if (
+        error instanceof ManagementApiError &&
+        error.code === "COLLEAGUE_SHIFTS_HIDDEN"
+      ) {
+        // The location hid the shifts after this screen was loaded.
+        setProposing(null);
+        void reload();
+      } else setProposing({ ...next, theirs: [] });
       center.report(explain(error));
     }
   }
@@ -297,7 +306,10 @@ export function MyShifts({
                         key={kind}
                         className="secondary"
                         disabled={
-                          center.blocked || !open || others.length === 0
+                          center.blocked ||
+                          !open ||
+                          others.length === 0 ||
+                          (kind === "swap" && hidden)
                         }
                         aria-label={`${kind === "handover" ? "Hand over" : "Swap"} ${describe(shift)}`}
                         onClick={() =>
@@ -319,6 +331,13 @@ export function MyShifts({
             </ul>
             {others.length === 0 && shifts.length > 0 && (
               <p>There are no colleagues in your location to ask.</p>
+            )}
+            {hidden && (
+              <p role="note">
+                Your location does not show colleagues’ shifts, so a swap cannot
+                be chosen here. You can still hand a shift over or ask for an
+                open shift.
+              </p>
             )}
           </section>
           {proposing && (
