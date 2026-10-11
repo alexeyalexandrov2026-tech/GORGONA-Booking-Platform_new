@@ -147,23 +147,24 @@ export function useWorkforceCommands(
           saved.reference,
           cancel,
         );
-        if (outcome.state === "committed") {
-          finish(saved.key, "Your earlier action was recorded.");
+        if (outcome.state === "unresolved") setUnresolved(true);
+        else {
+          clearWorkforceRecovery(actorId, businessId, saved.key);
           await reloaded();
-        } else if (outcome.state === "cancelled") {
           finish(
             saved.key,
-            "The earlier action was discarded. Nothing was recorded.",
+            outcome.state === "committed"
+              ? "Your earlier action was recorded."
+              : "The earlier action was discarded. Nothing was recorded.",
           );
-          await reloaded();
-        } else setUnresolved(true);
+        }
       } catch (failure) {
         setError(explain(failure));
       } finally {
         setBusy(false);
       }
     },
-    [businessId, finish, reloaded],
+    [actorId, businessId, finish, reloaded],
   );
 
   useEffect(() => {
@@ -193,8 +194,10 @@ export function useWorkforceCommands(
   async function send(command: WorkforceCommand, done: string) {
     try {
       const result = await executeWorkforceCommand(businessId, command);
-      finish(command.key, done);
+      clearWorkforceRecovery(actorId, businessId, command.key);
+      // Confirm only once the lists show the saved version.
       await reloaded();
+      finish(command.key, done);
       return result;
     } catch (failure) {
       if (uncertain(failure)) {

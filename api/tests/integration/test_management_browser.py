@@ -179,7 +179,12 @@ def _provider(
     @provider.get("/logout")
     async def logout(request: Request) -> RedirectResponse:
         destination = request.query_params.get("post_logout_redirect_uri", "")
-        if destination not in (f"{app_origin}/", f"{app_origin}/overview/"):
+        # The application's registered post-logout address is /auth/logout/.
+        if destination not in (
+            f"{app_origin}/",
+            f"{app_origin}/overview/",
+            f"{app_origin}/auth/logout/",
+        ):
             raise HTTPException(400, "Invalid logout redirect")
         return RedirectResponse(destination, status_code=302)
 
