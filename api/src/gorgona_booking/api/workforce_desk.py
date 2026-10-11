@@ -63,6 +63,16 @@ async def get_colleague_shifts(
         )
 
 
+@router.get("/my-changes/{request_id}/shifts")
+async def get_request_shifts(
+    business_id: UUID, request_id: UUID, request: Request, principal: CurrentPrincipal
+) -> ShiftList:
+    async with _access(request, principal, business_id, Permission.WORKFORCE_SELF) as access:
+        # A request may name a shift of another branch; the SQL filters the participant.
+        await access.conn.execute("select set_config('gba.location_id','',true)")
+        return await service.request_shifts(access.conn, business_id, principal.user_id, request_id)
+
+
 @router.get("/locations/{location_id}/settings")
 async def get_location_setting(
     business_id: UUID, location_id: UUID, request: Request, principal: CurrentPrincipal

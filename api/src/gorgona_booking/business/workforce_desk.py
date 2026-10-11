@@ -235,6 +235,26 @@ async def colleague_shifts(
     return ShiftList(items=items, next_cursor=listed.next_cursor)
 
 
+async def request_shifts(
+    conn: RuntimeConnection, business: UUID, user: UUID, request: UUID
+) -> ShiftList:
+    """The shift versions a request names, for a person who takes part in it.
+
+    A request shares exactly its own shifts, also where the branch hides the rest.
+    """
+    change = await shift_changes.load(conn, business, request, participant=user)
+    items = [
+        await workforce.load_shift(conn, business, change.shift_id, change.expected_shift_revision)
+    ]
+    if change.other_shift_id is not None:
+        items.append(
+            await workforce.load_shift(
+                conn, business, change.other_shift_id, change.expected_other_shift_revision
+            )
+        )
+    return ShiftList(items=tuple(items))
+
+
 def _scope(business: UUID, actor: str, body: CommandReference, key: str) -> IdempotencyScope:
     return IdempotencyScope(business, actor, "workforce." + body.operation, key)
 

@@ -20,6 +20,7 @@ from gorgona_booking.db.provisioning import owner_tenant_transaction
 from gorgona_booking.db.workforce_guard import assert_workforce_ready
 from tests.integration import test_management_api as api_shared
 from tests.integration import test_timesheets as shared
+from tests.integration.booking_support import at
 from tests.integration.configuration_support import Config
 from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.seed import FakeUser, seed_other_branch
@@ -370,6 +371,56 @@ async def test_damaged_setting_controls_fail_closed_with_503(
     async with tenant_transaction(app_pool, world.a.tenant_id) as conn:
         await assert_workforce_ready(conn)
     assert _versions(owner_conn, world.a.tenant_id) == []
+
+
+async def test_participants_read_the_shifts_of_their_request_even_when_hidden(
+    times: Times, owner_conn: psycopg.Connection, idp: FakeIdp, manager_b: FakeUser
+) -> None:
+    changes = times.changes
+    world = changes.workforce.world
+    tenant, location = world.a.tenant_id, world.a.location_id
+    mine = await changes.shift(changes.left_profile)
+    theirs = await changes.shift(changes.right_profile)
+    swap = await changes.propose(
+        "swap",
+        mine,
+        other_shift_id=theirs["shift_id"],
+        expected_other_shift_revision=theirs["revision"],
+    )
+    assert swap.status_code == 200, swap.text
+    assert (await _set(times, location, False, 0)).status_code == 200
+    path = f"/my-changes/{swap.json()['request_id']}/shifts"
+    # Both sides see exactly the two versions the request was made for.
+    for headers in (changes.left_headers, changes.right_headers):
+        named = await _get(times, path, headers)
+        assert named.status_code == 200, named.text
+        assert named.json() == {"schema_version": 1, "items": [mine, theirs], "next_cursor": None}
+    browse = await _get(
+        times, f"/colleagues/{changes.right_profile}/shifts", changes.left_headers, **WINDOW
+    )
+    assert browse.status_code == 403, browse.text
+    # A person outside the request learns nothing from it, a manager included.
+    outsider = _member(owner_conn, tenant, location, "artist")
+    for headers in (
+        idp.bearer(outsider.subject, email=outsider.email),
+        changes.workforce.headers,
+    ):
+        assert (await _get(times, path, headers)).status_code == 404
+    assert (
+        await _get(times, f"/my-changes/{uuid7()}/shifts", changes.left_headers)
+    ).status_code == 404
+    foreign = await _get(times, path, idp.bearer(manager_b.subject, email=manager_b.email))
+    assert foreign.status_code == 403, foreign.text
+    later = await changes.shift(
+        changes.left_profile, starts_at=at(14).isoformat(), ends_at=at(15).isoformat()
+    )
+    handover = await changes.propose("handover", later)
+    assert handover.status_code == 200, handover.text
+    single = await _get(
+        times, f"/my-changes/{handover.json()['request_id']}/shifts", changes.right_headers
+    )
+    assert single.status_code == 200, single.text
+    assert [item["shift_id"] for item in single.json()["items"]] == [handover.json()["shift_id"]]
 
 
 async def _wait_for_branch_lock_waiter(
