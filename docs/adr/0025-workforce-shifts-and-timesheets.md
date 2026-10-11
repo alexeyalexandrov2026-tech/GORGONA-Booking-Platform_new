@@ -118,6 +118,14 @@ owner is asked to resolve the difference before I1.
 
 ## Limits
 
+I4 implementation note (2026-10-11): three management screens use the I1–I3 API
+and five added routes: own desk state and profile, a scoped staff directory with
+names, a home colleague's published shifts for a swap, and resolve/cancel of a
+sent command by its original key. Cancel claims the key in the shared receipt
+table, so a lost command cannot commit after the person starts again; the
+browser keeps identifiers only. No migration, dependency or readiness change.
+[Evidence](../plan/evidence/2026-10-11-i4-workforce-screens/VALIDATION.md).
+
 I3 implementation note (2026-10-11): forward0034 adds immutable time-entry heads
 and revision snapshots, with a guarded derivable state. Identity and one-open/
 approved-full-interval exclusions use tenant/stable user, including reinvitation.

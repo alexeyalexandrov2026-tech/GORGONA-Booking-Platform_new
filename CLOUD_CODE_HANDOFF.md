@@ -1,6 +1,26 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current: I3 implemented and locally validated — 2026-10-11
+## Current: I4 implemented and locally validated — 2026-10-11
+
+Successor entry point: [package I after I4: open items and copyable prompts](docs/plan/NEXT_AGENT_PACKAGE_I_REVIEW_2026-10-11.md).
+Local branch codex/package-i4-workforce-screens on the I4 handoff
+d22b61cf53612ab85c157c00ecd75fd1630ba1c2; final code commit
+f4a7395e3ab9515e410143103142f44072af6cba. Three management screens over I1–I3:
+Schedule, My shifts and Timesheets, on desktop and phone. Five small read and
+outcome routes were added after failing tests; no migration. A lost answer is
+settled with the server by the original key; the browser keeps identifiers only.
+[Evidence](docs/plan/evidence/2026-10-11-i4-workforce-screens/VALIDATION.md),
+[commands](docs/plan/evidence/2026-10-11-i4-workforce-screens/COMMANDS.md).
+PASS: complete suite 1486 passed / 4 skipped / 907.37s on f4a7395; real browser on desktop and phone
+1 / 92.97s; two cancel races with observed pg_locks waits; Ruff/format/mypy 261;
+web unit 101 and build 23 pages. Independent review NOT DONE (the author's
+re-read only). No push/PR; exact-commit CI, containers, external site, HawkScan,
+load/soak, deployment/production NOT TESTED. Inherited production npm audit
+FAIL 2 high. Migrations 0001–0034, WORK-01/CORE-04 and the workforce readiness
+lock are unchanged. Package acceptance (matrix I-01–I-12) and publication remain
+owner decisions. FIN-03 check stays a separate task. No CodeRabbit.
+
+## Previous: I3 implemented and locally validated — 2026-10-11
 
 Successor entry point: [I4 handoff and copyable prompt](docs/plan/NEXT_AGENT_PACKAGE_I4_2026-10-11.md).
 Verified I3 code commit: `ec9524aa77d0d26fee7253380d226f394cc587fd`.

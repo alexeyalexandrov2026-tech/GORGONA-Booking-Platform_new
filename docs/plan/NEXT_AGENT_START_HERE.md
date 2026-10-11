@@ -1,6 +1,21 @@
-# GORGONA — начните здесь (актуальное продолжение, 2026-10-09)
+# GORGONA — начните здесь (актуальное продолжение, 2026-10-11)
 
-## Current: package I started (plan and slice I0)
+## Current: package I, slice I4 done locally — 2026-10-11
+
+Read the [handoff with open items and copyable prompts](NEXT_AGENT_PACKAGE_I_REVIEW_2026-10-11.md)
+first, then the [package I plan](PACKAGE_I_PLAN_2026-10-09.md),
+[ADR-0025](../adr/0025-workforce-shifts-and-timesheets.md) and the
+[I4 evidence](evidence/2026-10-11-i4-workforce-screens/VALIDATION.md). Checkout
+`C:\Users\alexa\Documents\ChatGPT\gorgona-package-i`, local branch
+`codex/package-i4-workforce-screens` (I0–I4 stacked, nothing pushed). Slices
+I1–I3 are recorded in `CLOUD_CODE_HANDOFF.md` and their evidence folders. Open:
+an independent review of I4, exact-commit CI, the acceptance record for
+I-01–I-12 and owner decisions. WORK-01 and CORE-04 stay planned. Package H keeps
+two open items: a draft PR for `codex/package-h-acceptance` and an independent
+check of `ec39622`. Merge, deployment and production migration are not
+authorized. Read the actual HEAD, remote, PR and CI state before continuing.
+
+## Previous: package I started (plan and slice I0)
 
 Read the [handoff and copyable prompt](NEXT_AGENT_PACKAGE_I_2026-10-09.md) first,
 then the [package I plan](PACKAGE_I_PLAN_2026-10-09.md),
