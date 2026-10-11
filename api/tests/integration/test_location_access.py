@@ -406,7 +406,7 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
             assert len(policies) == len(ADMISSION_TABLES)
             for policy in policies:
                 owner_conn.execute(policy.encode("utf-8"))
-            workforce = "\n".join(m.sql for m in load_migrations() if m.version in (32, 33))
+            workforce = "\n".join(m.sql for m in load_migrations() if m.version in (32, 33, 34))
             workforce_policies = re.findall(
                 r"create policy \w+_location_scope\b.*?;", workforce, re.DOTALL
             )

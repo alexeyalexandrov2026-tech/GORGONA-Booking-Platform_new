@@ -28,6 +28,7 @@ from gorgona_booking.api import (
     salons,
     setup,
     shift_changes,
+    timesheets,
     workforce,
 )
 from gorgona_booking.api.errors import install_error_handlers
@@ -134,6 +135,7 @@ def create_app(
     app.include_router(reservations.router)
     app.include_router(workforce.router)
     app.include_router(shift_changes.router)
+    app.include_router(timesheets.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

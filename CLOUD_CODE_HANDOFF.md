@@ -1,6 +1,25 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current: I2 implemented and locally validated — 2026-10-10
+## Current: I3 implemented and locally validated — 2026-10-11
+
+Local branch codex/package-i3-timesheets on I2
+49276bf800eb929589785e192db489e17ac77fa7. Forward0034 adds own start/end/breaks,
+immutable corrections/decisions, last-approved effective time, stable-user
+one-open/overlap protection and original-revision replay. Own closure/history
+work when workforce is off. No journal or shared occupancy is created.
+[Evidence](docs/plan/evidence/2026-10-11-i3-timesheets/VALIDATION.md),
+[independent source review](docs/plan/evidence/2026-10-11-i3-timesheets/INDEPENDENT_REVIEW.md).
+PASS: final focused76/67.46s, Ruff/format/mypy254,
+web94/build and corrected-source review14 SHA matches. All17 I3 races require
+observed pg_locks waits. Four SQL/state findings reproduced and fixed.
+Full I3 suite PASS:1473 passed / 4 skipped / 832.46s.
+Migrations0001–0033, WORK-01/CORE-04 and workforce readiness remain unchanged.
+No push/PR; exact-commit CI, I4 screens, containers, deployment/production and
+load/soak NOT TESTED. Inherited production npm audit FAIL2 high.
+Next slice I4 and package acceptance remain. FIN-03 check stays a separate task.
+No CodeRabbit.
+
+## Previous: I2 implemented and locally validated — 2026-10-10
 
 Local branch codex/package-i2-shift-changes on I1
 69270cc8bfdfb763cc8f5fc9b7892b13db987bce. Forward0033 adds handover, swap and

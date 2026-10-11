@@ -1,4 +1,4 @@
-"""I1/I2 packaged schema approvals. Never learn approvals from the target database."""
+"""I1-I3 packaged schema approvals. Never learn approvals from the target database."""
 
 import re
 from collections import defaultdict
@@ -11,7 +11,7 @@ from gorgona_booking.errors import DatabaseUnavailableError
 _MIGRATIONS = resources.files("gorgona_booking.db") / "migrations"
 _SQL = "\n".join(
     (_MIGRATIONS / filename).read_text(encoding="utf-8")
-    for filename in ("0032_workforce.sql", "0033_shift_changes.sql")
+    for filename in ("0032_workforce.sql", "0033_shift_changes.sql", "0034_timesheets.sql")
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
 WORKFORCE_TABLES = tuple(_BLOCKS)
@@ -25,7 +25,7 @@ _FUNCTIONS = dict(
 _TRIGGERS = tuple(
     re.findall(
         "create (constraint )?trigger (\\w+) (before|after) (update or "
-        "delete|insert|update) on gba\\.(\\w+)\\s*"
+        "delete|insert or update or delete|insert|update) on gba\\.(\\w+)\\s*"
         r"(deferrable initially deferred )?for each row execute function gba\.(\w+)\(([^)]*)\);",
         _SQL,
         re.DOTALL,
@@ -53,7 +53,8 @@ _INSERTS = {
     for columns, table in re.findall(r"grant insert \(([^)]+)\) on gba\.(\w+)", _SQL)
 }
 _COLUMN_PATTERN = (
-    r"^    (\w+) (uuid\[\]|uuid|text|integer|boolean|timestamptz|xid8)(?=[\s,])([^\n]*)"
+    r"^    (\w+) (uuid\[\]|uuid|text|integer|boolean|timestamptz\[\]|"
+    r"timestamptz|xid8)(?=[\s,])([^\n]*)"
 )
 _COLUMNS = {
     table: tuple(re.findall(_COLUMN_PATTERN, block, re.MULTILINE))
@@ -150,6 +151,62 @@ _CHECKS = {
     ),
     "shift_change_skill_snapshots_catalogue_check": ("((catalogue_revision > 0))"),
     "shift_change_skill_snapshots_staff_check": ("((staff_revision >= 0))"),
+    "time_entries_date_check": (
+        "((isfinite(starts_at) AND (EXTRACT(epoch FROM starts_at) >= ('-621040608"
+        "00'::bigint)::numeric) AND (EXTRACT(epoch FROM starts_at) < ('2533707648"
+        "00'::bigint)::numeric)))"
+    ),
+    "time_entries_shift_check": (
+        "((((shift_id IS NULL) AND (shift_revision IS NULL) AND (shift_starts_at "
+        "IS NULL) AND (shift_ends_at IS NULL)) OR ((shift_id IS NOT NULL) AND (sh"
+        "ift_revision IS NOT NULL) AND ((shift_revision >= 1) AND (shift_revision"
+        " <= 2147483646)) AND (shift_starts_at IS NOT NULL) AND (shift_ends_at IS"
+        " NOT NULL) AND (shift_ends_at > shift_starts_at))))"
+    ),
+    "time_entry_revisions_action_check": (
+        "((action = ANY (ARRAY['clock_in'::text, 'break_start'::text, 'break_end'"
+        "::text, 'clock_out'::text, 'correct'::text, 'approve'::text, 'decline'::"
+        "text])))"
+    ),
+    "time_entry_revisions_arrays_check": (
+        "(((cardinality(break_starts) = cardinality(break_ends)) AND (cardinality"
+        "(break_starts) <= 100) AND (COALESCE(array_ndims(break_starts), 1) = 1) "
+        "AND (COALESCE(array_ndims(break_ends), 1) = 1) AND (COALESCE(array_lower"
+        "(break_starts, 1), 1) = 1) AND (COALESCE(array_lower(break_ends, 1), 1) "
+        "= 1)))"
+    ),
+    "time_entry_revisions_dates_check": (
+        "((isfinite(occurred_at) AND (EXTRACT(epoch FROM occurred_at) >= ('-62104"
+        "060800'::bigint)::numeric) AND (EXTRACT(epoch FROM occurred_at) < ('2533"
+        "70764800'::bigint)::numeric) AND isfinite(starts_at) AND (EXTRACT(epoch "
+        "FROM starts_at) >= ('-62104060800'::bigint)::numeric) AND (EXTRACT(epoch"
+        " FROM starts_at) < ('253370764800'::bigint)::numeric) AND ((ends_at IS N"
+        "ULL) OR (isfinite(ends_at) AND (ends_at > starts_at) AND (EXTRACT(epoch "
+        "FROM ends_at) < ('253370764800'::bigint)::numeric))) AND ((break_started"
+        "_at IS NULL) OR (isfinite(break_started_at) AND (break_started_at >= sta"
+        "rts_at) AND (EXTRACT(epoch FROM break_started_at) < ('253370764800'::big"
+        "int)::numeric)))))"
+    ),
+    "time_entry_revisions_reason_check": (
+        "((((length(btrim(reason)) >= 1) AND (length(btrim(reason)) <= 1000)) AND"
+        " (reason !~ '[[:cntrl:]]'::text)))"
+    ),
+    "time_entry_revisions_revision_check": ("((revision > 0))"),
+    "time_entry_revisions_shape_check": (
+        "((((status = 'open'::text) AND (ends_at IS NULL)) OR ((status <> 'open':"
+        ":text) AND (ends_at IS NOT NULL) AND (break_started_at IS NULL))))"
+    ),
+    "time_entry_revisions_status_check": (
+        "((status = ANY (ARRAY['open'::text, 'proposed'::text, 'approved'::text, "
+        "'declined'::text])))"
+    ),
+    "time_entry_state_revision_check": ("((last_revision > 0))"),
+    "time_entry_state_shape_check": (
+        "((((approved_revision IS NULL) AND (starts_at IS NULL) AND (ends_at IS N"
+        "ULL)) OR ((approved_revision IS NOT NULL) AND (starts_at IS NOT NULL) AN"
+        "D (ends_at IS NOT NULL) AND (approved_revision <= last_revision) AND (en"
+        "ds_at > starts_at))))"
+    ),
 }
 
 _POLICIES = {
@@ -239,6 +296,36 @@ _POLICIES = {
             "skill_snapshots.request_id))))"
         ),
     ),
+    "time_entries": (
+        ("((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))"),
+        ("((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))"),
+    ),
+    "time_entry_revisions": (
+        (
+            "(EXISTS ( SELECT 1\n   FROM gba.time_entries e\n  WHERE ((e.tenant_id = ti"
+            "me_entry_revisions.tenant_id) AND (e.id = time_entry_revisions.entry_id)"
+            ")))"
+        ),
+        (
+            "(EXISTS ( SELECT 1\n   FROM gba.time_entries e\n  WHERE ((e.tenant_id = ti"
+            "me_entry_revisions.tenant_id) AND (e.id = time_entry_revisions.entry_id)"
+            ")))"
+        ),
+    ),
+    "time_entry_state": (
+        ("((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))"),
+        ("((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))"),
+    ),
+}
+
+_EXCLUSIONS: dict[str, str] = {
+    "time_entry_state_no_overlap": (
+        "EXCLUDE USING gist (tenant_id WITH =, user_id WITH =, tstzrange(starts_a"
+        "t, ends_at, '[)'::text) WITH &&) WHERE ((approved_revision IS NOT NULL))"
+    ),
+    "time_entry_state_one_open": (
+        "EXCLUDE USING gist (tenant_id WITH =, user_id WITH =) WHERE (is_open)"
+    ),
 }
 
 _SHARED_CHECKS = {
@@ -325,8 +412,13 @@ async def _check(conn: RuntimeConnection) -> None:
                c.confrelid::regclass::text,
                array(select attname from pg_attribute where attrelid=c.confrelid
                      and attnum=any(c.confkey) order by array_position(c.confkey,attnum)),
-               c.condeferrable,c.condeferred,c.confupdtype,c.confdeltype,c.confmatchtype,c.connoinherit
+               c.condeferrable,c.condeferred,c.confupdtype,c.confdeltype,c.confmatchtype,c.connoinherit,
+               i.indisvalid,i.indisready,i.indislive,i.indisexclusion,am.amname,
+               array(select op.opcname from unnest(i.indclass) with ordinality x(id,n)
+                     join pg_opclass op on op.oid=x.id order by x.n)
           from pg_constraint c join pg_class cl on cl.oid=c.conrelid
+          left join pg_index i on i.indexrelid=c.conindid
+          left join pg_class ix on ix.oid=i.indexrelid left join pg_am am on am.oid=ix.relam
          where cl.relnamespace='gba'::regnamespace and cl.relname=any(%s)
     """,
         [*names, "resources", "resource_allocations"],
@@ -380,13 +472,22 @@ async def _check(conn: RuntimeConnection) -> None:
                 else None
             )
             lock_column = (
-                table in ("work_skills", "work_shifts", "shift_change_requests") and name == "id"
+                table in ("work_skills", "work_shifts", "shift_change_requests", "time_entries")
+                and name == "id"
+            ) or (
+                table == "time_entry_state"
+                and name
+                in ("last_revision", "is_open", "approved_revision", "starts_at", "ends_at")
             )
             _require(
                 actual
                 == (
                     name,
-                    "timestamp with time zone" if kind == "timestamptz" else kind,
+                    "timestamp with time zone"
+                    if kind == "timestamptz"
+                    else "timestamp with time zone[]"
+                    if kind == "timestamptz[]"
+                    else kind,
                     "not null" in tail,
                     default,
                     name in _INSERTS[table],
@@ -398,6 +499,7 @@ async def _check(conn: RuntimeConnection) -> None:
         actual_keys: set[tuple[str, tuple[str, ...]]] = set()
         actual_fks: set[tuple[tuple[str, ...], str, tuple[str, ...]]] = set()
         check_names = set()
+        exclusion_names = set()
         for (
             name,
             kind,
@@ -413,6 +515,12 @@ async def _check(conn: RuntimeConnection) -> None:
             delete,
             match,
             noinherit,
+            index_valid,
+            index_ready,
+            index_live,
+            index_exclusion,
+            index_method,
+            index_classes,
         ) in constraints[table]:
             if not valid or not enforced or (kind == "c" and noinherit):
                 raise ValueError(
@@ -432,6 +540,24 @@ async def _check(conn: RuntimeConnection) -> None:
                 )
             elif kind == "t":
                 _require(name in {t[1] for t in _TRIGGERS if t[0] and t[4] == table})
+            elif kind == "x":
+                exclusion_names.add(name)
+                _require(not defer and not deferred and name in _EXCLUSIONS)
+                _require(_expression(definition) == _expression(_EXCLUSIONS[name]))
+                expected_classes = ["gist_uuid_ops", "gist_uuid_ops"]
+                if name == "time_entry_state_no_overlap":
+                    expected_classes.append("range_ops")
+                _require(
+                    (
+                        index_valid,
+                        index_ready,
+                        index_live,
+                        index_exclusion,
+                        index_method,
+                        index_classes,
+                    )
+                    == (True, True, True, True, "gist", expected_classes)
+                )
             else:
                 _require(kind == "n")
         _require(actual_keys == set(_KEYS[table]))
@@ -448,6 +574,7 @@ async def _check(conn: RuntimeConnection) -> None:
                 f"Unapproved FK for {table}: {actual_fks} expected {set(_FKS[table]) | inline}"
             )
         _require(check_names == {name for name in _CHECKS if name.startswith(table + "_")})
+        _require(exclusion_names == {name for name in _EXCLUSIONS if name.startswith(table + "_")})
         _require({t[0] for t in triggers[table]} == {t[1] for t in _TRIGGERS if t[4] == table})
     for constraint, name, when, event, table, deferred, function, argument in _TRIGGERS:
         actual_trigger = next((t[1:] for t in triggers[table] if t[0] == name), None)

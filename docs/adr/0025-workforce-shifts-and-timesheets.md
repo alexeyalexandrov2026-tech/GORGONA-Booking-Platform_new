@@ -118,6 +118,23 @@ owner is asked to resolve the difference before I1.
 
 ## Limits
 
+I3 implementation note (2026-10-11): forward0034 adds immutable time-entry heads
+and revision snapshots, with a guarded derivable state. Identity and one-open/
+approved-full-interval exclusions use tenant/stable user, including reinvitation.
+Pending/declined corrections retain the last approved interval; breaks deduct
+elapsed time without breaking its overlap interval. Accounting belongs to the
+staff home, while the optional original shift link/bounds remain immutable.
+Owners alone may approve their own time with a visible immutable flag; manager
+decisions enforce their actual home. Own history/closure survive module-off.
+Module-row and current allocation FOR SHARE refuse stale RR snapshots. These
+physical checks create no reservation; journal/occupancy counts remain unchanged.
+Starting another break after100 completed ones is refused before opening it,
+preserving the ability to close the entry, including when workforce is disabled.
+Clock inputs are reported timestamps, not device/geolocation proof. UTC instant
+ordering handles DST folds. No new dependencies or readiness promotion.
+[Evidence](../plan/evidence/2026-10-11-i3-timesheets/VALIDATION.md),
+[independent corrected-source review](../plan/evidence/2026-10-11-i3-timesheets/INDEPENDENT_REVIEW.md).
+
 I2 implementation note (2026-10-10): forward0033 adds immutable requests,
 participant/required-skill snapshots and consent/decision events. Pickup has no
 outgoing employee: its recipient explicitly accepts, then a different manager
