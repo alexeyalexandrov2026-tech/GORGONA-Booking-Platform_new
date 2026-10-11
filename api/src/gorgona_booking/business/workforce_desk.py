@@ -209,22 +209,24 @@ async def colleague_shifts(
     The home branch may hide them; then nothing about a colleague is read here.
     """
     location = await shift_changes.home(conn, business, user)
-    if location is None:
-        raise NotFoundError("Colleague not found")
-    await conn.execute("select set_config('gba.location_id',%s,true)", (str(location),))
-    if not await _shifts_visible(conn, business, location):
-        raise ColleagueShiftsHiddenError("Your branch does not show colleagues' shifts")
-    row = await (
-        await conn.execute(
-            "select m.user_id from gba.staff_profiles p join gba.memberships m "
-            "on m.tenant_id=p.tenant_id and m.id=p.membership_id "
-            "join gba.users u on u.id=p.user_id "
-            "where p.tenant_id=%s and p.id=%s and p.location_id=%s "
-            "and m.status='active' and u.status='active'",
-            (business, profile, location),
-        )
-    ).fetchone()
-    if row is None:
+    row = None
+    if location is not None:
+        # The colleague is looked up in the caller's own scope, as before the setting.
+        row = await (
+            await conn.execute(
+                "select m.user_id from gba.staff_profiles p join gba.memberships m "
+                "on m.tenant_id=p.tenant_id and m.id=p.membership_id "
+                "join gba.users u on u.id=p.user_id "
+                "where p.tenant_id=%s and p.id=%s and p.location_id=%s "
+                "and m.status='active' and u.status='active'",
+                (business, profile, location),
+            )
+        ).fetchone()
+        await conn.execute("select set_config('gba.location_id',%s,true)", (str(location),))
+        # A hidden branch answers the same for a known and an unknown colleague.
+        if not await _shifts_visible(conn, business, location):
+            raise ColleagueShiftsHiddenError("Your branch does not show colleagues' shifts")
+    if location is None or row is None:
         raise NotFoundError("Colleague not found")
     listed = await workforce.list_shifts(conn, business, starts, ends, after, limit, row[0])
     items = tuple(

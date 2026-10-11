@@ -423,6 +423,55 @@ async def test_participants_read_the_shifts_of_their_request_even_when_hidden(
     assert [item["shift_id"] for item in single.json()["items"]] == [handover.json()["shift_id"]]
 
 
+async def test_a_company_wide_member_follows_the_setting_of_their_home_branch(
+    times: Times, owner_conn: psycopg.Connection, idp: FakeIdp
+) -> None:
+    changes = times.changes
+    world = changes.workforce.world
+    tenant, location = world.a.tenant_id, world.a.location_id
+    roamer = _member(owner_conn, tenant, None, "artist")
+    with owner_tenant_transaction(owner_conn, tenant):
+        membership = owner_conn.execute(
+            "select id from gba.memberships where user_id=%s", (roamer.user_id,)
+        ).fetchone()
+    assert membership is not None
+    profile = await changes.workforce.put(
+        f"/staff/{uuid7()}", {"membership_id": str(membership[0]), "location_id": str(location)}
+    )
+    assert profile.status_code == 200, profile.text
+    headers = idp.bearer(roamer.subject, email=roamer.email)
+    theirs = await changes.shift(changes.right_profile)
+    candidates = f"/colleagues/{changes.right_profile}/shifts"
+    listed = await _get(times, candidates, headers, **WINDOW)
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["items"] == [theirs]
+    assert (await _get(times, "/desk", headers)).json()["colleague_shifts"] == "visible"
+    # The branch employee reads the company-wide colleague's shifts the same way.
+    held = await changes.workforce.put(
+        f"/shifts/{uuid7()}",
+        changes.workforce.shift(
+            staff_profile_id=profile.json()["profile_id"],
+            starts_at=at(14).isoformat(),
+            ends_at=at(15).isoformat(),
+        ),
+    )
+    assert held.status_code == 200, held.text
+    back = await _get(
+        times,
+        f"/colleagues/{profile.json()['profile_id']}/shifts",
+        changes.left_headers,
+        **WINDOW,
+    )
+    assert back.status_code == 200, back.text
+    assert back.json()["items"] == [held.json()]
+    assert (await _set(times, location, False, 0)).status_code == 200
+    for path in (candidates, f"/colleagues/{uuid7()}/shifts"):
+        refused = await _get(times, path, headers, **WINDOW)
+        assert refused.status_code == 403, refused.text
+        assert refused.json()["error"]["code"] == "COLLEAGUE_SHIFTS_HIDDEN"
+    assert (await _get(times, "/desk", headers)).json()["colleague_shifts"] == "hidden"
+
+
 async def _wait_for_branch_lock_waiter(
     monitor: psycopg.AsyncConnection, tenant: UUID, location: UUID
 ) -> None:
