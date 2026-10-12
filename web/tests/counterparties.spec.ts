@@ -136,7 +136,11 @@ test("counterparty cards, manual decisions, links, uncertain retries and retaine
     expect(changed.status()).toBe(200);
     await card.getByRole("button", { name: "Review and save card" }).click();
     await confirm(page);
-    await expect(page.getByRole("alert")).toBeVisible();
+    // The page also carries Next.js's own empty role=alert announcer, so the
+    // assertion names the message.
+    await expect(
+      page.getByRole("alert").filter({ hasText: "This counterparty changed." }),
+    ).toBeVisible();
     await expect(
       card.getByLabel("Display name", { exact: true }),
     ).toBeDisabled();

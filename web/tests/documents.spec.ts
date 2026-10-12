@@ -158,7 +158,11 @@ test("documents, verified files, counterparty links, uncertain retries and retai
     );
     expect(changed.status()).toBe(200);
     await card.getByRole("button", { name: "Save document" }).click();
-    await expect(page.getByRole("alert")).toBeVisible();
+    // The page also carries Next.js's own empty role=alert announcer, so the
+    // assertion names the message.
+    await expect(
+      page.getByRole("alert").filter({ hasText: "This document changed." }),
+    ).toBeVisible();
     await expect(card.getByLabel("Title", { exact: true })).toBeDisabled();
     await card
       .getByRole("button", { name: "Reload document", exact: true })
