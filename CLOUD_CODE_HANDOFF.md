@@ -9,9 +9,9 @@ FAIL: 2 high. Обновлены `next` 16.3.7 → 16.3.8 и `source-map-js` 1.2
 существует; в production-образ она не попадает.
 
 Проверки обновлённого дерева: full local **PASS: 1531 passed, 4 skipped in 1023.50s (0:17:03)**; Ruff, format и mypy PASS на
-265 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS. CI
-**NOT TESTED**: ветка `codex/web-dependency-audit` локальная и не опубликована (основа `4630ca3`);
-публикация требует отдельного разрешения владельца.
+265 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS. CI:
+**PASS**, [run 38315410876](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38315410876) на `8a1a7ab`: задание 1204 с, pytest 1057 с; текст логов не читался.
+Ветка `codex/web-dependency-audit` опубликована с разрешения владельца (основа `4630ca3`).
 
 Состояние Package I не изменилось и описано в следующем разделе.
 
