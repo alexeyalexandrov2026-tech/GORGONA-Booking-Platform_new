@@ -1,6 +1,34 @@
 # GORGONA — реестр реализации
 
-## Current: Package I acceptance prepared; readiness unchanged — 2026-10-12
+## Current: повторный независимый обзор I4 — FAIL, три находки — 2026-10-12
+
+Своя копия `C:/Users/alexa/.codex/worktrees/package-i4-review-2/Gorgona Booking`,
+локальная ветка `codex/package-i4-review-2` от `0356eb5`. Проверен diff
+`a806380..b66eb41`, SHA256 16/16 и неизменность рабочих source/test файлов.
+[Обзор](evidence/2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW_2.md),
+[точные команды и результаты](evidence/2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW_2_CHECKS.json).
+
+Две medium/P2: скрытая смена читается через swap после повторного приглашения
+в тот же филиал до создания нового профиля (R2-1); два cancel разных ключей
+проходят последний слот дневного лимита — 21 маркер вместо 20 (R2-2, три состояния
+модуля, настоящие pg_locks waiters). Одна low/P3: экран скрывает человеческую
+причину `Clock-in` по совпадению с системной строкой (R2-3). Отрицательные пробы:
+3 failed / 10.70s; 1 failed, 2 passed / 7.99s; browser 1 failed / 72.26s.
+Эти дефекты не исправлялись в review-копии. I-09/I-12 текущего плана FAIL;
+старые C1-числа сохранены как результат только выбранных случаев того прогона.
+
+Свежие PASS: focused 86 / 104.38s; стандартный browser 1 / 150.78s и отдельный
+browser UTC≠local + company-wide staff 1 / 149.74s, оба desktop/mobile, три фазы.
+Ruff/format/mypy 264; web typecheck/lint/format, unit 102 и build 23 страницы.
+Production audit FAIL 2 high, next/source-map-js. Полный suite в этом обзоре
+не повторялся; CI c6b8e34 success перечитан, CI локального review-коммита NOT TESTED.
+Оба своих кластера остановлены; временные проверки сохранены вне Git и удалены/
+восстановлены в копии. Код, тесты, миграции 0001–0035 и зависимости не изменены.
+Готовность WORK-01/CORE-04 не повышена, пакет не принят. Следующий срез —
+исправления R2-1/R2-2/R2-3 с red→green и свежими полными воротами, на отдельной
+ветке. Push/PR/merge/production и CodeRabbit не выполнялись.
+
+## Previous: Package I acceptance prepared; readiness unchanged — 2026-10-12
 
 Local branch `codex/package-i-acceptance` from verified local/remote I4 head
 `c6b8e341a7e88957ee5011e54e9aa06453b31b49`. Documentation/evidence only:

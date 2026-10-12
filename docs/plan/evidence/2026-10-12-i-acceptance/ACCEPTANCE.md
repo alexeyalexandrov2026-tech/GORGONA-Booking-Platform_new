@@ -1,5 +1,13 @@
 # Package I — acceptance preparation, 2026-10-12
 
+**Follow-up: independent review 2 completed, result FAIL.**
+[Review and reproductions](../2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW_2.md)
+found two medium defects and one low regression. Current plan rows I-09/I-12
+are FAIL; acceptance remains blocked until correction and fresh checks. The
+remaining text and CHECKS.json preserve the earlier C1 snapshot and its exact
+case selections. Their passing counts do not cover or refute the new probes.
+The source remains unchanged; readiness/publication decisions remain pending.
+
 **Preparation: PASS. Package acceptance: BLOCKED; WORK-01 and CORE-04 remain
 `planned`, workforce remains closed outside test fixtures.** This is a fresh
 acceptance evidence record for owner review, not an acceptance/readiness decision.

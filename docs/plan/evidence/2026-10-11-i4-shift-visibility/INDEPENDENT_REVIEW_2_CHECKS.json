@@ -1,0 +1,1123 @@
+{
+  "schema_version": 1,
+  "review_result": "FAIL",
+  "review_base_sha": "0356eb564ca645ea2c6e50aa3f5844b738d45276",
+  "source_commit": "b66eb4140c1101d78e1bd4068eac537aab922b38",
+  "source_hashes": [
+    {
+      "path": "api/src/gorgona_booking/api/workforce_desk.py",
+      "sha256": "112cbc39058a38885b1c236f7d06e44ea07fe382e5e31a215089d0d8bafb72e6",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "api/src/gorgona_booking/business/shift_changes.py",
+      "sha256": "c134711d578ff297028df876afd2ab9c159ba772c994379752440e6cc440f551",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "api/src/gorgona_booking/business/timesheet_contracts.py",
+      "sha256": "d38d7ba299d019a69b9012a42f7c458a23834be7d72dbf18e58d8d577a393dc5",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "api/src/gorgona_booking/business/timesheets.py",
+      "sha256": "721466efdd759df2a8af1edb242f720b03e1a22e08bf822360463b6c904b1d55",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "api/src/gorgona_booking/business/workforce_desk.py",
+      "sha256": "fde3087df7351b29530b4717ca4f5b8f5fd08953443e5f2df4ced25ee9a751b7",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "api/tests/integration/test_workforce_desk.py",
+      "sha256": "c6e7352b8414fccedd5998873cd58342e4abebdca0d8131794510242a9c0b12a",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "api/tests/integration/test_workforce_desk_races.py",
+      "sha256": "4c41fa49077dea63ae25e1cc5c177b1d5523dbac59f5c591352f68743baf0161",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "api/tests/integration/test_workforce_review_fixes.py",
+      "sha256": "795aa83374d72d04c76397775f86ca1b3bb4409e860ba797d597f744b45df1cd",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "api/tests/integration/test_workforce_visibility.py",
+      "sha256": "4da282f0f2730df3c7e335861f5fc69faa9f3976b6845f5081a4a5c49c3c9fcc",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "web/components/my-shifts.tsx",
+      "sha256": "111fb8f9a2743a1047607f37eba8cf3183ff2fb523ec86237c48235e1b439a45",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "web/components/schedule.tsx",
+      "sha256": "759f13c9c1662e3ed416cabf13c841ae8c2e52058a4f72b1bfc5ec3968254d8e",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "web/components/timesheets.tsx",
+      "sha256": "34f3d3e923571e1a26ab99a3378c54c166ead325083a090e73bfb59d5041c57c",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "web/components/workforce-shared.tsx",
+      "sha256": "66f5b1fb5ff493f34d0d63b7526c538ca851a202a10e087f0a2a76db3ff845ad",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "web/lib/workforce-contracts.ts",
+      "sha256": "9296e5490d3cf71bec83e40e314e11f1c2943c32089dbfd3a43a67ba307d90c0",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "web/tests/workforce-contracts.spec.ts",
+      "sha256": "042ce7facb908ab5bf465e6c04d62c6c7a78e43bc09d92347792bf243185934f",
+      "working_tree_matches_head": true
+    },
+    {
+      "path": "web/tests/workforce.spec.ts",
+      "sha256": "da7a7534fdaed5f782c5b248ae0610a63cfbf4cd0a4849e23a5336accda27161",
+      "working_tree_matches_head": true
+    }
+  ],
+  "started_utc": "2026-10-12T05:48:10.814220+00:00",
+  "finished_utc": "2026-10-12T05:58:52.091101+00:00",
+  "temporary_probes_restored_or_removed": true,
+  "runtime_changes": 0,
+  "own_clusters_stopped": true,
+  "ports": [
+    54378,
+    55504
+  ],
+  "steps": [
+    {
+      "name": "initdb",
+      "command": [
+        "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+        "-D",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\data",
+        "-U",
+        "gba_superuser",
+        "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\init-password.tmp",
+        "--auth=scram-sha-256",
+        "--locale=C",
+        "--encoding=UTF8",
+        "--data-checksums"
+      ],
+      "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5",
+      "exit_code": 0,
+      "seconds": 2.99,
+      "log_sha256": "be147cbdaa8ccaf3bef5592044b5524cb2aa52a5a2134b61331f213c7d965d5c"
+    },
+    {
+      "name": "pg-start",
+      "command": [
+        "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+        "start",
+        "-D",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\data",
+        "-l",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\server.log",
+        "-w",
+        "-o",
+        "-p 54378 -c max_connections=400 -c listen_addresses=127.0.0.1"
+      ],
+      "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5",
+      "exit_code": 0,
+      "seconds": 0.32,
+      "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+    },
+    {
+      "name": "web-build",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "run",
+        "build"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\web",
+      "exit_code": 0,
+      "seconds": 14.98,
+      "log_sha256": "85d104e08a8a39b0d8f8f0ae475daa03bc1f53d192a538749aa58f5b25c41888"
+    },
+    {
+      "name": "quota-reproduction",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\quota-reproduction-tmp",
+        "-q",
+        "-s",
+        "--tb=short",
+        "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\quota-reproduction.xml",
+        "tests/integration/test_review2_repro.py"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\api",
+      "exit_code": 1,
+      "seconds": 12.56,
+      "log_sha256": "e2572a313e157693b6f0922456983949b10d0d2ae90dcd0b0a2020e60bead314"
+    },
+    {
+      "name": "focused",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\focused-tmp",
+        "-q",
+        "-s",
+        "--tb=short",
+        "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\focused.xml",
+        "tests/integration/test_workforce_review_fixes.py",
+        "tests/integration/test_workforce_visibility.py",
+        "tests/integration/test_workforce_desk.py",
+        "tests/integration/test_workforce_desk_races.py",
+        "tests/unit/test_workforce_desk_contracts.py",
+        "tests/integration/test_timesheets.py",
+        "tests/integration/test_timesheet_guards.py",
+        "tests/integration/test_shift_changes.py"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\api",
+      "exit_code": 0,
+      "seconds": 105.66,
+      "log_sha256": "dafadeef6c85684f36edec219f0c3d5780e720fa14adac9bf70cbfc778c10a43"
+    },
+    {
+      "name": "browser-baseline",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\browser-baseline-tmp",
+        "-q",
+        "-s",
+        "--tb=short",
+        "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\browser-baseline.xml",
+        "tests/integration/test_i4_browser.py"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\api",
+      "exit_code": 0,
+      "seconds": 152.09,
+      "log_sha256": "4654efda398283d8d251513cba9a4d1a76fb984e819eacd295c7a181e407ee87"
+    },
+    {
+      "name": "browser-timezone-companywide",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\browser-timezone-companywide-tmp",
+        "-q",
+        "-s",
+        "--tb=short",
+        "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\browser-timezone-companywide.xml",
+        "tests/integration/test_i4_browser.py"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\api",
+      "exit_code": 0,
+      "seconds": 151.18,
+      "log_sha256": "c003b8755fa7436607326b6972636ea7cacfaccd4a165e904e6a5bb41766778a"
+    },
+    {
+      "name": "browser-human-reason",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\browser-human-reason-tmp",
+        "-q",
+        "-s",
+        "--tb=short",
+        "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\browser-human-reason.xml",
+        "tests/integration/test_i4_browser.py"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\api",
+      "exit_code": 1,
+      "seconds": 73.3,
+      "log_sha256": "8d8cc21155ddd1270f0d7d4c9c623552b88a6c26dbeed2ed336efa612138fccb"
+    },
+    {
+      "name": "ruff-check",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "src",
+        "tests"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\api",
+      "exit_code": 0,
+      "seconds": 0.24,
+      "log_sha256": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0"
+    },
+    {
+      "name": "ruff-format",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "src",
+        "tests"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\api",
+      "exit_code": 0,
+      "seconds": 0.17,
+      "log_sha256": "650ee2e444d93236ea11a512636d1c700c85635dbf7734b467f62743b4f0e017"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "src",
+        "tests"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\api",
+      "exit_code": 0,
+      "seconds": 18.42,
+      "log_sha256": "ccbf94a2882b2cbb3f0f62ed8653d9b7bd1090ce1be8d408a440eddd92bc3c1d"
+    },
+    {
+      "name": "web-typecheck",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "run",
+        "typecheck"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\web",
+      "exit_code": 0,
+      "seconds": 7.67,
+      "log_sha256": "57eb61b8116e9717145f8a326096c13f75126fdd520df38125124402e222a24c"
+    },
+    {
+      "name": "web-lint",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "run",
+        "lint"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\web",
+      "exit_code": 0,
+      "seconds": 19.62,
+      "log_sha256": "ce57886850d9496f41c2f2e77437461f5f112de7e9ab0107ceb3f2ce90dd738f"
+    },
+    {
+      "name": "web-format",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "run",
+        "format:check"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\web",
+      "exit_code": 0,
+      "seconds": 2.9,
+      "log_sha256": "04e80414d063c197fc67cb7f1eef4ae379749f4f76147f4cf366016a2a6ff65f"
+    },
+    {
+      "name": "web-unit",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "run",
+        "test:unit"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\web",
+      "exit_code": 0,
+      "seconds": 3.31,
+      "log_sha256": "cc4c720678e7528c5311d995ce41b3312ec16c69bea69a3d5453b59f67f1fb7c"
+    },
+    {
+      "name": "web-audit",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "audit",
+        "--omit=dev",
+        "--json"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\web",
+      "exit_code": 1,
+      "seconds": 1.59,
+      "log_sha256": "2e4444b547a1a5ff75d55174ec4e61fda9e2e007f8b4e9e4bbadad3e79aaa2cd"
+    },
+    {
+      "name": "pg-stop",
+      "command": [
+        "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+        "stop",
+        "-D",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\data",
+        "-m",
+        "fast",
+        "-w"
+      ],
+      "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5",
+      "exit_code": 0,
+      "seconds": 0.27,
+      "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+    },
+    {
+      "name": "initdb",
+      "command": [
+        "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+        "-D",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\data-extra",
+        "-U",
+        "gba_superuser",
+        "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\init-password.tmp",
+        "--auth=scram-sha-256",
+        "--locale=C",
+        "--encoding=UTF8",
+        "--data-checksums"
+      ],
+      "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5",
+      "exit_code": 0,
+      "seconds": 2.73,
+      "log_sha256": "5dbb7f7b0505511235030d8f1ceba5a7b03e8782731451c8a8671a61ff851cea"
+    },
+    {
+      "name": "pg-start",
+      "command": [
+        "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+        "start",
+        "-D",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\data-extra",
+        "-l",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\server.log",
+        "-w",
+        "-o",
+        "-p 55504 -c max_connections=400 -c listen_addresses=127.0.0.1"
+      ],
+      "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5",
+      "exit_code": 0,
+      "seconds": 0.49,
+      "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+    },
+    {
+      "name": "privacy-lifecycle-probes",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\privacy-lifecycle-tmp",
+        "-q",
+        "-s",
+        "--tb=short",
+        "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\privacy-lifecycle.xml",
+        "tests/integration/test_review2_privacy.py"
+      ],
+      "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-2\\Gorgona Booking\\api",
+      "exit_code": 1,
+      "seconds": 9.8,
+      "log_sha256": "38930fa425b7751fda62e8bc57d38e9fe975fcf430072b6bd1ada804d2b5c62a"
+    },
+    {
+      "name": "pg-stop",
+      "command": [
+        "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+        "stop",
+        "-D",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5\\data-extra",
+        "-m",
+        "fast",
+        "-w"
+      ],
+      "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i4-review2-20261012-0356eb5",
+      "exit_code": 0,
+      "seconds": 0.15,
+      "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+    }
+  ],
+  "case_records": [
+    {
+      "step": "quota-reproduction",
+      "counts": {
+        "PASS": 0,
+        "FAIL": 3,
+        "NOT TESTED": 0
+      },
+      "cases": [
+        {
+          "node": "tests/integration/test_review2_repro.py::test_two_discard_requests_cannot_both_take_the_last_slot[open]",
+          "status": "FAIL"
+        },
+        {
+          "node": "tests/integration/test_review2_repro.py::test_two_discard_requests_cannot_both_take_the_last_slot[off]",
+          "status": "FAIL"
+        },
+        {
+          "node": "tests/integration/test_review2_repro.py::test_two_discard_requests_cannot_both_take_the_last_slot[not_accepted]",
+          "status": "FAIL"
+        }
+      ],
+      "junit_sha256": "701a35609d56602cb327bd92bb09941555363f9a59004a37a65d2c066b7b8083"
+    },
+    {
+      "step": "focused",
+      "counts": {
+        "PASS": 86,
+        "FAIL": 0,
+        "NOT TESTED": 0
+      },
+      "cases": [
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_a_hidden_branch_refuses_a_new_swap_and_tells_nothing_about_the_holder",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_a_swap_sent_while_shown_replays_its_first_answer_after_hiding",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_the_outside_schedule_mark_of_the_time_in_effect_ignores_later_versions",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_a_long_valid_key_can_be_discarded",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_discarding_has_a_daily_limit_per_person",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_the_directory_skips_a_disabled_account",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_shifts_are_visible_by_default_and_a_manager_may_hide_and_show_them",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_change_is_versioned_idempotent_and_settled_by_its_original_key",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_only_the_owner_a_manager_or_that_branch_manager_changes_it",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_setting_stays_readable_and_closed_to_change_while_the_module_is_off",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_sql_keeps_versions_ordered_immutable_and_inside_the_branch",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[scope]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[guard]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[module]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[grant]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_participants_read_the_shifts_of_their_request_even_when_hidden",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_a_company_wide_member_follows_the_setting_of_their_home_branch",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_two_changes_of_one_version_wait_and_only_the_first_is_recorded",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_desk_names_own_profile_and_whether_new_actions_are_open",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_directory_names_staff_only_inside_the_managers_scope",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_swap_candidates_are_a_home_colleagues_published_assigned_shifts",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_command_outcome_is_resolved_by_its_original_key_without_a_body",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_cancelled_unresolved_command_can_never_commit",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_outcomes_stay_available_while_the_module_is_off",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_another_company_and_plain_staff_get_no_management_reads",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_desk_races.py::test_cancel_waits_for_a_running_command_and_reports_its_commit",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_workforce_desk_races.py::test_command_waits_for_a_running_cancel_and_is_then_refused",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/unit/test_workforce_desk_contracts.py::test_reference_accepts_only_known_operations_and_identifiers",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/unit/test_workforce_desk_contracts.py::test_cancellation_marker_keeps_the_reference_and_nothing_else",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/unit/test_workforce_desk_contracts.py::test_status_and_desk_are_closed_enumerations",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/unit/test_workforce_desk_contracts.py::test_branch_setting_is_a_strict_boolean_with_an_expected_version",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheets.py::test_clock_break_close_approval_and_original_receipt",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheets.py::test_three_corrections_keep_history_and_last_approved_time",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[False]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[True]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[False]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[True]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-manager]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-owner]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-manager]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-owner]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-module]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-readiness]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-module]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-readiness]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_module_off_close_cannot_also_replace_start_breaks_or_another_employee",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[False]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[True]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entries]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entry_revisions]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[update]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[insert]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[delete]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_end]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_start]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[clock_out]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_native_sql_serialization_error_maps_to_conflict_and_rolls_back_key",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[head]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[revision]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[overlap]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[outside]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[reverse]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[null]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[nested]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[lower_bound]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[too_many]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_timesheet_has_no_ledger_or_shared_occupancy_effect",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-approve]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-decline]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-approve]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-decline]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_home_scoped_manager_decision_locks_config_without_widening_scope",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_active_delegate_cannot_read_or_mutate_timesheets",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[False-False]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[False-True]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[True-False]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[True-True]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_hundredth_break_can_end_normally_or_close_with_the_entry[break_end]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_hundredth_break_can_end_normally_or_close_with_the_entry[clock_out]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_shift_changes.py::test_change_needs_explicit_consent_and_manager_and_applies_atomically[handover]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_shift_changes.py::test_change_needs_explicit_consent_and_manager_and_applies_atomically[swap]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_shift_changes.py::test_change_needs_explicit_consent_and_manager_and_applies_atomically[pickup]",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_shift_changes.py::test_one_version_per_shift_per_sql_statement",
+          "status": "PASS"
+        }
+      ],
+      "junit_sha256": "cd5408e65e367c7a88d4b62610d5761a66135a0608a93cd00a8fff2d76ab1352"
+    },
+    {
+      "step": "browser-baseline",
+      "counts": {
+        "PASS": 1,
+        "FAIL": 0,
+        "NOT TESTED": 0
+      },
+      "cases": [
+        {
+          "node": "tests/integration/test_i4_browser.py::test_i4_real_browser_closed_then_enabled_then_switched_off",
+          "status": "PASS"
+        }
+      ],
+      "junit_sha256": "050955d3f3326a2abbf3789f303e3cd4e2cb351ed2bb6b80b0330cd843e28d33"
+    },
+    {
+      "step": "browser-timezone-companywide",
+      "counts": {
+        "PASS": 1,
+        "FAIL": 0,
+        "NOT TESTED": 0
+      },
+      "cases": [
+        {
+          "node": "tests/integration/test_i4_browser.py::test_i4_real_browser_closed_then_enabled_then_switched_off",
+          "status": "PASS"
+        }
+      ],
+      "junit_sha256": "eb3494a865cbd96a09cb928b8ed04f1ef1cc9efb85817fb9e2cfda8f4e127db3"
+    },
+    {
+      "step": "browser-human-reason",
+      "counts": {
+        "PASS": 0,
+        "FAIL": 1,
+        "NOT TESTED": 0
+      },
+      "cases": [
+        {
+          "node": "tests/integration/test_i4_browser.py::test_i4_real_browser_closed_then_enabled_then_switched_off",
+          "status": "FAIL"
+        }
+      ],
+      "junit_sha256": "56748c824b5a2939128040f943e661b0c14e10f697ac43d5b36ba8117ddc6f79"
+    },
+    {
+      "step": "privacy-lifecycle-probes",
+      "counts": {
+        "PASS": 2,
+        "FAIL": 1,
+        "NOT TESTED": 0
+      },
+      "cases": [
+        {
+          "node": "tests/integration/test_review2_privacy.py::test_hidden_branch_swap_stays_closed_after_same_home_reinvitation",
+          "status": "FAIL"
+        },
+        {
+          "node": "tests/integration/test_review2_privacy.py::test_cancel_expiry_is_the_documented_twenty_four_hour_boundary",
+          "status": "PASS"
+        },
+        {
+          "node": "tests/integration/test_review2_privacy.py::test_human_reason_equal_to_system_text_is_retained_in_api",
+          "status": "PASS"
+        }
+      ],
+      "junit_sha256": "13c12e39556a17afc83fe2456eb573804b69c74525a8ef595a03df3f2600ed08"
+    }
+  ],
+  "summaries": {
+    "quota-reproduction": "3 failed in 10.70s",
+    "focused": "86 passed in 104.38s (0:01:44)",
+    "browser-baseline": "1 passed in 150.78s (0:02:30)",
+    "browser-timezone-companywide": "1 passed in 149.74s (0:02:29)",
+    "browser-human-reason": "1 failed in 72.26s (0:01:12)",
+    "privacy-lifecycle-probes": "1 failed, 2 passed in 7.99s"
+  },
+  "observed_markers": [
+    "REVIEW2 gate=open observed_insert_waiters=2 statuses=[200, 200] markers=21",
+    "REVIEW2 gate=off observed_insert_waiters=2 statuses=[200, 200] markers=21",
+    "REVIEW2 gate=not_accepted observed_insert_waiters=2 statuses=[200, 200] markers=21",
+    "REVIEW2 reinvited_no_profile=True desk_visibility=visible swap_status=200 hidden_holder_returned=True",
+    "REVIEW2 expiry: protected_before_expiry=True, committed_after_expiry=True",
+    "REVIEW2 human reason: action=correct, persisted_reason=Clock-in",
+    "REVIEW2 location_day=2026-10-11 utc_day=2026-10-12 company_wide_new_members=True"
+  ],
+  "dependency_audit": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {
+      "next": {
+        "name": "next",
+        "severity": "high",
+        "isDirect": true,
+        "via": [
+          {
+            "source": 1241489,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js: Pending `use cache` fill can leak Draft Mode content into regular responses and persisted pages",
+            "url": "https://github.com/advisories/GHSA-3w37-wq28-93x7",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-524"
+            ],
+            "cvss": {
+              "score": 4.2,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N"
+            },
+            "range": ">=16.3.0 <16.3.8"
+          },
+          {
+            "source": 1241490,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js has cache poisoning of SSG and ISR pages in self-hosted applications",
+            "url": "https://github.com/advisories/GHSA-4jqv-mc3x-m676",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-524"
+            ],
+            "cvss": {
+              "score": 5.3,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+            },
+            "range": ">=16.0.0 <16.3.8"
+          },
+          {
+            "source": 1241492,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js has information disclosure in development server's Model Context Protocol endpoint",
+            "url": "https://github.com/advisories/GHSA-39w2-rjm5-chcv",
+            "severity": "low",
+            "cwe": [
+              "CWE-346"
+            ],
+            "cvss": {
+              "score": 5.4,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N"
+            },
+            "range": ">=16.0.0 <16.3.8"
+          },
+          {
+            "source": 1241493,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js has information disclosure in App Router metadata image routes via dynamicParams bypass",
+            "url": "https://github.com/advisories/GHSA-f87g-xv8r-7p7x",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-346"
+            ],
+            "cvss": {
+              "score": 5.3,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+            },
+            "range": ">=16.0.0 <16.3.8"
+          },
+          {
+            "source": 1241495,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js has cache poisoning in SSG/ISR rendering that leads to cross-user content substitution and persistent denial of service",
+            "url": "https://github.com/advisories/GHSA-mcj8-r9mp-w47p",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-524"
+            ],
+            "cvss": {
+              "score": 4.8,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:L"
+            },
+            "range": ">=16.0.0 <16.3.8"
+          },
+          {
+            "source": 1241496,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js has Server-Side Request Forgery in Image Optimization",
+            "url": "https://github.com/advisories/GHSA-cjq9-62q9-8jv4",
+            "severity": "high",
+            "cwe": [
+              "CWE-918"
+            ],
+            "cvss": {
+              "score": 6.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:L/A:N"
+            },
+            "range": ">=16.0.0 <16.3.8"
+          }
+        ],
+        "effects": [],
+        "range": "16.0.0 - 16.3.7",
+        "nodes": [
+          "node_modules/next"
+        ],
+        "fixAvailable": {
+          "name": "next",
+          "version": "16.4.0",
+          "isSemVerMajor": false
+        }
+      },
+      "source-map-js": {
+        "name": "source-map-js",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1241209,
+            "name": "source-map-js",
+            "dependency": "source-map-js",
+            "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets",
+            "url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q",
+            "severity": "high",
+            "cwe": [
+              "CWE-1284"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": ">=1.0.0 <1.2.2"
+          }
+        ],
+        "effects": [],
+        "range": "1.0.0 - 1.2.1",
+        "nodes": [
+          "node_modules/source-map-js"
+        ],
+        "fixAvailable": true
+      }
+    },
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 2,
+        "critical": 0,
+        "total": 2
+      },
+      "dependencies": {
+        "prod": 22,
+        "dev": 360,
+        "optional": 66,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 420
+      }
+    }
+  },
+  "python_package_versions": {
+    "pytest": "9.1.1",
+    "psycopg": "3.3.6",
+    "ruff": "0.16.9",
+    "mypy": "2.3.1",
+    "fastapi": "0.142.1",
+    "pydantic": "2.13.5"
+  },
+  "findings": [
+    {
+      "id": "R2-1",
+      "priority": 2,
+      "severity": "medium",
+      "title": "Hidden shift read through a swap after same-home reinvitation",
+      "file": "api/src/gorgona_booking/business/shift_changes.py",
+      "line": 139,
+      "status": "FAIL"
+    },
+    {
+      "id": "R2-2",
+      "priority": 2,
+      "severity": "medium",
+      "title": "Concurrent discards exceed the per-user/business daily cap",
+      "file": "api/src/gorgona_booking/business/workforce_desk.py",
+      "line": 304,
+      "status": "FAIL"
+    },
+    {
+      "id": "R2-3",
+      "priority": 3,
+      "severity": "low",
+      "title": "A human correction note equal to a system string is hidden",
+      "file": "web/components/timesheets.tsx",
+      "line": 62,
+      "status": "FAIL"
+    }
+  ]
+}

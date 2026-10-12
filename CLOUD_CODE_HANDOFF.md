@@ -1,6 +1,33 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current: Package I acceptance evidence prepared; no promotion — 2026-10-12
+## Current: I4 fixes re-reviewed; acceptance blocked by three findings — 2026-10-12
+
+Local branch `codex/package-i4-review-2`, own managed checkout
+`C:/Users/alexa/.codex/worktrees/package-i4-review-2/Gorgona Booking`, base `0356eb5`.
+Read [review 2](docs/plan/evidence/2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW_2.md),
+[measured evidence](docs/plan/evidence/2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW_2_CHECKS.json)
+and the [updated continuation](docs/plan/NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md).
+
+Review result FAIL: R2-1/P2, hidden-shift access through swap after same-home
+reinvitation with no current profile; R2-2/P2, concurrent different-key cancels
+leave 21 markers despite the cap of 20 (open/off/not-accepted); R2-3/P3, a valid
+human reason `Clock-in` is hidden by the screen's string filter. Five targeted
+checks fail across these three findings; no product correction was made.
+
+Fresh PASS: 86 focused / 104.38s; standard browser 1 / 150.78s; timezone≠UTC and
+company-wide addition browser 1 / 149.74s, desktop/mobile across three phases.
+Static/web PASS, unit 102, pages 23; source hashes 16/16. Production audit FAIL
+2 high. Full suite was not repeated in this review; earlier full C1 is a separate
+snapshot. CI c6b8e34 is still success; exact local review-commit CI NOT TESTED.
+Temporary probes restored/removed, own clusters stopped, runtime unchanged.
+
+I-09 and I-12 now FAIL in the current plan. Correct the three findings on a new
+branch with failing checks first, smallest coherent fixes, focused/full/static/web
+and actual browser checks, then independent review and fresh evidence. WORK-01,
+CORE-04 and workforce stay planned/closed. Owner policy/acceptance/publication
+decisions remain pending. No push/PR/merge/deployment/production migration.
+
+## Previous: Package I acceptance evidence prepared; no promotion — 2026-10-12
 
 Continue from [the updated handoff](docs/plan/NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md)
 and [the fresh matrix](docs/plan/evidence/2026-10-12-i-acceptance/ACCEPTANCE.md).

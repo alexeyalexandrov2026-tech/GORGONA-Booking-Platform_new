@@ -1,5 +1,62 @@
 # Next agent — Package I acceptance preparation, 2026-10-12
 
+## Current: повторный обзор выполнен, следующий срез — исправления
+
+Обзор 2 **FAIL**: R2-1 medium/P2 — чтение скрытой смены через swap после
+повторного приглашения в тот же филиал без нового профиля; R2-2 medium/P2 —
+гонка разных cancel-ключей создаёт 21 маркер вместо 20; R2-3 low/P3 — экран
+скрывает допустимую человеческую причину `Clock-in`. Код не исправлялся.
+[Отчёт](evidence/2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW_2.md),
+[точные проверки](evidence/2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW_2_CHECKS.json).
+I-09/I-12 текущего плана FAIL. WORK-01/CORE-04 остаются planned, workforce закрыт
+вне фикстур; пакет не принят. Ни одна новая ветка не опубликована.
+
+Актуальная копия обзора:
+`C:/Users/alexa/.codex/worktrees/package-i4-review-2/Gorgona Booking`, локальная
+ветка `codex/package-i4-review-2` от `0356eb564ca645ea2c6e50aa3f5844b738d45276`.
+Коммит документов обзора читать из Git. Исходная acceptance-копия
+`C:/Users/alexa/Documents/ChatGPT/gorgona-package-i` сохранена на `0356eb5`.
+Перед изменением проверять оба фактических состояния, не переносить новые
+документы в чужую/грязную копию автоматически. Удалённая I4 c6b8e34 и её CI
+success проверены заново; CI локальной ветки обзора NOT TESTED.
+
+Свежие результаты: 86 focused PASS / 104.38s; standard browser PASS 1 / 150.78s;
+timezone≠UTC + company-wide staff browser PASS 1 / 149.74s, обе ширины/три фазы.
+Отрицательные пробы не исправлены: quota 3 FAIL / 10.70s, lifecycle 1 FAIL +
+2 PASS / 7.99s, human-reason browser 1 FAIL / 72.26s. Static/web PASS, unit 102,
+build 23; production audit FAIL 2 high. Source SHA256 16/16. Полный suite в
+этом обзоре не повторялся. Свои кластеры 54378/55504 остановлены; все временные
+test-изменения восстановлены/удалены, копии и журналы сохранены вне Git в
+`C:/Users/alexa/AppData/Local/GorgonaBookingTests/i4-review2-20261012-0356eb5`.
+
+Следующий безопасный шаг:
+
+1. Прочитать AGENTS, master/plan, ADR-0025, этот текущий раздел и обзор 2.
+   Проверить Git, удалённую голову и exact-SHA CI до правок.
+2. Создать отдельную ветку исправлений от проверенной головы обзора, например
+   `codex/package-i4-review-corrections`, и свою копию/одноразовый кластер.
+   Не перезаписывать существующую ветку или другой checkout.
+3. Перенести воспроизведения в постоянные regression tests и сначала получить
+   настоящие red: R2-1 без active profile после same-home reinvitation;
+   R2-2 с двумя наблюдаемыми INSERT waiters, все три gate states; R2-3 настоящая
+   человеческая причина в API/карточке/history. Не ослаблять проверки ради green.
+4. Минимально исправить безопасный home/отказ нового swap, сериализацию quota
+   actor/business и различение человеческих/системных причин. Сохранить старый
+   replay/историю, module-off closure/recovery, веточные права, неизменяемую
+   историю и SQL-инварианты. Новая схема только при необходимости, следующим
+   фактическим номером миграции с guard/restore, без изменения 0001–0035.
+5. Focused → полный serial suite → static/web/build → desktop/mobile browser;
+   не пересобирать web во время полного suite. Затем независимый обзор
+   исправлений и свежие проверки после новых правок. Сохранить первый FAIL и
+   итоговые PASS/FAIL/BLOCKED/NOT TESTED, точные команды/числа/SHA, обновить
+   evidence/status/handoff и локальный коммит.
+6. Не принимать пакет и не повышать readiness. Push/PR/merge, production/Azure,
+   providers/funds/credentials требуют отдельного прямого решения владельца.
+   CodeRabbit не запускать. Старые результаты ниже — исторический срез подготовки,
+   а не инструкция снова начать уже выполненный обзор или объявить его PASS.
+
+## Previous: подготовка приёмки до новых отрицательных проб
+
 **Acceptance preparation completed locally. Package I is not accepted.**
 I-01–I-11 PASS for their recorded executed cases; I-12 is conservatively BLOCKED
 pending a second independent source review of the post-review fixes. WORK-01 and
