@@ -1,6 +1,25 @@
 # GORGONA — пакет I: смены, замены и табели (WORK-01), план на согласование
 
-## Current checkpoint — 2026-10-12: package I accepted technically; WORK-01 and CORE-04 verified
+## Current checkpoint — 2026-10-12: production dependency audit cleared
+
+Production-аудит зависимостей web (`npm audit --omit=dev`) — **PASS: 0 находок**; было
+FAIL: 2 high. Обновлены `next` 16.3.7 → 16.3.8 и `source-map-js` 1.2.1 → 1.2.2. Код
+приложения, тесты и миграции не менялись. Полный аудит вместе с инструментами
+разработки — **FAIL: 5 high**: одна цепочка `braces`, исправленной версии которой не
+существует; в production-образ она не попадает.
+
+Проверки обновлённого дерева: full local **PASS: 1531 passed, 4 skipped in 1023.50s (0:17:03)**; Ruff, format и mypy PASS на
+265 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS. CI
+**NOT TESTED**: ветка `codex/web-dependency-audit` локальная и не опубликована (основа `4630ca3`);
+публикация требует отдельного разрешения владельца.
+
+Состояние Package I не изменилось и описано в следующем разделе.
+
+[Актуальный handoff](NEXT_AGENT_WEB_DEPENDENCY_AUDIT_2026-10-12.md),
+[готовый prompt](NEXT_AGENT_WEB_DEPENDENCY_AUDIT_PROMPT_2026-10-12.md),
+[запись о срезе](evidence/2026-10-12-web-dependency-audit/VALIDATION.md).
+
+## Previous checkpoint — 2026-10-12: package I accepted technically; WORK-01 and CORE-04 verified
 
 WORK-01 записан как `technically_verified` на коде `f41f9a8`. Модуль `workforce` стал
 включаемым: компания получает его, только опубликовав конфигурацию с ним. CORE-04
@@ -18,7 +37,7 @@ Production audit **FAIL: 2 high** (next, source-map-js).
 выполнялись; миграции и зависимости не менялись. Утверждения ниже о том, что
 WORK-01 или CORE-04 planned, а workforce закрыт, относятся к своим датам.
 
-[Актуальный handoff](NEXT_AGENT_PACKAGE_I_CORRECTIONS_2026-10-12.md),
+[Handoff приёмки](NEXT_AGENT_PACKAGE_I_CORRECTIONS_2026-10-12.md),
 [готовый prompt](NEXT_AGENT_PACKAGE_I_PROMPT_2026-10-12.md),
 [запись о приёмке](evidence/2026-10-12-work-01-acceptance/ACCEPTANCE.md),
 [независимая проверка](evidence/2026-10-12-work-01-acceptance/INDEPENDENT_CHECK.md),

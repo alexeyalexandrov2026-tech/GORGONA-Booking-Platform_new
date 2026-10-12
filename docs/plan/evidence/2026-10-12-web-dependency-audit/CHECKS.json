@@ -1,0 +1,498 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-12T18:26:44.521115+00:00",
+  "base": "4630ca38832c0d6126f5c352f9c4e3f636ac085c",
+  "branch": "codex/web-dependency-audit",
+  "published": false,
+  "decision": {
+    "owner_message": "continue",
+    "reading": "consent to start the slice the executor had recommended; publication not included"
+  },
+  "manifest_edits": [
+    {
+      "from": "\"next\": \"16.3.7\",",
+      "to": "\"next\": \"16.3.8\","
+    },
+    {
+      "from": "\"eslint-config-next\": \"16.3.7\",",
+      "to": "\"eslint-config-next\": \"16.3.8\","
+    }
+  ],
+  "lock_changed": [
+    {
+      "path": "node_modules/@next/env",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/@next/eslint-plugin-next",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/@next/swc-darwin-arm64",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/@next/swc-darwin-x64",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/@next/swc-linux-arm64-gnu",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/@next/swc-linux-arm64-musl",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/@next/swc-linux-x64-gnu",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/@next/swc-linux-x64-musl",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/@next/swc-win32-arm64-msvc",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/@next/swc-win32-x64-msvc",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/eslint-config-next",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/next",
+      "from": "16.3.7",
+      "to": "16.3.8"
+    },
+    {
+      "path": "node_modules/source-map-js",
+      "from": "1.2.1",
+      "to": "1.2.2"
+    }
+  ],
+  "lock_added": [],
+  "lock_removed": [],
+  "changed_sources": [
+    {
+      "path": "web/package-lock.json",
+      "sha256": "6aff8151843e5fea34467905d8212f0aa1778e5ee9bbec98403b90579c30ca58",
+      "git_blob_oid": "2615ac2a2f869ee977b912a31603a3368c75240d"
+    },
+    {
+      "path": "web/package.json",
+      "sha256": "a496a5718a750a10255c183b62f0b12009d7878acd2753b91502355e371dfdd0",
+      "git_blob_oid": "741e305e2b4f23e2c90ade854c76fb01d8ef4c9d"
+    }
+  ],
+  "advisories": [
+    {
+      "id": "GHSA-cjq9-62q9-8jv4",
+      "package": "next",
+      "severity": "high",
+      "affected": ">=16.0.0 <16.3.8",
+      "url": "https://github.com/advisories/GHSA-cjq9-62q9-8jv4",
+      "fixed_in": "16.3.8",
+      "description_ru": "подделка запросов со стороны сервера (SSRF) в оптимизаторе изображений"
+    },
+    {
+      "id": "GHSA-3w37-wq28-93x7",
+      "package": "next",
+      "severity": "moderate",
+      "affected": ">=16.3.0 <16.3.8",
+      "url": "https://github.com/advisories/GHSA-3w37-wq28-93x7",
+      "fixed_in": "16.3.8",
+      "description_ru": "утечка содержимого Draft Mode в обычные ответы через `use cache`"
+    },
+    {
+      "id": "GHSA-4jqv-mc3x-m676",
+      "package": "next",
+      "severity": "moderate",
+      "affected": ">=16.0.0 <16.3.8",
+      "url": "https://github.com/advisories/GHSA-4jqv-mc3x-m676",
+      "fixed_in": "16.3.8",
+      "description_ru": "отравление кэша страниц SSG и ISR при самостоятельном размещении"
+    },
+    {
+      "id": "GHSA-f87g-xv8r-7p7x",
+      "package": "next",
+      "severity": "moderate",
+      "affected": ">=16.0.0 <16.3.8",
+      "url": "https://github.com/advisories/GHSA-f87g-xv8r-7p7x",
+      "fixed_in": "16.3.8",
+      "description_ru": "раскрытие данных через маршруты изображений метаданных"
+    },
+    {
+      "id": "GHSA-mcj8-r9mp-w47p",
+      "package": "next",
+      "severity": "moderate",
+      "affected": ">=16.0.0 <16.3.8",
+      "url": "https://github.com/advisories/GHSA-mcj8-r9mp-w47p",
+      "fixed_in": "16.3.8",
+      "description_ru": "отравление кэша SSG/ISR: подмена содержимого между пользователями и отказ в обслуживании"
+    },
+    {
+      "id": "GHSA-39w2-rjm5-chcv",
+      "package": "next",
+      "severity": "low",
+      "affected": ">=16.0.0 <16.3.8",
+      "url": "https://github.com/advisories/GHSA-39w2-rjm5-chcv",
+      "fixed_in": "16.3.8",
+      "description_ru": "раскрытие данных в MCP-endpoint сервера разработки"
+    },
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "severity": "high",
+      "affected": "<=3.0.3",
+      "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "fixed_in": null,
+      "description_ru": "переполнение стека на глубоко вложенных шаблонах, отказ в обслуживании"
+    },
+    {
+      "id": "GHSA-68fv-2mgg-jv7q",
+      "package": "source-map-js",
+      "severity": "high",
+      "affected": ">=1.0.0 <1.2.2",
+      "url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q",
+      "fixed_in": "1.2.2",
+      "description_ru": "отказ в обслуживании при разборе source map"
+    }
+  ],
+  "audit": {
+    "before": {
+      "production": {
+        "exit_code": 1,
+        "counts": {
+          "info": 0,
+          "low": 0,
+          "moderate": 0,
+          "high": 2,
+          "critical": 0,
+          "total": 2
+        },
+        "packages": [
+          "next",
+          "source-map-js"
+        ]
+      },
+      "all": {
+        "exit_code": 1,
+        "counts": {
+          "info": 0,
+          "low": 0,
+          "moderate": 0,
+          "high": 7,
+          "critical": 0,
+          "total": 7
+        },
+        "packages": [
+          "@next/eslint-plugin-next",
+          "braces",
+          "eslint-config-next",
+          "fast-glob",
+          "micromatch",
+          "next",
+          "source-map-js"
+        ]
+      }
+    },
+    "after": {
+      "production": {
+        "exit_code": 0,
+        "counts": {
+          "info": 0,
+          "low": 0,
+          "moderate": 0,
+          "high": 0,
+          "critical": 0,
+          "total": 0
+        },
+        "packages": []
+      },
+      "all": {
+        "exit_code": 1,
+        "counts": {
+          "info": 0,
+          "low": 0,
+          "moderate": 0,
+          "high": 5,
+          "critical": 0,
+          "total": 5
+        },
+        "packages": [
+          "@next/eslint-plugin-next",
+          "braces",
+          "eslint-config-next",
+          "fast-glob",
+          "micromatch"
+        ]
+      }
+    }
+  },
+  "phases": {
+    "before-static": {
+      "base_sha": "4630ca38832c0d6126f5c352f9c4e3f636ac085c",
+      "started_utc": "2026-10-12T18:07:03.871334+00:00",
+      "finished_utc": "2026-10-12T18:07:34.924956+00:00",
+      "web_installed": {
+        "next": "16.3.7",
+        "eslint-config-next": "16.3.7",
+        "source-map-js": "1.2.1",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 154,
+        "sha256": "2ca297b3fe3dc408fce0d13be4d41b61032ad6dd777163297f439af71256ee89"
+      },
+      "web_out_after": {
+        "files": 154,
+        "sha256": "617d6c506e4180f2b69cd82330900346f52bca2e868f41da398df4c6b806740b"
+      },
+      "source_unchanged_during_run": true,
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.2,
+          "log_sha256": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0"
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.14,
+          "log_sha256": "db0bc1a972d22c4932b07dd741172261c182fb7e36c44e1155a3506e5a5d2e6d"
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 1.59,
+          "log_sha256": "3ba11ddb2f01e3f3dc21f0416fc90a3d8b5421e034e82f669ce34d9542e348b1"
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "seconds": 2.18,
+          "log_sha256": "57eb61b8116e9717145f8a326096c13f75126fdd520df38125124402e222a24c"
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "seconds": 11.91,
+          "log_sha256": "ce57886850d9496f41c2f2e77437461f5f112de7e9ab0107ceb3f2ce90dd738f"
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "seconds": 2.57,
+          "log_sha256": "04e80414d063c197fc67cb7f1eef4ae379749f4f76147f4cf366016a2a6ff65f"
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "seconds": 2.37,
+          "log_sha256": "d514af1096d0f7be3904e58c1c5cbf48cf066a95221a4056e843fa9fbb2ee0f1"
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "seconds": 6.76,
+          "log_sha256": "91d21e315709509006ff3349df8be15c44232614443bf68b9160f77bbc0bf24e"
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 1,
+          "seconds": 1.45,
+          "log_sha256": "2e4444b547a1a5ff75d55174ec4e61fda9e2e007f8b4e9e4bbadad3e79aaa2cd"
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "seconds": 1.32,
+          "log_sha256": "68bc72755cae8ab536b68ce7a398abdbb94332e6b17511dcee6ed08fdb573411"
+        }
+      ]
+    },
+    "after-static": {
+      "base_sha": "4630ca38832c0d6126f5c352f9c4e3f636ac085c",
+      "started_utc": "2026-10-12T18:08:41.105159+00:00",
+      "finished_utc": "2026-10-12T18:09:17.511356+00:00",
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 154,
+        "sha256": "617d6c506e4180f2b69cd82330900346f52bca2e868f41da398df4c6b806740b"
+      },
+      "web_out_after": {
+        "files": 154,
+        "sha256": "f5f0037ff2e0c8dbf56a4b3cb625be73bb1db1d7d145799da2fa93c422227f3f"
+      },
+      "source_unchanged_during_run": true,
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.19,
+          "log_sha256": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0"
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.15,
+          "log_sha256": "db0bc1a972d22c4932b07dd741172261c182fb7e36c44e1155a3506e5a5d2e6d"
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 1.59,
+          "log_sha256": "3ba11ddb2f01e3f3dc21f0416fc90a3d8b5421e034e82f669ce34d9542e348b1"
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "seconds": 6.17,
+          "log_sha256": "57eb61b8116e9717145f8a326096c13f75126fdd520df38125124402e222a24c"
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "seconds": 9.17,
+          "log_sha256": "ce57886850d9496f41c2f2e77437461f5f112de7e9ab0107ceb3f2ce90dd738f"
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "seconds": 2.28,
+          "log_sha256": "04e80414d063c197fc67cb7f1eef4ae379749f4f76147f4cf366016a2a6ff65f"
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "seconds": 2.18,
+          "log_sha256": "c71b67809603a8cc82276d930c1fc1ba95369e745c6c24144576d68f8fd76048"
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "seconds": 12.48,
+          "log_sha256": "5a74bf17ce3f9235b8744baf335a50bb48465d9e866714c67ddb212e3b1e8b00"
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 0,
+          "seconds": 0.85,
+          "log_sha256": "a36800d2b171922176fbc60c027874263ea37d0fc24441b302727df481fca187"
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "seconds": 1.0,
+          "log_sha256": "782f1844e2953ba85114ab3f7392cfa89e98cbaeed4549c1e46a9c0cfca942cc"
+        }
+      ]
+    },
+    "after-full": {
+      "base_sha": "4630ca38832c0d6126f5c352f9c4e3f636ac085c",
+      "started_utc": "2026-10-12T18:09:23.169016+00:00",
+      "finished_utc": "2026-10-12T18:26:32.365029+00:00",
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 154,
+        "sha256": "f5f0037ff2e0c8dbf56a4b3cb625be73bb1db1d7d145799da2fa93c422227f3f"
+      },
+      "web_out_after": {
+        "files": 154,
+        "sha256": "f5f0037ff2e0c8dbf56a4b3cb625be73bb1db1d7d145799da2fa93c422227f3f"
+      },
+      "source_unchanged_during_run": true,
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.08,
+          "log_sha256": "bf83d6e756cb476cb08a57e89849aa9289062bb4328ca3e220537edb506eb8a5"
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.47,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "pytest-full",
+          "exit_code": 0,
+          "seconds": 1025.12,
+          "log_sha256": "86ce68365337733df5b10f0f0a6fb57a8057c4361b49a12b13f6afe678c90b74"
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ]
+    }
+  },
+  "full_run": {
+    "summary": "1531 passed, 4 skipped in 1023.50s (0:17:03)",
+    "passed": 1531,
+    "skipped": 4,
+    "seconds": 1025.12
+  },
+  "web": {
+    "unit_tests_passed": 102,
+    "static_pages": 23
+  },
+  "tools": {
+    "node": "24.18.0",
+    "npm": "11.16.0",
+    "python_packages": {
+      "pytest": "9.1.1",
+      "psycopg": "3.3.6",
+      "ruff": "0.16.9",
+      "mypy": "2.3.1",
+      "fastapi": "0.142.1",
+      "pydantic": "2.13.5"
+    },
+    "mypy_source_files": 265
+  },
+  "ci": "NOT TESTED: the branch is not published",
+  "not_tested": [
+    "CI: the branch is not published",
+    "production image build: three container tests are skipped as BLOCKED without GBA_REQUIRE_CONTAINER=1",
+    "HawkScan: no hawk runtime and no API key in this environment",
+    "the Linux and macOS @next/swc packages: only win32-x64 is installed locally",
+    "an attack against any of the advisories: applicability is assessed from configuration only",
+    "screen reader, load, deployment, production"
+  ],
+  "run_folder": "C:/Users/alexa/AppData/Local/Packages/Claude_pzs8sxrjxfjjc/LocalCache/Local/GorgonaBookingTests/web-dependency-audit-20261012-4630ca3"
+}

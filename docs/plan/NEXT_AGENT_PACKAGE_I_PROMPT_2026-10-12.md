@@ -1,5 +1,7 @@
 # Ready-to-paste prompt — after the Package I technical acceptance
 
+Superseded on 2026-10-12 by the [dependency audit prompt](NEXT_AGENT_WEB_DEPENDENCY_AUDIT_PROMPT_2026-10-12.md); kept as the record of the acceptance handoff.
+
 ```text
 Continue GORGONA Booking after the Package I technical acceptance.
 
