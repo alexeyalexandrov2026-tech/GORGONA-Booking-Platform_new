@@ -39,6 +39,8 @@ module stays closed outside test fixtures. Migration `0035` is new; migrations
    no choice of location.
 4. **What hiding does.** `GET /workforce/colleagues/{id}/shifts` answers
    403 `COLLEAGUE_SHIFTS_HIDDEN`, the same for a known and an unknown colleague.
+   Since the independent review a new swap gets the same answer before anything
+   is looked up.
    `/workforce/desk` tells the person's screen `colleague_shifts: hidden`. On
    My shifts the Swap buttons are disabled and a note says why.
 5. **What hiding does not do.** Own shifts, open shifts, the list of colleagues'
@@ -46,8 +48,8 @@ module stays closed outside test fixtures. Migration `0035` is new; migrations
    take part in a request still see the shifts that request names.
 6. **A change is a command like the others.** It carries an expected version and
    an idempotency key; a repeat returns the first answer; a stale version is 409;
-   a lost answer is settled by the original key and a cancelled key can never
-   write. Every change adds a version and an audit event; nothing is edited in
+   a lost answer is settled by the original key and a cancelled key cannot
+   write while its receipt lives (24 hours). Every change adds a version and an audit event; nothing is edited in
    place.
 7. **Module off or not accepted.** The setting stays readable and stays in force;
    it cannot be changed (API 409 `MODULE_DISABLED`, SQL `GBM01`).
@@ -94,7 +96,8 @@ browses a colleague's schedule for that.
 | Exact-commit CI of the I4 record `5f0e58f` | **PASS:** run 38132277248, job `api` success. The owner allowed publishing this branch on 2026-10-11 |
 | Exact-commit CI of the head with this record | **NOT KNOWN HERE:** it starts on the push that carries this file; read it on GitHub |
 | HawkScan | **NOT TESTED:** no scanner runtime or key on this machine |
-| Independent review by a non-author | **NOT DONE.** The author re-read the diff; that is not an independent review |
+| Independent review by a non-author | **DONE on 2026-10-11:** no critical or high finding, two medium, seven low, seven notes. See [the review](INDEPENDENT_REVIEW.md) and [the author's response](AUTHOR_RESPONSE.md) |
+| Complete pytest after the review's fixes | **PASS:** 1506 passed / 4 skipped / 2306.13s on `b66eb41` |
 | Containers, optional external tenant site | **NOT TESTED:** skipped as in I1–I4 |
 | Load, soak, deployment, production | **NOT TESTED** |
 
@@ -119,9 +122,11 @@ Axe now covers twenty screen states per screen size (4 closed, 12 enabled,
 
 ## Limits and choices left to the owner
 
-- **Hiding closes browsing, not the swap command.** The server still accepts a
-  swap whose other shift id is already known to the sender; the screen cannot
-  choose one. Blocking the command itself would change slice I2.
+- **Hiding closes browsing and new swaps.** This line first said that the server
+  still accepted a swap with a known shift id. The independent review showed
+  that such a swap, with the request read, revealed the hidden shift; a hidden
+  branch now refuses a new swap. A swap sent while shifts were shown stays
+  readable to its two people. The refusal lives in the API, not in SQL.
 - **One setting per branch.** There is no company-wide default; a new branch
   starts visible. A company-wide default can be added if wanted.
 - **No exceptions per person and no schedule of the setting.** It applies to

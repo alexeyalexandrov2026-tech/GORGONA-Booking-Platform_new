@@ -2,7 +2,7 @@
 
 ## Current: colleague-shift visibility is a branch setting; branch published — 2026-10-11
 
-Successor entry point: [package I after I4: open items and copyable prompts](docs/plan/NEXT_AGENT_PACKAGE_I_REVIEW_2026-10-11.md).
+Successor entry point: [handoff for the next agent: acceptance of package I, instructions and copyable prompts](docs/plan/NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md).
 Owner decision of 2026-10-11 on the first open choice of I4: staff see colleagues'
 published shifts by default, and the owner, a manager or the manager of that
 branch may hide them. Same branch codex/package-i4-workforce-screens on the I4
@@ -19,7 +19,15 @@ PASS: complete suite 1500 passed / 4 skipped / 953.19s on 419eda8; real browser 
 1 / 103.56s; one race with an observed pg_locks wait; Ruff/format/mypy 263;
 web unit 102 and build 23 pages. The owner allowed publishing this branch: it is
 pushed; exact-commit CI of 5f0e58f is success (run 38132277248); CI of later heads
-is read on GitHub. No PR. Independent review NOT DONE. Containers, external site,
+is read on GitHub. No PR. Independent review DONE on 2026-10-11 by a non-author:
+no critical or high finding, two medium, seven low, seven notes
+([review](docs/plan/evidence/2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW.md),
+[author's response](docs/plan/evidence/2026-10-11-i4-shift-visibility/AUTHOR_RESPONSE.md)).
+Fourteen of sixteen are fixed in b66eb41: a hidden branch now also refuses a new
+swap, the outside-schedule mark follows the time in effect, discarding is limited
+to 20 a day; two are documented and left to the owner. Complete suite after the
+fixes: 1506 passed / 4 skipped / 2306.13s. A discarded key cannot write for the 24 hours its
+receipt lives, not for ever. Containers, external site,
 HawkScan, load/soak, deployment/production NOT TESTED. Inherited production npm
 audit FAIL 2 high. WORK-01/CORE-04 and the workforce readiness lock are unchanged;
 migrations 0001–0034 are untouched. No CodeRabbit.

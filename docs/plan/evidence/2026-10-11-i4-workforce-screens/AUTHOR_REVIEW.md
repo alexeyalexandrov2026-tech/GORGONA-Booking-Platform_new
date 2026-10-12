@@ -58,4 +58,7 @@ Question 1 below was answered by the owner on 2026-10-11; see
    or should a swap be proposed without seeing them?
 2. Should `cancel` be limited in number per person and day? Each call can add one
    row to `gba.idempotency_keys` for 24 hours, as any command can.
+   Corrected after the independent review: the row is not removed after 24
+   hours, only its key may be used again. Discarding is now limited to 20 per
+   person, business and 24 hours.
 3. Should the directory hide the role of a member from a branch manager?

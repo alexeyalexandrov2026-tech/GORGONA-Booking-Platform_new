@@ -2,7 +2,8 @@
 
 ## Current: package I, slice I4 and the visibility setting; branch published — 2026-10-11
 
-Read the [handoff with open items and copyable prompts](NEXT_AGENT_PACKAGE_I_REVIEW_2026-10-11.md)
+Read the [handoff for the next agent: acceptance of package I, instructions and
+copyable prompts](NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md)
 first, then the [package I plan](PACKAGE_I_PLAN_2026-10-09.md),
 [ADR-0025](../adr/0025-workforce-shifts-and-timesheets.md) and the
 [I4 evidence](evidence/2026-10-11-i4-workforce-screens/VALIDATION.md). Checkout
@@ -10,10 +11,13 @@ first, then the [package I plan](PACKAGE_I_PLAN_2026-10-09.md),
 `codex/package-i4-workforce-screens` (I0–I4 stacked; published on 2026-10-11 with
 the owner's permission, no PR). The owner's decision on colleague-shift
 visibility is a branch setting with migration `0035`
-([evidence](evidence/2026-10-11-i4-shift-visibility/VALIDATION.md)). Slices
+([evidence](evidence/2026-10-11-i4-shift-visibility/VALIDATION.md)). The
+independent review is done and answered
+([review](evidence/2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW.md),
+[response](evidence/2026-10-11-i4-shift-visibility/AUTHOR_RESPONSE.md)). Slices
 I1–I3 are recorded in `CLOUD_CODE_HANDOFF.md` and their evidence folders. Open:
-an independent review of I4 and of the setting, CI of the current head (read it
-on GitHub; `5f0e58f` passed), the acceptance record for
+CI of the current head (read it on GitHub; `5f0e58f` and `a806380` passed), the
+acceptance record for
 I-01–I-12 and owner decisions. WORK-01 and CORE-04 stay planned. Package H keeps
 two open items: a draft PR for `codex/package-h-acceptance` and an independent
 check of `ec39622`. Merge, deployment and production migration are not

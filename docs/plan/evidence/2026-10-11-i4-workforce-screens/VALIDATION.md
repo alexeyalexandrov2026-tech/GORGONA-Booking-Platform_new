@@ -81,8 +81,9 @@ Choices made here that the owner may change:
    under the same key. After a reload the body is gone; the person may only
    discard it.
 5. `cancel` claims the key with a marker in the shared receipt table. The claim
-   waits for a command still running under that key. A cancelled key can never
-   commit: the original command then gets 422 `IDEMPOTENCY_KEY_REUSED`. Only after
+   waits for a command still running under that key. A cancelled key cannot
+   commit while its receipt lives (24 hours; corrected after the independent
+   review): the original command then gets 422 `IDEMPOTENCY_KEY_REUSED`. Only after
    that does the person start again with a new key.
 6. The saved record is bound to the actor and the business. Another person in the
    same tab, or the same person in another business, is shown nothing.
@@ -106,7 +107,7 @@ showed the previous version (FAIL in COMMANDS.md), and it was corrected.
 | Web typecheck, lint, format, unit, build | **PASS:** exit 0 each; unit 101 passed / 1.4 s; build 23 static pages |
 | Production `npm audit` | **FAIL:** 2 high nodes, `next` and `source-map-js`; inherited, not addressed |
 | HawkScan | **NOT TESTED:** no scanner runtime or key on this machine |
-| Independent review by a non-author | **NOT DONE.** The author re-read the diff ([AUTHOR_REVIEW.md](AUTHOR_REVIEW.md)); that is not an independent review |
+| Independent review by a non-author | **DONE on 2026-10-11:** no critical or high finding, two medium, seven low, seven notes. See [the review](../2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW.md) and [the author's response](../2026-10-11-i4-shift-visibility/AUTHOR_RESPONSE.md) |
 | Exact-commit CI | **NOT TESTED:** the branch is local |
 | Containers, optional external tenant site | **NOT TESTED:** skipped as in I1–I3 |
 | Load, soak, deployment, production | **NOT TESTED** |
