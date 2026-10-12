@@ -1,28 +1,26 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-12: corrections committed locally; full suite PASS
+## Current checkpoint — 2026-10-12: corrections published; CI success; matrix I-01–I-12 PASS
 
-Сбой полного прогона разобран и закрыт. Причина была в проверке, а не в продукте:
-в двух browser-спеках `getByRole("alert")` совпадал и с пустым объявителем маршрута
-Next.js, поэтому проверка сообщения о конфликте либо проходила впустую, либо падала
-на двух совпадениях — исход решала гонка. Mobile-сбой был следствием: модуль
-выключает desktop-сценарий. Обе проверки теперь называют сообщение.
+Исправления второго обзора и правка двух browser-спеков опубликованы в
+`codex/package-i4-review-corrections`, проверенный коммит `f41f9a8`. Сбой полного
+прогона был дефектом проверки, а не продукта: `getByRole("alert")` совпадал и с
+пустым объявителем маршрута Next.js. Обе проверки теперь называют сообщение.
 
-Исправления R2-1/R2-2/R2-3/CR-1 (`2bca502`) и правка двух спеков (`3b9734c`)
-закоммичены **локально** в `codex/package-i4-review-corrections`; документы —
-следующий коммит. Ветка не опубликована.
+Full local **PASS: 1526 passed, 4 skipped in 997.19s (0:16:37)**. CI **PASS**: [run 38227457763](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38227457763).
+Первый прогон CI прошёл все проверки, но был отменён лимитом задания 20 минут;
+лимит поднят до 30 минут коммитом `f41f9a8`, проверки не менялись. Независимый
+обзор правки спеков PASS; разбор исправлений исполнителем, который их не писал,
+PASS. Матрица I-01–I-12 — PASS. Production audit **FAIL: 2 high** (next, source-map-js).
 
-Full **PASS: 1526 passed, 4 skipped in 997.19s (0:16:37)**. Focused browser desktop/mobile PASS 3 из 3; Ruff, format и
-mypy PASS на 265 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS.
-Production audit **FAIL: 2 high** (next, source-map-js). CI точного SHA
-**NOT TESTED**: публикация — решение владельца. I-01–I-11 PASS в выбранных cases;
-I-12 **BLOCKED** до CI точного SHA. Обзор двух строк спеков — только авторский.
-Пакет не принят; WORK-01/CORE-04 planned; workforce закрыт. Миграции, зависимости
-и готовность не менялись; API и web со строгим v1 `reason_source` выпускаются вместе.
+**Пакет не принят.** WORK-01 и CORE-04 остаются planned, workforce закрыт, статус
+ADR-0025 не менялся: запись готовности открывает модуль компаниям и оставлена
+отдельным срезом приёмки. PR и merge не выполнялись. Миграции, зависимости и
+готовность не менялись; API и web со строгим v1 `reason_source` выпускаются вместе.
 
 [Актуальный handoff](NEXT_AGENT_PACKAGE_I_CORRECTIONS_2026-10-12.md),
 [готовый prompt](NEXT_AGENT_PACKAGE_I_PROMPT_2026-10-12.md),
-[разбор и свежие проверки](evidence/2026-10-12-i4-review-corrections/FOLLOWUP_VALIDATION.md),
+[разбор, проверки и решения](evidence/2026-10-12-i4-review-corrections/FOLLOWUP_VALIDATION.md),
 [сохранённый первый FAIL](evidence/2026-10-12-i4-review-corrections/VALIDATION.md).
 Ниже сохранены исторические срезы; их результаты не заменяют текущий handoff.
 

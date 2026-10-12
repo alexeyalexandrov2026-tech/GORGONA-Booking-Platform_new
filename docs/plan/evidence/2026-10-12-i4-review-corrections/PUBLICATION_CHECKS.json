@@ -1,0 +1,238 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-12T09:24:14.525391+00:00",
+  "owner_instruction_2026_10_12": "Делай, как считаешь нужным. Я доверяю тебе. Проанализируй и делай выбор, как ты считаешь нужным.",
+  "published": {
+    "branch": "codex/package-i4-review-corrections",
+    "first_published_head": "b7953a449c42113b723b2e387c423e9220532e89",
+    "head": "f41f9a849a34a732433bea75514da758e345b859",
+    "remote_head": "f41f9a849a34a732433bea75514da758e345b859",
+    "difference_first_to_head": [
+      ".github/workflows/ci.yml: timeout-minutes 20 -> 30"
+    ],
+    "secret_scan_of_range": "c6b8e34..b7953a4: 0 matches for DSN, key, token and personal e-mail patterns",
+    "pull_requests_for_branch": 0
+  },
+  "ci_first_run": {
+    "run_id": 38225121578,
+    "url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38225121578",
+    "event": "push",
+    "head_sha": "b7953a449c42113b723b2e387c423e9220532e89",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "started": "2026-10-12T08:41:31Z",
+    "updated": "2026-10-12T09:01:39Z",
+    "job_id": 114730621959,
+    "job_conclusion": "cancelled",
+    "job_seconds": 1204,
+    "steps": [
+      {
+        "name": "Set up job",
+        "conclusion": "success",
+        "seconds": 2
+      },
+      {
+        "name": "Run actions/checkout@v5",
+        "conclusion": "success",
+        "seconds": 1
+      },
+      {
+        "name": "Run astral-sh/setup-uv@v6",
+        "conclusion": "success",
+        "seconds": 2
+      },
+      {
+        "name": "Run uv python install 3.14",
+        "conclusion": "success",
+        "seconds": 1
+      },
+      {
+        "name": "Run uv sync --locked",
+        "conclusion": "success",
+        "seconds": 2
+      },
+      {
+        "name": "Run actions/setup-node@v5",
+        "conclusion": "success",
+        "seconds": 1
+      },
+      {
+        "name": "Build and check customer web",
+        "conclusion": "success",
+        "seconds": 79
+      },
+      {
+        "name": "Start PostgreSQL 18",
+        "conclusion": "success",
+        "seconds": 11
+      },
+      {
+        "name": "Build the production image",
+        "conclusion": "success",
+        "seconds": 35
+      },
+      {
+        "name": "Run uv run ruff format --check .",
+        "conclusion": "success",
+        "seconds": 0
+      },
+      {
+        "name": "Run uv run ruff check .",
+        "conclusion": "success",
+        "seconds": 0
+      },
+      {
+        "name": "Run uv run mypy",
+        "conclusion": "success",
+        "seconds": 12
+      },
+      {
+        "name": "Run uv run pytest",
+        "conclusion": "success",
+        "seconds": 1052
+      },
+      {
+        "name": "Post Run actions/setup-node@v5",
+        "conclusion": "cancelled",
+        "seconds": 3
+      },
+      {
+        "name": "Post Run astral-sh/setup-uv@v6",
+        "conclusion": "skipped",
+        "seconds": 0
+      },
+      {
+        "name": "Post Run actions/checkout@v5",
+        "conclusion": "success",
+        "seconds": 0
+      },
+      {
+        "name": "Complete job",
+        "conclusion": "success",
+        "seconds": 0
+      }
+    ],
+    "reading": "every check step succeeded; the job then exceeded its 20-minute limit in a post step"
+  },
+  "ci_published_head": {
+    "run_id": 38227457763,
+    "url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38227457763",
+    "event": "push",
+    "head_sha": "f41f9a849a34a732433bea75514da758e345b859",
+    "status": "completed",
+    "conclusion": "success",
+    "started": "2026-10-12T09:03:44Z",
+    "updated": "2026-10-12T09:23:16Z",
+    "job_id": 114738363957,
+    "job_conclusion": "success",
+    "job_seconds": 1168,
+    "steps": [
+      {
+        "name": "Set up job",
+        "conclusion": "success",
+        "seconds": 2
+      },
+      {
+        "name": "Run actions/checkout@v5",
+        "conclusion": "success",
+        "seconds": 2
+      },
+      {
+        "name": "Run astral-sh/setup-uv@v6",
+        "conclusion": "success",
+        "seconds": 1
+      },
+      {
+        "name": "Run uv python install 3.14",
+        "conclusion": "success",
+        "seconds": 1
+      },
+      {
+        "name": "Run uv sync --locked",
+        "conclusion": "success",
+        "seconds": 1
+      },
+      {
+        "name": "Run actions/setup-node@v5",
+        "conclusion": "success",
+        "seconds": 4
+      },
+      {
+        "name": "Build and check customer web",
+        "conclusion": "success",
+        "seconds": 83
+      },
+      {
+        "name": "Start PostgreSQL 18",
+        "conclusion": "success",
+        "seconds": 11
+      },
+      {
+        "name": "Build the production image",
+        "conclusion": "success",
+        "seconds": 39
+      },
+      {
+        "name": "Run uv run ruff format --check .",
+        "conclusion": "success",
+        "seconds": 0
+      },
+      {
+        "name": "Run uv run ruff check .",
+        "conclusion": "success",
+        "seconds": 0
+      },
+      {
+        "name": "Run uv run mypy",
+        "conclusion": "success",
+        "seconds": 12
+      },
+      {
+        "name": "Run uv run pytest",
+        "conclusion": "success",
+        "seconds": 1008
+      },
+      {
+        "name": "Post Run actions/setup-node@v5",
+        "conclusion": "success",
+        "seconds": 0
+      },
+      {
+        "name": "Post Run astral-sh/setup-uv@v6",
+        "conclusion": "success",
+        "seconds": 1
+      },
+      {
+        "name": "Post Run actions/checkout@v5",
+        "conclusion": "success",
+        "seconds": 0
+      },
+      {
+        "name": "Complete job",
+        "conclusion": "success",
+        "seconds": 0
+      }
+    ],
+    "log_text": "NOT READ: the logs endpoint answers 403 without sign-in"
+  },
+  "reviews": {
+    "spec_fix_independent": "PASS, no P1/P2, three wording notes addressed",
+    "corrections_by_non_author": "PASS, no P1/P2, one P3 note"
+  },
+  "imports_resolved_from": [
+    "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api\\src\\gorgona_booking\\__init__.py",
+    "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api\\tests\\__init__.py"
+  ],
+  "built_site": {
+    "probe_red": {
+      "files": 154,
+      "sha256": "2847f1e7b037039ef50df3b09a8c2b188c9bb2d8a5cb1bf7871cabb47fe2b080"
+    },
+    "static_1_and_later": {
+      "files": 154,
+      "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+    }
+  },
+  "matrix_I_12": "PASS",
+  "readiness": "unchanged: WORK-01 and CORE-04 planned; ADR-0025 Proposed"
+}
