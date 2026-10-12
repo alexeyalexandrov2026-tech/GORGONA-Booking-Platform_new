@@ -33,7 +33,12 @@ from gorgona_booking.business.workforce_desk_contracts import (
     WriteState,
 )
 from gorgona_booking.db.pool import RuntimeConnection
-from gorgona_booking.errors import DomainError, InvalidReferenceError, NotFoundError
+from gorgona_booking.errors import (
+    DatabaseUnavailableError,
+    DomainError,
+    InvalidReferenceError,
+    NotFoundError,
+)
 from gorgona_booking.tenancy.authorization import PermissionDeniedError
 
 _CANCELLED_STATUS = 410
@@ -147,9 +152,8 @@ async def desk(conn: RuntimeConnection, business: UUID, user: UUID) -> DeskView:
         )
     ).fetchone()
     profile = None if row is None else await workforce.load_profile(conn, business, row[0])
-    visible = profile is None or await shift_changes.shifts_visible(
-        conn, business, profile.location_id
-    )
+    home = profile.location_id if profile else await shift_changes.home(conn, business, user)
+    visible = home is None or await shift_changes.shifts_visible(conn, business, home)
     return DeskView(
         business_id=business,
         writes=writes,
@@ -300,39 +304,53 @@ async def cancel_command(
     current = await resolve_command(conn, business, actor, key, body)
     if current.state != "unresolved":
         return current
-    scope = _scope(business, actor, body, key)
-    discarded = await (
+    isolation = await (await conn.execute("show transaction_isolation")).fetchone()
+    if isolation is None or isolation[0] != "read committed":
+        raise DatabaseUnavailableError(
+            "Discarding a new command requires read committed transactions"
+        )
+    # Lock order: actor quota, then receipt. Real commands never take the quota
+    # lock. READ COMMITTED gives the count a fresh snapshot after any lock wait.
+    # A savepoint also removes a new receipt if the quota refuses its cancellation.
+    async with conn.transaction():
         await conn.execute(
-            "select count(*) from gba.idempotency_keys where tenant_id=%s and actor_key=%s "
-            "and operation like 'workforce.%%' and response_status=%s "
-            "and created_at>now()-interval '24 hours'",
-            (business, actor, _CANCELLED_STATUS),
+            "select pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(%s,0))",
+            (f"gba:workforce-discards:{business}:{actor}",),
         )
-    ).fetchone()
-    if discarded is not None and discarded[0] >= DISCARD_LIMIT:
-        raise TooManyDiscardsError(
-            "Too many actions were discarded today; check the result instead or try later"
+        scope = _scope(business, actor, body, key)
+        marker = CancelledCommand(**body.model_dump())
+        # Wait for a real command first, even at the cap: reporting its outcome
+        # issues no discard. Only a newly claimed receipt consumes the quota.
+        previous = await idempotency.claim(
+            conn, scope, commands.fingerprint(marker.model_dump(mode="json"))
         )
-    marker = CancelledCommand(**body.model_dump())
-    # The claim waits for a command still running under this key, then reports it.
-    previous = await idempotency.claim(
-        conn, scope, commands.fingerprint(marker.model_dump(mode="json"))
-    )
-    if previous is not None:
-        return current.model_copy(
-            update={"state": _state(previous.status_code, previous.body, body)}
+        if previous is not None:
+            return current.model_copy(
+                update={"state": _state(previous.status_code, previous.body, body)}
+            )
+        discarded = await (
+            await conn.execute(
+                "select count(*) from gba.idempotency_keys where tenant_id=%s and actor_key=%s "
+                "and operation like 'workforce.%%' and response_status=%s "
+                "and created_at>now()-interval '24 hours'",
+                (business, actor, _CANCELLED_STATUS),
+            )
+        ).fetchone()
+        if discarded is not None and discarded[0] >= DISCARD_LIMIT:
+            raise TooManyDiscardsError(
+                "Too many actions were discarded today; check the result instead or try later"
+            )
+        await idempotency.complete(conn, scope, _CANCELLED_STATUS, marker.model_dump(mode="json"))
+        await commands.audit(
+            conn,
+            business,
+            actor,
+            "workforce.command_cancelled",
+            "workforce_command",
+            # A key may be longer than an audit target; then its digest names it.
+            key
+            if len(key) <= _AUDIT_TARGET_LIMIT
+            else "sha256:" + hashlib.sha256(key.encode()).hexdigest(),
+            {"operation": body.operation, "revision": body.revision},
         )
-    await idempotency.complete(conn, scope, _CANCELLED_STATUS, marker.model_dump(mode="json"))
-    await commands.audit(
-        conn,
-        business,
-        actor,
-        "workforce.command_cancelled",
-        "workforce_command",
-        # A key may be longer than an audit target; then its digest names it.
-        key
-        if len(key) <= _AUDIT_TARGET_LIMIT
-        else "sha256:" + hashlib.sha256(key.encode()).hexdigest(),
-        {"operation": body.operation, "revision": body.revision},
-    )
-    return current.model_copy(update={"state": "cancelled"})
+        return current.model_copy(update={"state": "cancelled"})

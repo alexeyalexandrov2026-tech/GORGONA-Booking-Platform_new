@@ -208,6 +208,7 @@ export const timeSchema = z
     breaks: z.array(breakSchema).max(100),
     break_started_at: instant.nullable(),
     reason: z.string().max(4000),
+    reason_source: z.enum(["system", "human"]),
     created_by: id,
     created_at: instant,
     self_approved: z.boolean(),

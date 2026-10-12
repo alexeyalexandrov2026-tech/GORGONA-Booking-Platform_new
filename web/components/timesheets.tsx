@@ -52,15 +52,8 @@ interface Correction extends Period {
   breaks: Period[];
   reason: string;
 }
-// Texts the server writes for clock actions; they are not a person's reason.
-const SYSTEM_REASONS = new Set([
-  "Clock-in",
-  "Break start",
-  "Break end",
-  "Recorded clock-out",
-]);
-const given = (reason: string) =>
-  reason && !SYSTEM_REASONS.has(reason) ? reason : null;
+const given = (entry: TimeEntry) =>
+  entry.reason_source === "human" ? entry.reason : null;
 const newest = (items: TimeEntry[]) =>
   [...items].sort((a, b) => Date.parse(b.starts_at) - Date.parse(a.starts_at));
 
@@ -353,7 +346,7 @@ export function Timesheets({
             Nothing is in effect: this record was declined and does not count.
           </p>
         )}
-        {given(entry.reason) && <p>Reason given: {given(entry.reason)}</p>}
+        {given(entry) && <p>Reason given: {given(entry)}</p>}
         <div className="workforce-actions">
           {own && entry.status !== "open" && (
             <button
@@ -698,7 +691,7 @@ export function Timesheets({
                         span(period.starts_at, period.ends_at, zone(item)),
                       )
                       .join(", ")}`}
-                  {given(item.reason) && ` · reason: ${given(item.reason)}`}
+                  {given(item) && ` · reason: ${given(item)}`}
                   {item.action === "approve" &&
                     item.self_approved &&
                     " · approved by the owner for their own time"}

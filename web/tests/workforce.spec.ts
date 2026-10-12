@@ -914,7 +914,7 @@ test("schedule, own shifts and timesheets with real gates, recovery and roles", 
   await accessible(page);
   await correction
     .getByLabel("Reason for the correction", { exact: true })
-    .fill(`${tag} worked on another day`);
+    .fill("Clock-in");
   await correction
     .getByRole("button", { name: "Send correction", exact: true })
     .click();
@@ -924,7 +924,7 @@ test("schedule, own shifts and timesheets with real gates, recovery and roles", 
   await expect(own).toContainText(
     "Version 6 is a pending correction and does not count",
   );
-  await expect(own).toContainText(`${tag} worked on another day`);
+  await expect(own).toContainText("Reason given: Clock-in");
   await fits(page);
 
   // --- The manager declines it with a reason. ---
@@ -981,6 +981,15 @@ test("schedule, own shifts and timesheets with real gates, recovery and roles", 
   );
   await expect(history.getByRole("listitem").nth(5)).toContainText(
     "Version 6: Correction proposed by you",
+  );
+  await expect(history.getByRole("listitem").nth(5)).toContainText(
+    "reason: Clock-in",
+  );
+  await expect(history.getByRole("listitem").nth(0)).not.toContainText(
+    "reason:",
+  );
+  await expect(history.getByRole("listitem").nth(4)).not.toContainText(
+    "reason:",
   );
   await accessible(page);
   await history.getByRole("button", { name: "Close", exact: true }).click();

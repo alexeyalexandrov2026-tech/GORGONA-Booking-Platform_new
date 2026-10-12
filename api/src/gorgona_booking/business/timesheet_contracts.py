@@ -135,6 +135,7 @@ class TimeView(WorkforceModel):
     breaks: tuple[BreakPeriod, ...]
     break_started_at: AwareDatetime | None
     reason: str
+    reason_source: Literal["system", "human"]
     created_by: UUID
     created_at: AwareDatetime
     self_approved: bool

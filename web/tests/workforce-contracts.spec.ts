@@ -101,6 +101,7 @@ const entry = {
   breaks: [],
   break_started_at: null,
   reason: "FAKE forgot the early start",
+  reason_source: "human",
   created_by: user,
   created_at: "2031-06-03T08:00:00Z",
   self_approved: false,
@@ -222,6 +223,8 @@ test("a time entry separates the pending version from the one in effect", () => 
     { effective: { ...approved, out_of_schedule: undefined } },
     { effective: { ...approved, out_of_schedule: "no" } },
     { wage: 100 },
+    { reason_source: undefined },
+    { reason_source: "unknown" },
   ]);
   const history = {
     schema_version: 1,

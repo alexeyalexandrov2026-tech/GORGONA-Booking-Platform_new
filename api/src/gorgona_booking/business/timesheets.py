@@ -36,7 +36,10 @@ _SELECT = (
     "(e.shift_id is null or v.starts_at<e.shift_starts_at or v.starts_at>=e.shift_ends_at),"
     "a.revision,a.starts_at,a.ends_at,a.break_starts,a.break_ends,"
     "a.created_by,a.created_at,a.self_approved,"
-    "(e.shift_id is null or a.starts_at<e.shift_starts_at or a.starts_at>=e.shift_ends_at) "
+    "(e.shift_id is null or a.starts_at<e.shift_starts_at or a.starts_at>=e.shift_ends_at),"
+    "(v.action in ('correct','decline') or (v.action='approve' and exists "
+    "(select 1 from gba.time_entry_revisions p where p.tenant_id=e.tenant_id "
+    "and p.entry_id=e.id and p.revision=v.revision-1 and p.action='correct'))) "
     "from gba.time_entries e "
     "join lateral (select * from gba.time_entry_revisions where tenant_id=e.tenant_id "
     "and entry_id=e.id and (%s::integer is null or revision=%s) "
@@ -89,6 +92,9 @@ def _view(business: UUID, row: tuple[Any, ...]) -> TimeView:
         breaks=periods,
         break_started_at=row[13],
         reason=row[14],
+        # Approval copies the previous reason; provenance comes from that event,
+        # never from its text. The same as-of projection serves cards and history.
+        reason_source="human" if row[28] else "system",
         created_by=row[15],
         created_at=row[16],
         self_approved=row[17],

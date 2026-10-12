@@ -136,7 +136,7 @@ async def propose(
             # swap is closed before anything is looked up, so every such request gets
             # one answer and a known shift id tells nothing about its holder.
             location = await home(conn, business, user)
-            if location is not None and not await shifts_visible(conn, business, location):
+            if location is None or not await shifts_visible(conn, business, location):
                 raise ColleagueShiftsHiddenError("Your branch does not show colleagues' shifts")
         await conn.execute(
             "insert into gba.shift_change_requests (tenant_id,id,kind,shift_id,shift_revision,"
@@ -251,11 +251,17 @@ async def history(
 
 
 async def home(conn: RuntimeConnection, business: UUID, user: UUID) -> UUID | None:
+    """The immutable staff home, including a same-home reinvitation before profiling.
+
+    A current membership must still cover that home; a new branch membership is
+    not permission to browse the old branch. No safe home closes new swaps.
+    """
     row = await (
         await conn.execute(
-            "select p.location_id from gba.staff_profiles p join gba.memberships m "
-            "on m.tenant_id=p.tenant_id and m.id=p.membership_id "
-            "where p.tenant_id=%s and p.user_id=%s and m.status='active' limit 1",
+            "select o.location_id from gba.staff_resource_owners o join gba.memberships m "
+            "on m.tenant_id=o.tenant_id and m.user_id=o.user_id "
+            "where o.tenant_id=%s and o.user_id=%s and m.status='active' "
+            "and (m.location_id is null or m.location_id=o.location_id)",
             (business, user),
         )
     ).fetchone()
