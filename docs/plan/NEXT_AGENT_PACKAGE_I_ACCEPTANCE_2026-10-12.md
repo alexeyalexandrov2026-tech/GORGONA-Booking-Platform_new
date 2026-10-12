@@ -1,6 +1,52 @@
 # Next agent — Package I acceptance preparation, 2026-10-12
 
-## Current: повторный обзор выполнен, следующий срез — исправления
+## Current checkpoint — 2026-10-12: corrections committed locally; full suite PASS
+
+Сбой полного прогона разобран и закрыт. Причина была в проверке, а не в продукте:
+в двух browser-спеках `getByRole("alert")` совпадал и с пустым объявителем маршрута
+Next.js, поэтому проверка сообщения о конфликте либо проходила впустую, либо падала
+на двух совпадениях — исход решала гонка. Mobile-сбой был следствием: модуль
+выключает desktop-сценарий. Обе проверки теперь называют сообщение.
+
+Исправления R2-1/R2-2/R2-3/CR-1 (`2bca502`) и правка двух спеков (`3b9734c`)
+закоммичены **локально** в `codex/package-i4-review-corrections`; документы —
+следующий коммит. Ветка не опубликована.
+
+Full **PASS: 1526 passed, 4 skipped in 997.19s (0:16:37)**. Focused browser desktop/mobile PASS 3 из 3; Ruff, format и
+mypy PASS на 265 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS.
+Production audit **FAIL: 2 high** (next, source-map-js). CI точного SHA
+**NOT TESTED**: публикация — решение владельца. I-01–I-11 PASS в выбранных cases;
+I-12 **BLOCKED** до CI точного SHA. Обзор двух строк спеков — только авторский.
+Пакет не принят; WORK-01/CORE-04 planned; workforce закрыт. Миграции, зависимости
+и готовность не менялись; API и web со строгим v1 `reason_source` выпускаются вместе.
+
+[Актуальный handoff](NEXT_AGENT_PACKAGE_I_CORRECTIONS_2026-10-12.md),
+[готовый prompt](NEXT_AGENT_PACKAGE_I_PROMPT_2026-10-12.md),
+[разбор и свежие проверки](evidence/2026-10-12-i4-review-corrections/FOLLOWUP_VALIDATION.md),
+[сохранённый первый FAIL](evidence/2026-10-12-i4-review-corrections/VALIDATION.md).
+Ниже сохранены исторические срезы; их результаты не заменяют текущий handoff.
+
+## Previous checkpoint — 2026-10-12: corrections uncommitted; full suite FAIL
+
+R2-1/R2-2/R2-3/CR-1 исправлены в рабочей копии
+`C:/Users/alexa/.codex/worktrees/package-i4-review-corrections/Gorgona Booking`,
+branch `codex/package-i4-review-corrections`, HEAD490652b. **Нового коммита нет.**
+Final focused47PASS,20новых regressionsPASS, workforce browser/static/web и
+ограниченный независимый source reviewPASS. Full **1failed,1525passed,4skipped /
+1124.75s**: counterparty desktop ambiguous alert locator; mobile module-off timeout.
+Причина mobile ещё не доказана. Следующий шаг — diagnosis/focused/full/review,
+после зелёных ворот local commit. Production auditFAIL2high. I-09 scopedPASS,
+I-12FAIL; acceptanceBLOCKED, WORK-01/CORE-04planned, workforce закрыт.
+Миграции/dependencies/readiness не менялись; API/web strict v1 reason_source
+требует согласованного выпуска. Новая ветка не опубликована; её CI NOT TESTED.
+
+[Актуальный handoff](NEXT_AGENT_PACKAGE_I_CORRECTIONS_2026-10-12.md),
+[готовый prompt](NEXT_AGENT_PACKAGE_I_PROMPT_2026-10-12.md),
+[evidence и точные ограничения](evidence/2026-10-12-i4-review-corrections/VALIDATION.md).
+Ниже сохранены исторические срезы. Их инструкции/результаты не заменяют текущий
+handoff и не означают, что dirty corrections входят в HEAD490652b.
+
+## Previous: повторный обзор выполнен, следующий срез — исправления
 
 Обзор 2 **FAIL**: R2-1 medium/P2 — чтение скрытой смены через swap после
 повторного приглашения в тот же филиал без нового профиля; R2-2 medium/P2 —

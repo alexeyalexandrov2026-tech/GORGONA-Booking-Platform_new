@@ -1,0 +1,1872 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-12T08:21:29.383776+00:00",
+  "base_sha": "490652b3f01a1b3de2df2d2e6257fced6caf32e2",
+  "source_state": "11 uncommitted source/test files at recording time; local commits follow this record",
+  "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b",
+  "phases": {
+    "probe-red": {
+      "base_sha": "490652b3f01a1b3de2df2d2e6257fced6caf32e2",
+      "phase": "probe-red",
+      "kind": "probe",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-12T07:59:45.049666+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red",
+          "exit_code": 0,
+          "seconds": 2.16,
+          "log_sha256": "5a18eeace43d3ba4a29799ec43eca66689170a9e931da633df4857d2ca7a989d"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red\\server.log",
+            "-w",
+            "-o",
+            "-p 61473 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red",
+          "exit_code": 0,
+          "seconds": 0.42,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "counterparty-browser",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red\\counterparty-browser-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red\\counterparty-browser.xml",
+            "tests/integration/test_counterparty_browser.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 1,
+          "seconds": 20.99,
+          "log_sha256": "82aba567f98e2e989899c1b5be722c7c271fbc7443e5b9c154c70a62b3cbd49b"
+        },
+        {
+          "name": "document-browser",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red\\document-browser-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red\\document-browser.xml",
+            "tests/integration/test_document_browser.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 1,
+          "seconds": 16.43,
+          "log_sha256": "98faac9a1caa5273383b65161a3b92274e0e2411fc2751373b81aaadd82203ad"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-red",
+          "exit_code": 0,
+          "seconds": 0.15,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5"
+      },
+      "web_out_before": {
+        "files": 154,
+        "sha256": "2847f1e7b037039ef50df3b09a8c2b188c9bb2d8a5cb1bf7871cabb47fe2b080"
+      },
+      "postgres_port": 61473,
+      "postmaster_pid_left": false,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 154,
+        "sha256": "2847f1e7b037039ef50df3b09a8c2b188c9bb2d8a5cb1bf7871cabb47fe2b080"
+      },
+      "finished_utc": "2026-10-12T08:00:25.783340+00:00",
+      "source_snapshot_files": 429,
+      "source_snapshot_equals_full_run": false
+    },
+    "static-1": {
+      "base_sha": "490652b3f01a1b3de2df2d2e6257fced6caf32e2",
+      "phase": "static-1",
+      "kind": "static",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\static-1",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-12T08:01:07.019338+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "ruff",
+            "check",
+            "src",
+            "tests"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 0.18,
+          "log_sha256": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0"
+        },
+        {
+          "name": "ruff-format",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "ruff",
+            "format",
+            "--check",
+            "src",
+            "tests"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 0.17,
+          "log_sha256": "db0bc1a972d22c4932b07dd741172261c182fb7e36c44e1155a3506e5a5d2e6d"
+        },
+        {
+          "name": "mypy",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "mypy",
+            "src",
+            "tests"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 1.54,
+          "log_sha256": "3ba11ddb2f01e3f3dc21f0416fc90a3d8b5421e034e82f669ce34d9542e348b1"
+        },
+        {
+          "name": "web-typecheck",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "typecheck"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "seconds": 2.54,
+          "log_sha256": "57eb61b8116e9717145f8a326096c13f75126fdd520df38125124402e222a24c"
+        },
+        {
+          "name": "web-lint",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "lint"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "seconds": 11.84,
+          "log_sha256": "ce57886850d9496f41c2f2e77437461f5f112de7e9ab0107ceb3f2ce90dd738f"
+        },
+        {
+          "name": "web-format",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "format:check"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "seconds": 2.51,
+          "log_sha256": "04e80414d063c197fc67cb7f1eef4ae379749f4f76147f4cf366016a2a6ff65f"
+        },
+        {
+          "name": "web-unit",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "test:unit"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "seconds": 2.51,
+          "log_sha256": "ff8a29ab7ae653c9212316dddcbb298fd6a33c3f1a48f7b249067e1fb8df1f9e"
+        },
+        {
+          "name": "web-build",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "build"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "seconds": 6.77,
+          "log_sha256": "68c41c9454aad1a59c5d344af670041ef4cd33ec93f0c10e56cdf6a0f5d9feb5"
+        },
+        {
+          "name": "web-audit",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "audit",
+            "--omit=dev",
+            "--json"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\web",
+          "exit_code": 1,
+          "seconds": 1.9,
+          "log_sha256": "2e4444b547a1a5ff75d55174ec4e61fda9e2e007f8b4e9e4bbadad3e79aaa2cd"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5"
+      },
+      "web_out_before": {
+        "files": 154,
+        "sha256": "2847f1e7b037039ef50df3b09a8c2b188c9bb2d8a5cb1bf7871cabb47fe2b080"
+      },
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 154,
+        "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+      },
+      "finished_utc": "2026-10-12T08:01:37.281069+00:00",
+      "source_snapshot_files": 429,
+      "source_snapshot_equals_full_run": true
+    },
+    "browser-1": {
+      "base_sha": "490652b3f01a1b3de2df2d2e6257fced6caf32e2",
+      "phase": "browser-1",
+      "kind": "browser",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-12T08:01:45.059342+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1",
+          "exit_code": 0,
+          "seconds": 2.76,
+          "log_sha256": "6bf9df5ad1db2afcc80c7d3e55c3ffca1c693fca3e8ee89d449a8978415cf716"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1\\server.log",
+            "-w",
+            "-o",
+            "-p 54300 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1",
+          "exit_code": 0,
+          "seconds": 0.45,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "counterparty-browser",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1\\counterparty-browser-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1\\counterparty-browser.xml",
+            "tests/integration/test_counterparty_browser.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 18.01,
+          "log_sha256": "c177ffafe1fb21266579e80f6da8a60d0eb4329828cdee2a2f43e7dad3e5cf71"
+        },
+        {
+          "name": "document-browser",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1\\document-browser-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1\\document-browser.xml",
+            "tests/integration/test_document_browser.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 12.93,
+          "log_sha256": "409744cf91e33b526592c8fa616f31213968f159d745266d6afd8dfd9e2bf07e"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-1",
+          "exit_code": 0,
+          "seconds": 0.15,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5"
+      },
+      "web_out_before": {
+        "files": 154,
+        "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+      },
+      "postgres_port": 54300,
+      "postmaster_pid_left": false,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 154,
+        "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+      },
+      "finished_utc": "2026-10-12T08:02:19.652396+00:00",
+      "source_snapshot_files": 429,
+      "source_snapshot_equals_full_run": true
+    },
+    "browser-2": {
+      "base_sha": "490652b3f01a1b3de2df2d2e6257fced6caf32e2",
+      "phase": "browser-2",
+      "kind": "browser",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-12T08:02:19.883890+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2",
+          "exit_code": 0,
+          "seconds": 2.62,
+          "log_sha256": "b035d030a49521363a5ff50cd9b96b7f8faccafc7f60ffe044912bd89c3f9577"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2\\server.log",
+            "-w",
+            "-o",
+            "-p 63348 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2",
+          "exit_code": 0,
+          "seconds": 0.43,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "counterparty-browser",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2\\counterparty-browser-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2\\counterparty-browser.xml",
+            "tests/integration/test_counterparty_browser.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 14.7,
+          "log_sha256": "b075739dfdd3360c92fd7a95493afeb9559fe8bccd5bc6bf740e1a6419a38aa9"
+        },
+        {
+          "name": "document-browser",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2\\document-browser-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2\\document-browser.xml",
+            "tests/integration/test_document_browser.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 13.02,
+          "log_sha256": "d5e4a65abe749fc02fb4ef087fccb235b1ca7fe4857f1f5cc452b7efea4b063a"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-2",
+          "exit_code": 0,
+          "seconds": 0.15,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5"
+      },
+      "web_out_before": {
+        "files": 154,
+        "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+      },
+      "postgres_port": 63348,
+      "postmaster_pid_left": false,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 154,
+        "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+      },
+      "finished_utc": "2026-10-12T08:02:50.971130+00:00",
+      "source_snapshot_files": 429,
+      "source_snapshot_equals_full_run": true
+    },
+    "browser-3": {
+      "base_sha": "490652b3f01a1b3de2df2d2e6257fced6caf32e2",
+      "phase": "browser-3",
+      "kind": "browser",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-12T08:02:51.213928+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3",
+          "exit_code": 0,
+          "seconds": 2.89,
+          "log_sha256": "ec17e5e65092b46a0cc518ae78170e99d3d48256ffd5b4576f4a4eb11263d592"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3\\server.log",
+            "-w",
+            "-o",
+            "-p 53922 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3",
+          "exit_code": 0,
+          "seconds": 0.32,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "counterparty-browser",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3\\counterparty-browser-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3\\counterparty-browser.xml",
+            "tests/integration/test_counterparty_browser.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 14.86,
+          "log_sha256": "559082a5fc1f3ad2c483e00014989f6368e1affec398f3254b0c566f552b73e0"
+        },
+        {
+          "name": "document-browser",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3\\document-browser-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3\\document-browser.xml",
+            "tests/integration/test_document_browser.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 12.73,
+          "log_sha256": "4f210aa3b2d8386f1848ede966d1bb181a435c0b1ecb4b051d21f65d0adfff27"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\browser-3",
+          "exit_code": 0,
+          "seconds": 0.17,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5"
+      },
+      "web_out_before": {
+        "files": 154,
+        "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+      },
+      "postgres_port": 53922,
+      "postmaster_pid_left": false,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 154,
+        "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+      },
+      "finished_utc": "2026-10-12T08:03:22.357301+00:00",
+      "source_snapshot_files": 429,
+      "source_snapshot_equals_full_run": true
+    },
+    "full": {
+      "base_sha": "490652b3f01a1b3de2df2d2e6257fced6caf32e2",
+      "phase": "full",
+      "kind": "full",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\full",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-12T08:03:49.369140+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\full\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\full\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\full",
+          "exit_code": 0,
+          "seconds": 2.67,
+          "log_sha256": "5f9743499011dca836cdb4f1f80d0227c3ba450970b72862767c35852e69e263"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\full\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\full\\server.log",
+            "-w",
+            "-o",
+            "-p 49975 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\full",
+          "exit_code": 0,
+          "seconds": 0.49,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "pytest-full",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\full\\pytest-full-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\full\\pytest-full.xml"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 998.37,
+          "log_sha256": "1e5b619c908b95eff566fbae4a4c72db954ec1c899bbbdcc6ae65c824615a362"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\full\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\full",
+          "exit_code": 0,
+          "seconds": 0.14,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5"
+      },
+      "web_out_before": {
+        "files": 154,
+        "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+      },
+      "postgres_port": 49975,
+      "postmaster_pid_left": false,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 154,
+        "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+      },
+      "finished_utc": "2026-10-12T08:20:31.379701+00:00",
+      "source_snapshot_files": 429,
+      "source_snapshot_equals_full_run": true
+    },
+    "probe-green": {
+      "base_sha": "490652b3f01a1b3de2df2d2e6257fced6caf32e2",
+      "phase": "probe-green",
+      "kind": "browser",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-12T08:20:46.915951+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green",
+          "exit_code": 0,
+          "seconds": 2.87,
+          "log_sha256": "dac0827d6de9f046191828615782f2fbf6ce483fd28522421c22ea8e5612cf09"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green\\server.log",
+            "-w",
+            "-o",
+            "-p 59947 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green",
+          "exit_code": 0,
+          "seconds": 0.34,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "counterparty-browser",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green\\counterparty-browser-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green\\counterparty-browser.xml",
+            "tests/integration/test_counterparty_browser.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 18.47,
+          "log_sha256": "a577625290c604a9123bbca3eea5db06b3909aa8e40b95a747d93e553e5be042"
+        },
+        {
+          "name": "document-browser",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green\\document-browser-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green\\document-browser.xml",
+            "tests/integration/test_document_browser.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-review-corrections\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "seconds": 13.87,
+          "log_sha256": "6171e458be76bb6db9d4209a3d3ebe7f82a989c70426a8fc7ad5478c01be603d"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\i4-counterparty-locator-20261012-490652b\\probe-green",
+          "exit_code": 0,
+          "seconds": 0.14,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5"
+      },
+      "web_out_before": {
+        "files": 154,
+        "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+      },
+      "postgres_port": 59947,
+      "postmaster_pid_left": false,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 154,
+        "sha256": "c09367d87b67e63b955a91cd0a940036181076e42196f45e8c4ce3e8e03d11a1"
+      },
+      "finished_utc": "2026-10-12T08:21:22.889142+00:00",
+      "source_snapshot_files": 429,
+      "source_snapshot_equals_full_run": false
+    }
+  },
+  "diagnosis_probe": {
+    "note": "Temporary probe in both specs; the probe versions are kept in probe-specs/ outside Git",
+    "counterparty": [
+      "PROBE alerts before the conflict: [{\"id\":\"__next-route-announcer__\",\"cls\":\"\",\"text\":\"\"}]",
+      "PROBE old assertion with no product message on the page: passes",
+      "PROBE alerts after the conflict: [{\"id\":\"\",\"cls\":\"error\",\"text\":\"This counterparty changed. Reload it before saving.\"},{\"id\":\"__next-route-announcer__\",\"cls\":\"\",\"text\":\"\"}]",
+      "x  1 [desktop] › tests\\counterparties.spec.ts:12:5 › counterparty cards, manual decisions, links, uncertain retries and retained history (3.9s)",
+      "x  2 [mobile] › tests\\counterparties.spec.ts:12:5 › counterparty cards, manual decisions, links, uncertain retries and retained history (6.1s)",
+      "  Error: strict mode violation: getByRole('alert') resolved to 2 elements:",
+      "      1) <p role=\"alert\" class=\"error\">This counterparty changed. Reload it before savin…</p> aka getByText('This counterparty changed.')",
+      "      2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')",
+      "    161 |     console.log(\"PROBE alerts after the conflict:\", JSON.stringify(await alerts()));",
+      "  Locator: getByText('Counterparties is turned off.')",
+      "  Timeout: 5000ms",
+      "2 failed",
+      "1 failed in 19.22s"
+    ],
+    "document": [
+      "PROBE alerts before the conflict: [{\"id\":\"__next-route-announcer__\",\"cls\":\"\",\"text\":\"\"}]",
+      "PROBE old assertion with no product message on the page: passes",
+      "PROBE alerts after the conflict: [{\"id\":\"\",\"cls\":\"error\",\"text\":\"This document changed. Reload it before saving.\"},{\"id\":\"__next-route-announcer__\",\"cls\":\"\",\"text\":\"\"}]",
+      "x  1 [desktop] › tests\\documents.spec.ts:16:5 › documents, verified files, counterparty links, uncertain retries and retained versions (2.7s)",
+      "x  2 [mobile] › tests\\documents.spec.ts:16:5 › documents, verified files, counterparty links, uncertain retries and retained versions (6.1s)",
+      "  Error: strict mode violation: getByRole('alert') resolved to 2 elements:",
+      "      1) <p role=\"alert\" class=\"error\">This document changed. Reload it before saving.</p> aka getByText('This document changed. Reload')",
+      "      2) <div role=\"alert\" aria-live=\"assertive\" id=\"__next-route-announcer__\"></div> aka locator('[id=\"__next-route-announcer__\"]')",
+      "    183 |     console.log(\"PROBE alerts after the conflict:\", JSON.stringify(await alerts()));",
+      "  Locator: getByText('Documents is turned off.')",
+      "  Timeout: 5000ms",
+      "2 failed",
+      "1 failed in 15.39s"
+    ],
+    "summaries": [
+      "1 failed in 19.22s",
+      "1 failed in 15.39s"
+    ],
+    "new_assertion": {
+      "note": "Second temporary probe after the full run; final spec bytes restored and re-hashed",
+      "counterparty": [
+        "PROBE new assertion with no product message on the page: fails: Error: expect(locator).toBeVisible() failed",
+        "1 passed in 16.90s"
+      ],
+      "document": [
+        "PROBE new assertion with no product message on the page: fails: Error: expect(locator).toBeVisible() failed",
+        "1 passed in 12.86s"
+      ]
+    }
+  },
+  "focused_browser": {
+    "browser-1": {
+      "counterparty": [
+        "  ok 1 [desktop] › tests\\counterparties.spec.ts:12:5 › counterparty cards, manual decisions, links, uncertain retries and retained history (6.7s)",
+        "  ok 2 [mobile] › tests\\counterparties.spec.ts:12:5 › counterparty cards, manual decisions, links, uncertain retries and retained history (1.8s)",
+        "  2 passed (11.2s)",
+        "1 passed in 16.48s"
+      ],
+      "document": [
+        "  ok 1 [desktop] › tests\\documents.spec.ts:16:5 › documents, verified files, counterparty links, uncertain retries and retained versions (3.8s)",
+        "  ok 2 [mobile] › tests\\documents.spec.ts:16:5 › documents, verified files, counterparty links, uncertain retries and retained versions (1.9s)",
+        "  2 passed (8.0s)",
+        "1 passed in 11.91s"
+      ]
+    },
+    "browser-2": {
+      "counterparty": [
+        "  ok 1 [desktop] › tests\\counterparties.spec.ts:12:5 › counterparty cards, manual decisions, links, uncertain retries and retained history (5.5s)",
+        "  ok 2 [mobile] › tests\\counterparties.spec.ts:12:5 › counterparty cards, manual decisions, links, uncertain retries and retained history (1.8s)",
+        "  2 passed (9.5s)",
+        "1 passed in 13.67s"
+      ],
+      "document": [
+        "  ok 1 [desktop] › tests\\documents.spec.ts:16:5 › documents, verified files, counterparty links, uncertain retries and retained versions (3.7s)",
+        "  ok 2 [mobile] › tests\\documents.spec.ts:16:5 › documents, verified files, counterparty links, uncertain retries and retained versions (2.0s)",
+        "  2 passed (8.0s)",
+        "1 passed in 12.01s"
+      ]
+    },
+    "browser-3": {
+      "counterparty": [
+        "  ok 1 [desktop] › tests\\counterparties.spec.ts:12:5 › counterparty cards, manual decisions, links, uncertain retries and retained history (5.7s)",
+        "  ok 2 [mobile] › tests\\counterparties.spec.ts:12:5 › counterparty cards, manual decisions, links, uncertain retries and retained history (1.8s)",
+        "  2 passed (9.8s)",
+        "1 passed in 13.84s"
+      ],
+      "document": [
+        "  ok 1 [desktop] › tests\\documents.spec.ts:16:5 › documents, verified files, counterparty links, uncertain retries and retained versions (3.8s)",
+        "  ok 2 [mobile] › tests\\documents.spec.ts:16:5 › documents, verified files, counterparty links, uncertain retries and retained versions (2.0s)",
+        "  2 passed (7.9s)",
+        "1 passed in 11.73s"
+      ]
+    }
+  },
+  "static": {
+    "ruff_check": [
+      "All checks passed!"
+    ],
+    "ruff_format": [
+      "265 files already formatted"
+    ],
+    "mypy": [
+      "Success: no issues found in 265 source files"
+    ],
+    "web_unit": [
+      "  102 passed (1.7s)"
+    ],
+    "web_build": [
+      "✓ Generating static pages using 11 workers (23/23) in 433ms"
+    ],
+    "exit_codes": {
+      "ruff-check": 0,
+      "ruff-format": 0,
+      "mypy": 0,
+      "web-typecheck": 0,
+      "web-lint": 0,
+      "web-format": 0,
+      "web-unit": 0,
+      "web-build": 0,
+      "web-audit": 1
+    }
+  },
+  "full_summary": "1526 passed, 4 skipped in 997.19s (0:16:37)",
+  "full_counts": {
+    "NOT TESTED": 4,
+    "PASS": 1526
+  },
+  "full_seconds": 998.37,
+  "full_junit_sha256": "9e3fa7dfc96eb8c55e824b06db5ad36f66b489529401bacf3abd55d91e248a1f",
+  "full_browser_cases": [
+    {
+      "node": "tests/integration/test_agreement_browser.py::test_real_agreement_browser_oidc_pkce_and_database",
+      "status": "PASS",
+      "seconds": 11.981
+    },
+    {
+      "node": "tests/integration/test_counterparty_browser.py::test_real_counterparty_browser_oidc_pkce_and_database",
+      "status": "PASS",
+      "seconds": 13.27
+    },
+    {
+      "node": "tests/integration/test_customer_browser.py::test_real_customer_browser",
+      "status": "PASS",
+      "seconds": 17.823
+    },
+    {
+      "node": "tests/integration/test_document_browser.py::test_real_document_browser_oidc_pkce_and_database",
+      "status": "PASS",
+      "seconds": 10.489
+    },
+    {
+      "node": "tests/integration/test_h4_browser.py::test_h4_real_browser_closed_until_published_then_enabled",
+      "status": "PASS",
+      "seconds": 42.578
+    },
+    {
+      "node": "tests/integration/test_i4_browser.py::test_i4_real_browser_closed_then_enabled_then_switched_off",
+      "status": "PASS",
+      "seconds": 106.828
+    },
+    {
+      "node": "tests/integration/test_ledger_browser.py::test_real_ledger_browser_oidc_pkce_and_database",
+      "status": "PASS",
+      "seconds": 18.039
+    },
+    {
+      "node": "tests/integration/test_management_browser.py::test_real_management_browser_oidc_pkce_and_database[False]",
+      "status": "PASS",
+      "seconds": 23.544
+    },
+    {
+      "node": "tests/integration/test_management_browser.py::test_real_management_browser_oidc_pkce_and_database[True]",
+      "status": "PASS",
+      "seconds": 10.124
+    },
+    {
+      "node": "tests/integration/test_management_browser.py::test_real_delegation_browser_oidc_pkce_and_database",
+      "status": "PASS",
+      "seconds": 10.305
+    },
+    {
+      "node": "tests/integration/test_management_browser.py::test_real_group_browser_oidc_pkce_and_database",
+      "status": "PASS",
+      "seconds": 8.895
+    },
+    {
+      "node": "tests/integration/test_management_browser.py::test_real_configuration_browser_oidc_pkce_and_database",
+      "status": "PASS",
+      "seconds": 9.482
+    },
+    {
+      "node": "tests/integration/test_reservation_browser.py::test_real_reservation_browser_oidc_pkce_and_database",
+      "status": "PASS",
+      "seconds": 8.238
+    }
+  ],
+  "skipped_cases": [
+    {
+      "node": "tests/container/test_container_image.py::test_migration_job_is_explicit_and_idempotent",
+      "detail": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "node": "tests/container/test_container_image.py::test_image_runs_non_root_without_baked_secrets",
+      "detail": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "node": "tests/container/test_container_image.py::test_api_container_serves_health_web_and_a_real_booking",
+      "detail": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "node": "tests/integration/test_tenant_site_embedding.py::test_tenant_site_embeds_the_real_wizard",
+      "detail": "BLOCKED: tenant-site verification requires GBA_REQUIRE_TENANT_SITE=1"
+    }
+  ],
+  "matrix": {
+    "I-01": {
+      "selection": {
+        "names": [
+          "test_profile_shift_and_occupancy_are_atomic_and_idempotent",
+          "test_failed_assignment_rolls_back_head_version_audit_and_receipt",
+          "test_conflicting_swap_rolls_back_both_sides_event_audit_and_key"
+        ]
+      },
+      "counts": {
+        "PASS": 3
+      },
+      "nodes": [
+        "tests/integration/test_shift_changes_guards.py::test_conflicting_swap_rolls_back_both_sides_event_audit_and_key",
+        "tests/integration/test_workforce.py::test_profile_shift_and_occupancy_are_atomic_and_idempotent",
+        "tests/integration/test_workforce.py::test_failed_assignment_rolls_back_head_version_audit_and_receipt"
+      ],
+      "status": "PASS",
+      "boundary": "Only the selected executed cases"
+    },
+    "I-02": {
+      "selection": {
+        "names": [
+          "test_i02_overlapping_cross_branch_assignments_wait_and_admit_one"
+        ]
+      },
+      "counts": {
+        "PASS": 2
+      },
+      "nodes": [
+        "tests/integration/test_workforce_guards.py::test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[False]",
+        "tests/integration/test_workforce_guards.py::test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[True]"
+      ],
+      "status": "PASS",
+      "boundary": "Only the selected executed cases"
+    },
+    "I-03": {
+      "selection": {
+        "names": [
+          "test_assignment_rechecks_effective_skills",
+          "test_future_and_revoked_skills_refuse_assignment",
+          "test_raw_sql_rechecks_required_skills",
+          "test_approval_repeats_effective_skill_validation_in_sql"
+        ]
+      },
+      "counts": {
+        "PASS": 10
+      },
+      "nodes": [
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-False]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-True]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-False]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-True]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-False]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-True]",
+        "tests/integration/test_workforce.py::test_assignment_rechecks_effective_skills",
+        "tests/integration/test_workforce.py::test_future_and_revoked_skills_refuse_assignment[12-True]",
+        "tests/integration/test_workforce.py::test_future_and_revoked_skills_refuse_assignment[9-False]",
+        "tests/integration/test_workforce_guards.py::test_raw_sql_rechecks_required_skills"
+      ],
+      "status": "PASS",
+      "boundary": "Only the selected executed cases"
+    },
+    "I-04": {
+      "selection": {
+        "names": [
+          "test_change_needs_explicit_consent_and_manager_and_applies_atomically",
+          "test_approval_refuses_any_changed_expected_fact",
+          "test_proposer_cannot_forge_the_other_employees_consent",
+          "test_pickup_manager_needs_another_manager_approval",
+          "test_terminal_changes_cannot_apply_or_transition"
+        ]
+      },
+      "counts": {
+        "PASS": 10
+      },
+      "nodes": [
+        "tests/integration/test_shift_changes.py::test_change_needs_explicit_consent_and_manager_and_applies_atomically[handover]",
+        "tests/integration/test_shift_changes.py::test_change_needs_explicit_consent_and_manager_and_applies_atomically[swap]",
+        "tests/integration/test_shift_changes.py::test_change_needs_explicit_consent_and_manager_and_applies_atomically[pickup]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[shift]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[catalogue]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[staff_event]",
+        "tests/integration/test_shift_changes_guards.py::test_proposer_cannot_forge_the_other_employees_consent",
+        "tests/integration/test_shift_changes_guards.py::test_pickup_manager_needs_another_manager_approval",
+        "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[decline]",
+        "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[withdraw]"
+      ],
+      "status": "PASS",
+      "boundary": "Only the selected executed cases"
+    },
+    "I-05": {
+      "selection": {
+        "files": [
+          "test_shift_changes_races"
+        ],
+        "names": []
+      },
+      "counts": {
+        "PASS": 10
+      },
+      "nodes": [
+        "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[pickup-False]",
+        "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[pickup-True]",
+        "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[withdraw-False]",
+        "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[withdraw-True]",
+        "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[manual-False]",
+        "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[manual-True]",
+        "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[opposite_swap-False]",
+        "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[opposite_swap-True]",
+        "tests/integration/test_shift_changes_races.py::test_catalogue_rename_is_locked_before_the_stale_snapshot_comparison[False]",
+        "tests/integration/test_shift_changes_races.py::test_catalogue_rename_is_locked_before_the_stale_snapshot_comparison[True]"
+      ],
+      "status": "PASS",
+      "boundary": "Only the selected executed cases"
+    },
+    "I-06": {
+      "selection": {
+        "names": [
+          "test_revision_history_and_cancellation_release_only_old_allocation",
+          "test_workforce_rows_are_immutable_even_for_owner",
+          "test_all_change_history_is_immutable_for_owner",
+          "test_snapshot_cannot_be_appended_to_an_old_request",
+          "test_change_history_exposes_exact_event_actor_and_timestamp"
+        ]
+      },
+      "counts": {
+        "PASS": 15
+      },
+      "nodes": [
+        "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[False]",
+        "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[True]",
+        "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_requests]",
+        "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_events]",
+        "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_skill_snapshots]",
+        "tests/integration/test_shift_changes_guards.py::test_snapshot_cannot_be_appended_to_an_old_request",
+        "tests/integration/test_workforce.py::test_revision_history_and_cancellation_release_only_old_allocation",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_resource_owners]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_profiles]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_skills]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_skill_versions]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_skill_events]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_shifts]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_shift_versions]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[shift_assignments]"
+      ],
+      "status": "PASS",
+      "boundary": "Only the selected executed cases"
+    },
+    "I-07": {
+      "selection": {
+        "names": [
+          "test_three_corrections_keep_history_and_last_approved_time",
+          "test_time_history_never_updates_or_deletes",
+          "test_pending_and_declined_correction_keep_the_previous_approved_interval",
+          "test_the_outside_schedule_mark_of_the_time_in_effect_ignores_later_versions",
+          "test_time_reason_provenance_survives_approval_and_history"
+        ]
+      },
+      "counts": {
+        "PASS": 10
+      },
+      "nodes": [
+        "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[False]",
+        "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[True]",
+        "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entries]",
+        "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entry_revisions]",
+        "tests/integration/test_timesheets.py::test_three_corrections_keep_history_and_last_approved_time",
+        "tests/integration/test_workforce_review2_fixes.py::test_time_reason_provenance_survives_approval_and_history[Clock-in]",
+        "tests/integration/test_workforce_review2_fixes.py::test_time_reason_provenance_survives_approval_and_history[Break start]",
+        "tests/integration/test_workforce_review2_fixes.py::test_time_reason_provenance_survives_approval_and_history[Break end]",
+        "tests/integration/test_workforce_review2_fixes.py::test_time_reason_provenance_survives_approval_and_history[Recorded clock-out]",
+        "tests/integration/test_workforce_review_fixes.py::test_the_outside_schedule_mark_of_the_time_in_effect_ignores_later_versions"
+      ],
+      "status": "PASS",
+      "boundary": "Only the selected executed cases"
+    },
+    "I-08": {
+      "selection": {
+        "files": [
+          "test_timesheet_races",
+          "test_timesheets"
+        ],
+        "names": [
+          "test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+          "test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+          "test_approved_full_intervals_exclude_overlap_even_during_a_break",
+          "test_different_cancel_keys_cannot_both_take_the_last_daily_slot",
+          "test_at_the_daily_cap_cancel_still_waits_for_the_real_command_outcome",
+          "test_refused_discard_leaves_no_receipt_even_when_the_caller_catches_the_error",
+          "test_cancellation_isolation_guard_preserves_known_outcomes"
+        ]
+      },
+      "counts": {
+        "PASS": 34
+      },
+      "nodes": [
+        "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[False]",
+        "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[True]",
+        "tests/integration/test_timesheet_guards.py::test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+        "tests/integration/test_timesheet_guards.py::test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[clock_in-api]",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[clock_in-sql]",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[clock_in-sql_rr]",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[correction-api]",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[correction-sql]",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[correction-sql_rr]",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approval-api]",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approval-sql]",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approval-sql_rr]",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approve_correct-api]",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approve_correct-sql]",
+        "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approve_correct-sql_rr]",
+        "tests/integration/test_timesheet_races.py::test_rr_shift_link_refuses_assignment_replaced_while_clockin_waits[cancel]",
+        "tests/integration/test_timesheet_races.py::test_rr_shift_link_refuses_assignment_replaced_while_clockin_waits[reassign]",
+        "tests/integration/test_timesheet_races.py::test_rr_module_disable_before_waiting_action_is_visible_or_conflicts[clock_in]",
+        "tests/integration/test_timesheet_races.py::test_rr_module_disable_before_waiting_action_is_visible_or_conflicts[correct]",
+        "tests/integration/test_timesheet_races.py::test_rr_module_disable_before_waiting_action_is_visible_or_conflicts[approve]",
+        "tests/integration/test_timesheets.py::test_clock_break_close_approval_and_original_receipt",
+        "tests/integration/test_timesheets.py::test_three_corrections_keep_history_and_last_approved_time",
+        "tests/integration/test_workforce_review2_fixes.py::test_different_cancel_keys_cannot_both_take_the_last_daily_slot[open]",
+        "tests/integration/test_workforce_review2_fixes.py::test_different_cancel_keys_cannot_both_take_the_last_daily_slot[off]",
+        "tests/integration/test_workforce_review2_fixes.py::test_different_cancel_keys_cannot_both_take_the_last_daily_slot[not_accepted]",
+        "tests/integration/test_workforce_review2_fixes.py::test_at_the_daily_cap_cancel_still_waits_for_the_real_command_outcome",
+        "tests/integration/test_workforce_review2_fixes.py::test_refused_discard_leaves_no_receipt_even_when_the_caller_catches_the_error",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[False-repeatable read]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[False-serializable]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[False-read uncommitted]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[True-repeatable read]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[True-serializable]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[True-read uncommitted]"
+      ],
+      "status": "PASS",
+      "boundary": "Only the selected executed cases"
+    },
+    "I-09": {
+      "selection": {
+        "names": [
+          "test_branch_manager_and_employee_permissions",
+          "test_other_company_and_platform_support_cannot_access_workforce",
+          "test_active_delegate_cannot_read_or_mutate_timesheets",
+          "test_manager_own_approval_is_forbidden_owner_exception_is_explicit",
+          "test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+          "test_foreign_company_and_platform_support_cannot_use_change_routes",
+          "test_raw_sql_cannot_forge_recipient_or_manager",
+          "test_own_cross_home_consent_and_company_wide_approval",
+          "test_self_pickup_cannot_discover_an_open_shift_outside_home",
+          "test_directory_names_staff_only_inside_the_managers_scope",
+          "test_another_company_and_plain_staff_get_no_management_reads",
+          "test_only_the_owner_a_manager_or_that_branch_manager_changes_it",
+          "test_a_hidden_branch_refuses_a_new_swap_and_tells_nothing_about_the_holder",
+          "test_participants_read_the_shifts_of_their_request_even_when_hidden",
+          "test_receipt_cannot_escape_changed_location_grant_and_revoke_is_immediate",
+          "test_swap_after_same_home_reinvitation_uses_the_stable_home",
+          "test_reinvitation_to_another_branch_does_not_authorize_the_old_home"
+        ]
+      },
+      "counts": {
+        "PASS": 26
+      },
+      "nodes": [
+        "tests/integration/test_location_access.py::test_receipt_cannot_escape_changed_location_grant_and_revoke_is_immediate",
+        "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[accept]",
+        "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[approve]",
+        "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[artist]",
+        "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[manager]",
+        "tests/integration/test_shift_changes_guards.py::test_foreign_company_and_platform_support_cannot_use_change_routes",
+        "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[False]",
+        "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[True]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-manager]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-owner]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-manager]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-owner]",
+        "tests/integration/test_timesheet_guards.py::test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+        "tests/integration/test_timesheet_guards.py::test_active_delegate_cannot_read_or_mutate_timesheets",
+        "tests/integration/test_workforce.py::test_branch_manager_and_employee_permissions",
+        "tests/integration/test_workforce_desk.py::test_directory_names_staff_only_inside_the_managers_scope",
+        "tests/integration/test_workforce_desk.py::test_another_company_and_plain_staff_get_no_management_reads",
+        "tests/integration/test_workforce_guards.py::test_other_company_and_platform_support_cannot_access_workforce",
+        "tests/integration/test_workforce_review2_fixes.py::test_swap_after_same_home_reinvitation_uses_the_stable_home[False-False]",
+        "tests/integration/test_workforce_review2_fixes.py::test_swap_after_same_home_reinvitation_uses_the_stable_home[False-True]",
+        "tests/integration/test_workforce_review2_fixes.py::test_swap_after_same_home_reinvitation_uses_the_stable_home[True-False]",
+        "tests/integration/test_workforce_review2_fixes.py::test_swap_after_same_home_reinvitation_uses_the_stable_home[True-True]",
+        "tests/integration/test_workforce_review2_fixes.py::test_reinvitation_to_another_branch_does_not_authorize_the_old_home",
+        "tests/integration/test_workforce_review_fixes.py::test_a_hidden_branch_refuses_a_new_swap_and_tells_nothing_about_the_holder",
+        "tests/integration/test_workforce_visibility.py::test_only_the_owner_a_manager_or_that_branch_manager_changes_it",
+        "tests/integration/test_workforce_visibility.py::test_participants_read_the_shifts_of_their_request_even_when_hidden"
+      ],
+      "status": "PASS",
+      "boundary": "Only the selected executed cases"
+    },
+    "I-10": {
+      "selection": {
+        "files": [
+          "test_workforce_guards",
+          "test_shift_changes_guards",
+          "test_timesheet_guards",
+          "test_shift_changes_schema",
+          "test_timesheet_schema",
+          "test_workforce_visibility"
+        ],
+        "names": []
+      },
+      "counts": {
+        "PASS": 152
+      },
+      "nodes": [
+        "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[shift]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[catalogue]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[staff_event]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-False]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-True]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-False]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-True]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-False]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-True]",
+        "tests/integration/test_shift_changes_guards.py::test_event_replay_returns_original_response_after_later_approval",
+        "tests/integration/test_shift_changes_guards.py::test_cross_home_recipient_can_decline_own_request[artist]",
+        "tests/integration/test_shift_changes_guards.py::test_cross_home_recipient_can_decline_own_request[manager]",
+        "tests/integration/test_shift_changes_guards.py::test_proposer_cannot_forge_the_other_employees_consent",
+        "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[False]",
+        "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[True]",
+        "tests/integration/test_shift_changes_guards.py::test_conflicting_swap_rolls_back_both_sides_event_audit_and_key",
+        "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[accept]",
+        "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[approve]",
+        "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_requests]",
+        "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_events]",
+        "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_skill_snapshots]",
+        "tests/integration/test_shift_changes_guards.py::test_snapshot_cannot_be_appended_to_an_old_request",
+        "tests/integration/test_shift_changes_guards.py::test_unrequired_snapshot_cannot_be_forged_in_the_creation_transaction",
+        "tests/integration/test_shift_changes_guards.py::test_only_participants_can_read_self_request_or_history_and_home_directory",
+        "tests/integration/test_shift_changes_guards.py::test_disabled_workforce_refuses_changes_but_preserves_history[module]",
+        "tests/integration/test_shift_changes_guards.py::test_disabled_workforce_refuses_changes_but_preserves_history[readiness]",
+        "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[artist]",
+        "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[manager]",
+        "tests/integration/test_shift_changes_guards.py::test_open_shifts_and_directory_use_home_and_active_memberships",
+        "tests/integration/test_shift_changes_guards.py::test_pickup_manager_needs_another_manager_approval",
+        "tests/integration/test_shift_changes_guards.py::test_proposal_replay_returns_its_original_event_after_approval",
+        "tests/integration/test_shift_changes_guards.py::test_manager_decline_probe_restores_scope_for_nonparticipant",
+        "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[decline]",
+        "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[withdraw]",
+        "tests/integration/test_shift_changes_guards.py::test_new_profile_of_same_user_is_not_a_second_employee",
+        "tests/integration/test_shift_changes_guards.py::test_foreign_company_and_platform_support_cannot_use_change_routes",
+        "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[False]",
+        "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[True]",
+        "tests/integration/test_shift_changes_guards.py::test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[published]",
+        "tests/integration/test_shift_changes_guards.py::test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[cancelled]",
+        "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[policy]",
+        "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[actor_function]",
+        "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[snapshot_function]",
+        "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[event_apply]",
+        "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[default]",
+        "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[snapshot_fk]",
+        "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[transition_alias]",
+        "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[transition_row]",
+        "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[when]",
+        "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[False]",
+        "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[True]",
+        "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[False]",
+        "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[True]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-manager]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-owner]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-manager]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-owner]",
+        "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-module]",
+        "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-readiness]",
+        "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-module]",
+        "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-readiness]",
+        "tests/integration/test_timesheet_guards.py::test_module_off_close_cannot_also_replace_start_breaks_or_another_employee",
+        "tests/integration/test_timesheet_guards.py::test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[False]",
+        "tests/integration/test_timesheet_guards.py::test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[True]",
+        "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entries]",
+        "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entry_revisions]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[update]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[insert]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[delete]",
+        "tests/integration/test_timesheet_guards.py::test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+        "tests/integration/test_timesheet_guards.py::test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+        "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_end]",
+        "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_start]",
+        "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[clock_out]",
+        "tests/integration/test_timesheet_guards.py::test_native_sql_serialization_error_maps_to_conflict_and_rolls_back_key",
+        "tests/integration/test_timesheet_guards.py::test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[head]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[revision]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[overlap]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[outside]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[reverse]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[null]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[nested]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[lower_bound]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[too_many]",
+        "tests/integration/test_timesheet_guards.py::test_timesheet_has_no_ledger_or_shared_occupancy_effect",
+        "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-approve]",
+        "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-decline]",
+        "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-approve]",
+        "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-decline]",
+        "tests/integration/test_timesheet_guards.py::test_home_scoped_manager_decision_locks_config_without_widening_scope",
+        "tests/integration/test_timesheet_guards.py::test_active_delegate_cannot_read_or_mutate_timesheets",
+        "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[False-False]",
+        "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[False-True]",
+        "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[True-False]",
+        "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[True-True]",
+        "tests/integration/test_timesheet_guards.py::test_hundredth_break_can_end_normally_or_close_with_the_entry[break_end]",
+        "tests/integration/test_timesheet_guards.py::test_hundredth_break_can_end_normally_or_close_with_the_entry[clock_out]",
+        "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[missing_exclusion]",
+        "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[deferred_exclusion]",
+        "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[weakened_exclusion]",
+        "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[projection_guard]",
+        "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[actor_guard]",
+        "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[apply]",
+        "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[policy]",
+        "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[xid_default]",
+        "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[when]",
+        "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[state_grant]",
+        "tests/integration/test_workforce_guards.py::test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[False]",
+        "tests/integration/test_workforce_guards.py::test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[True]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_resource_owners]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_profiles]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_skills]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_skill_versions]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_skill_events]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_shifts]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_shift_versions]",
+        "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[shift_assignments]",
+        "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[policy]",
+        "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[function]",
+        "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[trigger]",
+        "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[default]",
+        "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[constraint]",
+        "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[when]",
+        "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[quoted_function]",
+        "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[source_kind]",
+        "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[shared_literal]",
+        "tests/integration/test_workforce_guards.py::test_other_company_and_platform_support_cannot_access_workforce",
+        "tests/integration/test_workforce_guards.py::test_reinviting_one_user_keeps_one_resource_and_rejects_overlapping_shift",
+        "tests/integration/test_workforce_guards.py::test_staff_membership_home_cannot_be_silently_changed",
+        "tests/integration/test_workforce_guards.py::test_raw_sql_rejects_nonfinite_skill_date",
+        "tests/integration/test_workforce_guards.py::test_raw_sql_rechecks_required_skills",
+        "tests/integration/test_workforce_guards.py::test_raw_sql_rejects_multidimensional_required_skills",
+        "tests/integration/test_workforce_guards.py::test_sql_booking_reservation_staff_and_shift_artist_boundaries[booking]",
+        "tests/integration/test_workforce_guards.py::test_sql_booking_reservation_staff_and_shift_artist_boundaries[reservation]",
+        "tests/integration/test_workforce_guards.py::test_sql_booking_reservation_staff_and_shift_artist_boundaries[shift]",
+        "tests/integration/test_workforce_guards.py::test_reinvite_other_home_refuses_new_resource_without_changing_history",
+        "tests/integration/test_workforce_guards.py::test_profile_creation_locks_membership_against_home_move",
+        "tests/integration/test_workforce_guards.py::test_scoped_sql_cannot_move_a_membership_whose_profile_is_hidden",
+        "tests/integration/test_workforce_guards.py::test_raw_sql_refuses_finite_shift_dates_outside_python_range",
+        "tests/integration/test_workforce_visibility.py::test_shifts_are_visible_by_default_and_a_manager_may_hide_and_show_them",
+        "tests/integration/test_workforce_visibility.py::test_change_is_versioned_idempotent_and_settled_by_its_original_key",
+        "tests/integration/test_workforce_visibility.py::test_only_the_owner_a_manager_or_that_branch_manager_changes_it",
+        "tests/integration/test_workforce_visibility.py::test_setting_stays_readable_and_closed_to_change_while_the_module_is_off",
+        "tests/integration/test_workforce_visibility.py::test_sql_keeps_versions_ordered_immutable_and_inside_the_branch",
+        "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[scope]",
+        "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[guard]",
+        "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[module]",
+        "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[grant]",
+        "tests/integration/test_workforce_visibility.py::test_participants_read_the_shifts_of_their_request_even_when_hidden",
+        "tests/integration/test_workforce_visibility.py::test_a_company_wide_member_follows_the_setting_of_their_home_branch",
+        "tests/integration/test_workforce_visibility.py::test_two_changes_of_one_version_wait_and_only_the_first_is_recorded"
+      ],
+      "status": "PASS",
+      "boundary": "Only the selected executed cases"
+    },
+    "I-11": {
+      "selection": {
+        "files": [
+          "test_resource_kind_boundaries",
+          "test_resource_occupancy",
+          "test_resource_reservations",
+          "test_booking_concurrency",
+          "test_workforce",
+          "test_shift_changes_guards",
+          "test_timesheet_guards",
+          "test_workforce_upgrade",
+          "test_shift_changes_upgrade",
+          "test_timesheet_upgrade",
+          "test_workforce_visibility_upgrade"
+        ],
+        "names": [
+          "test_different_cancel_keys_cannot_both_take_the_last_daily_slot",
+          "test_cancellation_isolation_guard_preserves_known_outcomes"
+        ]
+      },
+      "counts": {
+        "PASS": 155
+      },
+      "nodes": [
+        "tests/integration/test_booking_concurrency.py::test_raw_sql_race_the_constraint_alone_admits_exactly_one",
+        "tests/integration/test_booking_concurrency.py::test_service_race_100_attempts_one_success_99_clean_conflicts",
+        "tests/integration/test_booking_concurrency.py::test_two_service_instances_race_like_two_api_processes",
+        "tests/integration/test_booking_concurrency.py::test_concurrent_hold_and_confirmed_follow_the_same_rule",
+        "tests/integration/test_booking_concurrency.py::test_race_over_an_expired_hold_expires_it_once_and_admits_one",
+        "tests/integration/test_booking_concurrency.py::test_confirm_racing_new_holds_keeps_the_confirmed_booking",
+        "tests/integration/test_booking_concurrency.py::test_same_idempotency_key_racing_creates_one_booking",
+        "tests/integration/test_booking_concurrency.py::test_race_helpers_do_not_hide_unexpected_errors",
+        "tests/integration/test_resource_kind_boundaries.py::test_staff_lookalike_never_enters_customer_or_management_booking",
+        "tests/integration/test_resource_kind_boundaries.py::test_customers_are_offered_and_can_hold_only_artists",
+        "tests/integration/test_resource_kind_boundaries.py::test_staff_can_search_and_book_only_artists",
+        "tests/integration/test_resource_kind_boundaries.py::test_the_booking_service_and_sql_do_not_check_the_resource_kind",
+        "tests/integration/test_resource_kind_boundaries.py::test_a_reservation_accepts_every_resource_kind",
+        "tests/integration/test_resource_kind_boundaries.py::test_the_staff_list_and_the_overview_count_every_resource_kind",
+        "tests/integration/test_resource_kind_boundaries.py::test_staff_setup_accepts_a_resource_that_is_not_an_artist",
+        "tests/integration/test_resource_kind_boundaries.py::test_the_staff_api_and_the_schema_know_three_resource_kinds",
+        "tests/integration/test_resource_occupancy.py::test_every_booking_status_is_mirrored_in_shared_occupancy",
+        "tests/integration/test_resource_occupancy.py::test_direct_sql_cannot_forge_or_rewrite_occupancy",
+        "tests/integration/test_resource_occupancy.py::test_readiness_refuses_drift_and_a_disabled_mirror",
+        "tests/integration/test_resource_occupancy.py::test_the_shared_constraint_decides_and_a_conflict_stays_a_slot_conflict",
+        "tests/integration/test_resource_occupancy.py::test_overlapping_stale_holds_are_released_in_shared_occupancy",
+        "tests/integration/test_resource_occupancy.py::test_a_moved_resource_keeps_the_mirror_exact_in_a_branch_session",
+        "tests/integration/test_resource_occupancy.py::test_backfill_copies_heals_stays_per_company_and_refuses_unknown_companies",
+        "tests/integration/test_resource_occupancy.py::test_migration_copies_and_reconciles_existing_booking_allocations",
+        "tests/integration/test_resource_reservations.py::test_reservation_takes_every_resource_and_its_cancellation_frees_them",
+        "tests/integration/test_resource_reservations.py::test_core_04_booking_and_reservation_race_for_one_resource",
+        "tests/integration/test_resource_reservations.py::test_reservation_sees_booking_allocations_that_were_not_copied_yet",
+        "tests/integration/test_resource_reservations.py::test_reservations_refuse_invalid_input_and_stop_with_the_booking_module",
+        "tests/integration/test_resource_reservations.py::test_reservation_access_is_staff_management_within_the_branch",
+        "tests/integration/test_resource_reservations.py::test_direct_sql_cannot_forge_or_bend_reservations",
+        "tests/integration/test_resource_reservations.py::test_customers_never_see_a_reserved_resource_as_available",
+        "tests/integration/test_resource_reservations.py::test_core_04_raw_sql_without_locks_admits_one_booking_or_reservation",
+        "tests/integration/test_resource_reservations.py::test_reservations_never_overlap_each_other",
+        "tests/integration/test_resource_reservations.py::test_concurrent_cancels_and_a_moved_resource_never_leave_a_resource_blocked",
+        "tests/integration/test_resource_reservations.py::test_resources_cannot_be_added_later_and_the_guard_checks_the_commit_trigger",
+        "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[shift]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[catalogue]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[staff_event]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-False]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-True]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-False]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-True]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-False]",
+        "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-True]",
+        "tests/integration/test_shift_changes_guards.py::test_event_replay_returns_original_response_after_later_approval",
+        "tests/integration/test_shift_changes_guards.py::test_cross_home_recipient_can_decline_own_request[artist]",
+        "tests/integration/test_shift_changes_guards.py::test_cross_home_recipient_can_decline_own_request[manager]",
+        "tests/integration/test_shift_changes_guards.py::test_proposer_cannot_forge_the_other_employees_consent",
+        "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[False]",
+        "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[True]",
+        "tests/integration/test_shift_changes_guards.py::test_conflicting_swap_rolls_back_both_sides_event_audit_and_key",
+        "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[accept]",
+        "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[approve]",
+        "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_requests]",
+        "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_events]",
+        "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_skill_snapshots]",
+        "tests/integration/test_shift_changes_guards.py::test_snapshot_cannot_be_appended_to_an_old_request",
+        "tests/integration/test_shift_changes_guards.py::test_unrequired_snapshot_cannot_be_forged_in_the_creation_transaction",
+        "tests/integration/test_shift_changes_guards.py::test_only_participants_can_read_self_request_or_history_and_home_directory",
+        "tests/integration/test_shift_changes_guards.py::test_disabled_workforce_refuses_changes_but_preserves_history[module]",
+        "tests/integration/test_shift_changes_guards.py::test_disabled_workforce_refuses_changes_but_preserves_history[readiness]",
+        "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[artist]",
+        "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[manager]",
+        "tests/integration/test_shift_changes_guards.py::test_open_shifts_and_directory_use_home_and_active_memberships",
+        "tests/integration/test_shift_changes_guards.py::test_pickup_manager_needs_another_manager_approval",
+        "tests/integration/test_shift_changes_guards.py::test_proposal_replay_returns_its_original_event_after_approval",
+        "tests/integration/test_shift_changes_guards.py::test_manager_decline_probe_restores_scope_for_nonparticipant",
+        "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[decline]",
+        "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[withdraw]",
+        "tests/integration/test_shift_changes_guards.py::test_new_profile_of_same_user_is_not_a_second_employee",
+        "tests/integration/test_shift_changes_guards.py::test_foreign_company_and_platform_support_cannot_use_change_routes",
+        "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[False]",
+        "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[True]",
+        "tests/integration/test_shift_changes_guards.py::test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[published]",
+        "tests/integration/test_shift_changes_guards.py::test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[cancelled]",
+        "tests/integration/test_shift_changes_upgrade.py::test_nonempty_0032_upgrade_preserves_every_row_and_prior_checksum",
+        "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[False]",
+        "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[True]",
+        "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[False]",
+        "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[True]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-manager]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-owner]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-manager]",
+        "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-owner]",
+        "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-module]",
+        "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-readiness]",
+        "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-module]",
+        "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-readiness]",
+        "tests/integration/test_timesheet_guards.py::test_module_off_close_cannot_also_replace_start_breaks_or_another_employee",
+        "tests/integration/test_timesheet_guards.py::test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[False]",
+        "tests/integration/test_timesheet_guards.py::test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[True]",
+        "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entries]",
+        "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entry_revisions]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[update]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[insert]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[delete]",
+        "tests/integration/test_timesheet_guards.py::test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+        "tests/integration/test_timesheet_guards.py::test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+        "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_end]",
+        "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_start]",
+        "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[clock_out]",
+        "tests/integration/test_timesheet_guards.py::test_native_sql_serialization_error_maps_to_conflict_and_rolls_back_key",
+        "tests/integration/test_timesheet_guards.py::test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[head]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[revision]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[overlap]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[outside]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[reverse]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[null]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[nested]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[lower_bound]",
+        "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[too_many]",
+        "tests/integration/test_timesheet_guards.py::test_timesheet_has_no_ledger_or_shared_occupancy_effect",
+        "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-approve]",
+        "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-decline]",
+        "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-approve]",
+        "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-decline]",
+        "tests/integration/test_timesheet_guards.py::test_home_scoped_manager_decision_locks_config_without_widening_scope",
+        "tests/integration/test_timesheet_guards.py::test_active_delegate_cannot_read_or_mutate_timesheets",
+        "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[False-False]",
+        "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[False-True]",
+        "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[True-False]",
+        "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[True-True]",
+        "tests/integration/test_timesheet_guards.py::test_hundredth_break_can_end_normally_or_close_with_the_entry[break_end]",
+        "tests/integration/test_timesheet_guards.py::test_hundredth_break_can_end_normally_or_close_with_the_entry[clock_out]",
+        "tests/integration/test_timesheet_upgrade.py::test_nonempty_0033_upgrade_preserves_every_fact_and_prior_checksum",
+        "tests/integration/test_workforce.py::test_packaged_workforce_schema_passes_guard",
+        "tests/integration/test_workforce.py::test_workforce_guard_uses_five_real_catalog_round_trips",
+        "tests/integration/test_workforce.py::test_unaccepted_workforce_refuses_writes",
+        "tests/integration/test_workforce.py::test_profile_shift_and_occupancy_are_atomic_and_idempotent",
+        "tests/integration/test_workforce.py::test_assignment_rechecks_effective_skills",
+        "tests/integration/test_workforce.py::test_staff_resource_is_absent_from_booking_setup_and_fingerprint",
+        "tests/integration/test_workforce.py::test_staff_resource_does_not_change_booking_readiness",
+        "tests/integration/test_workforce.py::test_staff_resource_refused_by_service_holds_and_reservations",
+        "tests/integration/test_workforce.py::test_revision_history_and_cancellation_release_only_old_allocation",
+        "tests/integration/test_workforce.py::test_failed_assignment_rolls_back_head_version_audit_and_receipt",
+        "tests/integration/test_workforce.py::test_shift_does_not_block_artist_booking",
+        "tests/integration/test_workforce.py::test_future_and_revoked_skills_refuse_assignment[12-True]",
+        "tests/integration/test_workforce.py::test_future_and_revoked_skills_refuse_assignment[9-False]",
+        "tests/integration/test_workforce.py::test_module_off_history_reads_and_sql_refuses_new_versions",
+        "tests/integration/test_workforce.py::test_branch_manager_and_employee_permissions",
+        "tests/integration/test_workforce.py::test_raw_sql_cannot_create_orphan_shift",
+        "tests/integration/test_workforce.py::test_revoked_workforce_readiness_refuses_write_and_keeps_history_readable",
+        "tests/integration/test_workforce.py::test_schedule_window_near_max_datetime_does_not_overflow",
+        "tests/integration/test_workforce_review2_fixes.py::test_different_cancel_keys_cannot_both_take_the_last_daily_slot[open]",
+        "tests/integration/test_workforce_review2_fixes.py::test_different_cancel_keys_cannot_both_take_the_last_daily_slot[off]",
+        "tests/integration/test_workforce_review2_fixes.py::test_different_cancel_keys_cannot_both_take_the_last_daily_slot[not_accepted]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[False-repeatable read]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[False-serializable]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[False-read uncommitted]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[True-repeatable read]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[True-serializable]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[True-read uncommitted]",
+        "tests/integration/test_workforce_upgrade.py::test_nonempty_0031_upgrade_preserves_booking_occupancy_and_checksums",
+        "tests/integration/test_workforce_visibility_upgrade.py::test_nonempty_0034_upgrade_preserves_every_fact_and_prior_checksum"
+      ],
+      "status": "PASS",
+      "boundary": "Only the selected executed cases"
+    },
+    "I-12": {
+      "selection": {
+        "files": [
+          "test_i4_browser",
+          "test_workforce_desk",
+          "test_workforce_desk_races",
+          "test_workforce_review_fixes",
+          "test_workforce_desk_contracts",
+          "test_workforce_review2_fixes"
+        ],
+        "names": []
+      },
+      "counts": {
+        "PASS": 40
+      },
+      "nodes": [
+        "tests/integration/test_i4_browser.py::test_i4_real_browser_closed_then_enabled_then_switched_off",
+        "tests/integration/test_workforce_desk.py::test_desk_names_own_profile_and_whether_new_actions_are_open",
+        "tests/integration/test_workforce_desk.py::test_directory_names_staff_only_inside_the_managers_scope",
+        "tests/integration/test_workforce_desk.py::test_swap_candidates_are_a_home_colleagues_published_assigned_shifts",
+        "tests/integration/test_workforce_desk.py::test_command_outcome_is_resolved_by_its_original_key_without_a_body",
+        "tests/integration/test_workforce_desk.py::test_cancelled_unresolved_command_can_never_commit",
+        "tests/integration/test_workforce_desk.py::test_outcomes_stay_available_while_the_module_is_off",
+        "tests/integration/test_workforce_desk.py::test_another_company_and_plain_staff_get_no_management_reads",
+        "tests/integration/test_workforce_desk_races.py::test_cancel_waits_for_a_running_command_and_reports_its_commit",
+        "tests/integration/test_workforce_desk_races.py::test_command_waits_for_a_running_cancel_and_is_then_refused",
+        "tests/integration/test_workforce_review2_fixes.py::test_swap_after_same_home_reinvitation_uses_the_stable_home[False-False]",
+        "tests/integration/test_workforce_review2_fixes.py::test_swap_after_same_home_reinvitation_uses_the_stable_home[False-True]",
+        "tests/integration/test_workforce_review2_fixes.py::test_swap_after_same_home_reinvitation_uses_the_stable_home[True-False]",
+        "tests/integration/test_workforce_review2_fixes.py::test_swap_after_same_home_reinvitation_uses_the_stable_home[True-True]",
+        "tests/integration/test_workforce_review2_fixes.py::test_reinvitation_to_another_branch_does_not_authorize_the_old_home",
+        "tests/integration/test_workforce_review2_fixes.py::test_different_cancel_keys_cannot_both_take_the_last_daily_slot[open]",
+        "tests/integration/test_workforce_review2_fixes.py::test_different_cancel_keys_cannot_both_take_the_last_daily_slot[off]",
+        "tests/integration/test_workforce_review2_fixes.py::test_different_cancel_keys_cannot_both_take_the_last_daily_slot[not_accepted]",
+        "tests/integration/test_workforce_review2_fixes.py::test_at_the_daily_cap_cancel_still_waits_for_the_real_command_outcome",
+        "tests/integration/test_workforce_review2_fixes.py::test_refused_discard_leaves_no_receipt_even_when_the_caller_catches_the_error",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[False-repeatable read]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[False-serializable]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[False-read uncommitted]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[True-repeatable read]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[True-serializable]",
+        "tests/integration/test_workforce_review2_fixes.py::test_cancellation_isolation_guard_preserves_known_outcomes[True-read uncommitted]",
+        "tests/integration/test_workforce_review2_fixes.py::test_time_reason_provenance_survives_approval_and_history[Clock-in]",
+        "tests/integration/test_workforce_review2_fixes.py::test_time_reason_provenance_survives_approval_and_history[Break start]",
+        "tests/integration/test_workforce_review2_fixes.py::test_time_reason_provenance_survives_approval_and_history[Break end]",
+        "tests/integration/test_workforce_review2_fixes.py::test_time_reason_provenance_survives_approval_and_history[Recorded clock-out]",
+        "tests/integration/test_workforce_review_fixes.py::test_a_hidden_branch_refuses_a_new_swap_and_tells_nothing_about_the_holder",
+        "tests/integration/test_workforce_review_fixes.py::test_a_swap_sent_while_shown_replays_its_first_answer_after_hiding",
+        "tests/integration/test_workforce_review_fixes.py::test_the_outside_schedule_mark_of_the_time_in_effect_ignores_later_versions",
+        "tests/integration/test_workforce_review_fixes.py::test_a_long_valid_key_can_be_discarded",
+        "tests/integration/test_workforce_review_fixes.py::test_discarding_has_a_daily_limit_per_person",
+        "tests/integration/test_workforce_review_fixes.py::test_the_directory_skips_a_disabled_account",
+        "tests/unit/test_workforce_desk_contracts.py::test_reference_accepts_only_known_operations_and_identifiers",
+        "tests/unit/test_workforce_desk_contracts.py::test_cancellation_marker_keeps_the_reference_and_nothing_else",
+        "tests/unit/test_workforce_desk_contracts.py::test_status_and_desk_are_closed_enumerations",
+        "tests/unit/test_workforce_desk_contracts.py::test_branch_setting_is_a_strict_boolean_with_an_expected_version"
+      ],
+      "status": "BLOCKED",
+      "boundary": "Selected cases and the required local full suite pass; exact-SHA CI is NOT TESTED because the commits are local, and publication is an owner gate"
+    }
+  },
+  "dependency_audit": {
+    "exit_code": 1,
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 2,
+      "critical": 0,
+      "total": 2
+    },
+    "packages": [
+      "next",
+      "source-map-js"
+    ]
+  },
+  "remote_observation": {
+    "observed_utc": "2026-10-12T08:21:29.383489+00:00",
+    "method": "read-only: git ls-remote and public REST GET",
+    "published_i4_head": "c6b8e341a7e88957ee5011e54e9aa06453b31b49",
+    "corrections_branch_published": false,
+    "runs": [
+      {
+        "id": 38204334830,
+        "head_sha": "c6b8e341a7e88957ee5011e54e9aa06453b31b49",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 38135230218,
+        "head_sha": "a8063804aec2fb18cab62c2157e3cea690e9c6ef",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 38132277248,
+        "head_sha": "5f0e58fe124e9668c94f3088fe3a660b5e476877",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "i4_pull_request_count": 0
+  },
+  "local_clusters_stopped": true,
+  "exact_correction_sha_ci": "NOT TESTED - commits are local and unpublished",
+  "preserved_first_failure": "CHECKS.json, VALIDATION.md and the earlier run folder are unchanged"
+}

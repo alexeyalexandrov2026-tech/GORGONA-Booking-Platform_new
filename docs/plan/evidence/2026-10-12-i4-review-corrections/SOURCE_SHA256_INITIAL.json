@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "snapshot": "initial",
+  "captured_utc": "2026-10-12T06:52:27.0332918Z",
+  "checkout": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-corrections-review\\Gorgona Booking",
+  "branch": "codex/package-i4-corrections-review",
+  "baseline": "490652b3f01a1b3de2df2d2e6257fced6caf32e2",
+  "source_state": "uncommitted",
+  "files": [
+    {
+      "path": "api/src/gorgona_booking/business/shift_changes.py",
+      "bytes": 10977,
+      "sha256": "36c747f4934ed61cff48dd81644d65f4815e91c638e7a9f5bbc55f30db9045d1"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/timesheet_contracts.py",
+      "bytes": 4873,
+      "sha256": "ca6063b7632d823337b8010ee82d9c8038ecf06fe93bf739f8db191dffa26eed"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/timesheets.py",
+      "bytes": 11040,
+      "sha256": "0dd16bf4cc185e7ef9a1c1ea5b4230984a52bc4ff001780a0f5144fad4027258"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/workforce_desk.py",
+      "bytes": 14057,
+      "sha256": "0f93109ee3a321b240903e57e6eec5d31d79c739b66fb18069c44c6be443a544"
+    },
+    {
+      "path": "web/components/timesheets.tsx",
+      "bytes": 24099,
+      "sha256": "9737d32211ab013927bd6c7131a8122fc58651daea785d0f094dba4d72414e90"
+    },
+    {
+      "path": "web/lib/workforce-contracts.ts",
+      "bytes": 17308,
+      "sha256": "4dd7278bd0430f374e4e3fae284d2e5bc04bcdb6cc449cda729dd011efc02295"
+    },
+    {
+      "path": "web/tests/workforce-contracts.spec.ts",
+      "bytes": 19272,
+      "sha256": "9fe3a6470e5e3279327b0d676c2b2da8cc392562f685a9c52298616c22e97598"
+    },
+    {
+      "path": "web/tests/workforce.spec.ts",
+      "bytes": 41891,
+      "sha256": "cf171cbea70cd2eab0a65f87347c98a42169b93f408ea953f8257397ddcc3155"
+    },
+    {
+      "path": "api/tests/integration/test_workforce_review2_fixes.py",
+      "bytes": 15142,
+      "sha256": "a44fbb4f3704cf376b51e07831ce54e95e30c3e3020c750b40979111655b547d"
+    }
+  ]
+}

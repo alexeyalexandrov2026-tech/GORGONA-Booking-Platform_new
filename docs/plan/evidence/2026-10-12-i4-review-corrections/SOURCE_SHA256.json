@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "snapshot": "final",
+  "captured_utc": "2026-10-12T06:56:53.7591191Z",
+  "checkout": "C:\\Users\\alexa\\.codex\\worktrees\\package-i4-corrections-review\\Gorgona Booking",
+  "branch": "codex/package-i4-corrections-review",
+  "baseline": "490652b3f01a1b3de2df2d2e6257fced6caf32e2",
+  "source_state": "uncommitted",
+  "review_status": "PASS limited independent source review",
+  "findings": [],
+  "initial_feedback": {
+    "severity": "P2",
+    "status": "corrected and re-reviewed by source",
+    "runtime_reproduction_by_reviewer": false,
+    "id": "CR-1"
+  },
+  "changes_since_initial": [
+    "api/src/gorgona_booking/business/workforce_desk.py",
+    "api/tests/integration/test_workforce_review2_fixes.py"
+  ],
+  "files": [
+    {
+      "path": "api/src/gorgona_booking/business/shift_changes.py",
+      "bytes": 10977,
+      "sha256": "36c747f4934ed61cff48dd81644d65f4815e91c638e7a9f5bbc55f30db9045d1"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/timesheet_contracts.py",
+      "bytes": 4873,
+      "sha256": "ca6063b7632d823337b8010ee82d9c8038ecf06fe93bf739f8db191dffa26eed"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/timesheets.py",
+      "bytes": 11040,
+      "sha256": "0dd16bf4cc185e7ef9a1c1ea5b4230984a52bc4ff001780a0f5144fad4027258"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/workforce_desk.py",
+      "bytes": 14376,
+      "sha256": "c3977d675cfc7fa88d662bad9f80e19950523f585df529491ab569b76cd3e2cc"
+    },
+    {
+      "path": "web/components/timesheets.tsx",
+      "bytes": 24099,
+      "sha256": "9737d32211ab013927bd6c7131a8122fc58651daea785d0f094dba4d72414e90"
+    },
+    {
+      "path": "web/lib/workforce-contracts.ts",
+      "bytes": 17308,
+      "sha256": "4dd7278bd0430f374e4e3fae284d2e5bc04bcdb6cc449cda729dd011efc02295"
+    },
+    {
+      "path": "web/tests/workforce-contracts.spec.ts",
+      "bytes": 19272,
+      "sha256": "9fe3a6470e5e3279327b0d676c2b2da8cc392562f685a9c52298616c22e97598"
+    },
+    {
+      "path": "web/tests/workforce.spec.ts",
+      "bytes": 41891,
+      "sha256": "cf171cbea70cd2eab0a65f87347c98a42169b93f408ea953f8257397ddcc3155"
+    },
+    {
+      "path": "api/tests/integration/test_workforce_review2_fixes.py",
+      "bytes": 16869,
+      "sha256": "65ed52ac576a31a045b6b7c49c973334b4120ce197de70e3f40135938fed515d"
+    }
+  ],
+  "reviewer_checks": [
+    {
+      "name": "git diff --check 490652b",
+      "status": "PASS",
+      "exit_code": 0
+    },
+    {
+      "name": "ruff check --no-cache changed Python files",
+      "status": "PASS",
+      "exit_code": 0,
+      "files": 5
+    },
+    {
+      "name": "ruff format --check --no-cache changed Python files",
+      "status": "PASS",
+      "exit_code": 0,
+      "files": 5
+    },
+    {
+      "name": "mypy src tests with external cache",
+      "status": "PASS",
+      "exit_code": 0,
+      "files": 265
+    },
+    {
+      "name": "pytest -p no:cacheprovider -q API timesheet and desk contract unit tests",
+      "status": "PASS",
+      "exit_code": 0,
+      "passed": 18,
+      "seconds": 0.16
+    }
+  ],
+  "runtime_integration_browser_ci_by_reviewer": "NOT TESTED"
+}
