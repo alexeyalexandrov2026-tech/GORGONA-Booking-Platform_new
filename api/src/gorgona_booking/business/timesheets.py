@@ -35,7 +35,8 @@ _SELECT = (
     "v.break_started_at,v.reason,v.created_by,v.created_at,v.self_approved,"
     "(e.shift_id is null or v.starts_at<e.shift_starts_at or v.starts_at>=e.shift_ends_at),"
     "a.revision,a.starts_at,a.ends_at,a.break_starts,a.break_ends,"
-    "a.created_by,a.created_at,a.self_approved "
+    "a.created_by,a.created_at,a.self_approved,"
+    "(e.shift_id is null or a.starts_at<e.shift_starts_at or a.starts_at>=e.shift_ends_at) "
     "from gba.time_entries e "
     "join lateral (select * from gba.time_entry_revisions where tenant_id=e.tenant_id "
     "and entry_id=e.id and (%s::integer is null or revision=%s) "
@@ -70,6 +71,7 @@ def _view(business: UUID, row: tuple[Any, ...]) -> TimeView:
             approved_by=row[24],
             approved_at=row[25],
             self_approved=row[26],
+            out_of_schedule=row[27],
         )
     return TimeView(
         business_id=business,

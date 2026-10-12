@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request
 from pydantic import AwareDatetime
 
 from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
+from gorgona_booking.api.errors import register_domain_error
 from gorgona_booking.api.workforce import Limit, _access
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import workforce_desk as service
@@ -22,6 +23,7 @@ from gorgona_booking.business.workforce_desk_contracts import (
 from gorgona_booking.errors import DomainError
 
 router = APIRouter(prefix="/v1/businesses/{business_id}/workforce", tags=["workforce"])
+register_domain_error(service.TooManyDiscardsError, 429)
 
 
 @router.get("/desk")

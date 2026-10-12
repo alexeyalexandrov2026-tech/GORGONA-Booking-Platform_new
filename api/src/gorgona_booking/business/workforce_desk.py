@@ -2,9 +2,11 @@
 
 A screen that lost a response asks for the outcome by the original key. The answer
 names no reason, name or time. Cancelling an unresolved key claims it in the shared
-receipt table, so the lost command can never commit after the person starts again.
+receipt table, so the lost command cannot commit after the person starts again for
+as long as that receipt lives (24 hours); after that the key is an unused key again.
 """
 
+import hashlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -31,14 +33,17 @@ from gorgona_booking.business.workforce_desk_contracts import (
     WriteState,
 )
 from gorgona_booking.db.pool import RuntimeConnection
-from gorgona_booking.errors import InvalidReferenceError, NotFoundError
+from gorgona_booking.errors import DomainError, InvalidReferenceError, NotFoundError
 from gorgona_booking.tenancy.authorization import PermissionDeniedError
 
 _CANCELLED_STATUS = 410
+# Discarded commands one person may leave in one business within 24 hours.
+DISCARD_LIMIT = 20
+_AUDIT_TARGET_LIMIT = 200
 
 
-class ColleagueShiftsHiddenError(PermissionDeniedError):
-    code = "COLLEAGUE_SHIFTS_HIDDEN"
+class TooManyDiscardsError(DomainError):
+    code = "TOO_MANY_DISCARDED_COMMANDS"
 
 
 @asynccontextmanager
@@ -50,18 +55,6 @@ async def _writes(conn: RuntimeConnection, business: UUID) -> AsyncIterator[None
         raise PermissionDeniedError(
             "Only the owner or a manager of this branch changes its settings"
         ) from exc
-
-
-async def _shifts_visible(conn: RuntimeConnection, business: UUID, location: UUID) -> bool:
-    row = await (
-        await conn.execute(
-            "select colleague_shifts_visible from gba.work_location_setting_versions "
-            "where tenant_id=%s and location_id=%s order by revision desc limit 1",
-            (business, location),
-        )
-    ).fetchone()
-    # No version means the default nobody has changed: visible.
-    return True if row is None else bool(row[0])
 
 
 async def load_location_setting(
@@ -121,13 +114,18 @@ async def save_location_setting(
             "values (%s,%s,%s,%s,%s)",
             (business, location, revision, body.colleague_shifts_visible, user),
         )
-        await workforce._finish(
+        # The audit event carries the chosen value, not only the version number.
+        await commands.audit(
             conn,
             business,
             actor,
+            "workforce.location_setting",
             "location_setting",
-            scope,
-            WorkforceReceipt(subject_id=location, revision=revision),
+            str(location),
+            {"revision": revision, "colleague_shifts_visible": body.colleague_shifts_visible},
+        )
+        await commands.complete(
+            conn, scope, WorkforceReceipt(subject_id=location, revision=revision)
         )
         return await load_location_setting(conn, business, location, revision)
 
@@ -149,7 +147,9 @@ async def desk(conn: RuntimeConnection, business: UUID, user: UUID) -> DeskView:
         )
     ).fetchone()
     profile = None if row is None else await workforce.load_profile(conn, business, row[0])
-    visible = profile is None or await _shifts_visible(conn, business, profile.location_id)
+    visible = profile is None or await shift_changes.shifts_visible(
+        conn, business, profile.location_id
+    )
     return DeskView(
         business_id=business,
         writes=writes,
@@ -169,7 +169,7 @@ async def directory(
     rows = await (
         await conn.execute(
             "select m.id,m.user_id,u.display_name,m.role,m.location_id,p.id,p.location_id "
-            "from gba.memberships m left join gba.users u on u.id=m.user_id "
+            "from gba.memberships m join gba.users u on u.id=m.user_id and u.status='active' "
             "left join gba.staff_profiles p on p.tenant_id=m.tenant_id and p.membership_id=m.id "
             "where m.tenant_id=%s and m.status='active' "
             "and (%s::uuid is null or p.location_id=%s or (p.id is null and m.location_id=%s)) "
@@ -224,8 +224,10 @@ async def colleague_shifts(
         ).fetchone()
         await conn.execute("select set_config('gba.location_id',%s,true)", (str(location),))
         # A hidden branch answers the same for a known and an unknown colleague.
-        if not await _shifts_visible(conn, business, location):
-            raise ColleagueShiftsHiddenError("Your branch does not show colleagues' shifts")
+        if not await shift_changes.shifts_visible(conn, business, location):
+            raise shift_changes.ColleagueShiftsHiddenError(
+                "Your branch does not show colleagues' shifts"
+            )
     if location is None or row is None:
         raise NotFoundError("Colleague not found")
     listed = await workforce.list_shifts(conn, business, starts, ends, after, limit, row[0])
@@ -299,6 +301,18 @@ async def cancel_command(
     if current.state != "unresolved":
         return current
     scope = _scope(business, actor, body, key)
+    discarded = await (
+        await conn.execute(
+            "select count(*) from gba.idempotency_keys where tenant_id=%s and actor_key=%s "
+            "and operation like 'workforce.%%' and response_status=%s "
+            "and created_at>now()-interval '24 hours'",
+            (business, actor, _CANCELLED_STATUS),
+        )
+    ).fetchone()
+    if discarded is not None and discarded[0] >= DISCARD_LIMIT:
+        raise TooManyDiscardsError(
+            "Too many actions were discarded today; check the result instead or try later"
+        )
     marker = CancelledCommand(**body.model_dump())
     # The claim waits for a command still running under this key, then reports it.
     previous = await idempotency.claim(
@@ -315,7 +329,10 @@ async def cancel_command(
         actor,
         "workforce.command_cancelled",
         "workforce_command",
-        key,
+        # A key may be longer than an audit target; then its digest names it.
+        key
+        if len(key) <= _AUDIT_TARGET_LIMIT
+        else "sha256:" + hashlib.sha256(key.encode()).hexdigest(),
         {"operation": body.operation, "revision": body.revision},
     )
     return current.model_copy(update={"state": "cancelled"})

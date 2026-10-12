@@ -65,6 +65,23 @@ def _view(business: UUID, row: tuple[Any, ...]) -> ChangeView:
     )
 
 
+class ColleagueShiftsHiddenError(PermissionDeniedError):
+    code = "COLLEAGUE_SHIFTS_HIDDEN"
+
+
+async def shifts_visible(conn: RuntimeConnection, business: UUID, location: UUID) -> bool:
+    """Whether staff of this branch may see colleagues' published shifts."""
+    row = await (
+        await conn.execute(
+            "select colleague_shifts_visible from gba.work_location_setting_versions "
+            "where tenant_id=%s and location_id=%s order by revision desc limit 1",
+            (business, location),
+        )
+    ).fetchone()
+    # No version means the default nobody has changed: visible.
+    return True if row is None else bool(row[0])
+
+
 @asynccontextmanager
 async def _writes(conn: RuntimeConnection, business: UUID) -> AsyncIterator[None]:
     try:
@@ -114,6 +131,13 @@ async def propose(
         )
         if receipt is not None:
             return await load(conn, business, request, receipt.revision, user)
+        if body.kind == "swap":
+            # A swap names a colleague's shift. Where the branch hides those shifts the
+            # swap is closed before anything is looked up, so every such request gets
+            # one answer and a known shift id tells nothing about its holder.
+            location = await home(conn, business, user)
+            if location is not None and not await shifts_visible(conn, business, location):
+                raise ColleagueShiftsHiddenError("Your branch does not show colleagues' shifts")
         await conn.execute(
             "insert into gba.shift_change_requests (tenant_id,id,kind,shift_id,shift_revision,"
             "other_shift_id,other_shift_revision,target_profile_id,proposed_by) "

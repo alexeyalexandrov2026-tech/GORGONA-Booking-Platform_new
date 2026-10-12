@@ -149,8 +149,18 @@ async def test_shifts_are_visible_by_default_and_a_manager_may_hide_and_show_the
             "where action='workforce.location_setting' order by id"
         ).fetchall()
     assert audit == [
-        (f"user:{manager_a.user_id}", "location_setting", str(location), {"revision": 1}),
-        (f"user:{manager_a.user_id}", "location_setting", str(location), {"revision": 2}),
+        (
+            f"user:{manager_a.user_id}",
+            "location_setting",
+            str(location),
+            {"revision": 1, "colleague_shifts_visible": False},
+        ),
+        (
+            f"user:{manager_a.user_id}",
+            "location_setting",
+            str(location),
+            {"revision": 2, "colleague_shifts_visible": True},
+        ),
     ]
 
 
@@ -311,7 +321,9 @@ async def test_sql_keeps_versions_ordered_immutable_and_inside_the_branch(
     # The author is the authenticated owner or manager whose membership covers the branch.
     assert await refused(INSERT, (tenant, location, 1, False, artist), session=artist) == "42501"
     assert await refused(INSERT, (tenant, location, 1, False, away), session=away) == "42501"
+    # Refused because that author's membership does not cover the branch.
     assert await refused(INSERT, (tenant, location, 1, False, away)) == "42501"
+    # The forged author: a valid author named by another person's session.
     assert await refused(INSERT, (tenant, location, 1, False, user), session=away) == "42501"
     # A branch session writes and reads its own branch only.
     assert await refused(INSERT, (tenant, location, 1, False, user), other) == "42501"

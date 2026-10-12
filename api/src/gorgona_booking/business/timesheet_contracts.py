@@ -115,6 +115,8 @@ class EffectiveTime(WorkforceModel):
     approved_by: UUID
     approved_at: AwareDatetime
     self_approved: bool
+    # The mark of the time that counts; the entry's own mark describes its latest version.
+    out_of_schedule: bool
 
 
 class TimeView(WorkforceModel):

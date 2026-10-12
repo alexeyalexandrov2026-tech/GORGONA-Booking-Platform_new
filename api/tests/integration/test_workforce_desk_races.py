@@ -1,7 +1,7 @@
 """Cancelling a command races the command itself: one observed wait, one outcome.
 
 A race counts only when the second transaction is seen waiting in pg_locks for the
-first one's uncommitted receipt key.
+very transaction that holds this key's uncommitted receipt row.
 """
 
 import asyncio
@@ -31,20 +31,38 @@ idp = shared.idp
 manager_a = shared.manager_a
 
 
-async def _wait_for_key_waiter(monitor: psycopg.AsyncConnection) -> None:
+async def _receipt_writer(conn: psycopg.AsyncConnection, business: UUID, key: str) -> str:
+    """The transaction that holds this key's uncommitted receipt row.
+
+    A waiter on a row written inside a released savepoint waits for the top-level
+    transaction, so that is the id to look for in pg_locks.
+    """
+    row = await (
+        await conn.execute(
+            "select pg_current_xact_id()::text from gba.idempotency_keys "
+            "where tenant_id=%s and idempotency_key=%s",
+            (business, key),
+        )
+    ).fetchone()
+    assert row is not None, "the receipt row of this key is not held by this transaction"
+    return str(row[0])
+
+
+async def _wait_for_key_waiter(monitor: psycopg.AsyncConnection, writer: str) -> None:
     deadline = asyncio.get_running_loop().time() + 8
     while asyncio.get_running_loop().time() < deadline:
         row = await (
             await monitor.execute(
                 "select count(*) from pg_locks l join pg_stat_activity a on a.pid=l.pid "
                 "where l.locktype='transactionid' and not l.granted "
-                "and a.datname=current_database()"
+                "and l.transactionid::text=%s and a.datname=current_database()",
+                (writer,),
             )
         ).fetchone()
         if row is not None and row[0] >= 1:
             return
         await asyncio.sleep(0.01)
-    pytest.fail("no observed wait for the running transaction in pg_locks")
+    pytest.fail("no observed wait in pg_locks for the transaction holding this key's receipt")
 
 
 def _entries(owner_conn: psycopg.Connection, tenant: UUID) -> int:
@@ -86,8 +104,9 @@ async def test_cancel_waits_for_a_running_command_and_reports_its_commit(
                 key,
                 ClockInInput(staff_profile_id=UUID(changes.left_profile), starts_at=at(10)),
             )
+            writer = await _receipt_writer(conn, business, key)
             task = asyncio.create_task(_outcome(times, "cancel", key, reference))
-            await _wait_for_key_waiter(monitor)
+            await _wait_for_key_waiter(monitor, writer)
             assert not task.done()
         response = await task
     finally:
@@ -122,8 +141,9 @@ async def test_command_waits_for_a_running_cancel_and_is_then_refused(
                 conn, business, f"user:{user}", key, reference
             )
             assert cancelled.state == "cancelled"
+            writer = await _receipt_writer(conn, business, key)
             task = asyncio.create_task(times.start(key, str(entry)))
-            await _wait_for_key_waiter(monitor)
+            await _wait_for_key_waiter(monitor, writer)
             assert not task.done()
         response = await task
     finally:

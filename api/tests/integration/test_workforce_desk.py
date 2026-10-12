@@ -294,6 +294,14 @@ async def test_another_company_and_plain_staff_get_no_management_reads(
     times: Times, manager_b: FakeUser, idp: FakeIdp
 ) -> None:
     changes = times.changes
+    # Plain staff: the two management reads are refused; their own reads answer.
+    location = changes.workforce.world.a.location_id
+    for path in ("/directory", f"/locations/{location}/settings"):
+        refused = await _get(times, path, changes.left_headers)
+        assert refused.status_code == 403, refused.text
+    for path in ("/desk", f"/colleagues/{changes.right_profile}/shifts"):
+        own = await _get(times, path, changes.left_headers, **WINDOW)
+        assert own.status_code == 200, own.text
     foreign = idp.bearer(manager_b.subject, email=manager_b.email)
     reference: dict[str, object] = {
         "operation": "time.clock_in",
