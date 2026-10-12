@@ -29,7 +29,7 @@
     "test:management:workforce": "playwright test tests/workforce.spec.ts --max-failures=1"
   },
   "dependencies": {
-    "next": "16.3.7",
+    "next": "16.3.8",
     "oidc-client-ts": "3.5.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -42,7 +42,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.3.7",
+    "eslint-config-next": "16.3.8",
     "prettier": "3.9.9",
     "typescript": "6.0.3"
   }
