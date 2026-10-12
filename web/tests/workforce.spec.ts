@@ -223,17 +223,56 @@ test("schedule, own shifts and timesheets with real gates, recovery and roles", 
   // --- The owner plans: staff, a skill, shifts, a stale edit, own time. ---
   await signIn(page, "owner");
   await open(page, "Schedule");
+  // The week starts today in the location's own time, not on the UTC date.
+  const places = page.getByLabel("Location:", { exact: true });
+  const zone = ((await places.locator("option:checked").textContent()) ?? "")
+    .split(" · ")
+    .pop()!;
+  await expect(page.getByLabel("Week from", { exact: true })).toHaveValue(
+    new Intl.DateTimeFormat("en-CA", { timeZone: zone }).format(new Date()),
+  );
+  // An unsaved privacy choice of one location is never shown for another.
+  const drafted = await openPrivacy(page);
+  await places.selectOption(homeLocation);
+  await drafted.getByRole("radio", { name: OWN_ONLY, exact: true }).check();
+  await page.getByRole("button", { name: "Shifts", exact: true }).click();
+  const elsewhere = await places
+    .locator("option")
+    .evaluateAll(
+      (options, home) =>
+        options
+          .map((option) => (option as HTMLOptionElement).value)
+          .find((value) => value !== home) ?? "",
+      homeLocation,
+    );
+  expect(elsewhere).not.toBe("");
+  await places.selectOption(elsewhere);
+  const other = await openPrivacy(page);
+  await expect(
+    other.getByRole("radio", { name: SHOWN, exact: true }),
+  ).toBeChecked();
+  await expect(
+    other.getByRole("button", { name: "Save privacy", exact: true }),
+  ).toBeDisabled();
+  await places.selectOption(homeLocation);
+  await expect(
+    other.getByRole("radio", { name: SHOWN, exact: true }),
+  ).toBeChecked();
   await page
     .getByRole("button", { name: "Staff and skills", exact: true })
     .click();
   const staff = within(page, "Staff");
+  // Staff names the location a company-wide person would be added to.
+  await expect(places).toHaveValue(homeLocation);
   // Company-wide access shows the other branch too.
   await expect(
     staff.getByRole("heading", { name: NAME.cy, exact: true }),
   ).toBeVisible();
   const added = `FAKE user i4-new-${project}`;
   await page
-    .getByRole("button", { name: `Add ${added} to the schedule`, exact: true })
+    .getByRole("button", {
+      name: new RegExp(`^Add ${added} to the schedule of `),
+    })
     .click();
   await expect(statusOf(page)).toContainText(`${added} is now on the schedule`);
   await page.getByRole("button", { name: "New skill", exact: true }).click();
@@ -352,6 +391,16 @@ test("schedule, own shifts and timesheets with real gates, recovery and roles", 
     "Version 1: Draft",
   );
   await versions.getByRole("button", { name: "Close", exact: true }).click();
+  // A published shift cannot go back to a draft, so its form does not offer it.
+  await page
+    .getByRole("button", { name: new RegExp(`^Edit ${tag} open `) })
+    .click();
+  await expect(
+    within(page, new RegExp(`^Edit ${tag} open `))
+      .getByRole("combobox", { name: "Status", exact: true })
+      .locator("option"),
+  ).toHaveText(["Published", "Cancelled"]);
+  await page.keyboard.press("Escape");
 
   // The same shift changes in another tab; this tab's stale edit is refused.
   const second = await page.context().newPage();

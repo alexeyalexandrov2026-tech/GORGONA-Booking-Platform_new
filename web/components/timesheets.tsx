@@ -52,6 +52,15 @@ interface Correction extends Period {
   breaks: Period[];
   reason: string;
 }
+// Texts the server writes for clock actions; they are not a person's reason.
+const SYSTEM_REASONS = new Set([
+  "Clock-in",
+  "Break start",
+  "Break end",
+  "Recorded clock-out",
+]);
+const given = (reason: string) =>
+  reason && !SYSTEM_REASONS.has(reason) ? reason : null;
 const newest = (items: TimeEntry[]) =>
   [...items].sort((a, b) => Date.parse(b.starts_at) - Date.parse(a.starts_at));
 
@@ -310,7 +319,8 @@ export function Timesheets({
           <span className={`workforce-badge workforce-${entry.status}`}>
             {STATUS[entry.status]}
           </span>
-          {entry.out_of_schedule && (
+          {/* The mark follows the time that counts, not a pending or declined version. */}
+          {(entry.effective?.out_of_schedule ?? entry.out_of_schedule) && (
             <span className="workforce-badge">Outside the schedule</span>
           )}
           {(entry.effective?.self_approved ||
@@ -328,6 +338,9 @@ export function Timesheets({
             {entry.status === "proposed"
               ? `Version ${entry.revision} is a pending correction and does not count until a manager approves it.`
               : `Version ${entry.revision} was declined and does not count.`}
+            {entry.status === "proposed" &&
+              entry.out_of_schedule !== entry.effective.out_of_schedule &&
+              ` The pending correction starts ${entry.out_of_schedule ? "outside" : "inside"} the schedule.`}
           </p>
         )}
         {!entry.effective && entry.status === "proposed" && (
@@ -335,7 +348,12 @@ export function Timesheets({
             Nothing is in effect yet: this record waits for a manager.
           </p>
         )}
-        {entry.reason && <p>Reason given: {entry.reason}</p>}
+        {!entry.effective && entry.status === "declined" && (
+          <p className="workforce-effective">
+            Nothing is in effect: this record was declined and does not count.
+          </p>
+        )}
+        {given(entry.reason) && <p>Reason given: {given(entry.reason)}</p>}
         <div className="workforce-actions">
           {own && entry.status !== "open" && (
             <button
@@ -680,7 +698,7 @@ export function Timesheets({
                         span(period.starts_at, period.ends_at, zone(item)),
                       )
                       .join(", ")}`}
-                  {item.reason && ` · reason: ${item.reason}`}
+                  {given(item.reason) && ` · reason: ${given(item.reason)}`}
                   {item.action === "approve" &&
                     item.self_approved &&
                     " · approved by the owner for their own time"}

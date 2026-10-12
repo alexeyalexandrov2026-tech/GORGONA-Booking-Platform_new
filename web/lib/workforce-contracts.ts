@@ -171,6 +171,8 @@ const effectiveSchema = z
     approved_by: id,
     approved_at: instant,
     self_approved: z.boolean(),
+    // The mark of the time that counts; the entry's own mark is its latest version's.
+    out_of_schedule: z.boolean(),
   })
   .refine((value) => ordered(value.starts_at, value.ends_at));
 export const timeActionSchema = z.enum([

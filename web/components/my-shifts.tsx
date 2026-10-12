@@ -25,6 +25,7 @@ import {
   moment,
   placeOf,
   span,
+  today,
   useDesk,
   useWorkforceCommands,
   zoneOf,
@@ -67,7 +68,7 @@ export function MyShifts({
   actorId: string;
 }) {
   const { desk, workspace, failed, reload } = useDesk(businessId);
-  const [from, setFrom] = useState(() => new Date().toISOString().slice(0, 10));
+  const [picked, setPicked] = useState("");
   const [shifts, setShifts] = useState<Shift[] | null>(null);
   const [free, setFree] = useState<Shift[]>([]);
   const [changes, setChanges] = useState<Change[]>([]);
@@ -87,6 +88,10 @@ export function MyShifts({
   } | null>(null);
 
   const profileId = desk?.profile?.profile_id ?? null;
+  // Until a date is chosen the four weeks start today in the home location's time.
+  const from =
+    picked ||
+    today(zoneOf(workspace?.locations, desk?.profile?.location_id ?? ""));
   const load = useCallback(async () => {
     const window = dayWindow(from, DAYS);
     const [own, vacant, requests, team] = await Promise.all([
@@ -289,7 +294,7 @@ export function MyShifts({
               required
               value={from}
               onChange={(event) => {
-                if (event.target.value) setFrom(event.target.value);
+                if (event.target.value) setPicked(event.target.value);
               }}
             />
           </label>

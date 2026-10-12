@@ -35,6 +35,8 @@ const REFUSALS: Record<string, string> = {
   PERMISSION_DENIED: "You do not have permission for this action.",
   COLLEAGUE_SHIFTS_HIDDEN:
     "Your location does not show colleagues’ shifts, so a swap cannot be chosen here.",
+  TOO_MANY_DISCARDED_COMMANDS:
+    "Too many actions were discarded today. Check the result instead, or try again later.",
   TENANT_ACCESS_DENIED: "You do not have access to this business.",
   MODULE_DISABLED:
     "Scheduling is turned off for this business. New actions are unavailable.",
@@ -304,7 +306,7 @@ export function CommandNotices({ center }: { center: CommandCenter }) {
           <h2>Result not confirmed</h2>
           <p>
             {center.unresolved
-              ? "The server has no record of your last action, so nothing was changed. Send it again or discard it before starting anything else."
+              ? "The server has no record of your last action yet. It may still be in progress: check again in a moment, send the same action again, or discard it before starting anything else."
               : "We could not confirm whether your last action was recorded. Check the result before starting anything else."}
           </p>
           <div className="workforce-actions">

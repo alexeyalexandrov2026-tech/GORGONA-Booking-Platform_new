@@ -35,6 +35,7 @@ import {
   span,
   toFields,
   toInstant,
+  today,
   useDesk,
   useWorkforceCommands,
   zoneOf,
@@ -89,7 +90,7 @@ export function Schedule({
   const { desk, workspace, failed, reload } = useDesk(businessId);
   const [tab, setTab] = useState<Tab>("shifts");
   const [chosen, setChosen] = useState("");
-  const [from, setFrom] = useState(() => new Date().toISOString().slice(0, 10));
+  const [picked, setPicked] = useState("");
   const [shifts, setShifts] = useState<Shift[] | null>(null);
   const [directory, setDirectory] = useState<DirectoryEntry[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -116,11 +117,17 @@ export function Schedule({
 
   const [privacy, setPrivacy] = useState<LocationSetting | null>(null);
   const [privacyError, setPrivacyError] = useState<string | null>(null);
-  const [choice, setChoice] = useState<boolean | null>(null);
+  // An unsaved choice belongs to the location it was made for.
+  const [choice, setChoice] = useState<{
+    location: string;
+    visible: boolean;
+  } | null>(null);
 
   const locations = workspace?.locations;
   const selected =
     chosen || workspace?.location_id || workspace?.locations[0]?.id || "";
+  // Until a date is chosen the week starts today in the location's own time.
+  const from = picked || today(zoneOf(locations, selected));
   const loadPrivacy = useCallback(async () => {
     if (!selected) return;
     try {
@@ -227,7 +234,10 @@ export function Schedule({
   }
   // A setting read for another location is never shown for this one.
   const current = privacy?.location_id === selected ? privacy : null;
-  const visible = choice ?? current?.colleague_shifts_visible ?? true;
+  const visible =
+    (choice?.location === selected ? choice.visible : null) ??
+    current?.colleague_shifts_visible ??
+    true;
   const changer =
     current?.changed_by === actorId
       ? "you"
@@ -539,7 +549,7 @@ export function Schedule({
               required
               value={from}
               onChange={(event) => {
-                if (event.target.value) setFrom(event.target.value);
+                if (event.target.value) setPicked(event.target.value);
               }}
             />
           </label>
@@ -671,7 +681,10 @@ export function Schedule({
                         })
                       }
                     >
-                      <option value="draft">Draft</option>
+                      {/* A published or cancelled shift cannot go back to a draft. */}
+                      {(!editing.shift || editing.shift.status === "draft") && (
+                        <option value="draft">Draft</option>
+                      )}
                       <option value="published">Published</option>
                       {editing.shift && (
                         <option value="cancelled">Cancelled</option>
@@ -742,6 +755,23 @@ export function Schedule({
         <>
           <section aria-label="Staff" className="workforce-card">
             <h2>Staff</h2>
+            {workspace && workspace.location_id === null && (
+              <>
+                <LocationFilter
+                  locations={workspace.locations}
+                  value={selected}
+                  onChange={(value) => {
+                    setChosen(value);
+                    setChoice(null);
+                  }}
+                />
+                <p>
+                  A person with access to the whole company is added to the
+                  schedule of the location chosen here. A home location cannot
+                  be changed later.
+                </p>
+              </>
+            )}
             {directory.length === 0 && <p>No members in your area.</p>}
             <ul className="cp-list">
               {directory.map((entry) => {
@@ -768,10 +798,11 @@ export function Schedule({
                         <button
                           className="secondary"
                           disabled={center.blocked || !open || !selected}
-                          aria-label={`Add ${name} to the schedule`}
+                          aria-label={`Add ${name} to the schedule of ${placeOf(locations, entry.location_id ?? selected)}`}
                           onClick={() => void addProfile(entry)}
                         >
-                          Add to the schedule
+                          Add to the schedule of{" "}
+                          {placeOf(locations, entry.location_id ?? selected)}
                         </button>
                       )}
                     </div>
@@ -995,7 +1026,9 @@ export function Schedule({
                     type="radio"
                     name="colleague-shifts"
                     checked={visible}
-                    onChange={() => setChoice(true)}
+                    onChange={() =>
+                      setChoice({ location: selected, visible: true })
+                    }
                   />
                   Staff see the published shifts of colleagues in this location
                 </label>
@@ -1004,7 +1037,9 @@ export function Schedule({
                     type="radio"
                     name="colleague-shifts"
                     checked={!visible}
-                    onChange={() => setChoice(false)}
+                    onChange={() =>
+                      setChoice({ location: selected, visible: false })
+                    }
                   />
                   Staff see only their own shifts and open shifts
                 </label>

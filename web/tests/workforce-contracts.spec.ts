@@ -82,6 +82,7 @@ const approved = {
   approved_by: uuid(11),
   approved_at: "2031-06-02T19:00:00Z",
   self_approved: false,
+  out_of_schedule: false,
 };
 const entry = {
   schema_version: 1,
@@ -217,6 +218,9 @@ test("a time entry separates the pending version from the one in effect", () => 
     { shift_id: null },
     { status: "paid" },
     { effective: { ...approved, ends_at: approved.starts_at } },
+    // The time in effect carries its own outside-schedule mark.
+    { effective: { ...approved, out_of_schedule: undefined } },
+    { effective: { ...approved, out_of_schedule: "no" } },
     { wage: 100 },
   ]);
   const history = {
