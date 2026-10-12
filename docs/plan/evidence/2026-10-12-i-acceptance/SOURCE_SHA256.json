@@ -1,0 +1,105 @@
+{
+  "source_table": "AUTHOR_RESPONSE.md",
+  "source_commit": "b66eb4140c1101d78e1bd4068eac537aab922b38",
+  "verified_commit": "c6b8e341a7e88957ee5011e54e9aa06453b31b49",
+  "pass": true,
+  "checks": [
+    {
+      "path": "api/src/gorgona_booking/api/workforce_desk.py",
+      "expected": "112cbc39058a38885b1c236f7d06e44ea07fe382e5e31a215089d0d8bafb72e6",
+      "actual": "112cbc39058a38885b1c236f7d06e44ea07fe382e5e31a215089d0d8bafb72e6",
+      "pass": true
+    },
+    {
+      "path": "api/src/gorgona_booking/business/shift_changes.py",
+      "expected": "c134711d578ff297028df876afd2ab9c159ba772c994379752440e6cc440f551",
+      "actual": "c134711d578ff297028df876afd2ab9c159ba772c994379752440e6cc440f551",
+      "pass": true
+    },
+    {
+      "path": "api/src/gorgona_booking/business/timesheet_contracts.py",
+      "expected": "d38d7ba299d019a69b9012a42f7c458a23834be7d72dbf18e58d8d577a393dc5",
+      "actual": "d38d7ba299d019a69b9012a42f7c458a23834be7d72dbf18e58d8d577a393dc5",
+      "pass": true
+    },
+    {
+      "path": "api/src/gorgona_booking/business/timesheets.py",
+      "expected": "721466efdd759df2a8af1edb242f720b03e1a22e08bf822360463b6c904b1d55",
+      "actual": "721466efdd759df2a8af1edb242f720b03e1a22e08bf822360463b6c904b1d55",
+      "pass": true
+    },
+    {
+      "path": "api/src/gorgona_booking/business/workforce_desk.py",
+      "expected": "fde3087df7351b29530b4717ca4f5b8f5fd08953443e5f2df4ced25ee9a751b7",
+      "actual": "fde3087df7351b29530b4717ca4f5b8f5fd08953443e5f2df4ced25ee9a751b7",
+      "pass": true
+    },
+    {
+      "path": "api/tests/integration/test_workforce_desk.py",
+      "expected": "c6e7352b8414fccedd5998873cd58342e4abebdca0d8131794510242a9c0b12a",
+      "actual": "c6e7352b8414fccedd5998873cd58342e4abebdca0d8131794510242a9c0b12a",
+      "pass": true
+    },
+    {
+      "path": "api/tests/integration/test_workforce_desk_races.py",
+      "expected": "4c41fa49077dea63ae25e1cc5c177b1d5523dbac59f5c591352f68743baf0161",
+      "actual": "4c41fa49077dea63ae25e1cc5c177b1d5523dbac59f5c591352f68743baf0161",
+      "pass": true
+    },
+    {
+      "path": "api/tests/integration/test_workforce_review_fixes.py",
+      "expected": "795aa83374d72d04c76397775f86ca1b3bb4409e860ba797d597f744b45df1cd",
+      "actual": "795aa83374d72d04c76397775f86ca1b3bb4409e860ba797d597f744b45df1cd",
+      "pass": true
+    },
+    {
+      "path": "api/tests/integration/test_workforce_visibility.py",
+      "expected": "4da282f0f2730df3c7e335861f5fc69faa9f3976b6845f5081a4a5c49c3c9fcc",
+      "actual": "4da282f0f2730df3c7e335861f5fc69faa9f3976b6845f5081a4a5c49c3c9fcc",
+      "pass": true
+    },
+    {
+      "path": "web/components/my-shifts.tsx",
+      "expected": "111fb8f9a2743a1047607f37eba8cf3183ff2fb523ec86237c48235e1b439a45",
+      "actual": "111fb8f9a2743a1047607f37eba8cf3183ff2fb523ec86237c48235e1b439a45",
+      "pass": true
+    },
+    {
+      "path": "web/components/schedule.tsx",
+      "expected": "759f13c9c1662e3ed416cabf13c841ae8c2e52058a4f72b1bfc5ec3968254d8e",
+      "actual": "759f13c9c1662e3ed416cabf13c841ae8c2e52058a4f72b1bfc5ec3968254d8e",
+      "pass": true
+    },
+    {
+      "path": "web/components/timesheets.tsx",
+      "expected": "34f3d3e923571e1a26ab99a3378c54c166ead325083a090e73bfb59d5041c57c",
+      "actual": "34f3d3e923571e1a26ab99a3378c54c166ead325083a090e73bfb59d5041c57c",
+      "pass": true
+    },
+    {
+      "path": "web/components/workforce-shared.tsx",
+      "expected": "66f5b1fb5ff493f34d0d63b7526c538ca851a202a10e087f0a2a76db3ff845ad",
+      "actual": "66f5b1fb5ff493f34d0d63b7526c538ca851a202a10e087f0a2a76db3ff845ad",
+      "pass": true
+    },
+    {
+      "path": "web/lib/workforce-contracts.ts",
+      "expected": "9296e5490d3cf71bec83e40e314e11f1c2943c32089dbfd3a43a67ba307d90c0",
+      "actual": "9296e5490d3cf71bec83e40e314e11f1c2943c32089dbfd3a43a67ba307d90c0",
+      "pass": true
+    },
+    {
+      "path": "web/tests/workforce-contracts.spec.ts",
+      "expected": "042ce7facb908ab5bf465e6c04d62c6c7a78e43bc09d92347792bf243185934f",
+      "actual": "042ce7facb908ab5bf465e6c04d62c6c7a78e43bc09d92347792bf243185934f",
+      "pass": true
+    },
+    {
+      "path": "web/tests/workforce.spec.ts",
+      "expected": "da7a7534fdaed5f782c5b248ae0610a63cfbf4cd0a4849e23a5336accda27161",
+      "actual": "da7a7534fdaed5f782c5b248ae0610a63cfbf4cd0a4849e23a5336accda27161",
+      "pass": true
+    }
+  ],
+  "code_changes_since_source": []
+}

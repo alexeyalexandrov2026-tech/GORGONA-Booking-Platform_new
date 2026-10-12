@@ -1,0 +1,3578 @@
+{
+  "schema_version": 1,
+  "verified_code_sha": "c6b8e341a7e88957ee5011e54e9aa06453b31b49",
+  "started_utc": "2026-10-12T04:57:03.344860+00:00",
+  "finished_utc": "2026-10-12T05:14:42.913649+00:00",
+  "local_cluster_stopped": true,
+  "versions": {
+    "pytest": "9.1.1",
+    "psycopg": "3.3.6",
+    "ruff": "0.16.9",
+    "mypy": "2.3.1",
+    "fastapi": "0.142.1",
+    "pydantic": "2.13.5"
+  },
+  "local_counts": {
+    "NOT TESTED": 4,
+    "PASS": 1506
+  },
+  "pytest_summary": "1506 passed, 4 skipped in 1026.84s (0:17:06)",
+  "junit_sha256": "aabbaed349d2ee2a79bad62eb1b0a698a116ca09b68544ced86b0cd961e9aa17",
+  "steps": [
+    {
+      "name": "initdb",
+      "command": [
+        "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+        "-D",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i-acceptance-20261012-c6b8e34\\data-retry",
+        "-U",
+        "gba_superuser",
+        "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i-acceptance-20261012-c6b8e34\\init-password.tmp",
+        "--auth=scram-sha-256",
+        "--locale=C",
+        "--encoding=UTF8",
+        "--data-checksums"
+      ],
+      "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i-acceptance-20261012-c6b8e34",
+      "exit_code": 0,
+      "seconds": 1.69,
+      "log_sha256": "e9ac0f5e70b30d2a6a61c9ae66491e896a715c53f1951e0d253e23cced2627ef"
+    },
+    {
+      "name": "pg-start",
+      "command": [
+        "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+        "start",
+        "-D",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i-acceptance-20261012-c6b8e34\\data-retry",
+        "-l",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i-acceptance-20261012-c6b8e34\\server.log",
+        "-w",
+        "-o",
+        "-p 56721 -c max_connections=400 -c listen_addresses=127.0.0.1"
+      ],
+      "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i-acceptance-20261012-c6b8e34",
+      "exit_code": 0,
+      "seconds": 0.32,
+      "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+    },
+    {
+      "name": "web-build",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "run",
+        "build"
+      ],
+      "cwd": "C:\\Users\\alexa\\Documents\\ChatGPT\\gorgona-package-i\\web",
+      "exit_code": 0,
+      "seconds": 7.57,
+      "log_sha256": "55d58c1fd104b7cb6b667d291c84f72f7bd26f98d1e4391ab28d96662098490e"
+    },
+    {
+      "name": "pytest-full",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i-acceptance-20261012-c6b8e34\\pytest-tmp-full",
+        "-q",
+        "-ra",
+        "--tb=short",
+        "--capture=tee-sys",
+        "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i-acceptance-20261012-c6b8e34\\pytest-full.xml"
+      ],
+      "cwd": "C:\\Users\\alexa\\Documents\\ChatGPT\\gorgona-package-i\\api",
+      "exit_code": 0,
+      "seconds": 1028.45,
+      "log_sha256": "ab0a94fc1d2d7768f112871f62fcc6c9fce6940da3cbc0e172102980d3888792"
+    },
+    {
+      "name": "ruff-check",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "src",
+        "tests"
+      ],
+      "cwd": "C:\\Users\\alexa\\Documents\\ChatGPT\\gorgona-package-i\\api",
+      "exit_code": 0,
+      "seconds": 0.18,
+      "log_sha256": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0"
+    },
+    {
+      "name": "ruff-format",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "src",
+        "tests"
+      ],
+      "cwd": "C:\\Users\\alexa\\Documents\\ChatGPT\\gorgona-package-i\\api",
+      "exit_code": 0,
+      "seconds": 0.15,
+      "log_sha256": "650ee2e444d93236ea11a512636d1c700c85635dbf7734b467f62743b4f0e017"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "C:\\Users\\alexa\\.codex\\worktrees\\package-g-ledger-review\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "src",
+        "tests"
+      ],
+      "cwd": "C:\\Users\\alexa\\Documents\\ChatGPT\\gorgona-package-i\\api",
+      "exit_code": 0,
+      "seconds": 1.45,
+      "log_sha256": "ccbf94a2882b2cbb3f0f62ed8653d9b7bd1090ce1be8d408a440eddd92bc3c1d"
+    },
+    {
+      "name": "web-typecheck",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "run",
+        "typecheck"
+      ],
+      "cwd": "C:\\Users\\alexa\\Documents\\ChatGPT\\gorgona-package-i\\web",
+      "exit_code": 0,
+      "seconds": 1.76,
+      "log_sha256": "57eb61b8116e9717145f8a326096c13f75126fdd520df38125124402e222a24c"
+    },
+    {
+      "name": "web-lint",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "run",
+        "lint"
+      ],
+      "cwd": "C:\\Users\\alexa\\Documents\\ChatGPT\\gorgona-package-i\\web",
+      "exit_code": 0,
+      "seconds": 11.78,
+      "log_sha256": "ce57886850d9496f41c2f2e77437461f5f112de7e9ab0107ceb3f2ce90dd738f"
+    },
+    {
+      "name": "web-format",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "run",
+        "format:check"
+      ],
+      "cwd": "C:\\Users\\alexa\\Documents\\ChatGPT\\gorgona-package-i\\web",
+      "exit_code": 0,
+      "seconds": 2.25,
+      "log_sha256": "04e80414d063c197fc67cb7f1eef4ae379749f4f76147f4cf366016a2a6ff65f"
+    },
+    {
+      "name": "web-unit",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "run",
+        "test:unit"
+      ],
+      "cwd": "C:\\Users\\alexa\\Documents\\ChatGPT\\gorgona-package-i\\web",
+      "exit_code": 0,
+      "seconds": 2.19,
+      "log_sha256": "8891389efdf70d802e44d2fcffb6a1fdd2a8248456e5d82b2454cde85feb68ee"
+    },
+    {
+      "name": "web-audit",
+      "command": [
+        "C:\\Program Files\\nodejs\\npm.cmd",
+        "audit",
+        "--omit=dev",
+        "--json"
+      ],
+      "cwd": "C:\\Users\\alexa\\Documents\\ChatGPT\\gorgona-package-i\\web",
+      "exit_code": 1,
+      "seconds": 1.52,
+      "log_sha256": "2e4444b547a1a5ff75d55174ec4e61fda9e2e007f8b4e9e4bbadad3e79aaa2cd"
+    },
+    {
+      "name": "pg-stop",
+      "command": [
+        "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+        "stop",
+        "-D",
+        "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i-acceptance-20261012-c6b8e34\\data-retry",
+        "-m",
+        "fast",
+        "-w"
+      ],
+      "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\OpenAI.Codex_2p2nqsd0c76g0\\LocalCache\\Local\\GorgonaBookingTests\\i-acceptance-20261012-c6b8e34",
+      "exit_code": 0,
+      "seconds": 0.16,
+      "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+    }
+  ],
+  "skipped_cases": [
+    {
+      "node": "tests/container/test_container_image.py::test_migration_job_is_explicit_and_idempotent",
+      "module": "test_container_image",
+      "name": "test_migration_job_is_explicit_and_idempotent",
+      "status": "NOT TESTED",
+      "seconds": 0.001,
+      "skip_reason": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "node": "tests/container/test_container_image.py::test_image_runs_non_root_without_baked_secrets",
+      "module": "test_container_image",
+      "name": "test_image_runs_non_root_without_baked_secrets",
+      "status": "NOT TESTED",
+      "seconds": 0.0,
+      "skip_reason": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "node": "tests/container/test_container_image.py::test_api_container_serves_health_web_and_a_real_booking",
+      "module": "test_container_image",
+      "name": "test_api_container_serves_health_web_and_a_real_booking",
+      "status": "NOT TESTED",
+      "seconds": 0.0,
+      "skip_reason": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "node": "tests/integration/test_tenant_site_embedding.py::test_tenant_site_embeds_the_real_wizard",
+      "module": "test_tenant_site_embedding",
+      "name": "test_tenant_site_embeds_the_real_wizard",
+      "status": "NOT TESTED",
+      "seconds": 0.154,
+      "skip_reason": "BLOCKED: tenant-site verification requires GBA_REQUIRE_TENANT_SITE=1"
+    }
+  ],
+  "matrix": {
+    "I-01": {
+      "command": "C1",
+      "selection": {
+        "names": [
+          "test_profile_shift_and_occupancy_are_atomic_and_idempotent",
+          "test_failed_assignment_rolls_back_head_version_audit_and_receipt",
+          "test_conflicting_swap_rolls_back_both_sides_event_audit_and_key"
+        ]
+      },
+      "counts": {
+        "PASS": 3
+      },
+      "case_seconds": 2.68,
+      "cases": [
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_conflicting_swap_rolls_back_both_sides_event_audit_and_key",
+          "module": "test_shift_changes_guards",
+          "name": "test_conflicting_swap_rolls_back_both_sides_event_audit_and_key",
+          "status": "PASS",
+          "seconds": 1.101
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_profile_shift_and_occupancy_are_atomic_and_idempotent",
+          "module": "test_workforce",
+          "name": "test_profile_shift_and_occupancy_are_atomic_and_idempotent",
+          "status": "PASS",
+          "seconds": 0.858
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_failed_assignment_rolls_back_head_version_audit_and_receipt",
+          "module": "test_workforce",
+          "name": "test_failed_assignment_rolls_back_head_version_audit_and_receipt",
+          "status": "PASS",
+          "seconds": 0.721
+        }
+      ],
+      "status": "PASS"
+    },
+    "I-02": {
+      "command": "C1",
+      "selection": {
+        "names": [
+          "test_i02_overlapping_cross_branch_assignments_wait_and_admit_one"
+        ]
+      },
+      "counts": {
+        "PASS": 2
+      },
+      "case_seconds": 1.763,
+      "cases": [
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[False]",
+          "module": "test_workforce_guards",
+          "name": "test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[False]",
+          "status": "PASS",
+          "seconds": 0.912
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[True]",
+          "module": "test_workforce_guards",
+          "name": "test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[True]",
+          "status": "PASS",
+          "seconds": 0.851
+        }
+      ],
+      "status": "PASS"
+    },
+    "I-03": {
+      "command": "C1",
+      "selection": {
+        "names": [
+          "test_assignment_rechecks_effective_skills",
+          "test_future_and_revoked_skills_refuse_assignment",
+          "test_raw_sql_rechecks_required_skills",
+          "test_approval_repeats_effective_skill_validation_in_sql"
+        ]
+      },
+      "counts": {
+        "PASS": 10
+      },
+      "case_seconds": 8.986,
+      "cases": [
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[missing-False]",
+          "status": "PASS",
+          "seconds": 1.009
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[missing-True]",
+          "status": "PASS",
+          "seconds": 0.986
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[future-False]",
+          "status": "PASS",
+          "seconds": 1.175
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[future-True]",
+          "status": "PASS",
+          "seconds": 1.012
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[revoked-False]",
+          "status": "PASS",
+          "seconds": 1.173
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[revoked-True]",
+          "status": "PASS",
+          "seconds": 1.048
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_assignment_rechecks_effective_skills",
+          "module": "test_workforce",
+          "name": "test_assignment_rechecks_effective_skills",
+          "status": "PASS",
+          "seconds": 0.748
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_future_and_revoked_skills_refuse_assignment[12-True]",
+          "module": "test_workforce",
+          "name": "test_future_and_revoked_skills_refuse_assignment[12-True]",
+          "status": "PASS",
+          "seconds": 0.638
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_future_and_revoked_skills_refuse_assignment[9-False]",
+          "module": "test_workforce",
+          "name": "test_future_and_revoked_skills_refuse_assignment[9-False]",
+          "status": "PASS",
+          "seconds": 0.64
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_raw_sql_rechecks_required_skills",
+          "module": "test_workforce_guards",
+          "name": "test_raw_sql_rechecks_required_skills",
+          "status": "PASS",
+          "seconds": 0.557
+        }
+      ],
+      "status": "PASS"
+    },
+    "I-04": {
+      "command": "C1",
+      "selection": {
+        "names": [
+          "test_change_needs_explicit_consent_and_manager_and_applies_atomically",
+          "test_approval_refuses_any_changed_expected_fact",
+          "test_proposer_cannot_forge_the_other_employees_consent",
+          "test_pickup_manager_needs_another_manager_approval",
+          "test_terminal_changes_cannot_apply_or_transition"
+        ]
+      },
+      "counts": {
+        "PASS": 10
+      },
+      "case_seconds": 10.458,
+      "cases": [
+        {
+          "node": "tests/integration/test_shift_changes.py::test_change_needs_explicit_consent_and_manager_and_applies_atomically[handover]",
+          "module": "test_shift_changes",
+          "name": "test_change_needs_explicit_consent_and_manager_and_applies_atomically[handover]",
+          "status": "PASS",
+          "seconds": 1.02
+        },
+        {
+          "node": "tests/integration/test_shift_changes.py::test_change_needs_explicit_consent_and_manager_and_applies_atomically[swap]",
+          "module": "test_shift_changes",
+          "name": "test_change_needs_explicit_consent_and_manager_and_applies_atomically[swap]",
+          "status": "PASS",
+          "seconds": 1.261
+        },
+        {
+          "node": "tests/integration/test_shift_changes.py::test_change_needs_explicit_consent_and_manager_and_applies_atomically[pickup]",
+          "module": "test_shift_changes",
+          "name": "test_change_needs_explicit_consent_and_manager_and_applies_atomically[pickup]",
+          "status": "PASS",
+          "seconds": 1.015
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[shift]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_refuses_any_changed_expected_fact[shift]",
+          "status": "PASS",
+          "seconds": 1.101
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[catalogue]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_refuses_any_changed_expected_fact[catalogue]",
+          "status": "PASS",
+          "seconds": 1.165
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[staff_event]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_refuses_any_changed_expected_fact[staff_event]",
+          "status": "PASS",
+          "seconds": 1.093
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_proposer_cannot_forge_the_other_employees_consent",
+          "module": "test_shift_changes_guards",
+          "name": "test_proposer_cannot_forge_the_other_employees_consent",
+          "status": "PASS",
+          "seconds": 0.792
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_pickup_manager_needs_another_manager_approval",
+          "module": "test_shift_changes_guards",
+          "name": "test_pickup_manager_needs_another_manager_approval",
+          "status": "PASS",
+          "seconds": 0.955
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[decline]",
+          "module": "test_shift_changes_guards",
+          "name": "test_terminal_changes_cannot_apply_or_transition[decline]",
+          "status": "PASS",
+          "seconds": 1.07
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[withdraw]",
+          "module": "test_shift_changes_guards",
+          "name": "test_terminal_changes_cannot_apply_or_transition[withdraw]",
+          "status": "PASS",
+          "seconds": 0.986
+        }
+      ],
+      "status": "PASS"
+    },
+    "I-05": {
+      "command": "C1",
+      "selection": {
+        "files": [
+          "test_shift_changes_races"
+        ]
+      },
+      "counts": {
+        "PASS": 10
+      },
+      "case_seconds": 11.534,
+      "cases": [
+        {
+          "node": "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[pickup-False]",
+          "module": "test_shift_changes_races",
+          "name": "test_i05_ordered_races_have_one_winner_without_deadlock[pickup-False]",
+          "status": "PASS",
+          "seconds": 1.208
+        },
+        {
+          "node": "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[pickup-True]",
+          "module": "test_shift_changes_races",
+          "name": "test_i05_ordered_races_have_one_winner_without_deadlock[pickup-True]",
+          "status": "PASS",
+          "seconds": 1.237
+        },
+        {
+          "node": "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[withdraw-False]",
+          "module": "test_shift_changes_races",
+          "name": "test_i05_ordered_races_have_one_winner_without_deadlock[withdraw-False]",
+          "status": "PASS",
+          "seconds": 1.207
+        },
+        {
+          "node": "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[withdraw-True]",
+          "module": "test_shift_changes_races",
+          "name": "test_i05_ordered_races_have_one_winner_without_deadlock[withdraw-True]",
+          "status": "PASS",
+          "seconds": 0.971
+        },
+        {
+          "node": "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[manual-False]",
+          "module": "test_shift_changes_races",
+          "name": "test_i05_ordered_races_have_one_winner_without_deadlock[manual-False]",
+          "status": "PASS",
+          "seconds": 1.01
+        },
+        {
+          "node": "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[manual-True]",
+          "module": "test_shift_changes_races",
+          "name": "test_i05_ordered_races_have_one_winner_without_deadlock[manual-True]",
+          "status": "PASS",
+          "seconds": 0.944
+        },
+        {
+          "node": "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[opposite_swap-False]",
+          "module": "test_shift_changes_races",
+          "name": "test_i05_ordered_races_have_one_winner_without_deadlock[opposite_swap-False]",
+          "status": "PASS",
+          "seconds": 1.508
+        },
+        {
+          "node": "tests/integration/test_shift_changes_races.py::test_i05_ordered_races_have_one_winner_without_deadlock[opposite_swap-True]",
+          "module": "test_shift_changes_races",
+          "name": "test_i05_ordered_races_have_one_winner_without_deadlock[opposite_swap-True]",
+          "status": "PASS",
+          "seconds": 1.28
+        },
+        {
+          "node": "tests/integration/test_shift_changes_races.py::test_catalogue_rename_is_locked_before_the_stale_snapshot_comparison[False]",
+          "module": "test_shift_changes_races",
+          "name": "test_catalogue_rename_is_locked_before_the_stale_snapshot_comparison[False]",
+          "status": "PASS",
+          "seconds": 1.062
+        },
+        {
+          "node": "tests/integration/test_shift_changes_races.py::test_catalogue_rename_is_locked_before_the_stale_snapshot_comparison[True]",
+          "module": "test_shift_changes_races",
+          "name": "test_catalogue_rename_is_locked_before_the_stale_snapshot_comparison[True]",
+          "status": "PASS",
+          "seconds": 1.107
+        }
+      ],
+      "status": "PASS"
+    },
+    "I-06": {
+      "command": "C1",
+      "selection": {
+        "names": [
+          "test_revision_history_and_cancellation_release_only_old_allocation",
+          "test_workforce_rows_are_immutable_even_for_owner",
+          "test_all_change_history_is_immutable_for_owner",
+          "test_snapshot_cannot_be_appended_to_an_old_request",
+          "test_change_history_exposes_exact_event_actor_and_timestamp"
+        ]
+      },
+      "counts": {
+        "PASS": 15
+      },
+      "case_seconds": 12.192,
+      "cases": [
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_change_history_exposes_exact_event_actor_and_timestamp[False]",
+          "status": "PASS",
+          "seconds": 0.936
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_change_history_exposes_exact_event_actor_and_timestamp[True]",
+          "status": "PASS",
+          "seconds": 1.127
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_requests]",
+          "module": "test_shift_changes_guards",
+          "name": "test_all_change_history_is_immutable_for_owner[shift_change_requests]",
+          "status": "PASS",
+          "seconds": 1.089
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_events]",
+          "module": "test_shift_changes_guards",
+          "name": "test_all_change_history_is_immutable_for_owner[shift_change_events]",
+          "status": "PASS",
+          "seconds": 0.858
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_skill_snapshots]",
+          "module": "test_shift_changes_guards",
+          "name": "test_all_change_history_is_immutable_for_owner[shift_change_skill_snapshots]",
+          "status": "PASS",
+          "seconds": 0.88
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_snapshot_cannot_be_appended_to_an_old_request",
+          "module": "test_shift_changes_guards",
+          "name": "test_snapshot_cannot_be_appended_to_an_old_request",
+          "status": "PASS",
+          "seconds": 0.974
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_revision_history_and_cancellation_release_only_old_allocation",
+          "module": "test_workforce",
+          "name": "test_revision_history_and_cancellation_release_only_old_allocation",
+          "status": "PASS",
+          "seconds": 0.753
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_resource_owners]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[staff_resource_owners]",
+          "status": "PASS",
+          "seconds": 0.672
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_profiles]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[staff_profiles]",
+          "status": "PASS",
+          "seconds": 0.675
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_skills]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[work_skills]",
+          "status": "PASS",
+          "seconds": 0.68
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_skill_versions]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[work_skill_versions]",
+          "status": "PASS",
+          "seconds": 0.659
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_skill_events]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[staff_skill_events]",
+          "status": "PASS",
+          "seconds": 0.658
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_shifts]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[work_shifts]",
+          "status": "PASS",
+          "seconds": 0.639
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_shift_versions]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[work_shift_versions]",
+          "status": "PASS",
+          "seconds": 0.94
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[shift_assignments]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[shift_assignments]",
+          "status": "PASS",
+          "seconds": 0.652
+        }
+      ],
+      "status": "PASS"
+    },
+    "I-07": {
+      "command": "C1",
+      "selection": {
+        "names": [
+          "test_three_corrections_keep_history_and_last_approved_time",
+          "test_time_history_never_updates_or_deletes",
+          "test_pending_and_declined_correction_keep_the_previous_approved_interval",
+          "test_the_outside_schedule_mark_of_the_time_in_effect_ignores_later_versions"
+        ]
+      },
+      "counts": {
+        "PASS": 6
+      },
+      "case_seconds": 7.065,
+      "cases": [
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[False]",
+          "module": "test_timesheet_guards",
+          "name": "test_pending_and_declined_correction_keep_the_previous_approved_interval[False]",
+          "status": "PASS",
+          "seconds": 1.101
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[True]",
+          "module": "test_timesheet_guards",
+          "name": "test_pending_and_declined_correction_keep_the_previous_approved_interval[True]",
+          "status": "PASS",
+          "seconds": 1.304
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entries]",
+          "module": "test_timesheet_guards",
+          "name": "test_time_history_never_updates_or_deletes[time_entries]",
+          "status": "PASS",
+          "seconds": 0.773
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entry_revisions]",
+          "module": "test_timesheet_guards",
+          "name": "test_time_history_never_updates_or_deletes[time_entry_revisions]",
+          "status": "PASS",
+          "seconds": 1.034
+        },
+        {
+          "node": "tests/integration/test_timesheets.py::test_three_corrections_keep_history_and_last_approved_time",
+          "module": "test_timesheets",
+          "name": "test_three_corrections_keep_history_and_last_approved_time",
+          "status": "PASS",
+          "seconds": 1.22
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_the_outside_schedule_mark_of_the_time_in_effect_ignores_later_versions",
+          "module": "test_workforce_review_fixes",
+          "name": "test_the_outside_schedule_mark_of_the_time_in_effect_ignores_later_versions",
+          "status": "PASS",
+          "seconds": 1.633
+        }
+      ],
+      "status": "PASS"
+    },
+    "I-08": {
+      "command": "C1",
+      "selection": {
+        "files": [
+          "test_timesheet_races",
+          "test_timesheets"
+        ],
+        "names": [
+          "test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+          "test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+          "test_approved_full_intervals_exclude_overlap_even_during_a_break"
+        ]
+      },
+      "counts": {
+        "PASS": 23
+      },
+      "case_seconds": 23.967,
+      "cases": [
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[False]",
+          "module": "test_timesheet_guards",
+          "name": "test_approved_full_intervals_exclude_overlap_even_during_a_break[False]",
+          "status": "PASS",
+          "seconds": 1.407
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[True]",
+          "module": "test_timesheet_guards",
+          "name": "test_approved_full_intervals_exclude_overlap_even_during_a_break[True]",
+          "status": "PASS",
+          "seconds": 1.142
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+          "module": "test_timesheet_guards",
+          "name": "test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+          "status": "PASS",
+          "seconds": 1.128
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+          "module": "test_timesheet_guards",
+          "name": "test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+          "status": "PASS",
+          "seconds": 1.27
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[clock_in-api]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[clock_in-api]",
+          "status": "PASS",
+          "seconds": 0.968
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[clock_in-sql]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[clock_in-sql]",
+          "status": "PASS",
+          "seconds": 1.178
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[clock_in-sql_rr]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[clock_in-sql_rr]",
+          "status": "PASS",
+          "seconds": 0.655
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[correction-api]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[correction-api]",
+          "status": "PASS",
+          "seconds": 1.024
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[correction-sql]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[correction-sql]",
+          "status": "PASS",
+          "seconds": 0.876
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[correction-sql_rr]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[correction-sql_rr]",
+          "status": "PASS",
+          "seconds": 1.08
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approval-api]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[approval-api]",
+          "status": "PASS",
+          "seconds": 1.406
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approval-sql]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[approval-sql]",
+          "status": "PASS",
+          "seconds": 1.13
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approval-sql_rr]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[approval-sql_rr]",
+          "status": "PASS",
+          "seconds": 1.183
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approve_correct-api]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[approve_correct-api]",
+          "status": "PASS",
+          "seconds": 1.094
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approve_correct-sql]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[approve_correct-sql]",
+          "status": "PASS",
+          "seconds": 0.997
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_time_races_wait_then_admit_one_effect[approve_correct-sql_rr]",
+          "module": "test_timesheet_races",
+          "name": "test_time_races_wait_then_admit_one_effect[approve_correct-sql_rr]",
+          "status": "PASS",
+          "seconds": 1.107
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_rr_shift_link_refuses_assignment_replaced_while_clockin_waits[cancel]",
+          "module": "test_timesheet_races",
+          "name": "test_rr_shift_link_refuses_assignment_replaced_while_clockin_waits[cancel]",
+          "status": "PASS",
+          "seconds": 0.713
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_rr_shift_link_refuses_assignment_replaced_while_clockin_waits[reassign]",
+          "module": "test_timesheet_races",
+          "name": "test_rr_shift_link_refuses_assignment_replaced_while_clockin_waits[reassign]",
+          "status": "PASS",
+          "seconds": 0.735
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_rr_module_disable_before_waiting_action_is_visible_or_conflicts[clock_in]",
+          "module": "test_timesheet_races",
+          "name": "test_rr_module_disable_before_waiting_action_is_visible_or_conflicts[clock_in]",
+          "status": "PASS",
+          "seconds": 0.745
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_rr_module_disable_before_waiting_action_is_visible_or_conflicts[correct]",
+          "module": "test_timesheet_races",
+          "name": "test_rr_module_disable_before_waiting_action_is_visible_or_conflicts[correct]",
+          "status": "PASS",
+          "seconds": 0.854
+        },
+        {
+          "node": "tests/integration/test_timesheet_races.py::test_rr_module_disable_before_waiting_action_is_visible_or_conflicts[approve]",
+          "module": "test_timesheet_races",
+          "name": "test_rr_module_disable_before_waiting_action_is_visible_or_conflicts[approve]",
+          "status": "PASS",
+          "seconds": 0.967
+        },
+        {
+          "node": "tests/integration/test_timesheets.py::test_clock_break_close_approval_and_original_receipt",
+          "module": "test_timesheets",
+          "name": "test_clock_break_close_approval_and_original_receipt",
+          "status": "PASS",
+          "seconds": 1.088
+        },
+        {
+          "node": "tests/integration/test_timesheets.py::test_three_corrections_keep_history_and_last_approved_time",
+          "module": "test_timesheets",
+          "name": "test_three_corrections_keep_history_and_last_approved_time",
+          "status": "PASS",
+          "seconds": 1.22
+        }
+      ],
+      "status": "PASS"
+    },
+    "I-09": {
+      "command": "C1",
+      "selection": {
+        "names": [
+          "test_branch_manager_and_employee_permissions",
+          "test_other_company_and_platform_support_cannot_access_workforce",
+          "test_active_delegate_cannot_read_or_mutate_timesheets",
+          "test_manager_own_approval_is_forbidden_owner_exception_is_explicit",
+          "test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+          "test_foreign_company_and_platform_support_cannot_use_change_routes",
+          "test_raw_sql_cannot_forge_recipient_or_manager",
+          "test_own_cross_home_consent_and_company_wide_approval",
+          "test_self_pickup_cannot_discover_an_open_shift_outside_home",
+          "test_directory_names_staff_only_inside_the_managers_scope",
+          "test_another_company_and_plain_staff_get_no_management_reads",
+          "test_only_the_owner_a_manager_or_that_branch_manager_changes_it",
+          "test_a_hidden_branch_refuses_a_new_swap_and_tells_nothing_about_the_holder",
+          "test_participants_read_the_shifts_of_their_request_even_when_hidden",
+          "test_receipt_cannot_escape_changed_location_grant_and_revoke_is_immediate"
+        ]
+      },
+      "counts": {
+        "PASS": 21
+      },
+      "case_seconds": 21.183,
+      "cases": [
+        {
+          "node": "tests/integration/test_location_access.py::test_receipt_cannot_escape_changed_location_grant_and_revoke_is_immediate",
+          "module": "test_location_access",
+          "name": "test_receipt_cannot_escape_changed_location_grant_and_revoke_is_immediate",
+          "status": "PASS",
+          "seconds": 0.575
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[accept]",
+          "module": "test_shift_changes_guards",
+          "name": "test_raw_sql_cannot_forge_recipient_or_manager[accept]",
+          "status": "PASS",
+          "seconds": 0.722
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[approve]",
+          "module": "test_shift_changes_guards",
+          "name": "test_raw_sql_cannot_forge_recipient_or_manager[approve]",
+          "status": "PASS",
+          "seconds": 0.874
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[artist]",
+          "module": "test_shift_changes_guards",
+          "name": "test_own_cross_home_consent_and_company_wide_approval[artist]",
+          "status": "PASS",
+          "seconds": 1.026
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[manager]",
+          "module": "test_shift_changes_guards",
+          "name": "test_own_cross_home_consent_and_company_wide_approval[manager]",
+          "status": "PASS",
+          "seconds": 1.172
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_foreign_company_and_platform_support_cannot_use_change_routes",
+          "module": "test_shift_changes_guards",
+          "name": "test_foreign_company_and_platform_support_cannot_use_change_routes",
+          "status": "PASS",
+          "seconds": 1.094
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_self_pickup_cannot_discover_an_open_shift_outside_home[False]",
+          "status": "PASS",
+          "seconds": 0.744
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_self_pickup_cannot_discover_an_open_shift_outside_home[True]",
+          "status": "PASS",
+          "seconds": 0.667
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-manager]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-manager]",
+          "status": "PASS",
+          "seconds": 0.85
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-owner]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-owner]",
+          "status": "PASS",
+          "seconds": 1.041
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-manager]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-manager]",
+          "status": "PASS",
+          "seconds": 0.875
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-owner]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-owner]",
+          "status": "PASS",
+          "seconds": 1.181
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+          "module": "test_timesheet_guards",
+          "name": "test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+          "status": "PASS",
+          "seconds": 1.033
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_active_delegate_cannot_read_or_mutate_timesheets",
+          "module": "test_timesheet_guards",
+          "name": "test_active_delegate_cannot_read_or_mutate_timesheets",
+          "status": "PASS",
+          "seconds": 0.813
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_branch_manager_and_employee_permissions",
+          "module": "test_workforce",
+          "name": "test_branch_manager_and_employee_permissions",
+          "status": "PASS",
+          "seconds": 0.893
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_directory_names_staff_only_inside_the_managers_scope",
+          "module": "test_workforce_desk",
+          "name": "test_directory_names_staff_only_inside_the_managers_scope",
+          "status": "PASS",
+          "seconds": 0.871
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_another_company_and_plain_staff_get_no_management_reads",
+          "module": "test_workforce_desk",
+          "name": "test_another_company_and_plain_staff_get_no_management_reads",
+          "status": "PASS",
+          "seconds": 0.879
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_other_company_and_platform_support_cannot_access_workforce",
+          "module": "test_workforce_guards",
+          "name": "test_other_company_and_platform_support_cannot_access_workforce",
+          "status": "PASS",
+          "seconds": 0.427
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_a_hidden_branch_refuses_a_new_swap_and_tells_nothing_about_the_holder",
+          "module": "test_workforce_review_fixes",
+          "name": "test_a_hidden_branch_refuses_a_new_swap_and_tells_nothing_about_the_holder",
+          "status": "PASS",
+          "seconds": 2.177
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_only_the_owner_a_manager_or_that_branch_manager_changes_it",
+          "module": "test_workforce_visibility",
+          "name": "test_only_the_owner_a_manager_or_that_branch_manager_changes_it",
+          "status": "PASS",
+          "seconds": 1.565
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_participants_read_the_shifts_of_their_request_even_when_hidden",
+          "module": "test_workforce_visibility",
+          "name": "test_participants_read_the_shifts_of_their_request_even_when_hidden",
+          "status": "PASS",
+          "seconds": 1.704
+        }
+      ],
+      "status": "PASS"
+    },
+    "I-10": {
+      "command": "C1",
+      "selection": {
+        "files": [
+          "test_workforce_guards",
+          "test_shift_changes_guards",
+          "test_timesheet_guards",
+          "test_shift_changes_schema",
+          "test_timesheet_schema",
+          "test_workforce_visibility"
+        ]
+      },
+      "counts": {
+        "PASS": 152
+      },
+      "case_seconds": 136.463,
+      "cases": [
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[shift]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_refuses_any_changed_expected_fact[shift]",
+          "status": "PASS",
+          "seconds": 1.101
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[catalogue]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_refuses_any_changed_expected_fact[catalogue]",
+          "status": "PASS",
+          "seconds": 1.165
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[staff_event]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_refuses_any_changed_expected_fact[staff_event]",
+          "status": "PASS",
+          "seconds": 1.093
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[missing-False]",
+          "status": "PASS",
+          "seconds": 1.009
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[missing-True]",
+          "status": "PASS",
+          "seconds": 0.986
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[future-False]",
+          "status": "PASS",
+          "seconds": 1.175
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[future-True]",
+          "status": "PASS",
+          "seconds": 1.012
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[revoked-False]",
+          "status": "PASS",
+          "seconds": 1.173
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[revoked-True]",
+          "status": "PASS",
+          "seconds": 1.048
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_event_replay_returns_original_response_after_later_approval",
+          "module": "test_shift_changes_guards",
+          "name": "test_event_replay_returns_original_response_after_later_approval",
+          "status": "PASS",
+          "seconds": 1.255
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_cross_home_recipient_can_decline_own_request[artist]",
+          "module": "test_shift_changes_guards",
+          "name": "test_cross_home_recipient_can_decline_own_request[artist]",
+          "status": "PASS",
+          "seconds": 0.874
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_cross_home_recipient_can_decline_own_request[manager]",
+          "module": "test_shift_changes_guards",
+          "name": "test_cross_home_recipient_can_decline_own_request[manager]",
+          "status": "PASS",
+          "seconds": 0.892
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_proposer_cannot_forge_the_other_employees_consent",
+          "module": "test_shift_changes_guards",
+          "name": "test_proposer_cannot_forge_the_other_employees_consent",
+          "status": "PASS",
+          "seconds": 0.792
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_change_history_exposes_exact_event_actor_and_timestamp[False]",
+          "status": "PASS",
+          "seconds": 0.936
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_change_history_exposes_exact_event_actor_and_timestamp[True]",
+          "status": "PASS",
+          "seconds": 1.127
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_conflicting_swap_rolls_back_both_sides_event_audit_and_key",
+          "module": "test_shift_changes_guards",
+          "name": "test_conflicting_swap_rolls_back_both_sides_event_audit_and_key",
+          "status": "PASS",
+          "seconds": 1.101
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[accept]",
+          "module": "test_shift_changes_guards",
+          "name": "test_raw_sql_cannot_forge_recipient_or_manager[accept]",
+          "status": "PASS",
+          "seconds": 0.722
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[approve]",
+          "module": "test_shift_changes_guards",
+          "name": "test_raw_sql_cannot_forge_recipient_or_manager[approve]",
+          "status": "PASS",
+          "seconds": 0.874
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_requests]",
+          "module": "test_shift_changes_guards",
+          "name": "test_all_change_history_is_immutable_for_owner[shift_change_requests]",
+          "status": "PASS",
+          "seconds": 1.089
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_events]",
+          "module": "test_shift_changes_guards",
+          "name": "test_all_change_history_is_immutable_for_owner[shift_change_events]",
+          "status": "PASS",
+          "seconds": 0.858
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_skill_snapshots]",
+          "module": "test_shift_changes_guards",
+          "name": "test_all_change_history_is_immutable_for_owner[shift_change_skill_snapshots]",
+          "status": "PASS",
+          "seconds": 0.88
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_snapshot_cannot_be_appended_to_an_old_request",
+          "module": "test_shift_changes_guards",
+          "name": "test_snapshot_cannot_be_appended_to_an_old_request",
+          "status": "PASS",
+          "seconds": 0.974
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_unrequired_snapshot_cannot_be_forged_in_the_creation_transaction",
+          "module": "test_shift_changes_guards",
+          "name": "test_unrequired_snapshot_cannot_be_forged_in_the_creation_transaction",
+          "status": "PASS",
+          "seconds": 0.817
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_only_participants_can_read_self_request_or_history_and_home_directory",
+          "module": "test_shift_changes_guards",
+          "name": "test_only_participants_can_read_self_request_or_history_and_home_directory",
+          "status": "PASS",
+          "seconds": 1.249
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_disabled_workforce_refuses_changes_but_preserves_history[module]",
+          "module": "test_shift_changes_guards",
+          "name": "test_disabled_workforce_refuses_changes_but_preserves_history[module]",
+          "status": "PASS",
+          "seconds": 0.92
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_disabled_workforce_refuses_changes_but_preserves_history[readiness]",
+          "module": "test_shift_changes_guards",
+          "name": "test_disabled_workforce_refuses_changes_but_preserves_history[readiness]",
+          "status": "PASS",
+          "seconds": 0.869
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[artist]",
+          "module": "test_shift_changes_guards",
+          "name": "test_own_cross_home_consent_and_company_wide_approval[artist]",
+          "status": "PASS",
+          "seconds": 1.026
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[manager]",
+          "module": "test_shift_changes_guards",
+          "name": "test_own_cross_home_consent_and_company_wide_approval[manager]",
+          "status": "PASS",
+          "seconds": 1.172
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_open_shifts_and_directory_use_home_and_active_memberships",
+          "module": "test_shift_changes_guards",
+          "name": "test_open_shifts_and_directory_use_home_and_active_memberships",
+          "status": "PASS",
+          "seconds": 1.194
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_pickup_manager_needs_another_manager_approval",
+          "module": "test_shift_changes_guards",
+          "name": "test_pickup_manager_needs_another_manager_approval",
+          "status": "PASS",
+          "seconds": 0.955
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_proposal_replay_returns_its_original_event_after_approval",
+          "module": "test_shift_changes_guards",
+          "name": "test_proposal_replay_returns_its_original_event_after_approval",
+          "status": "PASS",
+          "seconds": 1.011
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_manager_decline_probe_restores_scope_for_nonparticipant",
+          "module": "test_shift_changes_guards",
+          "name": "test_manager_decline_probe_restores_scope_for_nonparticipant",
+          "status": "PASS",
+          "seconds": 1.073
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[decline]",
+          "module": "test_shift_changes_guards",
+          "name": "test_terminal_changes_cannot_apply_or_transition[decline]",
+          "status": "PASS",
+          "seconds": 1.07
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[withdraw]",
+          "module": "test_shift_changes_guards",
+          "name": "test_terminal_changes_cannot_apply_or_transition[withdraw]",
+          "status": "PASS",
+          "seconds": 0.986
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_new_profile_of_same_user_is_not_a_second_employee",
+          "module": "test_shift_changes_guards",
+          "name": "test_new_profile_of_same_user_is_not_a_second_employee",
+          "status": "PASS",
+          "seconds": 0.785
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_foreign_company_and_platform_support_cannot_use_change_routes",
+          "module": "test_shift_changes_guards",
+          "name": "test_foreign_company_and_platform_support_cannot_use_change_routes",
+          "status": "PASS",
+          "seconds": 1.094
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_self_pickup_cannot_discover_an_open_shift_outside_home[False]",
+          "status": "PASS",
+          "seconds": 0.744
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_self_pickup_cannot_discover_an_open_shift_outside_home[True]",
+          "status": "PASS",
+          "seconds": 0.667
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[published]",
+          "module": "test_shift_changes_guards",
+          "name": "test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[published]",
+          "status": "PASS",
+          "seconds": 0.672
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[cancelled]",
+          "module": "test_shift_changes_guards",
+          "name": "test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[cancelled]",
+          "status": "PASS",
+          "seconds": 0.769
+        },
+        {
+          "node": "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[policy]",
+          "module": "test_shift_changes_schema",
+          "name": "test_i2_schema_damage_refuses_history_and_new_actions[policy]",
+          "status": "PASS",
+          "seconds": 0.751
+        },
+        {
+          "node": "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[actor_function]",
+          "module": "test_shift_changes_schema",
+          "name": "test_i2_schema_damage_refuses_history_and_new_actions[actor_function]",
+          "status": "PASS",
+          "seconds": 0.742
+        },
+        {
+          "node": "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[snapshot_function]",
+          "module": "test_shift_changes_schema",
+          "name": "test_i2_schema_damage_refuses_history_and_new_actions[snapshot_function]",
+          "status": "PASS",
+          "seconds": 0.784
+        },
+        {
+          "node": "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[event_apply]",
+          "module": "test_shift_changes_schema",
+          "name": "test_i2_schema_damage_refuses_history_and_new_actions[event_apply]",
+          "status": "PASS",
+          "seconds": 0.743
+        },
+        {
+          "node": "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[default]",
+          "module": "test_shift_changes_schema",
+          "name": "test_i2_schema_damage_refuses_history_and_new_actions[default]",
+          "status": "PASS",
+          "seconds": 0.724
+        },
+        {
+          "node": "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[snapshot_fk]",
+          "module": "test_shift_changes_schema",
+          "name": "test_i2_schema_damage_refuses_history_and_new_actions[snapshot_fk]",
+          "status": "PASS",
+          "seconds": 0.902
+        },
+        {
+          "node": "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[transition_alias]",
+          "module": "test_shift_changes_schema",
+          "name": "test_i2_schema_damage_refuses_history_and_new_actions[transition_alias]",
+          "status": "PASS",
+          "seconds": 0.733
+        },
+        {
+          "node": "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[transition_row]",
+          "module": "test_shift_changes_schema",
+          "name": "test_i2_schema_damage_refuses_history_and_new_actions[transition_row]",
+          "status": "PASS",
+          "seconds": 0.733
+        },
+        {
+          "node": "tests/integration/test_shift_changes_schema.py::test_i2_schema_damage_refuses_history_and_new_actions[when]",
+          "module": "test_shift_changes_schema",
+          "name": "test_i2_schema_damage_refuses_history_and_new_actions[when]",
+          "status": "PASS",
+          "seconds": 0.764
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[False]",
+          "module": "test_timesheet_guards",
+          "name": "test_approved_full_intervals_exclude_overlap_even_during_a_break[False]",
+          "status": "PASS",
+          "seconds": 1.407
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[True]",
+          "module": "test_timesheet_guards",
+          "name": "test_approved_full_intervals_exclude_overlap_even_during_a_break[True]",
+          "status": "PASS",
+          "seconds": 1.142
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[False]",
+          "module": "test_timesheet_guards",
+          "name": "test_pending_and_declined_correction_keep_the_previous_approved_interval[False]",
+          "status": "PASS",
+          "seconds": 1.101
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[True]",
+          "module": "test_timesheet_guards",
+          "name": "test_pending_and_declined_correction_keep_the_previous_approved_interval[True]",
+          "status": "PASS",
+          "seconds": 1.304
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-manager]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-manager]",
+          "status": "PASS",
+          "seconds": 0.85
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-owner]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-owner]",
+          "status": "PASS",
+          "seconds": 1.041
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-manager]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-manager]",
+          "status": "PASS",
+          "seconds": 0.875
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-owner]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-owner]",
+          "status": "PASS",
+          "seconds": 1.181
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-module]",
+          "module": "test_timesheet_guards",
+          "name": "test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-module]",
+          "status": "PASS",
+          "seconds": 1.021
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-readiness]",
+          "module": "test_timesheet_guards",
+          "name": "test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-readiness]",
+          "status": "PASS",
+          "seconds": 1.112
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-module]",
+          "module": "test_timesheet_guards",
+          "name": "test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-module]",
+          "status": "PASS",
+          "seconds": 0.999
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-readiness]",
+          "module": "test_timesheet_guards",
+          "name": "test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-readiness]",
+          "status": "PASS",
+          "seconds": 1.073
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_module_off_close_cannot_also_replace_start_breaks_or_another_employee",
+          "module": "test_timesheet_guards",
+          "name": "test_module_off_close_cannot_also_replace_start_breaks_or_another_employee",
+          "status": "PASS",
+          "seconds": 0.729
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[False]",
+          "module": "test_timesheet_guards",
+          "name": "test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[False]",
+          "status": "PASS",
+          "seconds": 0.91
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[True]",
+          "module": "test_timesheet_guards",
+          "name": "test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[True]",
+          "status": "PASS",
+          "seconds": 0.996
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entries]",
+          "module": "test_timesheet_guards",
+          "name": "test_time_history_never_updates_or_deletes[time_entries]",
+          "status": "PASS",
+          "seconds": 0.773
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entry_revisions]",
+          "module": "test_timesheet_guards",
+          "name": "test_time_history_never_updates_or_deletes[time_entry_revisions]",
+          "status": "PASS",
+          "seconds": 1.034
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[update]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_cannot_forge_or_remove_the_derived_projection[update]",
+          "status": "PASS",
+          "seconds": 0.796
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[insert]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_cannot_forge_or_remove_the_derived_projection[insert]",
+          "status": "PASS",
+          "seconds": 0.95
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[delete]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_cannot_forge_or_remove_the_derived_projection[delete]",
+          "status": "PASS",
+          "seconds": 0.779
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+          "module": "test_timesheet_guards",
+          "name": "test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+          "status": "PASS",
+          "seconds": 1.033
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+          "module": "test_timesheet_guards",
+          "name": "test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+          "status": "PASS",
+          "seconds": 1.128
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_end]",
+          "module": "test_timesheet_guards",
+          "name": "test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_end]",
+          "status": "PASS",
+          "seconds": 0.939
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_start]",
+          "module": "test_timesheet_guards",
+          "name": "test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_start]",
+          "status": "PASS",
+          "seconds": 1.047
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[clock_out]",
+          "module": "test_timesheet_guards",
+          "name": "test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[clock_out]",
+          "status": "PASS",
+          "seconds": 0.967
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_native_sql_serialization_error_maps_to_conflict_and_rolls_back_key",
+          "module": "test_timesheet_guards",
+          "name": "test_native_sql_serialization_error_maps_to_conflict_and_rolls_back_key",
+          "status": "PASS",
+          "seconds": 0.912
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+          "module": "test_timesheet_guards",
+          "name": "test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+          "status": "PASS",
+          "seconds": 1.27
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[head]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[head]",
+          "status": "PASS",
+          "seconds": 0.582
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[revision]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[revision]",
+          "status": "PASS",
+          "seconds": 0.798
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[overlap]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[overlap]",
+          "status": "PASS",
+          "seconds": 0.733
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[outside]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[outside]",
+          "status": "PASS",
+          "seconds": 0.892
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[reverse]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[reverse]",
+          "status": "PASS",
+          "seconds": 0.758
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[null]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[null]",
+          "status": "PASS",
+          "seconds": 0.793
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[nested]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[nested]",
+          "status": "PASS",
+          "seconds": 0.763
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[lower_bound]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[lower_bound]",
+          "status": "PASS",
+          "seconds": 0.738
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[too_many]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[too_many]",
+          "status": "PASS",
+          "seconds": 0.765
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_timesheet_has_no_ledger_or_shared_occupancy_effect",
+          "module": "test_timesheet_guards",
+          "name": "test_timesheet_has_no_ledger_or_shared_occupancy_effect",
+          "status": "PASS",
+          "seconds": 1.014
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-approve]",
+          "module": "test_timesheet_guards",
+          "name": "test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-approve]",
+          "status": "PASS",
+          "seconds": 0.879
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-decline]",
+          "module": "test_timesheet_guards",
+          "name": "test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-decline]",
+          "status": "PASS",
+          "seconds": 0.93
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-approve]",
+          "module": "test_timesheet_guards",
+          "name": "test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-approve]",
+          "status": "PASS",
+          "seconds": 0.841
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-decline]",
+          "module": "test_timesheet_guards",
+          "name": "test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-decline]",
+          "status": "PASS",
+          "seconds": 0.847
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_home_scoped_manager_decision_locks_config_without_widening_scope",
+          "module": "test_timesheet_guards",
+          "name": "test_home_scoped_manager_decision_locks_config_without_widening_scope",
+          "status": "PASS",
+          "seconds": 0.995
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_active_delegate_cannot_read_or_mutate_timesheets",
+          "module": "test_timesheet_guards",
+          "name": "test_active_delegate_cannot_read_or_mutate_timesheets",
+          "status": "PASS",
+          "seconds": 0.813
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[False-False]",
+          "module": "test_timesheet_guards",
+          "name": "test_break_limit_refuses_another_start_without_stranding_open_time[False-False]",
+          "status": "PASS",
+          "seconds": 1.119
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[False-True]",
+          "module": "test_timesheet_guards",
+          "name": "test_break_limit_refuses_another_start_without_stranding_open_time[False-True]",
+          "status": "PASS",
+          "seconds": 1.063
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[True-False]",
+          "module": "test_timesheet_guards",
+          "name": "test_break_limit_refuses_another_start_without_stranding_open_time[True-False]",
+          "status": "PASS",
+          "seconds": 1.289
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[True-True]",
+          "module": "test_timesheet_guards",
+          "name": "test_break_limit_refuses_another_start_without_stranding_open_time[True-True]",
+          "status": "PASS",
+          "seconds": 1.089
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_hundredth_break_can_end_normally_or_close_with_the_entry[break_end]",
+          "module": "test_timesheet_guards",
+          "name": "test_hundredth_break_can_end_normally_or_close_with_the_entry[break_end]",
+          "status": "PASS",
+          "seconds": 1.206
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_hundredth_break_can_end_normally_or_close_with_the_entry[clock_out]",
+          "module": "test_timesheet_guards",
+          "name": "test_hundredth_break_can_end_normally_or_close_with_the_entry[clock_out]",
+          "status": "PASS",
+          "seconds": 1.207
+        },
+        {
+          "node": "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[missing_exclusion]",
+          "module": "test_timesheet_schema",
+          "name": "test_timesheet_schema_damage_refuses_reads_and_commands[missing_exclusion]",
+          "status": "PASS",
+          "seconds": 1.276
+        },
+        {
+          "node": "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[deferred_exclusion]",
+          "module": "test_timesheet_schema",
+          "name": "test_timesheet_schema_damage_refuses_reads_and_commands[deferred_exclusion]",
+          "status": "PASS",
+          "seconds": 0.976
+        },
+        {
+          "node": "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[weakened_exclusion]",
+          "module": "test_timesheet_schema",
+          "name": "test_timesheet_schema_damage_refuses_reads_and_commands[weakened_exclusion]",
+          "status": "PASS",
+          "seconds": 0.931
+        },
+        {
+          "node": "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[projection_guard]",
+          "module": "test_timesheet_schema",
+          "name": "test_timesheet_schema_damage_refuses_reads_and_commands[projection_guard]",
+          "status": "PASS",
+          "seconds": 0.96
+        },
+        {
+          "node": "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[actor_guard]",
+          "module": "test_timesheet_schema",
+          "name": "test_timesheet_schema_damage_refuses_reads_and_commands[actor_guard]",
+          "status": "PASS",
+          "seconds": 0.954
+        },
+        {
+          "node": "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[apply]",
+          "module": "test_timesheet_schema",
+          "name": "test_timesheet_schema_damage_refuses_reads_and_commands[apply]",
+          "status": "PASS",
+          "seconds": 0.973
+        },
+        {
+          "node": "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[policy]",
+          "module": "test_timesheet_schema",
+          "name": "test_timesheet_schema_damage_refuses_reads_and_commands[policy]",
+          "status": "PASS",
+          "seconds": 0.825
+        },
+        {
+          "node": "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[xid_default]",
+          "module": "test_timesheet_schema",
+          "name": "test_timesheet_schema_damage_refuses_reads_and_commands[xid_default]",
+          "status": "PASS",
+          "seconds": 0.835
+        },
+        {
+          "node": "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[when]",
+          "module": "test_timesheet_schema",
+          "name": "test_timesheet_schema_damage_refuses_reads_and_commands[when]",
+          "status": "PASS",
+          "seconds": 0.844
+        },
+        {
+          "node": "tests/integration/test_timesheet_schema.py::test_timesheet_schema_damage_refuses_reads_and_commands[state_grant]",
+          "module": "test_timesheet_schema",
+          "name": "test_timesheet_schema_damage_refuses_reads_and_commands[state_grant]",
+          "status": "PASS",
+          "seconds": 0.873
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[False]",
+          "module": "test_workforce_guards",
+          "name": "test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[False]",
+          "status": "PASS",
+          "seconds": 0.912
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[True]",
+          "module": "test_workforce_guards",
+          "name": "test_i02_overlapping_cross_branch_assignments_wait_and_admit_one[True]",
+          "status": "PASS",
+          "seconds": 0.851
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_resource_owners]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[staff_resource_owners]",
+          "status": "PASS",
+          "seconds": 0.672
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_profiles]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[staff_profiles]",
+          "status": "PASS",
+          "seconds": 0.675
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_skills]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[work_skills]",
+          "status": "PASS",
+          "seconds": 0.68
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_skill_versions]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[work_skill_versions]",
+          "status": "PASS",
+          "seconds": 0.659
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[staff_skill_events]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[staff_skill_events]",
+          "status": "PASS",
+          "seconds": 0.658
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_shifts]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[work_shifts]",
+          "status": "PASS",
+          "seconds": 0.639
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[work_shift_versions]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[work_shift_versions]",
+          "status": "PASS",
+          "seconds": 0.94
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_workforce_rows_are_immutable_even_for_owner[shift_assignments]",
+          "module": "test_workforce_guards",
+          "name": "test_workforce_rows_are_immutable_even_for_owner[shift_assignments]",
+          "status": "PASS",
+          "seconds": 0.652
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[policy]",
+          "module": "test_workforce_guards",
+          "name": "test_damaged_workforce_schema_refuses_reads_and_writes[policy]",
+          "status": "PASS",
+          "seconds": 0.599
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[function]",
+          "module": "test_workforce_guards",
+          "name": "test_damaged_workforce_schema_refuses_reads_and_writes[function]",
+          "status": "PASS",
+          "seconds": 0.607
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[trigger]",
+          "module": "test_workforce_guards",
+          "name": "test_damaged_workforce_schema_refuses_reads_and_writes[trigger]",
+          "status": "PASS",
+          "seconds": 0.59
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[default]",
+          "module": "test_workforce_guards",
+          "name": "test_damaged_workforce_schema_refuses_reads_and_writes[default]",
+          "status": "PASS",
+          "seconds": 0.614
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[constraint]",
+          "module": "test_workforce_guards",
+          "name": "test_damaged_workforce_schema_refuses_reads_and_writes[constraint]",
+          "status": "PASS",
+          "seconds": 0.717
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[when]",
+          "module": "test_workforce_guards",
+          "name": "test_damaged_workforce_schema_refuses_reads_and_writes[when]",
+          "status": "PASS",
+          "seconds": 0.601
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[quoted_function]",
+          "module": "test_workforce_guards",
+          "name": "test_damaged_workforce_schema_refuses_reads_and_writes[quoted_function]",
+          "status": "PASS",
+          "seconds": 0.779
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[source_kind]",
+          "module": "test_workforce_guards",
+          "name": "test_damaged_workforce_schema_refuses_reads_and_writes[source_kind]",
+          "status": "PASS",
+          "seconds": 0.632
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_damaged_workforce_schema_refuses_reads_and_writes[shared_literal]",
+          "module": "test_workforce_guards",
+          "name": "test_damaged_workforce_schema_refuses_reads_and_writes[shared_literal]",
+          "status": "PASS",
+          "seconds": 0.626
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_other_company_and_platform_support_cannot_access_workforce",
+          "module": "test_workforce_guards",
+          "name": "test_other_company_and_platform_support_cannot_access_workforce",
+          "status": "PASS",
+          "seconds": 0.427
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_reinviting_one_user_keeps_one_resource_and_rejects_overlapping_shift",
+          "module": "test_workforce_guards",
+          "name": "test_reinviting_one_user_keeps_one_resource_and_rejects_overlapping_shift",
+          "status": "PASS",
+          "seconds": 0.685
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_staff_membership_home_cannot_be_silently_changed",
+          "module": "test_workforce_guards",
+          "name": "test_staff_membership_home_cannot_be_silently_changed",
+          "status": "PASS",
+          "seconds": 0.639
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_raw_sql_rejects_nonfinite_skill_date",
+          "module": "test_workforce_guards",
+          "name": "test_raw_sql_rejects_nonfinite_skill_date",
+          "status": "PASS",
+          "seconds": 0.536
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_raw_sql_rechecks_required_skills",
+          "module": "test_workforce_guards",
+          "name": "test_raw_sql_rechecks_required_skills",
+          "status": "PASS",
+          "seconds": 0.557
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_raw_sql_rejects_multidimensional_required_skills",
+          "module": "test_workforce_guards",
+          "name": "test_raw_sql_rejects_multidimensional_required_skills",
+          "status": "PASS",
+          "seconds": 0.521
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_sql_booking_reservation_staff_and_shift_artist_boundaries[booking]",
+          "module": "test_workforce_guards",
+          "name": "test_sql_booking_reservation_staff_and_shift_artist_boundaries[booking]",
+          "status": "PASS",
+          "seconds": 0.721
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_sql_booking_reservation_staff_and_shift_artist_boundaries[reservation]",
+          "module": "test_workforce_guards",
+          "name": "test_sql_booking_reservation_staff_and_shift_artist_boundaries[reservation]",
+          "status": "PASS",
+          "seconds": 0.518
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_sql_booking_reservation_staff_and_shift_artist_boundaries[shift]",
+          "module": "test_workforce_guards",
+          "name": "test_sql_booking_reservation_staff_and_shift_artist_boundaries[shift]",
+          "status": "PASS",
+          "seconds": 0.518
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_reinvite_other_home_refuses_new_resource_without_changing_history",
+          "module": "test_workforce_guards",
+          "name": "test_reinvite_other_home_refuses_new_resource_without_changing_history",
+          "status": "PASS",
+          "seconds": 0.658
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_profile_creation_locks_membership_against_home_move",
+          "module": "test_workforce_guards",
+          "name": "test_profile_creation_locks_membership_against_home_move",
+          "status": "PASS",
+          "seconds": 0.465
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_scoped_sql_cannot_move_a_membership_whose_profile_is_hidden",
+          "module": "test_workforce_guards",
+          "name": "test_scoped_sql_cannot_move_a_membership_whose_profile_is_hidden",
+          "status": "PASS",
+          "seconds": 0.594
+        },
+        {
+          "node": "tests/integration/test_workforce_guards.py::test_raw_sql_refuses_finite_shift_dates_outside_python_range",
+          "module": "test_workforce_guards",
+          "name": "test_raw_sql_refuses_finite_shift_dates_outside_python_range",
+          "status": "PASS",
+          "seconds": 0.552
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_shifts_are_visible_by_default_and_a_manager_may_hide_and_show_them",
+          "module": "test_workforce_visibility",
+          "name": "test_shifts_are_visible_by_default_and_a_manager_may_hide_and_show_them",
+          "status": "PASS",
+          "seconds": 1.49
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_change_is_versioned_idempotent_and_settled_by_its_original_key",
+          "module": "test_workforce_visibility",
+          "name": "test_change_is_versioned_idempotent_and_settled_by_its_original_key",
+          "status": "PASS",
+          "seconds": 1.215
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_only_the_owner_a_manager_or_that_branch_manager_changes_it",
+          "module": "test_workforce_visibility",
+          "name": "test_only_the_owner_a_manager_or_that_branch_manager_changes_it",
+          "status": "PASS",
+          "seconds": 1.565
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_setting_stays_readable_and_closed_to_change_while_the_module_is_off",
+          "module": "test_workforce_visibility",
+          "name": "test_setting_stays_readable_and_closed_to_change_while_the_module_is_off",
+          "status": "PASS",
+          "seconds": 0.911
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_sql_keeps_versions_ordered_immutable_and_inside_the_branch",
+          "module": "test_workforce_visibility",
+          "name": "test_sql_keeps_versions_ordered_immutable_and_inside_the_branch",
+          "status": "PASS",
+          "seconds": 0.648
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[scope]",
+          "module": "test_workforce_visibility",
+          "name": "test_damaged_setting_controls_fail_closed_with_503[scope]",
+          "status": "PASS",
+          "seconds": 0.925
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[guard]",
+          "module": "test_workforce_visibility",
+          "name": "test_damaged_setting_controls_fail_closed_with_503[guard]",
+          "status": "PASS",
+          "seconds": 0.817
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[module]",
+          "module": "test_workforce_visibility",
+          "name": "test_damaged_setting_controls_fail_closed_with_503[module]",
+          "status": "PASS",
+          "seconds": 0.802
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_damaged_setting_controls_fail_closed_with_503[grant]",
+          "module": "test_workforce_visibility",
+          "name": "test_damaged_setting_controls_fail_closed_with_503[grant]",
+          "status": "PASS",
+          "seconds": 0.815
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_participants_read_the_shifts_of_their_request_even_when_hidden",
+          "module": "test_workforce_visibility",
+          "name": "test_participants_read_the_shifts_of_their_request_even_when_hidden",
+          "status": "PASS",
+          "seconds": 1.704
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_a_company_wide_member_follows_the_setting_of_their_home_branch",
+          "module": "test_workforce_visibility",
+          "name": "test_a_company_wide_member_follows_the_setting_of_their_home_branch",
+          "status": "PASS",
+          "seconds": 1.223
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility.py::test_two_changes_of_one_version_wait_and_only_the_first_is_recorded",
+          "module": "test_workforce_visibility",
+          "name": "test_two_changes_of_one_version_wait_and_only_the_first_is_recorded",
+          "status": "PASS",
+          "seconds": 0.839
+        }
+      ],
+      "status": "PASS"
+    },
+    "I-11": {
+      "command": "C1",
+      "selection": {
+        "files": [
+          "test_resource_kind_boundaries",
+          "test_resource_occupancy",
+          "test_resource_reservations",
+          "test_booking_concurrency",
+          "test_workforce",
+          "test_shift_changes_guards",
+          "test_timesheet_guards",
+          "test_workforce_upgrade",
+          "test_shift_changes_upgrade",
+          "test_timesheet_upgrade",
+          "test_workforce_visibility_upgrade"
+        ]
+      },
+      "counts": {
+        "PASS": 146
+      },
+      "case_seconds": 158.507,
+      "cases": [
+        {
+          "node": "tests/integration/test_booking_concurrency.py::test_raw_sql_race_the_constraint_alone_admits_exactly_one",
+          "module": "test_booking_concurrency",
+          "name": "test_raw_sql_race_the_constraint_alone_admits_exactly_one",
+          "status": "PASS",
+          "seconds": 4.852
+        },
+        {
+          "node": "tests/integration/test_booking_concurrency.py::test_service_race_100_attempts_one_success_99_clean_conflicts",
+          "module": "test_booking_concurrency",
+          "name": "test_service_race_100_attempts_one_success_99_clean_conflicts",
+          "status": "PASS",
+          "seconds": 3.357
+        },
+        {
+          "node": "tests/integration/test_booking_concurrency.py::test_two_service_instances_race_like_two_api_processes",
+          "module": "test_booking_concurrency",
+          "name": "test_two_service_instances_race_like_two_api_processes",
+          "status": "PASS",
+          "seconds": 3.505
+        },
+        {
+          "node": "tests/integration/test_booking_concurrency.py::test_concurrent_hold_and_confirmed_follow_the_same_rule",
+          "module": "test_booking_concurrency",
+          "name": "test_concurrent_hold_and_confirmed_follow_the_same_rule",
+          "status": "PASS",
+          "seconds": 3.544
+        },
+        {
+          "node": "tests/integration/test_booking_concurrency.py::test_race_over_an_expired_hold_expires_it_once_and_admits_one",
+          "module": "test_booking_concurrency",
+          "name": "test_race_over_an_expired_hold_expires_it_once_and_admits_one",
+          "status": "PASS",
+          "seconds": 3.577
+        },
+        {
+          "node": "tests/integration/test_booking_concurrency.py::test_confirm_racing_new_holds_keeps_the_confirmed_booking",
+          "module": "test_booking_concurrency",
+          "name": "test_confirm_racing_new_holds_keeps_the_confirmed_booking",
+          "status": "PASS",
+          "seconds": 0.927
+        },
+        {
+          "node": "tests/integration/test_booking_concurrency.py::test_same_idempotency_key_racing_creates_one_booking",
+          "module": "test_booking_concurrency",
+          "name": "test_same_idempotency_key_racing_creates_one_booking",
+          "status": "PASS",
+          "seconds": 0.612
+        },
+        {
+          "node": "tests/integration/test_booking_concurrency.py::test_race_helpers_do_not_hide_unexpected_errors",
+          "module": "test_booking_concurrency",
+          "name": "test_race_helpers_do_not_hide_unexpected_errors",
+          "status": "PASS",
+          "seconds": 0.003
+        },
+        {
+          "node": "tests/integration/test_resource_kind_boundaries.py::test_staff_lookalike_never_enters_customer_or_management_booking",
+          "module": "test_resource_kind_boundaries",
+          "name": "test_staff_lookalike_never_enters_customer_or_management_booking",
+          "status": "PASS",
+          "seconds": 0.619
+        },
+        {
+          "node": "tests/integration/test_resource_kind_boundaries.py::test_customers_are_offered_and_can_hold_only_artists",
+          "module": "test_resource_kind_boundaries",
+          "name": "test_customers_are_offered_and_can_hold_only_artists",
+          "status": "PASS",
+          "seconds": 0.461
+        },
+        {
+          "node": "tests/integration/test_resource_kind_boundaries.py::test_staff_can_search_and_book_only_artists",
+          "module": "test_resource_kind_boundaries",
+          "name": "test_staff_can_search_and_book_only_artists",
+          "status": "PASS",
+          "seconds": 0.295
+        },
+        {
+          "node": "tests/integration/test_resource_kind_boundaries.py::test_the_booking_service_and_sql_do_not_check_the_resource_kind",
+          "module": "test_resource_kind_boundaries",
+          "name": "test_the_booking_service_and_sql_do_not_check_the_resource_kind",
+          "status": "PASS",
+          "seconds": 0.211
+        },
+        {
+          "node": "tests/integration/test_resource_kind_boundaries.py::test_a_reservation_accepts_every_resource_kind",
+          "module": "test_resource_kind_boundaries",
+          "name": "test_a_reservation_accepts_every_resource_kind",
+          "status": "PASS",
+          "seconds": 0.524
+        },
+        {
+          "node": "tests/integration/test_resource_kind_boundaries.py::test_the_staff_list_and_the_overview_count_every_resource_kind",
+          "module": "test_resource_kind_boundaries",
+          "name": "test_the_staff_list_and_the_overview_count_every_resource_kind",
+          "status": "PASS",
+          "seconds": 0.272
+        },
+        {
+          "node": "tests/integration/test_resource_kind_boundaries.py::test_staff_setup_accepts_a_resource_that_is_not_an_artist",
+          "module": "test_resource_kind_boundaries",
+          "name": "test_staff_setup_accepts_a_resource_that_is_not_an_artist",
+          "status": "PASS",
+          "seconds": 0.301
+        },
+        {
+          "node": "tests/integration/test_resource_kind_boundaries.py::test_the_staff_api_and_the_schema_know_three_resource_kinds",
+          "module": "test_resource_kind_boundaries",
+          "name": "test_the_staff_api_and_the_schema_know_three_resource_kinds",
+          "status": "PASS",
+          "seconds": 0.251
+        },
+        {
+          "node": "tests/integration/test_resource_occupancy.py::test_every_booking_status_is_mirrored_in_shared_occupancy",
+          "module": "test_resource_occupancy",
+          "name": "test_every_booking_status_is_mirrored_in_shared_occupancy",
+          "status": "PASS",
+          "seconds": 0.322
+        },
+        {
+          "node": "tests/integration/test_resource_occupancy.py::test_direct_sql_cannot_forge_or_rewrite_occupancy",
+          "module": "test_resource_occupancy",
+          "name": "test_direct_sql_cannot_forge_or_rewrite_occupancy",
+          "status": "PASS",
+          "seconds": 0.338
+        },
+        {
+          "node": "tests/integration/test_resource_occupancy.py::test_readiness_refuses_drift_and_a_disabled_mirror",
+          "module": "test_resource_occupancy",
+          "name": "test_readiness_refuses_drift_and_a_disabled_mirror",
+          "status": "PASS",
+          "seconds": 0.388
+        },
+        {
+          "node": "tests/integration/test_resource_occupancy.py::test_the_shared_constraint_decides_and_a_conflict_stays_a_slot_conflict",
+          "module": "test_resource_occupancy",
+          "name": "test_the_shared_constraint_decides_and_a_conflict_stays_a_slot_conflict",
+          "status": "PASS",
+          "seconds": 0.214
+        },
+        {
+          "node": "tests/integration/test_resource_occupancy.py::test_overlapping_stale_holds_are_released_in_shared_occupancy",
+          "module": "test_resource_occupancy",
+          "name": "test_overlapping_stale_holds_are_released_in_shared_occupancy",
+          "status": "PASS",
+          "seconds": 0.2
+        },
+        {
+          "node": "tests/integration/test_resource_occupancy.py::test_a_moved_resource_keeps_the_mirror_exact_in_a_branch_session",
+          "module": "test_resource_occupancy",
+          "name": "test_a_moved_resource_keeps_the_mirror_exact_in_a_branch_session",
+          "status": "PASS",
+          "seconds": 0.279
+        },
+        {
+          "node": "tests/integration/test_resource_occupancy.py::test_backfill_copies_heals_stays_per_company_and_refuses_unknown_companies",
+          "module": "test_resource_occupancy",
+          "name": "test_backfill_copies_heals_stays_per_company_and_refuses_unknown_companies",
+          "status": "PASS",
+          "seconds": 0.244
+        },
+        {
+          "node": "tests/integration/test_resource_occupancy.py::test_migration_copies_and_reconciles_existing_booking_allocations",
+          "module": "test_resource_occupancy",
+          "name": "test_migration_copies_and_reconciles_existing_booking_allocations",
+          "status": "PASS",
+          "seconds": 1.275
+        },
+        {
+          "node": "tests/integration/test_resource_reservations.py::test_reservation_takes_every_resource_and_its_cancellation_frees_them",
+          "module": "test_resource_reservations",
+          "name": "test_reservation_takes_every_resource_and_its_cancellation_frees_them",
+          "status": "PASS",
+          "seconds": 0.777
+        },
+        {
+          "node": "tests/integration/test_resource_reservations.py::test_core_04_booking_and_reservation_race_for_one_resource",
+          "module": "test_resource_reservations",
+          "name": "test_core_04_booking_and_reservation_race_for_one_resource",
+          "status": "PASS",
+          "seconds": 0.632
+        },
+        {
+          "node": "tests/integration/test_resource_reservations.py::test_reservation_sees_booking_allocations_that_were_not_copied_yet",
+          "module": "test_resource_reservations",
+          "name": "test_reservation_sees_booking_allocations_that_were_not_copied_yet",
+          "status": "PASS",
+          "seconds": 0.692
+        },
+        {
+          "node": "tests/integration/test_resource_reservations.py::test_reservations_refuse_invalid_input_and_stop_with_the_booking_module",
+          "module": "test_resource_reservations",
+          "name": "test_reservations_refuse_invalid_input_and_stop_with_the_booking_module",
+          "status": "PASS",
+          "seconds": 0.678
+        },
+        {
+          "node": "tests/integration/test_resource_reservations.py::test_reservation_access_is_staff_management_within_the_branch",
+          "module": "test_resource_reservations",
+          "name": "test_reservation_access_is_staff_management_within_the_branch",
+          "status": "PASS",
+          "seconds": 0.778
+        },
+        {
+          "node": "tests/integration/test_resource_reservations.py::test_direct_sql_cannot_forge_or_bend_reservations",
+          "module": "test_resource_reservations",
+          "name": "test_direct_sql_cannot_forge_or_bend_reservations",
+          "status": "PASS",
+          "seconds": 0.604
+        },
+        {
+          "node": "tests/integration/test_resource_reservations.py::test_customers_never_see_a_reserved_resource_as_available",
+          "module": "test_resource_reservations",
+          "name": "test_customers_never_see_a_reserved_resource_as_available",
+          "status": "PASS",
+          "seconds": 0.566
+        },
+        {
+          "node": "tests/integration/test_resource_reservations.py::test_core_04_raw_sql_without_locks_admits_one_booking_or_reservation",
+          "module": "test_resource_reservations",
+          "name": "test_core_04_raw_sql_without_locks_admits_one_booking_or_reservation",
+          "status": "PASS",
+          "seconds": 0.685
+        },
+        {
+          "node": "tests/integration/test_resource_reservations.py::test_reservations_never_overlap_each_other",
+          "module": "test_resource_reservations",
+          "name": "test_reservations_never_overlap_each_other",
+          "status": "PASS",
+          "seconds": 0.525
+        },
+        {
+          "node": "tests/integration/test_resource_reservations.py::test_concurrent_cancels_and_a_moved_resource_never_leave_a_resource_blocked",
+          "module": "test_resource_reservations",
+          "name": "test_concurrent_cancels_and_a_moved_resource_never_leave_a_resource_blocked",
+          "status": "PASS",
+          "seconds": 0.706
+        },
+        {
+          "node": "tests/integration/test_resource_reservations.py::test_resources_cannot_be_added_later_and_the_guard_checks_the_commit_trigger",
+          "module": "test_resource_reservations",
+          "name": "test_resources_cannot_be_added_later_and_the_guard_checks_the_commit_trigger",
+          "status": "PASS",
+          "seconds": 0.615
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[shift]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_refuses_any_changed_expected_fact[shift]",
+          "status": "PASS",
+          "seconds": 1.101
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[catalogue]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_refuses_any_changed_expected_fact[catalogue]",
+          "status": "PASS",
+          "seconds": 1.165
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_refuses_any_changed_expected_fact[staff_event]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_refuses_any_changed_expected_fact[staff_event]",
+          "status": "PASS",
+          "seconds": 1.093
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[missing-False]",
+          "status": "PASS",
+          "seconds": 1.009
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[missing-True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[missing-True]",
+          "status": "PASS",
+          "seconds": 0.986
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[future-False]",
+          "status": "PASS",
+          "seconds": 1.175
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[future-True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[future-True]",
+          "status": "PASS",
+          "seconds": 1.012
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[revoked-False]",
+          "status": "PASS",
+          "seconds": 1.173
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_approval_repeats_effective_skill_validation_in_sql[revoked-True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_approval_repeats_effective_skill_validation_in_sql[revoked-True]",
+          "status": "PASS",
+          "seconds": 1.048
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_event_replay_returns_original_response_after_later_approval",
+          "module": "test_shift_changes_guards",
+          "name": "test_event_replay_returns_original_response_after_later_approval",
+          "status": "PASS",
+          "seconds": 1.255
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_cross_home_recipient_can_decline_own_request[artist]",
+          "module": "test_shift_changes_guards",
+          "name": "test_cross_home_recipient_can_decline_own_request[artist]",
+          "status": "PASS",
+          "seconds": 0.874
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_cross_home_recipient_can_decline_own_request[manager]",
+          "module": "test_shift_changes_guards",
+          "name": "test_cross_home_recipient_can_decline_own_request[manager]",
+          "status": "PASS",
+          "seconds": 0.892
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_proposer_cannot_forge_the_other_employees_consent",
+          "module": "test_shift_changes_guards",
+          "name": "test_proposer_cannot_forge_the_other_employees_consent",
+          "status": "PASS",
+          "seconds": 0.792
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_change_history_exposes_exact_event_actor_and_timestamp[False]",
+          "status": "PASS",
+          "seconds": 0.936
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_change_history_exposes_exact_event_actor_and_timestamp[True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_change_history_exposes_exact_event_actor_and_timestamp[True]",
+          "status": "PASS",
+          "seconds": 1.127
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_conflicting_swap_rolls_back_both_sides_event_audit_and_key",
+          "module": "test_shift_changes_guards",
+          "name": "test_conflicting_swap_rolls_back_both_sides_event_audit_and_key",
+          "status": "PASS",
+          "seconds": 1.101
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[accept]",
+          "module": "test_shift_changes_guards",
+          "name": "test_raw_sql_cannot_forge_recipient_or_manager[accept]",
+          "status": "PASS",
+          "seconds": 0.722
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_raw_sql_cannot_forge_recipient_or_manager[approve]",
+          "module": "test_shift_changes_guards",
+          "name": "test_raw_sql_cannot_forge_recipient_or_manager[approve]",
+          "status": "PASS",
+          "seconds": 0.874
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_requests]",
+          "module": "test_shift_changes_guards",
+          "name": "test_all_change_history_is_immutable_for_owner[shift_change_requests]",
+          "status": "PASS",
+          "seconds": 1.089
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_events]",
+          "module": "test_shift_changes_guards",
+          "name": "test_all_change_history_is_immutable_for_owner[shift_change_events]",
+          "status": "PASS",
+          "seconds": 0.858
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_all_change_history_is_immutable_for_owner[shift_change_skill_snapshots]",
+          "module": "test_shift_changes_guards",
+          "name": "test_all_change_history_is_immutable_for_owner[shift_change_skill_snapshots]",
+          "status": "PASS",
+          "seconds": 0.88
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_snapshot_cannot_be_appended_to_an_old_request",
+          "module": "test_shift_changes_guards",
+          "name": "test_snapshot_cannot_be_appended_to_an_old_request",
+          "status": "PASS",
+          "seconds": 0.974
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_unrequired_snapshot_cannot_be_forged_in_the_creation_transaction",
+          "module": "test_shift_changes_guards",
+          "name": "test_unrequired_snapshot_cannot_be_forged_in_the_creation_transaction",
+          "status": "PASS",
+          "seconds": 0.817
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_only_participants_can_read_self_request_or_history_and_home_directory",
+          "module": "test_shift_changes_guards",
+          "name": "test_only_participants_can_read_self_request_or_history_and_home_directory",
+          "status": "PASS",
+          "seconds": 1.249
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_disabled_workforce_refuses_changes_but_preserves_history[module]",
+          "module": "test_shift_changes_guards",
+          "name": "test_disabled_workforce_refuses_changes_but_preserves_history[module]",
+          "status": "PASS",
+          "seconds": 0.92
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_disabled_workforce_refuses_changes_but_preserves_history[readiness]",
+          "module": "test_shift_changes_guards",
+          "name": "test_disabled_workforce_refuses_changes_but_preserves_history[readiness]",
+          "status": "PASS",
+          "seconds": 0.869
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[artist]",
+          "module": "test_shift_changes_guards",
+          "name": "test_own_cross_home_consent_and_company_wide_approval[artist]",
+          "status": "PASS",
+          "seconds": 1.026
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_own_cross_home_consent_and_company_wide_approval[manager]",
+          "module": "test_shift_changes_guards",
+          "name": "test_own_cross_home_consent_and_company_wide_approval[manager]",
+          "status": "PASS",
+          "seconds": 1.172
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_open_shifts_and_directory_use_home_and_active_memberships",
+          "module": "test_shift_changes_guards",
+          "name": "test_open_shifts_and_directory_use_home_and_active_memberships",
+          "status": "PASS",
+          "seconds": 1.194
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_pickup_manager_needs_another_manager_approval",
+          "module": "test_shift_changes_guards",
+          "name": "test_pickup_manager_needs_another_manager_approval",
+          "status": "PASS",
+          "seconds": 0.955
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_proposal_replay_returns_its_original_event_after_approval",
+          "module": "test_shift_changes_guards",
+          "name": "test_proposal_replay_returns_its_original_event_after_approval",
+          "status": "PASS",
+          "seconds": 1.011
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_manager_decline_probe_restores_scope_for_nonparticipant",
+          "module": "test_shift_changes_guards",
+          "name": "test_manager_decline_probe_restores_scope_for_nonparticipant",
+          "status": "PASS",
+          "seconds": 1.073
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[decline]",
+          "module": "test_shift_changes_guards",
+          "name": "test_terminal_changes_cannot_apply_or_transition[decline]",
+          "status": "PASS",
+          "seconds": 1.07
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_terminal_changes_cannot_apply_or_transition[withdraw]",
+          "module": "test_shift_changes_guards",
+          "name": "test_terminal_changes_cannot_apply_or_transition[withdraw]",
+          "status": "PASS",
+          "seconds": 0.986
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_new_profile_of_same_user_is_not_a_second_employee",
+          "module": "test_shift_changes_guards",
+          "name": "test_new_profile_of_same_user_is_not_a_second_employee",
+          "status": "PASS",
+          "seconds": 0.785
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_foreign_company_and_platform_support_cannot_use_change_routes",
+          "module": "test_shift_changes_guards",
+          "name": "test_foreign_company_and_platform_support_cannot_use_change_routes",
+          "status": "PASS",
+          "seconds": 1.094
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[False]",
+          "module": "test_shift_changes_guards",
+          "name": "test_self_pickup_cannot_discover_an_open_shift_outside_home[False]",
+          "status": "PASS",
+          "seconds": 0.744
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_self_pickup_cannot_discover_an_open_shift_outside_home[True]",
+          "module": "test_shift_changes_guards",
+          "name": "test_self_pickup_cannot_discover_an_open_shift_outside_home[True]",
+          "status": "PASS",
+          "seconds": 0.667
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[published]",
+          "module": "test_shift_changes_guards",
+          "name": "test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[published]",
+          "status": "PASS",
+          "seconds": 0.672
+        },
+        {
+          "node": "tests/integration/test_shift_changes_guards.py::test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[cancelled]",
+          "module": "test_shift_changes_guards",
+          "name": "test_raw_branch_sql_cannot_leave_a_hidden_prior_allocation_active[cancelled]",
+          "status": "PASS",
+          "seconds": 0.769
+        },
+        {
+          "node": "tests/integration/test_shift_changes_upgrade.py::test_nonempty_0032_upgrade_preserves_every_row_and_prior_checksum",
+          "module": "test_shift_changes_upgrade",
+          "name": "test_nonempty_0032_upgrade_preserves_every_row_and_prior_checksum",
+          "status": "PASS",
+          "seconds": 7.269
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[False]",
+          "module": "test_timesheet_guards",
+          "name": "test_approved_full_intervals_exclude_overlap_even_during_a_break[False]",
+          "status": "PASS",
+          "seconds": 1.407
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_approved_full_intervals_exclude_overlap_even_during_a_break[True]",
+          "module": "test_timesheet_guards",
+          "name": "test_approved_full_intervals_exclude_overlap_even_during_a_break[True]",
+          "status": "PASS",
+          "seconds": 1.142
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[False]",
+          "module": "test_timesheet_guards",
+          "name": "test_pending_and_declined_correction_keep_the_previous_approved_interval[False]",
+          "status": "PASS",
+          "seconds": 1.101
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_pending_and_declined_correction_keep_the_previous_approved_interval[True]",
+          "module": "test_timesheet_guards",
+          "name": "test_pending_and_declined_correction_keep_the_previous_approved_interval[True]",
+          "status": "PASS",
+          "seconds": 1.304
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-manager]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-manager]",
+          "status": "PASS",
+          "seconds": 0.85
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-owner]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[False-owner]",
+          "status": "PASS",
+          "seconds": 1.041
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-manager]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-manager]",
+          "status": "PASS",
+          "seconds": 0.875
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-owner]",
+          "module": "test_timesheet_guards",
+          "name": "test_manager_own_approval_is_forbidden_owner_exception_is_explicit[True-owner]",
+          "status": "PASS",
+          "seconds": 1.181
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-module]",
+          "module": "test_timesheet_guards",
+          "name": "test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-module]",
+          "status": "PASS",
+          "seconds": 1.021
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-readiness]",
+          "module": "test_timesheet_guards",
+          "name": "test_disabled_gate_closes_only_existing_own_entry_and_active_break[False-readiness]",
+          "status": "PASS",
+          "seconds": 1.112
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-module]",
+          "module": "test_timesheet_guards",
+          "name": "test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-module]",
+          "status": "PASS",
+          "seconds": 0.999
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-readiness]",
+          "module": "test_timesheet_guards",
+          "name": "test_disabled_gate_closes_only_existing_own_entry_and_active_break[True-readiness]",
+          "status": "PASS",
+          "seconds": 1.073
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_module_off_close_cannot_also_replace_start_breaks_or_another_employee",
+          "module": "test_timesheet_guards",
+          "name": "test_module_off_close_cannot_also_replace_start_breaks_or_another_employee",
+          "status": "PASS",
+          "seconds": 0.729
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[False]",
+          "module": "test_timesheet_guards",
+          "name": "test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[False]",
+          "status": "PASS",
+          "seconds": 0.91
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[True]",
+          "module": "test_timesheet_guards",
+          "name": "test_shift_link_has_exact_owned_version_and_flag_uses_actual_start[True]",
+          "status": "PASS",
+          "seconds": 0.996
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entries]",
+          "module": "test_timesheet_guards",
+          "name": "test_time_history_never_updates_or_deletes[time_entries]",
+          "status": "PASS",
+          "seconds": 0.773
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_time_history_never_updates_or_deletes[time_entry_revisions]",
+          "module": "test_timesheet_guards",
+          "name": "test_time_history_never_updates_or_deletes[time_entry_revisions]",
+          "status": "PASS",
+          "seconds": 1.034
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[update]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_cannot_forge_or_remove_the_derived_projection[update]",
+          "status": "PASS",
+          "seconds": 0.796
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[insert]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_cannot_forge_or_remove_the_derived_projection[insert]",
+          "status": "PASS",
+          "seconds": 0.95
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_forge_or_remove_the_derived_projection[delete]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_cannot_forge_or_remove_the_derived_projection[delete]",
+          "status": "PASS",
+          "seconds": 0.779
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+          "module": "test_timesheet_guards",
+          "name": "test_other_people_support_and_foreign_company_cannot_see_or_clock_this_user",
+          "status": "PASS",
+          "seconds": 1.033
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+          "module": "test_timesheet_guards",
+          "name": "test_reinvite_cannot_open_another_entry_and_can_close_old_own_entry",
+          "status": "PASS",
+          "seconds": 1.128
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_end]",
+          "module": "test_timesheet_guards",
+          "name": "test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_end]",
+          "status": "PASS",
+          "seconds": 0.939
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_start]",
+          "module": "test_timesheet_guards",
+          "name": "test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[break_start]",
+          "status": "PASS",
+          "seconds": 1.047
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[clock_out]",
+          "module": "test_timesheet_guards",
+          "name": "test_invalid_clock_state_or_repeated_revision_never_creates_a_partial_effect[clock_out]",
+          "status": "PASS",
+          "seconds": 0.967
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_native_sql_serialization_error_maps_to_conflict_and_rolls_back_key",
+          "module": "test_timesheet_guards",
+          "name": "test_native_sql_serialization_error_maps_to_conflict_and_rolls_back_key",
+          "status": "PASS",
+          "seconds": 0.912
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+          "module": "test_timesheet_guards",
+          "name": "test_clock_in_replay_and_correction_replay_keep_original_immutable_response",
+          "status": "PASS",
+          "seconds": 1.27
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[head]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[head]",
+          "status": "PASS",
+          "seconds": 0.582
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[revision]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_cannot_leave_an_orphan_head_or_incomplete_projection[revision]",
+          "status": "PASS",
+          "seconds": 0.798
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[overlap]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[overlap]",
+          "status": "PASS",
+          "seconds": 0.733
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[outside]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[outside]",
+          "status": "PASS",
+          "seconds": 0.892
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[reverse]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[reverse]",
+          "status": "PASS",
+          "seconds": 0.758
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[null]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[null]",
+          "status": "PASS",
+          "seconds": 0.793
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[nested]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[nested]",
+          "status": "PASS",
+          "seconds": 0.763
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[lower_bound]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[lower_bound]",
+          "status": "PASS",
+          "seconds": 0.738
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[too_many]",
+          "module": "test_timesheet_guards",
+          "name": "test_raw_sql_corrections_require_valid_ordered_bounded_break_arrays[too_many]",
+          "status": "PASS",
+          "seconds": 0.765
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_timesheet_has_no_ledger_or_shared_occupancy_effect",
+          "module": "test_timesheet_guards",
+          "name": "test_timesheet_has_no_ledger_or_shared_occupancy_effect",
+          "status": "PASS",
+          "seconds": 1.014
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-approve]",
+          "module": "test_timesheet_guards",
+          "name": "test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-approve]",
+          "status": "PASS",
+          "seconds": 0.879
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-decline]",
+          "module": "test_timesheet_guards",
+          "name": "test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[False-decline]",
+          "status": "PASS",
+          "seconds": 0.93
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-approve]",
+          "module": "test_timesheet_guards",
+          "name": "test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-approve]",
+          "status": "PASS",
+          "seconds": 0.841
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-decline]",
+          "module": "test_timesheet_guards",
+          "name": "test_branch_manager_cannot_decide_another_home_entry_with_wide_sql_context[True-decline]",
+          "status": "PASS",
+          "seconds": 0.847
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_home_scoped_manager_decision_locks_config_without_widening_scope",
+          "module": "test_timesheet_guards",
+          "name": "test_home_scoped_manager_decision_locks_config_without_widening_scope",
+          "status": "PASS",
+          "seconds": 0.995
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_active_delegate_cannot_read_or_mutate_timesheets",
+          "module": "test_timesheet_guards",
+          "name": "test_active_delegate_cannot_read_or_mutate_timesheets",
+          "status": "PASS",
+          "seconds": 0.813
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[False-False]",
+          "module": "test_timesheet_guards",
+          "name": "test_break_limit_refuses_another_start_without_stranding_open_time[False-False]",
+          "status": "PASS",
+          "seconds": 1.119
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[False-True]",
+          "module": "test_timesheet_guards",
+          "name": "test_break_limit_refuses_another_start_without_stranding_open_time[False-True]",
+          "status": "PASS",
+          "seconds": 1.063
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[True-False]",
+          "module": "test_timesheet_guards",
+          "name": "test_break_limit_refuses_another_start_without_stranding_open_time[True-False]",
+          "status": "PASS",
+          "seconds": 1.289
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_break_limit_refuses_another_start_without_stranding_open_time[True-True]",
+          "module": "test_timesheet_guards",
+          "name": "test_break_limit_refuses_another_start_without_stranding_open_time[True-True]",
+          "status": "PASS",
+          "seconds": 1.089
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_hundredth_break_can_end_normally_or_close_with_the_entry[break_end]",
+          "module": "test_timesheet_guards",
+          "name": "test_hundredth_break_can_end_normally_or_close_with_the_entry[break_end]",
+          "status": "PASS",
+          "seconds": 1.206
+        },
+        {
+          "node": "tests/integration/test_timesheet_guards.py::test_hundredth_break_can_end_normally_or_close_with_the_entry[clock_out]",
+          "module": "test_timesheet_guards",
+          "name": "test_hundredth_break_can_end_normally_or_close_with_the_entry[clock_out]",
+          "status": "PASS",
+          "seconds": 1.207
+        },
+        {
+          "node": "tests/integration/test_timesheet_upgrade.py::test_nonempty_0033_upgrade_preserves_every_fact_and_prior_checksum",
+          "module": "test_timesheet_upgrade",
+          "name": "test_nonempty_0033_upgrade_preserves_every_fact_and_prior_checksum",
+          "status": "PASS",
+          "seconds": 7.747
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_packaged_workforce_schema_passes_guard",
+          "module": "test_workforce",
+          "name": "test_packaged_workforce_schema_passes_guard",
+          "status": "PASS",
+          "seconds": 0.2
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_workforce_guard_uses_five_real_catalog_round_trips",
+          "module": "test_workforce",
+          "name": "test_workforce_guard_uses_five_real_catalog_round_trips",
+          "status": "PASS",
+          "seconds": 0.202
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_unaccepted_workforce_refuses_writes",
+          "module": "test_workforce",
+          "name": "test_unaccepted_workforce_refuses_writes",
+          "status": "PASS",
+          "seconds": 0.492
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_profile_shift_and_occupancy_are_atomic_and_idempotent",
+          "module": "test_workforce",
+          "name": "test_profile_shift_and_occupancy_are_atomic_and_idempotent",
+          "status": "PASS",
+          "seconds": 0.858
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_assignment_rechecks_effective_skills",
+          "module": "test_workforce",
+          "name": "test_assignment_rechecks_effective_skills",
+          "status": "PASS",
+          "seconds": 0.748
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_staff_resource_is_absent_from_booking_setup_and_fingerprint",
+          "module": "test_workforce",
+          "name": "test_staff_resource_is_absent_from_booking_setup_and_fingerprint",
+          "status": "PASS",
+          "seconds": 0.771
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_staff_resource_does_not_change_booking_readiness",
+          "module": "test_workforce",
+          "name": "test_staff_resource_does_not_change_booking_readiness",
+          "status": "PASS",
+          "seconds": 0.486
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_staff_resource_refused_by_service_holds_and_reservations",
+          "module": "test_workforce",
+          "name": "test_staff_resource_refused_by_service_holds_and_reservations",
+          "status": "PASS",
+          "seconds": 0.524
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_revision_history_and_cancellation_release_only_old_allocation",
+          "module": "test_workforce",
+          "name": "test_revision_history_and_cancellation_release_only_old_allocation",
+          "status": "PASS",
+          "seconds": 0.753
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_failed_assignment_rolls_back_head_version_audit_and_receipt",
+          "module": "test_workforce",
+          "name": "test_failed_assignment_rolls_back_head_version_audit_and_receipt",
+          "status": "PASS",
+          "seconds": 0.721
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_shift_does_not_block_artist_booking",
+          "module": "test_workforce",
+          "name": "test_shift_does_not_block_artist_booking",
+          "status": "PASS",
+          "seconds": 0.659
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_future_and_revoked_skills_refuse_assignment[12-True]",
+          "module": "test_workforce",
+          "name": "test_future_and_revoked_skills_refuse_assignment[12-True]",
+          "status": "PASS",
+          "seconds": 0.638
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_future_and_revoked_skills_refuse_assignment[9-False]",
+          "module": "test_workforce",
+          "name": "test_future_and_revoked_skills_refuse_assignment[9-False]",
+          "status": "PASS",
+          "seconds": 0.64
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_module_off_history_reads_and_sql_refuses_new_versions",
+          "module": "test_workforce",
+          "name": "test_module_off_history_reads_and_sql_refuses_new_versions",
+          "status": "PASS",
+          "seconds": 0.811
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_branch_manager_and_employee_permissions",
+          "module": "test_workforce",
+          "name": "test_branch_manager_and_employee_permissions",
+          "status": "PASS",
+          "seconds": 0.893
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_raw_sql_cannot_create_orphan_shift",
+          "module": "test_workforce",
+          "name": "test_raw_sql_cannot_create_orphan_shift",
+          "status": "PASS",
+          "seconds": 0.418
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_revoked_workforce_readiness_refuses_write_and_keeps_history_readable",
+          "module": "test_workforce",
+          "name": "test_revoked_workforce_readiness_refuses_write_and_keeps_history_readable",
+          "status": "PASS",
+          "seconds": 0.736
+        },
+        {
+          "node": "tests/integration/test_workforce.py::test_schedule_window_near_max_datetime_does_not_overflow",
+          "module": "test_workforce",
+          "name": "test_schedule_window_near_max_datetime_does_not_overflow",
+          "status": "PASS",
+          "seconds": 0.608
+        },
+        {
+          "node": "tests/integration/test_workforce_upgrade.py::test_nonempty_0031_upgrade_preserves_booking_occupancy_and_checksums",
+          "module": "test_workforce_upgrade",
+          "name": "test_nonempty_0031_upgrade_preserves_booking_occupancy_and_checksums",
+          "status": "PASS",
+          "seconds": 1.973
+        },
+        {
+          "node": "tests/integration/test_workforce_visibility_upgrade.py::test_nonempty_0034_upgrade_preserves_every_fact_and_prior_checksum",
+          "module": "test_workforce_visibility_upgrade",
+          "name": "test_nonempty_0034_upgrade_preserves_every_fact_and_prior_checksum",
+          "status": "PASS",
+          "seconds": 9.839
+        }
+      ],
+      "status": "PASS"
+    },
+    "I-12": {
+      "command": "C1",
+      "selection": {
+        "files": [
+          "test_i4_browser",
+          "test_workforce_desk",
+          "test_workforce_desk_races",
+          "test_workforce_review_fixes",
+          "test_workforce_desk_contracts"
+        ]
+      },
+      "counts": {
+        "PASS": 20
+      },
+      "case_seconds": 129.513,
+      "cases": [
+        {
+          "node": "tests/integration/test_i4_browser.py::test_i4_real_browser_closed_then_enabled_then_switched_off",
+          "module": "test_i4_browser",
+          "name": "test_i4_real_browser_closed_then_enabled_then_switched_off",
+          "status": "PASS",
+          "seconds": 110.217
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_desk_names_own_profile_and_whether_new_actions_are_open",
+          "module": "test_workforce_desk",
+          "name": "test_desk_names_own_profile_and_whether_new_actions_are_open",
+          "status": "PASS",
+          "seconds": 0.991
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_directory_names_staff_only_inside_the_managers_scope",
+          "module": "test_workforce_desk",
+          "name": "test_directory_names_staff_only_inside_the_managers_scope",
+          "status": "PASS",
+          "seconds": 0.871
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_swap_candidates_are_a_home_colleagues_published_assigned_shifts",
+          "module": "test_workforce_desk",
+          "name": "test_swap_candidates_are_a_home_colleagues_published_assigned_shifts",
+          "status": "PASS",
+          "seconds": 1.493
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_command_outcome_is_resolved_by_its_original_key_without_a_body",
+          "module": "test_workforce_desk",
+          "name": "test_command_outcome_is_resolved_by_its_original_key_without_a_body",
+          "status": "PASS",
+          "seconds": 1.223
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_cancelled_unresolved_command_can_never_commit",
+          "module": "test_workforce_desk",
+          "name": "test_cancelled_unresolved_command_can_never_commit",
+          "status": "PASS",
+          "seconds": 1.068
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_outcomes_stay_available_while_the_module_is_off",
+          "module": "test_workforce_desk",
+          "name": "test_outcomes_stay_available_while_the_module_is_off",
+          "status": "PASS",
+          "seconds": 1.037
+        },
+        {
+          "node": "tests/integration/test_workforce_desk.py::test_another_company_and_plain_staff_get_no_management_reads",
+          "module": "test_workforce_desk",
+          "name": "test_another_company_and_plain_staff_get_no_management_reads",
+          "status": "PASS",
+          "seconds": 0.879
+        },
+        {
+          "node": "tests/integration/test_workforce_desk_races.py::test_cancel_waits_for_a_running_command_and_reports_its_commit",
+          "module": "test_workforce_desk_races",
+          "name": "test_cancel_waits_for_a_running_command_and_reports_its_commit",
+          "status": "PASS",
+          "seconds": 0.963
+        },
+        {
+          "node": "tests/integration/test_workforce_desk_races.py::test_command_waits_for_a_running_cancel_and_is_then_refused",
+          "module": "test_workforce_desk_races",
+          "name": "test_command_waits_for_a_running_cancel_and_is_then_refused",
+          "status": "PASS",
+          "seconds": 0.963
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_a_hidden_branch_refuses_a_new_swap_and_tells_nothing_about_the_holder",
+          "module": "test_workforce_review_fixes",
+          "name": "test_a_hidden_branch_refuses_a_new_swap_and_tells_nothing_about_the_holder",
+          "status": "PASS",
+          "seconds": 2.177
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_a_swap_sent_while_shown_replays_its_first_answer_after_hiding",
+          "module": "test_workforce_review_fixes",
+          "name": "test_a_swap_sent_while_shown_replays_its_first_answer_after_hiding",
+          "status": "PASS",
+          "seconds": 0.95
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_the_outside_schedule_mark_of_the_time_in_effect_ignores_later_versions",
+          "module": "test_workforce_review_fixes",
+          "name": "test_the_outside_schedule_mark_of_the_time_in_effect_ignores_later_versions",
+          "status": "PASS",
+          "seconds": 1.633
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_a_long_valid_key_can_be_discarded",
+          "module": "test_workforce_review_fixes",
+          "name": "test_a_long_valid_key_can_be_discarded",
+          "status": "PASS",
+          "seconds": 1.526
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_discarding_has_a_daily_limit_per_person",
+          "module": "test_workforce_review_fixes",
+          "name": "test_discarding_has_a_daily_limit_per_person",
+          "status": "PASS",
+          "seconds": 2.599
+        },
+        {
+          "node": "tests/integration/test_workforce_review_fixes.py::test_the_directory_skips_a_disabled_account",
+          "module": "test_workforce_review_fixes",
+          "name": "test_the_directory_skips_a_disabled_account",
+          "status": "PASS",
+          "seconds": 0.722
+        },
+        {
+          "node": "tests/unit/test_workforce_desk_contracts.py::test_reference_accepts_only_known_operations_and_identifiers",
+          "module": "test_workforce_desk_contracts",
+          "name": "test_reference_accepts_only_known_operations_and_identifiers",
+          "status": "PASS",
+          "seconds": 0.0
+        },
+        {
+          "node": "tests/unit/test_workforce_desk_contracts.py::test_cancellation_marker_keeps_the_reference_and_nothing_else",
+          "module": "test_workforce_desk_contracts",
+          "name": "test_cancellation_marker_keeps_the_reference_and_nothing_else",
+          "status": "PASS",
+          "seconds": 0.0
+        },
+        {
+          "node": "tests/unit/test_workforce_desk_contracts.py::test_status_and_desk_are_closed_enumerations",
+          "module": "test_workforce_desk_contracts",
+          "name": "test_status_and_desk_are_closed_enumerations",
+          "status": "PASS",
+          "seconds": 0.0
+        },
+        {
+          "node": "tests/unit/test_workforce_desk_contracts.py::test_branch_setting_is_a_strict_boolean_with_an_expected_version",
+          "module": "test_workforce_desk_contracts",
+          "name": "test_branch_setting_is_a_strict_boolean_with_an_expected_version",
+          "status": "PASS",
+          "seconds": 0.201
+        }
+      ],
+      "status": "BLOCKED"
+    }
+  },
+  "dependency_audit": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {
+      "next": {
+        "name": "next",
+        "severity": "high",
+        "isDirect": true,
+        "via": [
+          {
+            "source": 1241489,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js: Pending `use cache` fill can leak Draft Mode content into regular responses and persisted pages",
+            "url": "https://github.com/advisories/GHSA-3w37-wq28-93x7",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-524"
+            ],
+            "cvss": {
+              "score": 4.2,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N"
+            },
+            "range": ">=16.3.0 <16.3.8"
+          },
+          {
+            "source": 1241490,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js has cache poisoning of SSG and ISR pages in self-hosted applications",
+            "url": "https://github.com/advisories/GHSA-4jqv-mc3x-m676",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-524"
+            ],
+            "cvss": {
+              "score": 5.3,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+            },
+            "range": ">=16.0.0 <16.3.8"
+          },
+          {
+            "source": 1241492,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js has information disclosure in development server's Model Context Protocol endpoint",
+            "url": "https://github.com/advisories/GHSA-39w2-rjm5-chcv",
+            "severity": "low",
+            "cwe": [
+              "CWE-346"
+            ],
+            "cvss": {
+              "score": 5.4,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N"
+            },
+            "range": ">=16.0.0 <16.3.8"
+          },
+          {
+            "source": 1241493,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js has information disclosure in App Router metadata image routes via dynamicParams bypass",
+            "url": "https://github.com/advisories/GHSA-f87g-xv8r-7p7x",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-346"
+            ],
+            "cvss": {
+              "score": 5.3,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+            },
+            "range": ">=16.0.0 <16.3.8"
+          },
+          {
+            "source": 1241495,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js has cache poisoning in SSG/ISR rendering that leads to cross-user content substitution and persistent denial of service",
+            "url": "https://github.com/advisories/GHSA-mcj8-r9mp-w47p",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-524"
+            ],
+            "cvss": {
+              "score": 4.8,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:L"
+            },
+            "range": ">=16.0.0 <16.3.8"
+          },
+          {
+            "source": 1241496,
+            "name": "next",
+            "dependency": "next",
+            "title": "Next.js has Server-Side Request Forgery in Image Optimization",
+            "url": "https://github.com/advisories/GHSA-cjq9-62q9-8jv4",
+            "severity": "high",
+            "cwe": [
+              "CWE-918"
+            ],
+            "cvss": {
+              "score": 6.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:L/A:N"
+            },
+            "range": ">=16.0.0 <16.3.8"
+          }
+        ],
+        "effects": [],
+        "range": "16.0.0 - 16.3.7",
+        "nodes": [
+          "node_modules/next"
+        ],
+        "fixAvailable": {
+          "name": "next",
+          "version": "16.4.0",
+          "isSemVerMajor": false
+        }
+      },
+      "source-map-js": {
+        "name": "source-map-js",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1241209,
+            "name": "source-map-js",
+            "dependency": "source-map-js",
+            "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets",
+            "url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q",
+            "severity": "high",
+            "cwe": [
+              "CWE-1284"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": ">=1.0.0 <1.2.2"
+          }
+        ],
+        "effects": [],
+        "range": "1.0.0 - 1.2.1",
+        "nodes": [
+          "node_modules/source-map-js"
+        ],
+        "fixAvailable": true
+      }
+    },
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 2,
+        "critical": 0,
+        "total": 2
+      },
+      "dependencies": {
+        "prod": 22,
+        "dev": 360,
+        "optional": 66,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 420
+      }
+    }
+  },
+  "I-12_blocker": "Independent re-review of the post-review fixes a806380..b66eb41 has not been performed; exact-SHA CI on c6b8e34 passed, the final local documentation commit is not published."
+}

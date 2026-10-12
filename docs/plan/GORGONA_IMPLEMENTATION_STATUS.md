@@ -1,6 +1,33 @@
 # GORGONA — реестр реализации
 
-## Current: видимость смен коллег — настройка филиала; ветка опубликована — 2026-10-11
+## Current: Package I acceptance prepared; readiness unchanged — 2026-10-12
+
+Local branch `codex/package-i-acceptance` from verified local/remote I4 head
+`c6b8e341a7e88957ee5011e54e9aa06453b31b49`. Documentation/evidence only:
+[fresh acceptance matrix](evidence/2026-10-12-i-acceptance/ACCEPTANCE.md),
+[executed cases and exact commands](evidence/2026-10-12-i-acceptance/CHECKS.json),
+[source hashes](evidence/2026-10-12-i-acceptance/SOURCE_SHA256.json),
+[CI evidence](evidence/2026-10-12-i-acceptance/CI_EVIDENCE.json).
+
+PASS: fresh serial PostgreSQL/browser-required full suite, 1506 passed / 4 skipped /
+1026.84s; I4 browser six successful desktop/mobile cases across closed/enabled/off
+phases; Ruff/format/mypy (264 files), web typecheck/lint/format, 102 unit cases and
+23-page build. Exact-source CI c6b8e34 passed: run 38204334830, job 114664366391,
+1509 passed / 1 skipped / 595.96s, including required containers. Local container
+checks and the optional external tenant site were skipped, not PASS. Own disposable
+clusters are stopped. Production npm audit FAIL: 2 high, next and source-map-js.
+
+I-01–I-11 PASS for their recorded executed cases. I-12 conservatively BLOCKED:
+the original review covers a806380, fourteen fixes in b66eb41 have fresh passing
+regressions but no second independent source review. All 16 author-response source
+hashes match. Package I is not accepted; WORK-01/CORE-04 stay planned and workforce
+stays closed outside fixtures. Migrations 0001–0035, code and dependency locks are
+unchanged. Plan/ADR approval, policy choices, readiness and stack/publication
+decisions remain with the owner. New documentation-commit CI is NOT TESTED because
+the acceptance branch remains local. No push/PR/merge or production action.
+Continue from the [updated acceptance handoff](NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md).
+
+## Previous: видимость смен коллег — настройка филиала; ветка опубликована — 2026-10-11
 
 Решение владельца 2026-10-11 по первому открытому варианту I4: сотрудник по
 умолчанию видит опубликованные смены коллег своего филиала, а владелец, менеджер

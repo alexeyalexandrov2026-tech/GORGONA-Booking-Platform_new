@@ -1,338 +1,184 @@
-# Передача следующему агенту — GORGONA, пакет I: приёмка
+# Next agent — Package I acceptance preparation, 2026-10-12
 
-Дата: 2026-10-12. Срезы I0–I4 пакета I и настройка видимости смен реализованы,
-проверены и лежат в одной опубликованной ветке. Независимый обзор выполнен, его
-находки исправлены или описаны. **Пакет I не принят.** Следующий шаг — запись
-приёмки по матрице I-01–I-12 и решения владельца. Всё ниже — снимок на момент
-записи: сначала прочитайте фактическое состояние Git, удалённого репозитория и
-CI.
+**Acceptance preparation completed locally. Package I is not accepted.**
+I-01–I-11 PASS for their recorded executed cases; I-12 is conservatively BLOCKED
+pending a second independent source review of the post-review fixes. WORK-01 and
+CORE-04 remain `planned`, workforce is closed outside fixtures. This document
+supersedes its earlier acceptance-preparation prompt at handoff c6b8e34; earlier
+slice evidence remains historical and unchanged.
 
-## Короткий запрос для запуска
+## Start here
 
-Вставьте следующему агенту. Значение `Handoff commit` возьмите из Git:
-`git -C "C:\Users\alexa\Documents\ChatGPT\gorgona-package-i" log -1 --format=%H`.
-
-```text
-Continue GORGONA Booking, Package I: acceptance preparation.
-
-First read:
-C:\Users\alexa\Documents\ChatGPT\gorgona-package-i\docs\plan\NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md
-
-Follow its continuation instructions. Verify actual Git, remote and CI state before editing.
-
-Base branch: codex/package-i4-workforce-screens
-Handoff commit: <SHA>
-```
-
-## Исходная точка
-
-| Поле | Значение |
+| Field | Observed state |
 |---|---|
-| Репозиторий | `alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new` |
-| Рабочая копия | `C:\Users\alexa\Documents\ChatGPT\gorgona-package-i` |
-| Ветка | `codex/package-i4-workforce-screens` — стек I0–I4, настройка видимости, исправления по обзору |
-| Итоговый коммит кода | `b66eb4140c1101d78e1bd4068eac537aab922b38`; после него в ветке только документы |
-| Голова ветки | читать из Git и с GitHub; на момент записи опубликована по разрешению владельца |
-| База среза I4 | `d22b61cf53612ab85c157c00ecd75fd1630ba1c2` |
-| Последняя миграция | `0035_work_location_settings.sql`; `0001`–`0035` не редактировать |
-| Готовность | WORK-01 и CORE-04 `planned`; модуль `workforce` закрыт вне тестовых фикстур |
-| CI | `.github/workflows/ci.yml` запускается на каждый push. Успешны `5f0e58f` (run 38132277248) и `a806380` (run 38135230218). Для текущей головы — прочитать |
-| PR | не создан |
+| Repository | alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new |
+| Checkout | C:/Users/alexa/Documents/ChatGPT/gorgona-package-i |
+| Current local branch | codex/package-i-acceptance |
+| Base branch | codex/package-i4-workforce-screens |
+| Verified base/handoff SHA | c6b8e341a7e88957ee5011e54e9aa06453b31b49 |
+| Final code SHA | b66eb4140c1101d78e1bd4068eac537aab922b38 |
+| Final acceptance-document SHA | Read `git log -1 --format=%H`; a commit cannot record its own SHA |
+| Latest migration | 0035_work_location_settings.sql; 0001–0035 unchanged |
+| Published head | I4 c6b8e34; verify live, do not assume this snapshot is current |
+| CI of base | PASS, run 38204334830, job 114664366391, 1509 passed / 1 skipped / 595.96s |
+| CI of new local documentation commit | NOT TESTED; acceptance branch is not published |
+| PR query for I4 | Zero PRs returned (`state=all`, exact branch head); acceptance PR not created |
 
-CI читается без входа в GitHub:
-`https://api.github.com/repos/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs?branch=codex/package-i4-workforce-screens&per_page=5`.
+Before editing, read AGENTS.md, GORGONA_MASTER_PLAN.md, the current part of
+CLOUD_CODE_HANDOFF.md, relevant architecture, the working
+[package I plan](PACKAGE_I_PLAN_2026-10-09.md),
+[ADR-0025 Proposed](../adr/0025-workforce-shifts-and-timesheets.md), and:
 
-Ветки I0–I3 отдельными ссылками не опубликованы; их коммиты входят в
-опубликованную ветку I4.
+- [Fresh acceptance preparation](evidence/2026-10-12-i-acceptance/ACCEPTANCE.md).
+- [Commands, case selections/counts, skipped cases and current audit](evidence/2026-10-12-i-acceptance/CHECKS.json).
+- [16/16 current Git-blob hash matches](evidence/2026-10-12-i-acceptance/SOURCE_SHA256.json).
+- [Actual base-CI log excerpts](evidence/2026-10-12-i-acceptance/CI_EVIDENCE.json).
+- [Original independent review](evidence/2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW.md)
+  and [author response](evidence/2026-10-11-i4-shift-visibility/AUTHOR_RESPONSE.md).
 
-## Что уже сделано
+Inspect `git status`, branch, HEAD, recent log, worktrees and remote before changes.
+Do not overwrite successor work or switch a dirty checkout. Local and remote I4
+matched c6b8e34 before this preparation. Downloads INVENTORY.md, INDEPENDENT_REVIEW.md
+and AUTHOR_RESPONSE.md matched the repository copies byte for byte at that point.
+The attached instructions were not separate authorization to publish or accept.
 
-| Часть | Где описано |
-|---|---|
-| План пакета, девять рабочих решений, матрица приёмки | [план пакета I](PACKAGE_I_PLAN_2026-10-09.md), [ADR-0025](../adr/0025-workforce-shifts-and-timesheets.md) |
-| I0: границы видов ресурсов | [evidence/2026-10-09-i0-resource-kinds](evidence/2026-10-09-i0-resource-kinds/INVENTORY.md) |
-| I1: профили, навыки, смены, занятость (миграция 0032) | [evidence/2026-10-09-i1-workforce](evidence/2026-10-09-i1-workforce/VALIDATION.md) |
-| I2: передача, обмен, открытая смена (0033) | [evidence/2026-10-10-i2-shift-changes](evidence/2026-10-10-i2-shift-changes/VALIDATION.md) |
-| I3: табели с версиями и решениями (0034) | [evidence/2026-10-11-i3-timesheets](evidence/2026-10-11-i3-timesheets/VALIDATION.md) |
-| I4: экраны «Schedule», «My shifts», «Timesheets», восстановление после потери ответа | [evidence/2026-10-11-i4-workforce-screens](evidence/2026-10-11-i4-workforce-screens/VALIDATION.md) |
-| Настройка видимости смен коллег по решению владельца (0035) | [evidence/2026-10-11-i4-shift-visibility](evidence/2026-10-11-i4-shift-visibility/VALIDATION.md) |
-| Независимый обзор I4 и настройки | [обзор](evidence/2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW.md), [ответ автора](evidence/2026-10-11-i4-shift-visibility/AUTHOR_RESPONSE.md) |
+Read-only remote/CI checks:
 
-Итог проверок на `b66eb41`: полный прогон 1506 passed / 4 skipped / 2306.13s; настоящий
-браузер на компьютере и телефоне — 1 passed / 274.67s; Ruff, format и mypy —
-264 файла; web typecheck, lint, format — exit 0; web unit — 102; сборка —
-23 страницы. Четыре пропуска (три проверки контейнера и внешний сайт) не
-считаются PASS. Унаследованный production `npm audit` — FAIL, 2 high (`next`,
-`source-map-js`).
-
-Независимый обзор: критических и высоких находок нет, две средние, семь низких,
-семь заметок. Четырнадцать исправлены, две описаны и оставлены владельцу (срок
-жизни отменённого ключа — 24 часа; чтение смен коллеги не ограничено датами).
-Сами исправления второй раз независимо не проверялись.
-
-## Что открыто
-
-1. **Запись приёмки по матрице I-01–I-12** — главная задача, см. ниже.
-2. **Повторный независимый обзор исправлений** (`git diff a806380..b66eb41`) —
-   желателен до приёмки; готовый запрос ниже.
-3. **CI текущей головы** — прочитать; если голова изменится, дождаться нового.
-4. **Решения владельца:**
-   - согласовать план пакета I и ADR-0025 (сейчас это рабочие варианты);
-   - повышать ли WORK-01 после приёмки (отдельный коммит);
-   - расхождение по CORE-04: акт пакета F — «проверено», реестр в коде —
-     `planned`;
-   - порядок слияния неслитых веток и создание PR;
-   - настройка видимости: нужна ли настройка по умолчанию на всю компанию
-     (сейчас отдельно по каждому филиалу, новый филиал начинает с «видно»);
-     оставить ли отказ сервера в новом обмене при скрытых сменах (сделано по
-     обзору, отменяется одной правкой);
-   - из обзора: ограничивать ли датами чтение смен коллеги; оставлять ли
-     24-часовой срок у отменённого ключа; показывать ли менеджеру филиала роль
-     участника в списке.
-5. **Честно не проверено:** контейнеры, необязательный внешний сайт, HawkScan,
-   нагрузка, развёртывание, production, настоящий экранный диктор. В браузере не
-   проверялись: пометка «вне расписания» по действующей версии, добавление
-   участника с доступом на всю компанию, потерянный ответ на изменение
-   настройки, ответ 5xx, списки длиннее одной страницы.
-6. **Прежние пакеты:** черновик PR для `codex/package-h-acceptance` и
-   независимая проверка `ec39622` (FIN-03).
-
-## Задача следующего исполнителя: подготовить приёмку
-
-Готовность не повышать: это отдельное решение владельца и отдельный коммит.
-
-1. Проверьте состояние: `git status`, `git log --oneline -8`, удалённую голову,
-   CI. Рабочее дерево должно быть чистым.
-2. Создайте свою ветку от головы: `git switch -c codex/package-i-acceptance`.
-   В канонической рабочей копии работает один исполнитель; прежний автор работу
-   в ней закончил.
-3. Поднимите свой одноразовый кластер PostgreSQL (раздел «Окружение»).
-4. Соберите web (`npm run build` в `web`) и выполните полный прогон. Во время
-   прогона web не пересобирать: браузерные тесты читают `web/out`.
-5. Составьте `docs/plan/evidence/<дата>-i-acceptance/ACCEPTANCE.md` по образцу
-   [приёмки пакета H](evidence/2026-10-09-h-acceptance/ACCEPTANCE.md). По каждой
-   строке I-01–I-12 плана: тест или сценарий, точная команда, число, результат
-   PASS / FAIL / BLOCKED / NOT TESTED. Не переносите результаты из чужих записей:
-   каждую строку подтвердите своим запуском.
-6. Отдельно перечислите решения, которые ждут владельца, и всё, что осталось
-   NOT TESTED.
-7. Локальный коммит. Публикация новой ветки и PR — только после прямого
-   разрешения владельца: разрешение от 2026-10-11 относится к ветке
-   `codex/package-i4-workforce-screens`.
-
-Где искать доказательства по строкам матрицы (подсказка, не замена проверки):
-
-| Строки | Тесты в `api/tests/integration` |
-|---|---|
-| I-01, I-02, I-03, I-06 (смены, назначения, навыки, занятость) | `test_workforce.py`, `test_workforce_guards.py`, `test_workforce_upgrade.py` |
-| I-04, I-05, I-06 (замены и их гонки) | `test_shift_changes.py`, `test_shift_changes_races.py`, `test_shift_changes_guards.py`, `test_shift_changes_schema.py`, `test_shift_changes_upgrade.py` |
-| I-07, I-08 (табели и их гонки) | `test_timesheets.py`, `test_timesheet_races.py`, `test_timesheet_guards.py`, `test_timesheet_schema.py`, `test_timesheet_upgrade.py` |
-| I-09 (права и область) | `test_location_access.py`, `test_workforce_desk.py`, `test_workforce_visibility.py`, а также тесты прав в файлах I1–I3 |
-| I-10 (прямой SQL, 503 при повреждении) | `test_*_guards.py`, `test_*_schema.py`, `test_workforce_visibility.py` |
-| I-11 (выключенный модуль, регрессия `staff`) | `test_resource_kind_boundaries.py`, тесты «module off» в файлах I1–I4 |
-| I-12 (экраны, доступность, восстановление) | `test_i4_browser.py` с `web/tests/workforce.spec.ts`, `web/tests/workforce-contracts.spec.ts`, `test_workforce_desk_races.py`, `test_workforce_review_fixes.py` |
-
-I-12 требует ещё CI точного SHA и независимого обзора: обзор есть, исправления
-после него повторно не проверялись — отметьте это в записи как есть.
-
-## Окружение
-
-| Что | Где |
-|---|---|
-| Python 3.14 | `C:\Users\alexa\.codex\worktrees\package-g-ledger-review\Gorgona Booking\api\.venv\Scripts\python.exe` |
-| Node 24 | `C:\Program Files\nodejs` (поставить первым в `PATH`) |
-| PostgreSQL 18.6 | `C:\Users\alexa\AppData\Local\GorgonaBookingTests\postgres-18.6\pgsql\bin` |
-| Браузеры Playwright | уже в кеше пользователя |
-
-**Свой кластер.** Новый каталог в
-`C:\Users\alexa\AppData\Local\GorgonaBookingTests\` (не существующий):
-
-```text
-initdb -D <каталог>\data -U gba_superuser --pwfile=<файл со случайным паролем> --auth=scram-sha-256 --locale=C --encoding=UTF8 --data-checksums
-pg_ctl start -D <каталог>\data -l <каталог>\server.log -w -o "-p <свободный порт> -c max_connections=400 -c listen_addresses=127.0.0.1"
+```powershell
+git ls-remote origin refs/heads/codex/package-i4-workforce-screens refs/heads/codex/package-i-acceptance
 ```
 
-Без `-o` кластер поднимется на 5432. Порты 51454, 51458, 51474 и 51511 заняты
-чужими кластерами — не использовать. Перед остановкой проверить, что
-`postmaster.pid` указывает на свой каталог данных; в конце остановить:
-`pg_ctl stop -D <каталог>\data -m fast`.
+Use the public GitHub REST endpoints under
+`https://api.github.com/repos/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new`:
+`/actions/runs?branch=codex/package-i4-workforce-screens&per_page=10`,
+`/actions/runs/38204334830/jobs?per_page=100`, and `/pulls?state=all` with the exact
+head filter. Fetch the actual job log through the authorized GitHub connector.
+Check the returned head_sha/event/conclusion; no PR-only workflow query proves
+the absence of push CI. Do not apply base CI to a different final SHA.
 
-**Запуск тестов.** Из каталога `api` рабочей копии, с переменными окружения:
+## What was verified freshly
 
-```text
-PYTHONPATH=<рабочая копия>\api\src;<рабочая копия>\api
-PYTHONDONTWRITEBYTECODE=1
-GBA_REQUIRE_POSTGRES=1
-GBA_REQUIRE_BROWSER=1            (только для браузерных тестов и полного прогона)
-GBA_TEST_ADMIN_DSN=postgresql://gba_superuser:<пароль>@127.0.0.1:<порт>/postgres
+One serial full run with real PostgreSQL 18.6 and browser required:
+**PASS: 1506 passed / 4 skipped / 1026.84s** on the unchanged c6b8e34 runtime tree.
+Ruff check/format/mypy PASS (264 files); web typecheck/lint/format PASS;
+unit **102 passed / 1.4s**; build **23 pages**. I4 executes six successful
+desktop/mobile Playwright cases across closed/enabled/off phases, with existing
+axe/overflow and recovery assertions. Four other specs are phase-filtered in
+each invocation; all six intended phase/viewport cases execute overall.
 
-python -m pytest -p no:cacheprovider --basetemp <новая временная папка> -q <тесты> --tb=short
-python -m pytest -p no:cacheprovider --basetemp <новая временная папка> -q -ra --tb=short        (полный прогон)
-python -m ruff check src tests
-python -m ruff format --check src tests
-python -m mypy src tests
-```
+Base CI was read through the public REST API and GitHub connector:
+**1509 passed / 1 skipped / 595.96s**, including the production image build and
+required container checks; web unit 102, pages 23, format/mypy 267 files.
+The source-hash table is 16/16 matches, and no runtime code changed after b66eb41.
+Fresh local production npm audit remains **FAIL: 2 high, next and source-map-js**.
+No dependency remediation or readiness promotion was performed.
 
-Значение подключения и пароль не печатать, не писать в записи и в Git:
-передавать через переменные окружения внутри одной команды или через файл вне
-Git, вывод при необходимости вычищать.
+The evidence matrix selects only cases actually executed in this new C1 run.
+Counts overlap between rows and must not be added. The original review covers
+a806380, not the fourteen fixes of b66eb41; rerunning regression tests and matching
+hashes is not a second source review. I-12 therefore remains conservatively BLOCKED.
+Final local documentation-commit CI also remains NOT TESTED until authorized
+publication and a successful exact-SHA run.
 
-**Web**, из каталога `web`: `npm run typecheck`, `npm run lint`,
-`npm run format:check`, `npm run test:unit`, `npm run build`,
-`npm audit --omit=dev --json`. Отдельный браузерный сценарий пакета:
+## Next safe action: independent re-review of the fixes
 
-```text
-python -m pytest -p no:cacheprovider --basetemp <новая временная папка> -q -s tests/integration/test_i4_browser.py --tb=short
-```
+Use your own branch/checkout, for example `codex/package-i4-review-2`, from the
+verified current acceptance head. Inspect existing branches/worktrees first;
+do not overwrite an existing review checkout or branch. The author/acceptance
+checkout is for one executor only. No product edit is required for a review.
 
-**Сколько это занимает.** Полный прогон — от 16 до 60 минут в зависимости от
-загрузки машины; браузерный сценарий — 2–3 минуты. Полный прогон запускайте в
-фоне и не трогайте рабочую копию до его конца.
+Read the review, author response and current hash evidence. Inspect
+`git diff a806380..b66eb41` substantively, including:
 
-**Особенности этой машины.**
+1. F1: privacy refusal of a new swap, all lookup/probe/replay paths, handover,
+   pickup and the participant request-shift read; document the API/SQL boundary.
+2. F2: the effective version's outside-schedule mark on server and screen.
+3. F3/F9: 200/201/255-character keys, the per-user/business 20-cancellation limit,
+   races and module-off behavior.
+4. F5–F8, N1–N4/N6: correspondence to the finding and adjacent behavior.
+5. N7: observed wait for the actual top-level receipt writer, not row xmin.
+6. F4/N5: the deliberately documented 24-hour lifetime and unbounded date choice;
+   these are owner choices, not silently accepted policy changes.
 
-- Работает проверочный хук «Fact-Forcing Gate». Первая команда Bash и первая
-  запись (Write или Edit) каждого файла отклоняются один раз с просьбой назвать
-  факты. Это не ошибка: коротко назовите запрошенные факты и повторите ту же
-  операцию. Первой попыткой записи нового файла отправляйте однострочную
-  заготовку, затем настоящий текст.
-- Длинные сценарии с кавычками, обратными кавычками и нелатинскими знаками не
-  передавайте через heredoc в Bash: записывайте файл и запускайте его.
-- Обновление строк в `gba.users` под ролью владельца без контекста не находит
-  строк из-за защиты на уровне строк; используйте помощники из
-  `gorgona_booking.db.provisioning` (например, `set_user_status`).
-- Ожидающий на строке, записанной внутри завершённой точки сохранения, ждёт
-  верхнюю транзакцию: в `pg_locks` ищите её идентификатор, а не `xmin` строки.
+Record PASS/FAIL/BLOCKED/NOT TESTED with actual commands/counts, severity,
+path/line and reproduction for any finding. Write INDEPENDENT_REVIEW_2.md under
+the existing visibility evidence folder in your own branch, local commit only.
+No CodeRabbit. Never use historical counts as your own reproduction.
+If a product defect needs correction, reproduce a failing check first, make the
+smallest fix on an appropriate isolated branch, then focused/full/static/web
+checks and actual browser validation when the screen changes. Fresh evidence
+must follow every substantive correction. Migration changes are forward-only,
+next actual number, including workforce_guard and branch-policy restoration.
 
-## Что обязательно сохранить
+## Owner decisions still pending
 
-- Серверные права — источник истины. Скрытая кнопка их не заменяет.
-- Перед отправкой команды экран сохраняет только идентификаторы: ключ, операцию,
-  предмет, ожидаемую версию, пользователя и компанию. Причины, имена, время и
-  тело команды в браузере не хранятся.
-- Неизвестный результат выясняется у сервера по исходному ключу
-  (`/workforce/commands/{key}/resolve`). Новый ключ создаётся только после
-  отмены прежнего (`/cancel`). Отменённый ключ не может записаться, пока живёт
-  его квитанция (24 часа). Один человек отменяет не больше 20 команд в сутки.
-- Сообщение об успехе показывается после обновления списков.
-- Настройку филиала меняет только владелец или менеджер, чьё участие охватывает
-  филиал; это проверяет и SQL. При скрытых сменах сервер отказывает в просмотре
-  смен коллеги и в новом обмене; участник запроса читает смены своего запроса.
-- Каждая новая таблица пакета входит в охранную проверку
-  `api/src/gorgona_booking/db/workforce_guard.py` и в восстановление политик
-  `api/tests/integration/test_location_access.py`.
-- Закрытый путь проверяется на реестре как есть; готовность открывает только
-  тестовая фикстура.
-- Гонка засчитывается только при наблюдаемом ожидании в `pg_locks`.
+- Explicit approval of the working package I plan and Proposed ADR-0025.
+- Acceptance and any WORK-01 promotion in a separate authorized commit.
+- CORE-04 discrepancy: F acceptance says verified; registry remains planned.
+- Publication/PR creation and the unmerged branch stack's merge order.
+- A company-wide visibility default (currently branch-local; new branches visible),
+  and retaining the refusal of a new swap while hidden.
+- Arbitrary date bounds for colleague reads; 24-hour cancelled-key protection;
+  the role shown to a branch manager in the directory.
+- Separate earlier work: H-acceptance draft PR and independent FIN-03/ec39622 check.
 
-## Ограничения владельца
+## Environment and preserved boundaries
 
-Миграции `0001`–`0035` не редактировать; новая схема — только одним следующим
-номером, с включением в охранную проверку и в восстановление политик. Готовность
-WORK-01, CORE-04 и другую не повышать без прямого решения владельца. Без нового
-прямого разрешения не выполнять PR, merge, force-push, rebase, amend, reset,
-clean, публикацию других веток, развёртывание, production-миграции, действия в
-Azure, с провайдерами, деньгами и учётными данными. CodeRabbit не запускать.
-Секреты не выводить. Универсальная Booking-платформа, KA Nails и камерный
-продукт с Local Gateway — разные проекты. Результаты — PASS, FAIL, BLOCKED или
-NOT TESTED с точными командами и числами.
+Python 3.14.6:
+`C:/Users/alexa/.codex/worktrees/package-g-ledger-review/Gorgona Booking/api/.venv/Scripts/python.exe`.
+Node 24.18.0/npm 11.16.0: C:/Program Files/nodejs, first in PATH.
+PostgreSQL 18.6: C:/Users/alexa/AppData/Local/GorgonaBookingTests/postgres-18.6/pgsql/bin.
+Playwright browsers were already installed. No new dependency was introduced.
 
-## Чужие рабочие копии и кластеры — не трогать
+Acceptance artifacts/private helper scripts are outside Git under
+`C:/Users/alexa/AppData/Local/GorgonaBookingTests/i-acceptance-20261012-c6b8e34`;
+MSIX resolves this into the application's LocalCache (exact paths in CHECKS.json).
+Both its bootstrap and retry clusters are stopped. Retry used port 56721;
+its postmaster data/port were checked before stop. No plaintext DSN was persisted;
+the init password file was removed. Existing cluster directories must not be
+reused. Use a new directory and a verified free port for any next run. Do not
+start/read/stop other agents' clusters, including 51454, 51458, 51474 or 51511.
 
-| Что | Состояние на момент записи |
-|---|---|
-| `C:\Users\alexa\Documents\ChatGPT\Gorgona Booking` | рабочая копия владельца, `2f16380`, 19 изменённых путей |
-| `C:\Users\alexa\Documents\ChatGPT\gorgona-h-acceptance` | `9ef3734`, чистая |
-| `C:\Users\alexa\Documents\ChatGPT\gorgona-package-i4-review` | рабочая копия рецензента, ветка `codex/package-i4-review`, коммит обзора `cd906d3`; локальная |
-| Кластеры `h-acceptance-20261009` (51474), `i4-review-20261011` (51511), `h2-settlements-20261006`, `h3-guards-20261007`, `claude-cluster` | остановлены или чужие; не запускать и не читать их файлы подключения |
+Initialize a new SCRAM, UTF-8, locale C, checksummed cluster; start with explicit
+`-o "-p <free port> -c max_connections=400 -c listen_addresses=127.0.0.1"`.
+For pg_ctl on Windows, use a file output handle: a persistent inherited pipe
+stalled the initial local wrapper after successful server startup. The wrapper
+was corrected before any test; the first attempt is not a C1 result.
+Before stopping, verify postmaster.pid's data directory and port belong to you.
 
-## Готовый запрос: приёмка пакета I
+For API tests set PYTHONPATH to your checkout's api/src and api,
+PYTHONDONTWRITEBYTECODE=1, GBA_REQUIRE_POSTGRES=1, GBA_REQUIRE_BROWSER=1 for
+browser/full runs, and the private GBA_TEST_ADMIN_DSN in the child environment.
+Do not print the DSN/password. Build web before the full run; do not rebuild it
+while tests read web/out. Exact previous commands are in the fresh acceptance
+record and CHECKS.json. A new source SHA requires its own fresh results.
 
-```text
-Подготовь приёмку пакета I проекта GORGONA Booking (WORK-01). Готовность не
-повышай: это отдельное решение владельца и отдельный коммит.
+Server authorization remains authoritative; browser storage holds only command
+identifiers, actor/company and expected version. Resolve by the original key;
+create a new key only after cancellation. Cancelled keys are protected for their
+24-hour receipt lifetime, with 20 discards per person/business/day. Success is
+shown only after refreshed lists. Preserve tenant isolation, SQL invariants,
+versioned typed contracts and the closed readiness path outside fixtures.
 
-Сначала прочитай docs/plan/NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md, затем
-план пакета I (матрица I-01–I-12), ADR-0025, AGENTS.md и доказательства срезов
-I0–I4, настройки видимости, независимый обзор и ответ автора. Проверь фактическое
-состояние Git, удалённого репозитория, PR и CI.
+NOT TESTED locally: containers (three skips), optional external tenant website,
+real screen reader, HawkScan, load/soak, deployment/production and the explicit
+browser cases in ACCEPTANCE.md (including effective mark, company-wide addition,
+Privacy lost response, 5xx/unreadable recovery and paginated lists). CI containers
+are separate PASS evidence, not a local PASS. Do not infer complete coverage.
 
-Работай в C:\Users\alexa\Documents\ChatGPT\gorgona-package-i на новой ветке
-codex/package-i-acceptance от головы codex/package-i4-workforce-screens. Создай
-свой одноразовый кластер PostgreSQL на свободном порту, собери web и выполни
-свежий полный прогон, статические проверки и web-проверки.
+No new permission to push/PR/merge, force-push, rebase/amend/reset/clean, deploy,
+run production migrations, act in Azure, use providers/funds or change credentials.
+The 2026-10-11 publication permission covered I4 only. Keep code readiness planned.
+The universal Booking platform, KA Nails and the camera Local Gateway remain
+separate projects. Preserve unrelated owner/reviewer checkouts. No CodeRabbit.
 
-Составь docs/plan/evidence/<дата>-i-acceptance/ACCEPTANCE.md по образцу приёмки
-пакета H: по каждой строке I-01–I-12 — тест или сценарий, точная команда, число,
-результат PASS / FAIL / BLOCKED / NOT TESTED. Каждую строку подтверди своим
-запуском. Отдельно перечисли решения, которые ждут владельца, и всё, что осталось
-NOT TESTED. Обнови текущие статусы и напиши передачу следующему агенту.
+## Final documentation checks
 
-Если найдёшь дефект: сначала падающий тест, затем минимальная правка, затем
-свежие проверки. Серверные ограничения не ослабляй. Локальный коммит. Публикация
-новой ветки и PR — только после прямого разрешения владельца. Без merge, rebase,
-amend, reset, clean, развёртывания, production-миграций и действий с учётными
-данными. CodeRabbit не запускать. Секреты не выводить.
-```
-
-## Готовый запрос: повторный независимый обзор исправлений
-
-```text
-Проведи независимый обзор исправлений, сделанных после первого обзора среза I4
-проекта GORGONA Booking. Ты не писал этот код. Продуктовый код не меняй.
-
-Рабочая копия автора: C:\Users\alexa\Documents\ChatGPT\gorgona-package-i,
-ветка codex/package-i4-workforce-screens. В ней не работай: создай свою рабочую
-копию и ветку codex/package-i4-review-2 от её головы
-(git worktree add <новый каталог> -b codex/package-i4-review-2 <голова>).
-
-Сначала прочитай docs/plan/NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md,
-INDEPENDENT_REVIEW.md и AUTHOR_RESPONSE.md в
-docs/plan/evidence/2026-10-11-i4-shift-visibility/. Сверь SHA256 из
-AUTHOR_RESPONSE.md. Проверь git diff a806380..b66eb41 по существу:
-1. F1: отказ в новом обмене при скрытых сменах — нет ли другого пути узнать
-   смену коллеги или её держателя (передача, открытая смена, чтение смен запроса,
-   коды отказа, повтор по ключу).
-2. F2: пометка «вне расписания» у действующей версии — сервер и экран.
-3. F3 и F9: длинный ключ и лимит 20 отмен в сутки — обход лимита, гонки,
-   поведение при закрытом модуле.
-4. F5–F8, N1–N4, N6: соответствует ли исправление находке и не сломало ли оно
-   соседнее поведение.
-5. N7: действительно ли тесты гонок теперь распознают нужного ожидающего.
-6. Что автор оставил без изменений (F4, N5) — согласен ли ты с этим.
-
-Если запускаешь тесты — свой одноразовый кластер PostgreSQL на свободном порту.
-Результаты: PASS / FAIL / BLOCKED / NOT TESTED с командами и числами. Находки —
-с серьёзностью, файлом, строкой и способом воспроизведения. Запиши обзор в
-docs/plan/evidence/2026-10-11-i4-shift-visibility/INDEPENDENT_REVIEW_2.md в своей
-ветке, локальным коммитом. Без push, PR, merge, rebase, amend, reset, clean,
-развёртывания и действий с учётными данными. CodeRabbit не запускать. Секреты не
-выводить.
-```
-
-## Готовый запрос: изменения по решениям владельца
-
-Использовать только после того, как владелец назвал решение.
-
-```text
-Реализуй решение владельца по пакету I проекта GORGONA Booking: <решение>.
-
-Сначала прочитай docs/plan/NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md, план
-пакета I и ADR-0025. Проверь фактическое состояние Git, удалённого репозитория и
-CI. Работай на новой ветке codex/ от головы codex/package-i4-workforce-screens,
-на своём одноразовом кластере PostgreSQL.
-
-Порядок: падающий тест, минимальная реализация, точечные тесты, полный прогон,
-статические проверки и web, настоящий браузер на компьютере и телефоне, если
-меняется экран, независимый обзор, свежие проверки после исправлений, локальный
-коммит. Новая схема — только следующим номером миграции, с включением в
-workforce_guard.py и в восстановление политик test_location_access.py. Гонку
-засчитывать только при наблюдаемом ожидании в pg_locks. Готовность не повышать.
-Первый отказ и окончательный результат записать в новую папку evidence с
-командами, числами и SHA; обновить статусы и передачу.
-
-Без прямого разрешения владельца не делать push, PR, merge, force-push, rebase,
-amend, reset, clean, развёртывание, production-миграции, действия в Azure, с
-провайдерами, деньгами и учётными данными. CodeRabbit не запускать. Секреты не
-выводить.
-```
+The private validate_docs.py check ran through the same Python executable:
+**PASS: 8 UTF-8 files, 5 Markdown/3 JSON, 166 existing local link targets,
+12 matching matrix rows, 16 matching source hashes; git diff --check exit 0;
+zero runtime changes; both owned cluster PID files absent.** Limited plaintext
+DSN/key pattern checks found zero matches, not a full security audit. The complete
+documentation diff was inspected. Repeat this validation after the last edits
+and local commit; inspect the actual clean status/HEAD and remote again. A new
+source change invalidates inherited functional results and requires fresh tests.

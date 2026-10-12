@@ -1,0 +1,27 @@
+{
+  "repository": "alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new",
+  "head_sha": "c6b8e341a7e88957ee5011e54e9aa06453b31b49",
+  "run_id": 38204334830,
+  "job_id": 114664366391,
+  "url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38204334830",
+  "status": "completed",
+  "conclusion": "success",
+  "event": "push",
+  "retrieval": "GitHub connector fetch_workflow_job_logs and public GitHub REST run/jobs APIs",
+  "log_excerpt": [
+    "2026-10-12T04:35:01.2573659Z   102 passed (1.5s)",
+    "2026-10-12T04:35:11.0973856Z ✓ Generating static pages using 3 workers (23/23) in 331ms",
+    "2026-10-12T04:36:10.0434511Z #28 11.19 ✓ Generating static pages using 3 workers (23/23) in 317ms",
+    "2026-10-12T04:36:11.6784746Z 267 files already formatted",
+    "2026-10-12T04:36:11.7473502Z All checks passed!",
+    "2026-10-12T04:36:17.9965939Z Success: no issues found in 267 source files",
+    "2026-10-12T04:46:14.7837088Z SKIPPED [1] tests/integration/test_tenant_site_embedding.py:56: BLOCKED: tenant-site verification requires GBA_REQUIRE_TENANT_SITE=1",
+    "2026-10-12T04:46:14.7837707Z ================= 1509 passed, 1 skipped in 595.96s (0:09:55) =================="
+  ],
+  "required_flags": [
+    "GBA_REQUIRE_POSTGRES=1",
+    "GBA_REQUIRE_BROWSER=1",
+    "GBA_REQUIRE_CONTAINER=1"
+  ],
+  "container_scope": "Production image build and required container checks in CI; local containers are separate."
+}

@@ -1,6 +1,31 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current: colleague-shift visibility is a branch setting; branch published — 2026-10-11
+## Current: Package I acceptance evidence prepared; no promotion — 2026-10-12
+
+Continue from [the updated handoff](docs/plan/NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md)
+and [the fresh matrix](docs/plan/evidence/2026-10-12-i-acceptance/ACCEPTANCE.md).
+Local branch `codex/package-i-acceptance` starts at verified local/remote I4 head
+`c6b8e341a7e88957ee5011e54e9aa06453b31b49`; changes are documentation/evidence only.
+Read the final local documentation SHA from Git. The branch is not published.
+
+Fresh PASS: complete PostgreSQL/browser-required suite 1506 passed / 4 skipped /
+1026.84s; I4 three phases on desktop/mobile (six Playwright cases); Ruff/format/mypy
+264; web typecheck/lint/format, unit 102 and build 23 pages. Exact-source CI c6b8e34
+PASS: run 38204334830, job 114664366391, 1509 passed / 1 skipped / 595.96s, including
+required container checks. Local container skips and the optional external site
+remain NOT TESTED locally. Source hashes match 16/16; own clusters stopped.
+Current production npm audit FAIL: 2 high (next, source-map-js).
+
+I-01–I-11 PASS for recorded cases; I-12 conservatively BLOCKED pending a second
+independent source review of a806380..b66eb41. The first review exists, but fresh
+regression execution does not replace a source review of the fourteen fixes.
+Package I is not accepted. WORK-01/CORE-04 and workforce readiness are unchanged;
+migrations 0001–0035, code and dependency locks are preserved. Owner decisions on
+the working plan/ADR, policy choices, acceptance/readiness, PRs and stack order
+remain open. Exact-SHA CI for the new local documentation commit is NOT TESTED.
+No push/PR/merge, deployment, production migration or CodeRabbit.
+
+## Previous: colleague-shift visibility is a branch setting; branch published — 2026-10-11
 
 Successor entry point: [handoff for the next agent: acceptance of package I, instructions and copyable prompts](docs/plan/NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md).
 Owner decision of 2026-10-11 on the first open choice of I4: staff see colleagues'
