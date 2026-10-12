@@ -126,6 +126,7 @@ async def test_lifecycle_keeps_every_version_and_replays(
     assert [m["id"] for m in catalog["modules"] if m["enableable"]] == [
         "counterparties",
         BOOKING,
+        "workforce",
         "documents",
         "finance",
         "finance_documents",
@@ -265,7 +266,7 @@ async def test_invalid_configurations_are_explained(
     unknown = await config.draft(owner_a, a, 0, ["organization"])
     assert unknown.json()["error"]["code"] == "INVALID_REQUEST"
     for version, modules, codes in (
-        (1, ["workforce"], {("MODULE_NOT_READY", "workforce")}),
+        (1, ["analytics"], {("MODULE_NOT_READY", "analytics")}),
         (
             2,
             ["sales"],
@@ -698,3 +699,43 @@ async def test_registry_v2_preserves_published_v1_finance_and_admits_h_only_when
     final = (await config.get(owner_a, a)).json()
     assert final["published"]["registry_version"] == 2
     assert "finance_documents" in final["effective_module_ids"]
+
+
+async def test_workforce_is_admitted_only_while_accepted(
+    config: Config, world: BookingWorld, owner_a: FakeUser
+) -> None:
+    from gorgona_booking.business import modules
+    from gorgona_booking.business.readiness_registry import Readiness
+
+    a = world.a.tenant_id
+    await config.profile(owner_a, a, 0, [1])
+    before = (await config.get(owner_a, a)).json()
+    drafted = await config.draft(owner_a, a, 0, [BOOKING, "workforce"])
+    assert drafted.status_code == 200, drafted.text
+    accepted = modules.MODULES_BY_ID["workforce"]
+    assert (accepted.readiness, accepted.enableable) == (Readiness.TECHNICALLY_VERIFIED, True)
+    # Without technical acceptance the same selection is refused and nothing changes.
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setitem(
+            modules.MODULES_BY_ID,
+            "workforce",
+            accepted.model_copy(update={"enableable": False, "readiness": Readiness.PLANNED}),
+        )
+        refused = await config.step(owner_a, a, 1, "validate", 1)
+        assert (refused.status_code, refused.json()["error"]["code"]) == (
+            422,
+            "CONFIGURATION_INVALID",
+        )
+        assert {
+            (p["code"], p["module_id"]) for p in refused.json()["error"]["details"]["problems"]
+        } == {("MODULE_NOT_READY", "workforce")}
+        after = (await config.get(owner_a, a)).json()
+        assert after["published"] == before["published"]
+        assert after["effective_module_ids"] == before["effective_module_ids"]
+    # The accepted module is enabled only by this explicit publication.
+    validated = await config.step(owner_a, a, 1, "validate", 1)
+    assert validated.status_code == 200, validated.text
+    published = await config.step(owner_a, a, 1, "publish", 2)
+    assert published.status_code == 200, published.text
+    final = (await config.get(owner_a, a)).json()
+    assert "workforce" in final["effective_module_ids"]

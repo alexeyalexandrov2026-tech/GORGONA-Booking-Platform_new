@@ -94,6 +94,7 @@ def test_module_registry_is_consistent() -> None:
     assert [m.id for m in MODULES if m.enableable] == [
         "counterparties",
         BOOKING_MODULE,
+        "workforce",
         "documents",
         "finance",
         "finance_documents",
@@ -135,6 +136,24 @@ def test_verified_records_cite_existing_evidence_and_owners_stay_unassigned() ->
             assert scenario.verified_on, scenario.id
         # Pilot and production statuses need owner decisions that do not exist yet.
         assert not at_least(scenario.status, Readiness.PILOT_ACCEPTED), scenario.id
+
+
+def test_work_01_and_core_04_are_verified_and_workforce_follows_work_01() -> None:
+    by_id = {scenario.id: scenario for scenario in SCENARIOS}
+    work, core = by_id["WORK-01"], by_id["CORE-04"]
+    assert (work.status, work.code_version, work.schema_version) == (
+        Readiness.TECHNICALLY_VERIFIED,
+        "f41f9a849a34a732433bea75514da758e345b859",
+        35,
+    )
+    assert (core.status, core.code_version, core.schema_version) == (
+        Readiness.TECHNICALLY_VERIFIED,
+        "bf3645d987f06f9993d6e6b4087f54168bc0fc26",
+        19,
+    )
+    workforce = MODULES_BY_ID["workforce"]
+    assert (workforce.readiness, workforce.enableable) == (work.status, True)
+    assert workforce.depends_on == ("users_access",)
 
 
 def test_catalog_readiness_comes_from_the_registry() -> None:

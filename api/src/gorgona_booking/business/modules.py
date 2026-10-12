@@ -126,7 +126,23 @@ MODULES: tuple[PlatformModule, ...] = (
         "and new resource reservations. Cancellations, existing holds, history and reads "
         "continue.",
     ),
-    _module("workforce", "Workforce", _OPTIONAL, ("users_access",)),
+    _module(
+        "workforce",
+        "Workforce",
+        _OPTIONAL,
+        ("users_access",),
+        next(scenario.status for scenario in SCENARIOS if scenario.id == "WORK-01"),
+        "Staff profiles and skills, versioned shifts with one assigned person in the shared "
+        "occupancy, handovers, swaps and open shifts with a colleague's consent and a "
+        "manager's approval, versioned timesheets with corrections, and a per-branch setting "
+        "for seeing colleagues' shifts (ADR-0025). Technical acceptance: "
+        "docs/plan/evidence/2026-10-12-work-01-acceptance/ACCEPTANCE.md (code f41f9a8). "
+        "No payroll, rates, leave, automatic scheduling, notifications or geolocation.",
+        "New staff profiles, skills, shifts, assignments and shift changes, changes of the "
+        "branch setting, clock-ins, breaks, corrections and decisions on time entries. History "
+        "and reads continue, an open time entry can still be closed, and an uncertain command "
+        "can still be resolved or discarded.",
+    ),
     _module("projects", "Projects and work", _OPTIONAL, ("counterparties",)),
     _module(
         "documents",

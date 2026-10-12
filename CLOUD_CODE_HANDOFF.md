@@ -1,27 +1,28 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-12: corrections published; CI success; matrix I-01–I-12 PASS
+## Current checkpoint — 2026-10-12: package I accepted technically; WORK-01 and CORE-04 verified
 
-Исправления второго обзора и правка двух browser-спеков опубликованы в
-`codex/package-i4-review-corrections`, проверенный коммит `f41f9a8`. Сбой полного
-прогона был дефектом проверки, а не продукта: `getByRole("alert")` совпадал и с
-пустым объявителем маршрута Next.js. Обе проверки теперь называют сообщение.
+WORK-01 записан как `technically_verified` на коде `f41f9a8`. Модуль `workforce` стал
+включаемым: компания получает его, только опубликовав конфигурацию с ним. CORE-04
+записан как `technically_verified` отдельным коммитом `1b925f1` по основаниям пакета F.
+ADR-0025 — Accepted as implemented. Решение: 2026-10-12 владелец поручил исполнителю
+выбирать самостоятельно и на предложение выполнить приёмку ответил «Continue»;
+трактовка записана в [записи о приёмке](docs/plan/evidence/2026-10-12-work-01-acceptance/ACCEPTANCE.md).
 
-Full local **PASS: 1526 passed, 4 skipped in 997.19s (0:16:37)**. CI **PASS**: [run 38227457763](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38227457763).
-Первый прогон CI прошёл все проверки, но был отменён лимитом задания 20 минут;
-лимит поднят до 30 минут коммитом `f41f9a8`, проверки не менялись. Независимый
-обзор правки спеков PASS; разбор исправлений исполнителем, который их не писал,
-PASS. Матрица I-01–I-12 — PASS. Production audit **FAIL: 2 high** (next, source-map-js).
+Проверки дерева приёмки: full local **PASS: 1531 passed, 4 skipped in 972.96s (0:16:12)**; Ruff, format и mypy PASS на
+265 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS; независимая
+проверка изменения PASS. CI коммита приёмки: NOT TESTED на момент коммита: выполняется после публикации.
+Production audit **FAIL: 2 high** (next, source-map-js).
 
-**Пакет не принят.** WORK-01 и CORE-04 остаются planned, workforce закрыт, статус
-ADR-0025 не менялся: запись готовности открывает модуль компаниям и оставлена
-отдельным срезом приёмки. PR и merge не выполнялись. Миграции, зависимости и
-готовность не менялись; API и web со строгим v1 `reason_source` выпускаются вместе.
+Это техническая приёмка. Пилота и разрешения на production нет. PR и merge не
+выполнялись; миграции и зависимости не менялись. Утверждения ниже о том, что
+WORK-01 или CORE-04 planned, а workforce закрыт, относятся к своим датам.
 
 [Актуальный handoff](docs/plan/NEXT_AGENT_PACKAGE_I_CORRECTIONS_2026-10-12.md),
 [готовый prompt](docs/plan/NEXT_AGENT_PACKAGE_I_PROMPT_2026-10-12.md),
-[разбор, проверки и решения](docs/plan/evidence/2026-10-12-i4-review-corrections/FOLLOWUP_VALIDATION.md),
-[сохранённый первый FAIL](docs/plan/evidence/2026-10-12-i4-review-corrections/VALIDATION.md).
+[запись о приёмке](docs/plan/evidence/2026-10-12-work-01-acceptance/ACCEPTANCE.md),
+[независимая проверка](docs/plan/evidence/2026-10-12-work-01-acceptance/INDEPENDENT_CHECK.md),
+[предыдущий срез: исправления и публикация](docs/plan/evidence/2026-10-12-i4-review-corrections/FOLLOWUP_VALIDATION.md).
 Ниже сохранены исторические срезы; их результаты не заменяют текущий handoff.
 
 ## Previous checkpoint — 2026-10-12: corrections uncommitted; full suite FAIL

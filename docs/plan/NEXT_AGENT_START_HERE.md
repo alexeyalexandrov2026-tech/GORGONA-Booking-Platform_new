@@ -1,6 +1,18 @@
-# GORGONA — начните здесь (актуальное продолжение, 2026-10-11)
+# GORGONA — начните здесь (актуальное продолжение, 2026-10-12)
 
-## Current: package I, slice I4 and the visibility setting; branch published — 2026-10-11
+## Current: package I accepted technically — 2026-10-12
+
+Read the [handoff](NEXT_AGENT_PACKAGE_I_CORRECTIONS_2026-10-12.md) first, then the
+[acceptance record](evidence/2026-10-12-work-01-acceptance/ACCEPTANCE.md). Checkout
+`C:\Users\alexa\.codex\worktrees\package-i4-review-corrections\Gorgona Booking`, branch
+`codex/package-i4-review-corrections` (published). WORK-01 and CORE-04 are
+`technically_verified`; `workforce` is enableable by a company's own published
+configuration; ADR-0025 is accepted as implemented. Open: a pull request and the
+merge order of the unmerged stack, the production dependency audit (2 high) and
+package H's two items named below. Merge, deployment and production migration are
+not authorized. Read the actual HEAD, remote, PR and CI state before continuing.
+
+## Previous: package I, slice I4 and the visibility setting; branch published — 2026-10-11
 
 Read the [handoff for the next agent: acceptance of package I, instructions and
 copyable prompts](NEXT_AGENT_PACKAGE_I_ACCEPTANCE_2026-10-12.md)

@@ -1,5 +1,19 @@
 # Development
 
+## I technical acceptance (WORK-01, 2026-10-12)
+
+WORK-01 is `technically_verified` on code `f41f9a8`:
+[acceptance record](plan/evidence/2026-10-12-work-01-acceptance/ACCEPTANCE.md),
+[independent check](plan/evidence/2026-10-12-work-01-acceptance/INDEPENDENT_CHECK.md).
+`workforce` is enableable. A company turns it on only by publishing a configuration
+that selects it. Workforce tests use that real publication and no readiness override.
+The suites keep tests that withdraw the readiness and expect `MODULE_NOT_READY`, and
+tests that expect `MODULE_DISABLED` before publication. CORE-04 is recorded as
+`technically_verified` on package F's evidence. Statements below that WORK-01 or
+CORE-04 is planned describe their own dates. Published migrations 0001–0035 must
+retain their checksums. Production migration and deployment still need separate
+owner authorization.
+
 ## H technical acceptance (FIN-03, 2026-10-09)
 
 FIN-03 is `technically_verified` on code `319f144` by the owner's decision:

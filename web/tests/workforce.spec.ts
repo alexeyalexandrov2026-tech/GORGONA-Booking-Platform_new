@@ -162,8 +162,8 @@ async function showWeek(page: Page, day: string, company: boolean) {
   await page.getByLabel("Week from", { exact: true }).fill(day);
 }
 
-test("workforce stays closed until it is accepted", async ({ page }) => {
-  test.skip(phase !== "closed", "runs against the registry as it is");
+test("workforce stays closed while it is not accepted", async ({ page }) => {
+  test.skip(phase !== "closed", "runs with the acceptance withdrawn");
   await signIn(page, "owner");
   await open(page, "Schedule");
   await expect(
@@ -209,7 +209,7 @@ test("workforce stays closed until it is accepted", async ({ page }) => {
 test("schedule, own shifts and timesheets with real gates, recovery and roles", async ({
   page,
 }, testInfo) => {
-  test.skip(phase !== "enabled", "needs the fixture's opened readiness");
+  test.skip(phase !== "enabled", "needs the module published by the fixture");
   test.setTimeout(600000);
   const project = testInfo.project.name;
   const tag = `FAKE ${project}`;

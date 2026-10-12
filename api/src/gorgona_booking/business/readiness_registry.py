@@ -198,7 +198,25 @@ SCENARIOS: tuple[ScenarioReadiness, ...] = (
         verified_on=date(2026, 10, 9),
     ),
     _planned("STOCK-01", "No owner-linked material documents or movements."),
-    _planned("WORK-01", "Weekly staff hours are not shifts, swaps or versioned timesheets."),
+    ScenarioReadiness(
+        id="WORK-01",
+        status=Readiness.TECHNICALLY_VERIFIED,
+        code_version="f41f9a849a34a732433bea75514da758e345b859",
+        schema_version=35,
+        scope="Staff profiles and skills, versioned shifts with one assigned person in the shared "
+        "occupancy, handovers, swaps and open shifts that need a colleague's consent and a "
+        "manager's approval, versioned timesheets whose corrections keep every earlier version, "
+        "and a per-branch setting for seeing colleagues' shifts. Technical evidence: exact-commit "
+        "CI and the reviews listed in the acceptance record, which also lists the screen "
+        "situations that were not tested. Shifts do not change customer booking availability. "
+        "No payroll, rates, labour-law rules, leave, automatic scheduling, notifications, "
+        "geolocation, retention rules or production approval.",
+        evidence=(
+            "docs/plan/evidence/2026-10-12-work-01-acceptance/ACCEPTANCE.md",
+            "docs/plan/evidence/2026-10-12-i4-review-corrections/FOLLOWUP_VALIDATION.md",
+        ),
+        verified_on=date(2026, 10, 12),
+    ),
     _planned(
         "BEAUTY-01",
         "Partial: booking, prices and compatible add-ons work; service stages, multi-resource "

@@ -1,10 +1,11 @@
 # ADR-0025 — Workforce: shifts, shift changes and versioned timesheets
 
-- Status: **Proposed (2026-10-09); not explicitly approved.** The owner delegated
-  the choice of next steps on 2026-10-09, so the recommended options are working
-  defaults for slice I0 of the
-  [package I plan](../plan/PACKAGE_I_PLAN_2026-10-09.md). Slice I0 changes no
-  schema. The owner can still change any choice before the slice it affects.
+- Status: **Accepted (2026-10-12)** as implemented, with the WORK-01 technical
+  acceptance: [record](../plan/evidence/2026-10-12-work-01-acceptance/ACCEPTANCE.md).
+  Proposed on 2026-10-09 with the recommended options of the
+  [package I plan](../plan/PACKAGE_I_PLAN_2026-10-09.md) as working defaults. The
+  owner refined choice 7 on 2026-10-11 (a per-branch setting) and left the other
+  choices to the executor on 2026-10-12. The text below keeps its original wording.
 - Scope: package I of the owner-approved stage 2; criterion WORK-01 ("a shift
   handover checks skills, conflicts and approval; a timesheet correction keeps the
   previous version").
@@ -115,6 +116,15 @@ The plan also records one observation outside this decision: package F's
 acceptance record states CORE-04 as technically verified, while the readiness
 registry in code still lists CORE-04 as `planned`. Package I depends on F, so the
 owner is asked to resolve the difference before I1.
+
+**Update 2026-10-12.** Slices I0–I4, the visibility setting and the corrections of two
+independent reviews are implemented at `f41f9a8`. Rows I-01–I-12 pass, that commit
+passed CI and the reviews are listed in the acceptance record. WORK-01 is
+`technically_verified` and `workforce` is enableable by a company's own published
+configuration. CORE-04 is recorded as `technically_verified` on package F's evidence,
+which resolves the difference noted above. The paragraphs above describe the state at
+proposal time. Payroll, leave, notifications, retention rules, a pilot and production
+approval remain separate.
 
 ## Limits
 

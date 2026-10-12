@@ -46,19 +46,67 @@ async def test_workforce_guard_uses_five_real_catalog_round_trips(
             assert recorder.call_count == 5
 
 
-async def test_unaccepted_workforce_refuses_writes(
-    client: httpx.AsyncClient, world: BookingWorld, manager_a: FakeUser, idp: FakeIdp
+async def test_accepted_workforce_is_closed_until_published_and_refused_when_withdrawn(
+    client: httpx.AsyncClient,
+    world: BookingWorld,
+    manager_a: FakeUser,
+    idp: FakeIdp,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    async def write() -> httpx.Response:
+        return await client.put(
+            f"/v1/businesses/{world.a.tenant_id}/workforce/skills/{uuid7()}",
+            json={"schema_version": 1, "expected_revision": 0, "code": "FAKE", "name": "FAKE"},
+            headers={
+                **idp.bearer(manager_a.subject, email=manager_a.email),
+                "Idempotency-Key": str(uuid7()),
+            },
+        )
+
+    accepted = modules.MODULES_BY_ID["workforce"]
+    assert (accepted.readiness, accepted.enableable) == (Readiness.TECHNICALLY_VERIFIED, True)
+    # Accepted is not enabled: a company opts in by publishing a configuration.
+    closed = await write()
+    assert (closed.status_code, closed.json()["error"]["code"]) == (409, "MODULE_DISABLED")
+    monkeypatch.setitem(
+        modules.MODULES_BY_ID,
+        "workforce",
+        accepted.model_copy(update={"enableable": False, "readiness": Readiness.PLANNED}),
+    )
+    refused = await write()
+    assert (refused.status_code, refused.json()["error"]["code"]) == (409, "MODULE_NOT_READY")
+
+
+@pytest.mark.parametrize("route", ["skills", "shifts", "privacy"])
+async def test_a_company_that_never_published_workforce_cannot_write(
+    client: httpx.AsyncClient, world: BookingWorld, manager_a: FakeUser, idp: FakeIdp, route: str
+) -> None:
+    # Accepted but unpublished is every company's starting state; no route may write in it.
+    shift: dict[str, object] = {
+        "location_id": str(world.a.location_id),
+        "position": "FAKE position",
+        "starts_at": at(10).isoformat(),
+        "ends_at": at(11).isoformat(),
+        "status": "published",
+    }
+    routes: dict[str, tuple[str, dict[str, object]]] = {
+        "skills": (f"/skills/{uuid7()}", {"code": "FAKE", "name": "FAKE"}),
+        "shifts": (f"/shifts/{uuid7()}", shift),
+        "privacy": (
+            f"/locations/{world.a.location_id}/settings",
+            {"colleague_shifts_visible": False},
+        ),
+    }
+    path, body = routes[route]
     response = await client.put(
-        f"/v1/businesses/{world.a.tenant_id}/workforce/skills/{uuid7()}",
-        json={"schema_version": 1, "expected_revision": 0, "code": "FAKE", "name": "FAKE"},
+        f"/v1/businesses/{world.a.tenant_id}/workforce{path}",
+        json={"schema_version": 1, "expected_revision": 0, **body},
         headers={
             **idp.bearer(manager_a.subject, email=manager_a.email),
             "Idempotency-Key": str(uuid7()),
         },
     )
-    assert response.status_code == 409, response.text
-    assert response.json()["error"]["code"] == "MODULE_NOT_READY"
+    assert (response.status_code, response.json()["error"]["code"]) == (409, "MODULE_DISABLED")
 
 
 @dataclass(frozen=True)
@@ -112,19 +160,8 @@ async def workforce(
     manager_a: FakeUser,
     idp: FakeIdp,
     owner_conn: psycopg.Connection,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> Workforce:
-    current = modules.MODULES_BY_ID["workforce"]
-    monkeypatch.setitem(
-        modules.MODULES_BY_ID,
-        "workforce",
-        current.model_copy(
-            update={
-                "enableable": True,
-                "readiness": Readiness.TECHNICALLY_VERIFIED,
-            }
-        ),
-    )
+    # The registry is used as it is: an accepted module, enabled by a real publication.
     config = Config(client, idp)
     await config.profile(manager_a, world.a.tenant_id, 0, [1])
     await config.publish(manager_a, world.a.tenant_id, 0, ["booking_resources", "workforce"])

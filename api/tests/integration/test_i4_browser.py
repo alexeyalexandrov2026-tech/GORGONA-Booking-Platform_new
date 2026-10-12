@@ -1,7 +1,7 @@
 """Actual OIDC/PKCE, workforce screens and PostgreSQL on desktop and mobile.
 
-The workforce module is not accepted. The closed path runs against the registry as
-it is; only this fixture then opens readiness for the enabled and switched-off paths.
+The workforce module is accepted. The closed path runs with the acceptance withdrawn
+by this test; the enabled and switched-off paths use the registry as it is.
 Several FAKE people sign in through the same loopback provider, one at a time.
 """
 
@@ -63,7 +63,6 @@ def test_i4_real_browser_closed_then_enabled_then_switched_off(
     world: BookingWorld,
     owner_conn: psycopg.Connection,
     test_database: ProvisionedDatabase,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     if os.environ.get("GBA_REQUIRE_BROWSER") != "1":
         pytest.skip("BLOCKED: I4 browser requires GBA_REQUIRE_BROWSER=1")
@@ -171,16 +170,17 @@ def test_i4_real_browser_closed_then_enabled_then_switched_off(
 
         request("PUT", "profile", {"expected_revision": 0, "industry_ids": [1]})
         publish(0, ["booking_resources"])
-        # The registry is used as it is: workforce is not accepted and stays closed.
-        browser("closed")
-        current = modules.MODULES_BY_ID["workforce"]
-        monkeypatch.setitem(
-            modules.MODULES_BY_ID,
-            "workforce",
-            current.model_copy(
-                update={"enableable": True, "readiness": Readiness.TECHNICALLY_VERIFIED}
-            ),
-        )
+        accepted = modules.MODULES_BY_ID["workforce"]
+        assert (accepted.readiness, accepted.enableable) == (Readiness.TECHNICALLY_VERIFIED, True)
+        # The closed path: the acceptance is withdrawn for this phase only.
+        with pytest.MonkeyPatch.context() as withdrawn:
+            withdrawn.setitem(
+                modules.MODULES_BY_ID,
+                "workforce",
+                accepted.model_copy(update={"enableable": False, "readiness": Readiness.PLANNED}),
+            )
+            browser("closed")
+        # From here the registry is used as it is; a real publication enables the module.
         publish(1, ["booking_resources", "workforce"])
         profiles: dict[str, str] = {}
         for name, place in (("owner", home), ("ada", home), ("ben", home), ("cy", away)):
