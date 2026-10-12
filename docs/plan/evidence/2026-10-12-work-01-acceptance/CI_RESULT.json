@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-12T10:46:31.961916+00:00",
+  "acceptance_commit": "75f2b9bb1296f727678650bd72036e5f9140abb7",
+  "core_04_commit": "1b925f1becff730be33716dfcf2f89b367356c43",
+  "remote_head_at_run": "75f2b9bb1296f727678650bd72036e5f9140abb7",
+  "run_id": 38236481277,
+  "url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38236481277",
+  "event": "push",
+  "status": "completed",
+  "conclusion": "success",
+  "started": "2026-10-12T10:27:53Z",
+  "updated": "2026-10-12T10:45:14Z",
+  "job_id": 114768305523,
+  "job_seconds": 1037,
+  "steps": [
+    {
+      "name": "Set up job",
+      "conclusion": "success",
+      "seconds": 1
+    },
+    {
+      "name": "Run actions/checkout@v5",
+      "conclusion": "success",
+      "seconds": 2
+    },
+    {
+      "name": "Run astral-sh/setup-uv@v6",
+      "conclusion": "success",
+      "seconds": 1
+    },
+    {
+      "name": "Run uv python install 3.14",
+      "conclusion": "success",
+      "seconds": 1
+    },
+    {
+      "name": "Run uv sync --locked",
+      "conclusion": "success",
+      "seconds": 2
+    },
+    {
+      "name": "Run actions/setup-node@v5",
+      "conclusion": "success",
+      "seconds": 1
+    },
+    {
+      "name": "Build and check customer web",
+      "conclusion": "success",
+      "seconds": 69
+    },
+    {
+      "name": "Start PostgreSQL 18",
+      "conclusion": "success",
+      "seconds": 17
+    },
+    {
+      "name": "Build the production image",
+      "conclusion": "success",
+      "seconds": 33
+    },
+    {
+      "name": "Run uv run ruff format --check .",
+      "conclusion": "success",
+      "seconds": 0
+    },
+    {
+      "name": "Run uv run ruff check .",
+      "conclusion": "success",
+      "seconds": 0
+    },
+    {
+      "name": "Run uv run mypy",
+      "conclusion": "success",
+      "seconds": 9
+    },
+    {
+      "name": "Run uv run pytest",
+      "conclusion": "success",
+      "seconds": 899
+    },
+    {
+      "name": "Post Run actions/setup-node@v5",
+      "conclusion": "success",
+      "seconds": 0
+    },
+    {
+      "name": "Post Run astral-sh/setup-uv@v6",
+      "conclusion": "success",
+      "seconds": 0
+    },
+    {
+      "name": "Post Run actions/checkout@v5",
+      "conclusion": "success",
+      "seconds": 0
+    },
+    {
+      "name": "Complete job",
+      "conclusion": "success",
+      "seconds": 0
+    }
+  ],
+  "log_text": "NOT READ: the logs endpoint answers 403 without sign-in",
+  "pull_requests_for_branch": 0
+}

@@ -66,7 +66,7 @@ api, web и .github не менялись.
 | Исходники во время full | не менялись; `web/out` не менялся со сборки до конца full |
 | Production npm audit | **FAIL exit 1: 2 high (next, source-map-js)**, без remediation |
 | Независимая проверка изменения | PASS, две находки P2 и пять P3; дополнение по правкам — PASS |
-| CI коммита приёмки | NOT TESTED на момент записи: выполняется после публикации |
+| CI коммита приёмки | **PASS**, [run 38236481277](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38236481277) на `75f2b9b`: задание 1037 с, pytest 899 с; текст логов не читался. Записано следующим коммитом |
 
 Браузерные сценарии на итоговых байтах выполнялись только внутри полного прогона.
 [CHECKS.json](CHECKS.json) содержит argv, cwd, exit, время и хеши логов каждой фазы,

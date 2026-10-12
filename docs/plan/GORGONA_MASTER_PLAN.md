@@ -11,7 +11,7 @@ ADR-0025 — Accepted as implemented. Решение: 2026-10-12 владеле�
 
 Проверки дерева приёмки: full local **PASS: 1531 passed, 4 skipped in 972.96s (0:16:12)**; Ruff, format и mypy PASS на
 265 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS; независимая
-проверка изменения PASS. CI коммита приёмки: NOT TESTED на момент коммита: выполняется после публикации.
+проверка изменения PASS. CI коммита приёмки: **PASS**, [run 38236481277](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38236481277) на `75f2b9b`: задание 1037 с, pytest 899 с; текст логов не читался.
 Production audit **FAIL: 2 high** (next, source-map-js).
 
 Это техническая приёмка. Пилота и разрешения на production нет. PR и merge не

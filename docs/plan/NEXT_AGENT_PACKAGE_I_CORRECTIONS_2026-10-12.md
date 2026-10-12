@@ -11,8 +11,8 @@
 - Коммиты поверх `490652b`: `2bca502` — исправления второго обзора; `3b9734c` — проверка
   сообщения о конфликте в двух browser-спеках; `b7953a4`, `678a21e` — документы;
   `f41f9a8` — лимит времени задания CI (проверенный код приёмки); `1b925f1` — запись
-  CORE-04; следующий коммит — приёмка WORK-01 с тестами и документами. Точные SHA
-  читать из `git log`: коммит не может записать собственный.
+  CORE-04; `75f2b9b` — приёмка WORK-01 с тестами и документами. HEAD — следующий
+  коммит, только запись результата CI.
 - [Запись о приёмке](evidence/2026-10-12-work-01-acceptance/ACCEPTANCE.md), [её проверки](evidence/2026-10-12-work-01-acceptance/CHECKS.json),
   [независимая проверка](evidence/2026-10-12-work-01-acceptance/INDEPENDENT_CHECK.md).
 - Предыдущий срез: [разбор сбоя, обзоры и публикация](evidence/2026-10-12-i4-review-corrections/FOLLOWUP_VALIDATION.md),
@@ -43,7 +43,7 @@ reviewer `C:/Users/alexa/.codex/worktrees/package-i4-corrections-review/Gorgona 
 - Проверки дерева приёмки: full local **PASS: 1531 passed, 4 skipped in 972.96s (0:16:12)**; Ruff, format и mypy PASS на
   265 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS; независимая
   проверка изменения PASS, её замечания учтены.
-- CI коммита приёмки: NOT TESTED на момент коммита: выполняется после публикации.
+- CI коммита приёмки: **PASS**, [run 38236481277](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38236481277) на `75f2b9b`: задание 1037 с, pytest 899 с; текст логов не читался.
 
 ## Решение о приёмке
 

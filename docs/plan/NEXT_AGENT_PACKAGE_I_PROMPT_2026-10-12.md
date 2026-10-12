@@ -8,7 +8,7 @@ C:\Users\alexa\.codex\worktrees\package-i4-review-corrections\Gorgona Booking\do
 
 Canonical checkout: C:\Users\alexa\.codex\worktrees\package-i4-review-corrections\Gorgona Booking
 Branch: codex/package-i4-review-corrections (published)
-Verified code: f41f9a849a34a732433bea75514da758e345b859. On top of it: the CORE-04 record (1b925f1becff730be33716dfcf2f89b367356c43), the WORK-01 acceptance commit and documents. Read the exact SHAs from git log and git ls-remote, and compare git rev-parse HEAD:<path> with changed_sources in evidence/2026-10-12-work-01-acceptance/CHECKS.json before changing anything. Do not reset, clean, amend or rebase.
+Verified code: f41f9a849a34a732433bea75514da758e345b859. On top of it: the CORE-04 record (1b925f1becff730be33716dfcf2f89b367356c43), the WORK-01 acceptance commit (75f2b9bb1296f727678650bd72036e5f9140abb7; CI success, run 38236481277) and a documents-only commit. Read the exact SHAs from git log and git ls-remote, and compare git rev-parse HEAD:<path> with changed_sources in evidence/2026-10-12-work-01-acceptance/CHECKS.json before changing anything. Do not reset, clean, amend or rebase.
 
 Read AGENTS.md, the current CLOUD_CODE_HANDOFF.md, master/status/package-I plan, ADR-0025 and evidence/2026-10-12-work-01-acceptance/{ACCEPTANCE.md,CHECKS.json,INDEPENDENT_CHECK.md}. One executor per checkout and disposable PostgreSQL cluster.
 
