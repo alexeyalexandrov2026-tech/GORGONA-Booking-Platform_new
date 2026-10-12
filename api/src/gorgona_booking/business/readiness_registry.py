@@ -147,7 +147,24 @@ SCENARIOS: tuple[ScenarioReadiness, ...] = (
         "docs/plan/evidence/2026-10-04-groups/ACCEPTANCE.md",
         "docs/plan/evidence/2026-10-04-delegation/ACCEPTANCE.md",
     ),
-    _planned("CORE-04", "Shared resource occupancy across modules is not implemented."),
+    ScenarioReadiness(
+        id="CORE-04",
+        status=Readiness.TECHNICALLY_VERIFIED,
+        code_version="bf3645d987f06f9993d6e6b4087f54168bc0fc26",
+        schema_version=19,
+        scope="Bookings of one resource and staff reservations of one or more resources share "
+        "one occupancy: racing requests leave one confirmed interval, and a reservation that "
+        "cannot take every resource leaves none. Technical evidence includes exact-SHA CI and "
+        "an independent review; the stage 1 record lists it as a technical PASS. Bookings made "
+        "before migration 0018 join the shared occupancy only after the per-company backfill; "
+        "until then a reservation checks those bookings itself. Resource blocks stay outside "
+        "it. No rental workflow, no capacity above one and no production approval.",
+        evidence=(
+            "docs/plan/evidence/2026-10-05-occupancy/ACCEPTANCE.md",
+            "docs/plan/evidence/2026-10-06-stage1/ACCEPTANCE.md",
+        ),
+        verified_on=date(2026, 10, 6),
+    ),
     ScenarioReadiness(
         id="FIN-01",
         status=Readiness.TECHNICALLY_VERIFIED,
