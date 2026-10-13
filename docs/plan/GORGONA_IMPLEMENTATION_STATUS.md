@@ -1,6 +1,26 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-13: package J plan approved; code not started
+## Current checkpoint — 2026-10-13: package J slice J1 committed locally; not published
+
+Срез J1 пакета J (материалы и места хранения, денег нет) написан и закоммичен локально:
+`39fc819` на ветке `codex/package-j1-materials`. Миграция 0036 добавляет четыре таблицы
+`stock_*` с защитой строк по компании и филиалу, упорядоченными неизменяемыми версиями и
+замком модуля; API `/v1/businesses/{id}/inventory/items` и `/places`; карта прав версии 7;
+реестр модулей версии 3, где `inventory` зависит от `finance`. STOCK-01 остаётся
+`planned`, модуль в продукте включить нельзя; ADR-0026 остаётся Proposed.
+
+Проверки: full local **PASS: 1573 passed, 4 skipped in 1342.47s (0:22:22)**; новые тесты
+J1 — 40 passed; Ruff, format и mypy PASS на 274 файлах; web typecheck, lint, format, 102
+unit и 23 страницы PASS. Независимый обзор и CI — NOT TESTED: ветка на момент записи не
+опубликована. Где `main` и опубликована ли ветка, читать из `git ls-remote origin`.
+
+[Актуальный handoff](NEXT_AGENT_PACKAGE_J1_2026-10-13.md),
+[готовый prompt](NEXT_AGENT_PACKAGE_J1_PROMPT_2026-10-13.md),
+[запись о срезе](evidence/2026-10-13-j1-materials/VALIDATION.md),
+[план пакета J](PACKAGE_J_PLAN_2026-10-13.md),
+[ADR-0026 (Proposed)](../adr/0026-materials-and-stock-movements.md).
+
+## Previous checkpoint — 2026-10-13: package J plan approved; code not started
 
 Владелец согласовал план пакета J этапа 2 (базовые материалы, STOCK-01), выбрав
 двенадцать решений. Главное: материалы ведутся со стоимостью по скользящей средней и сами

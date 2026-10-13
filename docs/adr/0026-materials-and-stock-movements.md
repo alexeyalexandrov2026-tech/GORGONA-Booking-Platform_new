@@ -1,6 +1,7 @@
 # ADR-0026 — Basic materials: owner-linked stock documents, moving-average cost and ledger postings
 
-- Status: **Proposed (2026-10-13)**. No code exists. The owner chose the twelve options
+- Status: **Proposed (2026-10-13)**. Slice J1 is implemented locally (see the
+  implementation notes below); nothing else is. The owner chose the twelve options
   of the [package J plan](../plan/PACKAGE_J_PLAN_2026-10-13.md) on 2026-10-13; this text
   follows them. It becomes Accepted only with the technical acceptance of STOCK-01.
 - Scope: package J of the owner-approved stage 2; criterion STOCK-01 ("receipt,
@@ -172,6 +173,32 @@
   database the arbiter.
 - **Editable or deletable documents, server drafts, negative balances.** They break the
   history rule or remove the invariant that makes two competing write-offs decidable.
+
+## Implementation notes — slice J1 (2026-10-13)
+
+Slice J1 is commit `39fc819` on the local branch `codex/package-j1-materials`: migration
+0036, the packaged schema check, contracts, service and API for materials and storage
+places, permissions map version 7 and module registry version 3. It holds no money, no
+documents and no movements. Record:
+[validation](../plan/evidence/2026-10-13-j1-materials/VALIDATION.md).
+
+Choices made while implementing; none of them changes an owner decision:
+
+1. A storage place code is unique inside its branch, not across the company. A material
+   code is unique across the company.
+2. The unit label and the quantity scale are columns of the immutable head row of a
+   material, next to its code; only the name and the archive flag are versioned.
+3. The database itself checks the author of every version, as migration 0035 does for
+   workforce: an active owner or manager who is the authenticated user, company-wide
+   for a material and covering the branch for a storage place. A violation is SQLSTATE
+   `42501`.
+4. A version that is not the next one is refused with SQLSTATE `GBS01`, which the
+   service maps to 409 `INVENTORY_CONFLICT`.
+5. A client that lost the answer to a command reads the record by the identifier it
+   chose itself; reads stay open when the module is disabled.
+
+Not implemented yet from decision 2: an archived material or place refuses nothing,
+because no movements exist before slice J2.
 
 ## Acceptance and status
 

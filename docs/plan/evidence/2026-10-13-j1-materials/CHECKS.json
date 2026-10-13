@@ -1,0 +1,284 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-13T08:03:11.541973+00:00",
+  "branch": "codex/package-j1-materials",
+  "base": "9032a69693c4901d218ce804080252c14925220f",
+  "published": false,
+  "changed_sources": [
+    {
+      "path": "api/src/gorgona_booking/api/app.py",
+      "sha256": "6e62763720bd4ce071b1ee5688e41553a609813b9f47186127a4f4e5c5fe6681",
+      "git_blob_oid": "332e067c2faf886929db08cb66ed0f95680f63f5"
+    },
+    {
+      "path": "api/src/gorgona_booking/api/inventory.py",
+      "sha256": "0aaf36d304ee52f90d8118109c42d2e100930a95a182180f4f1be4fa386c2195",
+      "git_blob_oid": "df591f1af984189c1ab74cae2fbbda01ff6c3f00"
+    },
+    {
+      "path": "api/src/gorgona_booking/auth/permissions.py",
+      "sha256": "19893ae41fc946a0403f8d9b7d91b49d1d1726477893e64989d78c472ffc7bad",
+      "git_blob_oid": "63128fa0b7bcee1c6022edfe335f69e81a66c227"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/inventory.py",
+      "sha256": "94e3036adeea849ea8596de2fce20562aa3aa166e5e70d5b797fe0878037ac17",
+      "git_blob_oid": "9c292b883c13f3a2d1b07b3f22c801d67fd70e3f"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/inventory_contracts.py",
+      "sha256": "262eb792ab33e59ade669eaef283010449da5f2930b6a47ae6ca8aa63930c728",
+      "git_blob_oid": "0803efb27c4a03af7cf5c56090376a7c8a9ab092"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/module_gate.py",
+      "sha256": "225b248e6d55bdeab4f59912f8d3dfbb76d245060d80f1f4c11c2ec69829afb6",
+      "git_blob_oid": "a35d92e33f77be85520bfefd874438cf6f51d648"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/modules.py",
+      "sha256": "a46506bca2b71639e0249b772672b016a72fe9b02c367828ca39b86c40bddb41",
+      "git_blob_oid": "1d47f492d76b1b70fcc244978c7afb51a841c8ab"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/inventory_guard.py",
+      "sha256": "1166369f79a2e82b9b8debfe26347cb8228bacc84b70ccfbf67f232cbefd29d5",
+      "git_blob_oid": "29f4813671f3d2df53998597b1dfde9c308fa5ef"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/migrations/0036_inventory.sql",
+      "sha256": "ac98b4c4ef131abd0473668c6f119147e5c06b2af34012933a005cabd7d1ea55",
+      "git_blob_oid": "db59ec73791f0aab31782c7fee6bf14c34307750"
+    },
+    {
+      "path": "api/tests/integration/test_configurations.py",
+      "sha256": "7949c49b72f46b16c03938dcacc16ed2ac09a009d9ecab8751b140be1f30a7c6",
+      "git_blob_oid": "0bd8d87ebefdf3a823995a4b7ccb2e32784c7b9f"
+    },
+    {
+      "path": "api/tests/integration/test_inventory.py",
+      "sha256": "92a7df75bb49d0a3b0a08da4efb1dbe6855ccd9a02a73b31876854691f791658",
+      "git_blob_oid": "ad08fa52e224bb930a610a5c5178fd7c7b52774b"
+    },
+    {
+      "path": "api/tests/integration/test_inventory_guards.py",
+      "sha256": "2f37b720a624c6a0db6bfeac1fa3654682b230a7327f6af2072a3e9264bc7809",
+      "git_blob_oid": "6f805e7bd61ae15634bbccc68c3001dd643e2165"
+    },
+    {
+      "path": "api/tests/integration/test_inventory_upgrade.py",
+      "sha256": "ea1c4fd87f78822419848e8aa001c89a3f2c92bde6818b42c4da00baef801309",
+      "git_blob_oid": "3c1cf7abbafa732fd890ab2a1a238bb07892e110"
+    },
+    {
+      "path": "api/tests/integration/test_location_access.py",
+      "sha256": "8d9f68f62ccc511c9752e1ee2a777eb715c575b24e92fdc214300af154e459a0",
+      "git_blob_oid": "532b137b47463fec87df3ae61e464de88bb5e89b"
+    },
+    {
+      "path": "api/tests/integration/test_workforce_visibility_upgrade.py",
+      "sha256": "eb9ef9cc8050e48f35ab59f7ce259ee8494e9c88d2452a622c437367d1547f97",
+      "git_blob_oid": "8cb2860af74239f95daa6bd2f822490d4c7a7557"
+    },
+    {
+      "path": "api/tests/unit/test_counterparty_contracts.py",
+      "sha256": "2630c4f3da6367c0bddfacd3d210393dedf9389adafd4343aba5bc76dd7d8bc9",
+      "git_blob_oid": "c5cb48a5f947f14d40afa39c34ddfdf23b9626b6"
+    },
+    {
+      "path": "api/tests/unit/test_financial_documents.py",
+      "sha256": "dd3f2c1feb2db4ce52f1dacd2959845d1fc0e1a1a47a5c9d4852e7d2a16a40fc",
+      "git_blob_oid": "82f9f360be2278904c6cf51e4b0a4d48da900d25"
+    },
+    {
+      "path": "api/tests/unit/test_inventory_contracts.py",
+      "sha256": "db6eb3c2f226cf965bc1c34631da6bcfc39dab35423b4e8d05ba0ab27475821c",
+      "git_blob_oid": "7328c6b857f5aec75cac974dcff41435858c6296"
+    },
+    {
+      "path": "api/tests/unit/test_workforce_contracts.py",
+      "sha256": "a2317a08ebadda615802867d56f3e5f1a0fa54e570dbc7a002c69b73e79a30ed",
+      "git_blob_oid": "84e81db7113145da02b3cde3a08b0e1c8af9f361"
+    }
+  ],
+  "phases": {
+    "red-2": {
+      "kind": "focused",
+      "base_sha": "9032a69693c4901d218ce804080252c14925220f",
+      "started_utc": "2026-10-13T07:30:57.552147+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.07
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.43
+        },
+        {
+          "name": "focused",
+          "exit_code": 2,
+          "seconds": 1.96
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "green-2": {
+      "kind": "focused",
+      "base_sha": "9032a69693c4901d218ce804080252c14925220f",
+      "started_utc": "2026-10-13T07:37:16.531580+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.71
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.56
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 16.01
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "static-1": {
+      "kind": "static",
+      "base_sha": "9032a69693c4901d218ce804080252c14925220f",
+      "started_utc": "2026-10-13T07:38:56.627276+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.18
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.18
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 1.47
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "seconds": 7.54
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "seconds": 13.95
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "seconds": 2.17
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "seconds": 2.77
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "seconds": 13.36
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 0,
+          "seconds": 1.24
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "seconds": 0.99
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": false,
+      "error": null
+    },
+    "full-1": {
+      "kind": "full",
+      "base_sha": "9032a69693c4901d218ce804080252c14925220f",
+      "started_utc": "2026-10-13T07:39:45.633419+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.23
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.43
+        },
+        {
+          "name": "pytest-full",
+          "exit_code": 0,
+          "seconds": 1344.14
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.27
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    }
+  },
+  "full_run": {
+    "phase": "full-1",
+    "summary": "1573 passed, 4 skipped in 1342.47s (0:22:22)",
+    "pytest_step": {
+      "name": "pytest-full",
+      "exit_code": 0,
+      "seconds": 1344.14
+    }
+  },
+  "tools": {
+    "python_packages": {
+      "pytest": "9.1.1",
+      "psycopg": "3.3.6",
+      "ruff": "0.16.9",
+      "mypy": "2.3.1",
+      "fastapi": "0.142.1",
+      "pydantic": "2.13.5"
+    },
+    "web_installed": {
+      "next": "16.3.8",
+      "eslint-config-next": "16.3.8",
+      "source-map-js": "1.2.2",
+      "postcss": "8.5.23",
+      "react": "19.3.0",
+      "@playwright/test": "1.63.0"
+    }
+  },
+  "run_folder": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-j1-20261013-9032a69"
+}

@@ -1,6 +1,22 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: package J plan approved; code not started — 2026-10-13
+## Current: package J slice J1 committed locally; not published — 2026-10-13
+
+Read the [handoff](NEXT_AGENT_PACKAGE_J1_2026-10-13.md) first, then the
+[record](evidence/2026-10-13-j1-materials/VALIDATION.md), the [plan](PACKAGE_J_PLAN_2026-10-13.md) and
+[ADR-0026 (Proposed)](../adr/0026-materials-and-stock-movements.md).
+Checkout `C:\Users\alexa\.codex\worktrees\package-j1-materials\Gorgona Booking`, branch
+`codex/package-j1-materials` (base `9032a69`: `main` at `fedd0f1` plus the two plan commits;
+read from `git ls-remote origin` where `main` is and whether the branch is published).
+Slice J1 is commit `39fc819`: materials and storage places with migration 0036, permissions
+map version 7 and module registry version 3; no money, documents or movements yet. The
+complete local suite passes (1573 passed, 4 skipped); there is no independent review and no
+CI run. STOCK-01 stays planned. The next slice is J2: accounts for materials and receipts
+with amounts, migration 0037.
+Deployment and production migration are not authorized. Read the actual HEAD, remote, PR
+and CI state before continuing.
+
+## Previous: package J plan approved; code not started — 2026-10-13
 
 Read the [handoff](NEXT_AGENT_PACKAGE_J_PLAN_2026-10-13.md) first, then the [plan](PACKAGE_J_PLAN_2026-10-13.md) and
 [ADR-0026 (Proposed)](../adr/0026-materials-and-stock-movements.md).
