@@ -1,8 +1,8 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-13: package J slice J3 committed locally; not published
+## Current checkpoint — 2026-10-13: package J slices J1–J3 published; CI success; not merged
 
-Срез J3 пакета J (списание по средней цене) написан и закоммичен локально:
+Срез J3 пакета J (списание по средней цене) написан, закоммичен и опубликован:
 `565b68f` на ветке `codex/package-j3-writeoffs`, поверх среза J2. Списание проводится одной
 командой: документ, строки, расходные движения, остатки, стоимость и одна проводка
 `stock` в книге владельца — в одной транзакции. Сумму расхода считает база по
@@ -12,9 +12,10 @@
 
 Проверки: full local **PASS: 1651 passed, 4 skipped in 1727.29s (0:28:47)**; Ruff, format и mypy
 PASS на 282 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS. Три гонки
-засчитаны с наблюдаемым ожиданием в `pg_locks`. Независимый обзор и CI — NOT TESTED: ни
-одна ветка пакета J на момент записи не опубликована. Где `main` и опубликованы ли
-ветки, читать из `git ls-remote origin`.
+засчитаны с наблюдаемым ожиданием в `pg_locks`. Ветка опубликована 2026-10-13 без PR;
+она несёт план, J1, J2 и J3. CI точного коммита `c4a2422` — **PASS** (run 38482480419).
+`main` не переносился. Независимый обзор — NOT TESTED: исполнитель решил провести его
+один раз после среза J4. Где `main` и что опубликовано, читать из `git ls-remote origin`.
 
 [Актуальный handoff](docs/plan/NEXT_AGENT_PACKAGE_J3_2026-10-13.md),
 [готовый prompt](docs/plan/NEXT_AGENT_PACKAGE_J3_PROMPT_2026-10-13.md),

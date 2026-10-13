@@ -1,19 +1,21 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: package J slice J3 committed locally; not published — 2026-10-13
+## Current: package J slices J1–J3 published, CI success; not merged — 2026-10-13
 
 Read the [handoff](NEXT_AGENT_PACKAGE_J3_2026-10-13.md) first, then the
 [record](evidence/2026-10-13-j3-writeoffs/VALIDATION.md), the [plan](PACKAGE_J_PLAN_2026-10-13.md) and
 [ADR-0026 (Proposed)](../adr/0026-materials-and-stock-movements.md).
 Checkout `C:\Users\alexa\.codex\worktrees\package-j3-writeoffs\Gorgona Booking`, branch
-`codex/package-j3-writeoffs` (base `7616266`, the head of slice J2; read from
-`git ls-remote origin` where `main` is and whether any package J branch is published).
+`codex/package-j3-writeoffs` (base `7616266`, the head of slice J2). The branch was published on 2026-10-13 without a
+pull request; it carries the plan, J1, J2 and J3. Read from `git ls-remote origin` where
+`main` is and what is published.
 Slice J3 is commit `565b68f`: write-offs at the moving-average cost. One command posts a
 write-off whole: document, lines, outbound movements, balances, cost and one `stock`
 journal entry in the owner's book; the database values it and never lets a balance go
-below zero; migration 0038. The complete local suite passes (1651 passed, 4 skipped); there is
-no independent review and no CI run. STOCK-01 stays planned. The next slice is J4: returns
-against a source line and transfers between storage places, migration 0039.
+below zero; migration 0038. The complete local suite passes (1651 passed, 4 skipped) and CI
+of the exact commit `c4a2422` passed (run 38482480419); there is no independent review yet.
+STOCK-01 stays planned. The next slice is J4 in two parts: transfers between storage places
+(migration 0039), then returns against a source line (migration 0040).
 Deployment and production migration are not authorized. Read the actual HEAD, remote, PR
 and CI state before continuing.
 
