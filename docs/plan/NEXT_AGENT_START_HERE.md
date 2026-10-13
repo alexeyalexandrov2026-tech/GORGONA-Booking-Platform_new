@@ -3,12 +3,12 @@
 ## Current: workforce screens checked in eight untested situations — 2026-10-13
 
 Read the [handoff](NEXT_AGENT_WORKFORCE_SCREENS_2026-10-13.md) first, then the [record](evidence/2026-10-13-workforce-screen-situations/VALIDATION.md).
-Checkout `C:\Users\alexa\.codex\worktrees\workforce-screen-situations\Gorgona Booking`, local
-branch `codex/workforce-screen-situations` (not published; base `455ab14`, which is `main` plus the record of its
-fast-forward). `main` stays at `8a34a80`. Eight situations the Package I acceptance listed as
+Checkout `C:\Users\alexa\.codex\worktrees\workforce-screen-situations\Gorgona Booking`, branch
+`codex/workforce-screen-situations` (base `455ab14`, the earlier `main` plus the record of its fast-forward). On
+2026-10-13 the owner chose to publish it and, after green CI on its exact commit, to
+fast-forward `main` to its head; read where `main` is from `git ls-remote origin main`. Eight situations the Package I acceptance listed as
 untested now pass in a real browser on desktop and mobile; two defects of the My shifts screen
-were found and fixed. Open: publication and CI of this branch, carrying it and the record to
-`main`, and the items of the previous section. Deployment and production migration are not
+were found and fixed. Open: the items of the previous section. Deployment and production migration are not
 authorized. Read the actual HEAD, remote, PR and CI state before continuing.
 
 ## Previous: main fast-forwarded to the head of the stack — 2026-10-12

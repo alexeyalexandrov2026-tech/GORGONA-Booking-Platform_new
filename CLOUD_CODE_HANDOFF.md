@@ -8,10 +8,10 @@ Package I назвала непроверенными: 16 из 16 на комп�
 обрезал длинный список. Сервер, API, миграции и статусы готовности не менялись.
 
 Проверки: full local **PASS: 1532 passed, 4 skipped in 1419.45s (0:23:39)**; Ruff, format и mypy PASS на
-266 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS. CI
-**NOT TESTED**: ветка `codex/workforce-screen-situations` локальная и не опубликована (основа `455ab14` — это
-`main` и запись о его переносе); публикация требует отдельного разрешения владельца.
-`main` остаётся на `8a34a80`.
+266 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS. CI на
+момент записи NOT TESTED. 2026-10-13 владелец решил опубликовать ветку `codex/workforce-screen-situations` и после
+зелёного CI точного коммита перенести на неё `main` одним обычным push; результат CI и
+положение `main` читать из GitHub Actions и `git ls-remote origin main`.
 
 [Актуальный handoff](docs/plan/NEXT_AGENT_WORKFORCE_SCREENS_2026-10-13.md),
 [готовый prompt](docs/plan/NEXT_AGENT_WORKFORCE_SCREENS_PROMPT_2026-10-13.md),
