@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { businessDateTime, shiftDate } from "../lib/business-time";
 import { ManagementApiError } from "../lib/management-api";
 import {
   fetchChangeHistory,
@@ -74,6 +75,7 @@ export function MyShifts({
   const [changes, setChanges] = useState<Change[]>([]);
   const [colleagues, setColleagues] = useState<Colleague[]>([]);
   const [known, setKnown] = useState<Map<string, Shift>>(new Map());
+  const [cut, setCut] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [proposing, setProposing] = useState<{
     shift: Shift;
@@ -124,6 +126,7 @@ export function MyShifts({
     setChanges(latest(requests.items));
     setColleagues(team.items);
     setKnown(map);
+    setCut(own.more || vacant.more || requests.more || team.more);
     setLoadError(null);
   }, [businessId, from]);
   const refresh = useCallback(async () => {
@@ -160,6 +163,18 @@ export function MyShifts({
     const found = known.get(shift);
     return found ? describe(found) : "a shift outside the dates shown";
   };
+  // The window read from the server is wider than the four weeks: keep to the
+  // dates of each shift's own location.
+  const until = shiftDate(from, DAYS);
+  const inDates = (shift: Shift) => {
+    const zone = zoneOf(workspace?.locations, shift.location_id);
+    return (
+      businessDateTime(shift.starts_at, zone).date < until &&
+      businessDateTime(shift.ends_at, zone).date >= from
+    );
+  };
+  const assigned = (shifts ?? []).filter(inDates);
+  const unfilled = free.filter(inDates);
 
   async function chooseColleague(colleague: string) {
     if (!proposing) return;
@@ -174,7 +189,7 @@ export function MyShifts({
         window.starts,
         window.ends,
       );
-      setProposing({ ...next, theirs: soonest(listed.items) });
+      setProposing({ ...next, theirs: soonest(listed.items.filter(inDates)) });
     } catch (error) {
       if (
         error instanceof ManagementApiError &&
@@ -278,6 +293,12 @@ export function MyShifts({
         </p>
       )}
       <CommandNotices center={center} />
+      {cut && (
+        <p role="note">
+          Only the first 1000 records of each list are shown. Choose another
+          start date to see other shifts.
+        </p>
+      )}
       {!desk || shifts === null ? (
         !(failed ?? loadError) && <p aria-live="polite">Loading your shifts…</p>
       ) : !profileId ? (
@@ -300,9 +321,9 @@ export function MyShifts({
           </label>
           <section aria-label="Assigned to me" className="workforce-card">
             <h2>Assigned to me</h2>
-            {shifts.length === 0 && <p>No shifts in these four weeks.</p>}
+            {assigned.length === 0 && <p>No shifts in these four weeks.</p>}
             <ul className="cp-list">
-              {shifts.map((shift) => (
+              {assigned.map((shift) => (
                 <li key={shift.shift_id} className="workforce-item">
                   <h3>{describe(shift)}</h3>
                   <div className="workforce-actions">
@@ -334,7 +355,7 @@ export function MyShifts({
                 </li>
               ))}
             </ul>
-            {others.length === 0 && shifts.length > 0 && (
+            {others.length === 0 && assigned.length > 0 && (
               <p>There are no colleagues in your location to ask.</p>
             )}
             {hidden && (
@@ -413,11 +434,11 @@ export function MyShifts({
           )}
           <section aria-label="Open shifts" className="workforce-card">
             <h2>Open shifts</h2>
-            {free.length === 0 && (
+            {unfilled.length === 0 && (
               <p>No open shifts in your location for these dates.</p>
             )}
             <ul className="cp-list">
-              {free.map((shift) => (
+              {unfilled.map((shift) => (
                 <li key={shift.shift_id} className="workforce-item">
                   <h3>{describe(shift)}</h3>
                   <button
