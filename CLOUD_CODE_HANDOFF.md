@@ -1,6 +1,23 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-12: main fast-forwarded to the head of the stack
+## Current checkpoint — 2026-10-13: workforce screens checked in eight untested situations
+
+Экраны «Персонала» проверены в настоящем браузере в восьми ситуациях, которые приёмка
+Package I назвала непроверенными: 16 из 16 на компьютере и телефоне. Найдены и исправлены
+два дефекта экрана «Мои смены»: он показывал смены вне выбранных четырёх недель и молча
+обрезал длинный список. Сервер, API, миграции и статусы готовности не менялись.
+
+Проверки: full local **PASS: 1532 passed, 4 skipped in 1419.45s (0:23:39)**; Ruff, format и mypy PASS на
+266 файлах; web typecheck, lint, format, 102 unit и 23 страницы PASS. CI
+**NOT TESTED**: ветка `codex/workforce-screen-situations` локальная и не опубликована (основа `455ab14` — это
+`main` и запись о его переносе); публикация требует отдельного разрешения владельца.
+`main` остаётся на `8a34a80`.
+
+[Актуальный handoff](docs/plan/NEXT_AGENT_WORKFORCE_SCREENS_2026-10-13.md),
+[готовый prompt](docs/plan/NEXT_AGENT_WORKFORCE_SCREENS_PROMPT_2026-10-13.md),
+[запись о срезе](docs/plan/evidence/2026-10-13-workforce-screen-situations/VALIDATION.md).
+
+## Previous checkpoint — 2026-10-12: main fast-forwarded to the head of the stack
 
 `main` перенесён с `46cd866` на `8a34a80` одним обычным push без force по решению владельца
 от 2026-10-12. В `main` теперь вся основная линия: 113 коммитов, миграции 0001–0035.
@@ -11,7 +28,7 @@ CI на `main`: **PASS**, [run 38338644832](https://github.com/alexeyalexandrov2
 Новая работа начинается от `main`. Запись о выполнении лежит на ветке `codex/merge-plan`, на один
 коммит документов впереди `main`.
 
-[Актуальный handoff](docs/plan/NEXT_AGENT_AFTER_MERGE_2026-10-12.md),
+[Handoff после переноса `main`](docs/plan/NEXT_AGENT_AFTER_MERGE_2026-10-12.md),
 [готовый prompt](docs/plan/NEXT_AGENT_AFTER_MERGE_PROMPT_2026-10-12.md),
 [план слияния и его выполнение](docs/plan/MERGE_PLAN_2026-10-12.md).
 

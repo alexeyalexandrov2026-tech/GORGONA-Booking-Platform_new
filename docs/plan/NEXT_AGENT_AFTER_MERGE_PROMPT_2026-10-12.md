@@ -1,5 +1,7 @@
 # Ready-to-paste prompt — after main was fast-forwarded
 
+Superseded on 2026-10-13 by the [workforce screens prompt](NEXT_AGENT_WORKFORCE_SCREENS_PROMPT_2026-10-13.md); kept as the record of that slice.
+
 ```text
 Continue GORGONA Booking. The whole platform is now on main.
 

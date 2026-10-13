@@ -1,0 +1,373 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-13T04:22:33.648079+00:00",
+  "base": "455ab14c99eb8d05f532f798a7986b55b7e5d8b4",
+  "main_at_record": "8a34a80",
+  "branch": "codex/workforce-screen-situations",
+  "published": false,
+  "decision": {
+    "owner_message": "continue",
+    "reading": "consent to go on; the executor chose this slice; no new push to main"
+  },
+  "changed_sources": [
+    {
+      "path": "api/tests/integration/test_i4_situations_browser.py",
+      "sha256": "f5944710225effa4a01e94fd2dff2225a912d7dc032e1e3196d72f0bf817193e",
+      "git_blob_oid": "ef23e5dee55f3508a1a0182b175c60d4ff5c1ab1"
+    },
+    {
+      "path": "web/components/my-shifts.tsx",
+      "sha256": "95395c87405f8eb12fe42fe09d48adefcd5c94761c6797650d8bcc82653ed1a1",
+      "git_blob_oid": "ee0eb5507f5be8ce4b86b5fe0ebdb29e9512a019"
+    },
+    {
+      "path": "web/package.json",
+      "sha256": "88ee11214483afa944f9a85da5745bee36989fd520f08cc7bd6a4f4e6cbbbba8",
+      "git_blob_oid": "7a04cbd12c0d9d050ae4b22555763f489658386b"
+    },
+    {
+      "path": "web/tests/workforce-situations.spec.ts",
+      "sha256": "d1670126bb88c0e314311bd3504ea09d900ec32c17c09b56feb66df7915bffd9",
+      "git_blob_oid": "6e56d88e03ed41f7c4b34cb5342907979c8df399"
+    }
+  ],
+  "findings": [
+    {
+      "id": "S-1",
+      "severity": "medium",
+      "screen": "My shifts",
+      "defect": "shifts outside the chosen four weeks were listed: up to 15 hours before the first date and after the last one, also in the colleague's shifts offered for a swap",
+      "cause": "the window read from the server is widened by 15 hours on each side and the screen did not trim it to the dates of the location, as the Schedule screen does",
+      "red": "red-1",
+      "fix": "web/components/my-shifts.tsx: lists keep to the dates of each shift's location"
+    },
+    {
+      "id": "S-2",
+      "severity": "low",
+      "screen": "My shifts",
+      "defect": "a list cut after ten pages was shown without saying so",
+      "cause": "the result flag `more` was ignored on this screen; Schedule and Timesheets show a note",
+      "red": "red-2",
+      "fix": "web/components/my-shifts.tsx: the same note as on the other screens"
+    }
+  ],
+  "situations": [
+    {
+      "situation": "Часы браузера далеко от UTC и от филиала",
+      "check": "«Мои смены» начинаются с сегодняшней даты филиала, время показано по часам филиала, в списке только 28 дат филиала. Браузер работает в `Pacific/Kiritimati` или `Pacific/Pago_Pago`: его календарная дата в момент теста не совпадает с датой филиала.",
+      "result": "PASS после исправления S-1"
+    },
+    {
+      "situation": "Списки длиннее одной страницы",
+      "check": "Тест добавляет к запросу списка `limit`, и сервер отдаёт страницы по 5 и по 1 записи. Клиент дочитывает все 12 смен; при десяти страницах список обрезан и экран сообщает об этом. Проверены «Расписание» и «Мои смены».",
+      "result": "PASS; для «Моих смен» — после исправления S-2"
+    },
+    {
+      "situation": "Сбой сервера и нечитаемый ответ на команду",
+      "check": "Ответ 500 после записи; нечитаемый ответ после записи; ответ 503 без записи. Каждый раз экран пишет, что результат не подтверждён; что новое действие при этом закрыто, проверено на первом случае. Проверка по ключу команды находит записанную смену ровно один раз, а незаписанную позволяет отбросить. Сбой чтения списка показан, следующее чтение восстанавливает экран.",
+      "result": "PASS"
+    },
+    {
+      "situation": "Потеря ответа при смене настройки приватности",
+      "check": "Сервер записал настройку, ответ потерян. После проверки по ключу настройка показана как сохранённая; в базе одна версия на каждое изменение.",
+      "result": "PASS"
+    },
+    {
+      "situation": "Перевод часов внутри смены",
+      "check": "Смена с 22:00 до 06:00 в ночь перевода часов сохранена с настоящей длиной. В этом прогоне ближайший перевод — назад, 2026-11-01: длина 9 часов, а время 01:30, которое в ту ночь наступает дважды, отклонено с объяснением, и ничего не сохранено. Ветка теста для перевода вперёд (7 часов, несуществующее время) в этом прогоне не выполнялась.",
+      "result": "PASS"
+    },
+    {
+      "situation": "Компания, которая модуль не включала",
+      "check": "«Расписание», «Табели» и «Мои смены» закрыты для записи и доступны; в базе этой компании ноль строк смен, профилей, табелей и запросов.",
+      "result": "PASS"
+    },
+    {
+      "situation": "Больше 20 версий смены",
+      "check": "У смены 21 версия: показаны последние 20 и сказано, что показаны только они.",
+      "result": "PASS"
+    },
+    {
+      "situation": "Больше 20 запросов",
+      "check": "У сотрудника 21 запрос на открытые смены вне показанных дат. Перечислены все; подробности смены прочитаны для последних 20, самый старый назван сменой вне показанных дат.",
+      "result": "PASS"
+    }
+  ],
+  "browser_tests": {
+    "spec": "web/tests/workforce-situations.spec.ts",
+    "fixture": "api/tests/integration/test_i4_situations_browser.py",
+    "titles": [
+      "a company that never enabled the module shows closed screens",
+      "a lost answer to the privacy setting is settled, not repeated",
+      "a server fault or an unreadable answer to a command is settled by its key",
+      "a shift across the night the clocks change keeps its real length",
+      "a shift with more than twenty versions lists the latest twenty and says so",
+      "lists longer than one page are read to the end, and a cut list says so",
+      "more than twenty requests stay listed; the oldest names no shift",
+      "my shifts keep to four weeks of the location's dates under a far browser clock"
+    ],
+    "runs_in_full": 16
+  },
+  "phases": {
+    "red-1": {
+      "base_sha": "455ab14c99eb8d05f532f798a7986b55b7e5d8b4",
+      "started_utc": "2026-10-13T03:48:39.301274+00:00",
+      "finished_utc": "2026-10-13T03:49:03.891565+00:00",
+      "web_out_before": {
+        "files": 154,
+        "sha256": "806ac71666b4e0f6a1cb832e05b02e2db055158370587dce9ae21028e2993ac3"
+      },
+      "web_out_after": {
+        "files": 154,
+        "sha256": "806ac71666b4e0f6a1cb832e05b02e2db055158370587dce9ae21028e2993ac3"
+      },
+      "source_unchanged_during_run": true,
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 4.79,
+          "log_sha256": "67bdca32d54e13afa87d5153aed0fcfdf86a9893af4e397e2b62bcaee6b79b8f"
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.46,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 18.72,
+          "log_sha256": "46e1bbebdfcd45120d17a109baa6e3bfb97380b1db59856653f85ec05f0e3146"
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.18,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ]
+    },
+    "red-2": {
+      "base_sha": "455ab14c99eb8d05f532f798a7986b55b7e5d8b4",
+      "started_utc": "2026-10-13T03:50:17.189956+00:00",
+      "finished_utc": "2026-10-13T03:50:47.211905+00:00",
+      "web_out_before": {
+        "files": 154,
+        "sha256": "3c08cf1da4c0bd6759c8cf9f434c463005b1fc70fd348251f6c62900faf5791b"
+      },
+      "web_out_after": {
+        "files": 154,
+        "sha256": "3c08cf1da4c0bd6759c8cf9f434c463005b1fc70fd348251f6c62900faf5791b"
+      },
+      "source_unchanged_during_run": true,
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.27,
+          "log_sha256": "483c123bc2c662c38068b4bd4cd001844f260524ecc3265d39f773d96ba5f21b"
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.56,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 25.3,
+          "log_sha256": "6eedb54e0698f65a1837667c3d8508f477762935f2f65dbabf40b66b6b96da53"
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.35,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ]
+    },
+    "static-1": {
+      "base_sha": "455ab14c99eb8d05f532f798a7986b55b7e5d8b4",
+      "started_utc": "2026-10-13T03:57:48.314793+00:00",
+      "finished_utc": "2026-10-13T03:58:31.419714+00:00",
+      "web_out_before": {
+        "files": 154,
+        "sha256": "d027e773f82fa2ae9dca01f233a27e8630d610212c582cf840962ddfaa22b2fc"
+      },
+      "web_out_after": {
+        "files": 154,
+        "sha256": "916bde52dd190892d544c5747e958db8d444bff0b9b3fa825abc8ce34d9a12e0"
+      },
+      "source_unchanged_during_run": true,
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.21,
+          "log_sha256": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0"
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.16,
+          "log_sha256": "f79981b5bf68717cf1f1116abf9ab226382aa94feece4df31e45a8bf23769446"
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 6.93,
+          "log_sha256": "1077830cf8a318181c98b26ef2ba9bff43a862783d682ff2089088451dc25121"
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "seconds": 3.12,
+          "log_sha256": "57eb61b8116e9717145f8a326096c13f75126fdd520df38125124402e222a24c"
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "seconds": 13.83,
+          "log_sha256": "ce57886850d9496f41c2f2e77437461f5f112de7e9ab0107ceb3f2ce90dd738f"
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "seconds": 2.45,
+          "log_sha256": "04e80414d063c197fc67cb7f1eef4ae379749f4f76147f4cf366016a2a6ff65f"
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "seconds": 3.01,
+          "log_sha256": "0e93949cb4d56114c861fa79c2f23e38e8352ccf03d84d3d83b6256f35cc3721"
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "seconds": 7.98,
+          "log_sha256": "726eb87fb4ff1b5aed3e623a81dbe3175ba6560e3aff5d5e720ef15d601a2b83"
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 0,
+          "seconds": 1.14,
+          "log_sha256": "a36800d2b171922176fbc60c027874263ea37d0fc24441b302727df481fca187"
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "seconds": 3.74,
+          "log_sha256": "782f1844e2953ba85114ab3f7392cfa89e98cbaeed4549c1e46a9c0cfca942cc"
+        }
+      ]
+    },
+    "full-1": {
+      "base_sha": "455ab14c99eb8d05f532f798a7986b55b7e5d8b4",
+      "started_utc": "2026-10-13T03:58:38.457450+00:00",
+      "finished_utc": "2026-10-13T04:22:25.730562+00:00",
+      "web_out_before": {
+        "files": 154,
+        "sha256": "916bde52dd190892d544c5747e958db8d444bff0b9b3fa825abc8ce34d9a12e0"
+      },
+      "web_out_after": {
+        "files": 154,
+        "sha256": "916bde52dd190892d544c5747e958db8d444bff0b9b3fa825abc8ce34d9a12e0"
+      },
+      "source_unchanged_during_run": true,
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.96,
+          "log_sha256": "4eb90a1a69db068019d82f41e6f37d4802a71fe4711b076b701efdc5718d32c2"
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.45,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "pytest-full",
+          "exit_code": 0,
+          "seconds": 1421.95,
+          "log_sha256": "e01d32f02956d96d7470e6cd2477bf48e26b78de0f45dfea62d3c36b063ead63"
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.17,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ]
+    }
+  },
+  "full_run": {
+    "summary": "1532 passed, 4 skipped in 1419.45s (0:23:39)",
+    "passed": 1532,
+    "skipped": 4,
+    "seconds": 1421.95
+  },
+  "web": {
+    "unit_tests_passed": 102,
+    "static_pages": 23,
+    "audit": {
+      "web-audit": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "web-audit-all": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 5,
+        "critical": 0,
+        "total": 5
+      }
+    }
+  },
+  "tools": {
+    "python_packages": {
+      "pytest": "9.1.1",
+      "psycopg": "3.3.6",
+      "ruff": "0.16.9",
+      "mypy": "2.3.1",
+      "fastapi": "0.142.1",
+      "pydantic": "2.13.5"
+    },
+    "mypy_source_files": 266,
+    "web_installed": {
+      "next": "16.3.8",
+      "eslint-config-next": "16.3.8",
+      "source-map-js": "1.2.2",
+      "postcss": "8.5.23",
+      "react": "19.3.0",
+      "@playwright/test": "1.63.0"
+    }
+  },
+  "ci": "NOT TESTED: the branch is not published",
+  "not_tested": [
+    "CI: ветка не опубликована",
+    "настоящий screen reader",
+    "находки первого обзора F2, F6 и N2 в браузере: отметка «вне расписания», сообщение при ещё идущей команде и отклонённая запись без утверждённой версии",
+    "замечание P3: подсказка для человека, переведённого в другой филиал",
+    "перевод часов на экране «Табели»: отработанное время и исправление времени",
+    "настоящие списки длиннее 1000 записей: тест заставляет сервер отдавать маленькие страницы",
+    "предел в 40 смен, которые «Расписание» читает для запросов (проверен предел 20 на «Моих сменах»)",
+    "HawkScan, нагрузка, развёртывание и production"
+  ],
+  "observations": [
+    "После неудачной первой загрузки экран показывает только сообщение об ошибке: кнопки повтора нет, нужно перезагрузить страницу. Это видно по коду; в браузере проверен сбой повторного чтения, когда данные уже были загружены, — следующее чтение восстанавливает экран.",
+    "Компании, которая никогда не включала модуль, экран пишет «Scheduling is turned off for this business» — тот же текст, что и после выключения.",
+    "При более чем 20 запросах самый старый показан без названия смены, хотя запрос остаётся в списке и его историю можно открыть."
+  ],
+  "run_folder": "C:/Users/alexa/AppData/Local/Packages/Claude_pzs8sxrjxfjjc/LocalCache/Local/GorgonaBookingTests/workforce-situations-20261012-455ab14"
+}
