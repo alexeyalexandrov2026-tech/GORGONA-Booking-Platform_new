@@ -1,0 +1,430 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-13T02:17:49.939181+00:00",
+  "repository": "alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new",
+  "main": "46cd866e059597aee75da4181dbb8c0928bbe57d",
+  "main_files": [
+    "README.md"
+  ],
+  "tip": "79115a53ba5ea2f9b94641633968278936b7e2f3",
+  "tip_branch": "codex/web-dependency-audit",
+  "commits": 111,
+  "merge_commits": 0,
+  "files_changed": 719,
+  "insertions": 171699,
+  "migrations_on_tip": [
+    "0001_tenancy.sql",
+    "0035_work_location_settings.sql",
+    35
+  ],
+  "line": [
+    {
+      "order": 1,
+      "branch": "codex/universal-business-foundation",
+      "head": "2f1638011987e06923468b64600de1d1f4a14020",
+      "ahead_of_main": 15,
+      "pull_request": 1,
+      "pull_request_base": "main",
+      "content": "Build universal business foundation and versioned legal-entity drafts"
+    },
+    {
+      "order": 2,
+      "branch": "codex/package-e-isolation-audit",
+      "head": "bbe6ecd80d8827ca94a63f15587704ffc22dba62",
+      "ahead_of_main": 17,
+      "pull_request": 6,
+      "pull_request_base": "codex/universal-business-foundation",
+      "content": "Fix selected-company readiness and membership queries (Package E0)"
+    },
+    {
+      "order": 3,
+      "branch": "codex/package-e1-counterparties",
+      "head": "3983dd4f36e67830427cc09fafcb51ae68c7705d",
+      "ahead_of_main": 20,
+      "pull_request": 7,
+      "pull_request_base": "codex/package-e-isolation-audit",
+      "content": "Add versioned counterparties, contacts and manual matching (E1)"
+    },
+    {
+      "order": 4,
+      "branch": "codex/package-e2-file-validation",
+      "head": "4a6f63bcb1c641967827e7bba2d673fe5eddc1da",
+      "ahead_of_main": 22,
+      "pull_request": 8,
+      "pull_request_base": "codex/package-e1-counterparties",
+      "content": "Prepare bounded file validation and preserve API CSP (E2 prerequisite)"
+    },
+    {
+      "order": 5,
+      "branch": "claude/package-e2-documents",
+      "head": "c5a3908edf67541457eecbc32a279899205fd8a1",
+      "ahead_of_main": 24,
+      "pull_request": 9,
+      "pull_request_base": "codex/package-e2-file-validation",
+      "content": "Add versioned documents, verified files and counterparty links (E2)"
+    },
+    {
+      "order": 6,
+      "branch": "claude/package-e3-agreements",
+      "head": "b8834fbba7adfc5acaeeb28a2eb57654e34202da",
+      "ahead_of_main": 26,
+      "pull_request": 10,
+      "pull_request_base": "claude/package-e2-documents",
+      "content": "Add versioned contracts with counterparties (E3)"
+    },
+    {
+      "order": 7,
+      "branch": "claude/package-f-occupancy-plan",
+      "head": "b4c8563210d80cac0b19d898b676c1149f9a1d0b",
+      "ahead_of_main": 28,
+      "pull_request": null,
+      "pull_request_base": null,
+      "content": "план пакета F; входит в PR #11"
+    },
+    {
+      "order": 8,
+      "branch": "claude/package-f-occupancy",
+      "head": "ed7884e5efb7bcb4a1fcba147b53fdf928795230",
+      "ahead_of_main": 32,
+      "pull_request": 11,
+      "pull_request_base": "claude/package-e3-agreements",
+      "content": "Add shared resource occupancy and staff reservations (package F, CORE-04)"
+    },
+    {
+      "order": 9,
+      "branch": "claude/stage1-closure",
+      "head": "de5fada53a1908ce50031dfba270d6d22946a55e",
+      "ahead_of_main": 34,
+      "pull_request": null,
+      "pull_request_base": null,
+      "content": "закрытие этапа 1"
+    },
+    {
+      "order": 10,
+      "branch": "claude/stage2-finance-plan",
+      "head": "151472a68d736ef21f68550ec36674eb36efc23c",
+      "ahead_of_main": 36,
+      "pull_request": null,
+      "pull_request_base": null,
+      "content": "план этапа 2; служит основой PR #12"
+    },
+    {
+      "order": 11,
+      "branch": "codex/package-g-ledger-review",
+      "head": "5be6e7abd7b552903a4f4b2884b150c62532c17d",
+      "ahead_of_main": 41,
+      "pull_request": 12,
+      "pull_request_base": "claude/stage2-finance-plan",
+      "content": "Package G: technically verified ledger foundation (FIN-01)"
+    },
+    {
+      "order": 12,
+      "branch": "codex/package-h-finance-plan",
+      "head": "925ae02b581d22cf1e7897a3d94844b8ebc24648",
+      "ahead_of_main": 43,
+      "pull_request": 13,
+      "pull_request_base": "codex/package-g-ledger-review",
+      "content": "docs: propose Package H invoices and settlement rules"
+    },
+    {
+      "order": 13,
+      "branch": "codex/package-h-invoices",
+      "head": "18e3f5e53b24a7590ef035df7fe3ae41521dc740",
+      "ahead_of_main": 48,
+      "pull_request": 14,
+      "pull_request_base": "codex/package-h-finance-plan",
+      "content": "H1 foundation: strict finance contracts and closed workflow gate"
+    },
+    {
+      "order": 14,
+      "branch": "codex/package-h1-persistence",
+      "head": "75e809b9d82b514fd9d2ae93122c23c0ae217e85",
+      "ahead_of_main": 51,
+      "pull_request": 15,
+      "pull_request_base": "codex/package-h-invoices",
+      "content": "H1 backend: atomic invoice accruals behind the closed workflow gate"
+    },
+    {
+      "order": 15,
+      "branch": "codex/package-h2-settlements",
+      "head": "e93ca5cae9400b7e9c2207089dda0ee101b7517d",
+      "ahead_of_main": 61,
+      "pull_request": 16,
+      "pull_request_base": "codex/package-h1-persistence",
+      "content": "feat(finance): H2 manual accruals, settlement reserves and attested confirmations"
+    },
+    {
+      "order": 16,
+      "branch": "codex/package-h3-settlement-guards",
+      "head": "c6c5d89a752a526d72ae310c42dbc63106612705",
+      "ahead_of_main": 64,
+      "pull_request": 17,
+      "pull_request_base": "codex/package-h2-settlements",
+      "content": "H3: settlement guards after the independent H2 money review (F1–F4)"
+    },
+    {
+      "order": 17,
+      "branch": "codex/package-h3-credits",
+      "head": "807ed594f808ea4919718205f78085406c054038",
+      "ahead_of_main": 66,
+      "pull_request": 18,
+      "pull_request_base": "codex/package-h3-settlement-guards",
+      "content": "H3: issue credit notes and track separate refund obligations"
+    },
+    {
+      "order": 18,
+      "branch": "codex/package-h3-payment-corrections",
+      "head": "1d96a64c3b85507d1db230e1dcb7dd21e6947046",
+      "ahead_of_main": 68,
+      "pull_request": 19,
+      "pull_request_base": "codex/package-h3-credits",
+      "content": "H3: correct and void payment attestations with immutable revisions"
+    },
+    {
+      "order": 19,
+      "branch": "codex/package-h3-credit-voids",
+      "head": "785fb7f3d4ba57a9b758b693d92ee1b2d95fa35b",
+      "ahead_of_main": 71,
+      "pull_request": 20,
+      "pull_request_base": "codex/package-h3-payment-corrections",
+      "content": "H3: void issued credits and cancel untouched refund obligations"
+    },
+    {
+      "order": 20,
+      "branch": "codex/h3-forward-corrections",
+      "head": "12875e826b58c752bf6068352f398ec388ed7c0a",
+      "ahead_of_main": 72,
+      "pull_request": 21,
+      "pull_request_base": "codex/package-h3-credit-voids",
+      "content": "fix(finance): resolve H3 review F1–F5 with forward-only 0030"
+    },
+    {
+      "order": 21,
+      "branch": "codex/package-h4-ui-admission",
+      "head": "319f144f9a234fbfc2cfef5f0aea2708d3870d7e",
+      "ahead_of_main": 73,
+      "pull_request": 22,
+      "pull_request_base": "codex/h3-forward-corrections",
+      "content": "H4: financial workspaces and provider admission metadata"
+    },
+    {
+      "order": 22,
+      "branch": "codex/package-h-acceptance",
+      "head": "9ef373489f1e6c9bb37cc8b2929143484afdc461",
+      "ahead_of_main": 77,
+      "pull_request": null,
+      "pull_request_base": null,
+      "content": "приёмка пакета H (FIN-03)"
+    },
+    {
+      "order": 23,
+      "branch": "codex/package-i4-workforce-screens",
+      "head": "c6b8e341a7e88957ee5011e54e9aa06453b31b49",
+      "ahead_of_main": 98,
+      "pull_request": null,
+      "pull_request_base": null,
+      "content": "пакет I: срезы I0–I4 и настройка видимости смен"
+    },
+    {
+      "order": 24,
+      "branch": "codex/package-i4-review-corrections",
+      "head": "4630ca38832c0d6126f5c352f9c4e3f636ac085c",
+      "ahead_of_main": 108,
+      "pull_request": null,
+      "pull_request_base": null,
+      "content": "исправления обзоров и приёмка пакета I (WORK-01, CORE-04)"
+    },
+    {
+      "order": 25,
+      "branch": "codex/web-dependency-audit",
+      "head": "79115a53ba5ea2f9b94641633968278936b7e2f3",
+      "ahead_of_main": 111,
+      "pull_request": null,
+      "pull_request_base": null,
+      "content": "обновление next и source-map-js"
+    }
+  ],
+  "identifiers": {
+    "cited_by_readiness_registry": [
+      "319f144f9a234fbfc2cfef5f0aea2708d3870d7e",
+      "95a0de4ac9f5aa3c96b054c5504f59115b0e4b69",
+      "bf3645d987f06f9993d6e6b4087f54168bc0fc26",
+      "f41f9a849a34a732433bea75514da758e345b859",
+      "f8db038e4d10c02bec69578cfaba349d21595f71"
+    ],
+    "stack_commits_cited_in_documents": 87
+  },
+  "old_line": {
+    "pull_requests": [
+      2,
+      3,
+      4,
+      5
+    ],
+    "branches": {
+      "claude/keen-mayer-lg9ift": "ef423f3c672bf2da219d6aef85f9a44cf1f37317",
+      "codex/booking-state-isolation": "b8647897cfa653e39f2e3188dbb9ad23c13e13fa",
+      "codex/company-departments": "161509f0e3a298cef9d2929576a023a6dd2e93c3",
+      "codex/company-groups": "1542b70fd82b57aaf304fc1f9c448bd4e2d8e1b0"
+    },
+    "fork_point": "eaa62339cf82ea69b96f2e8ec346ede585729f02",
+    "commits_not_on_tip": [
+      "bd1a138 Add limited delegation between independent businesses",
+      "c613d99 Record delegation CI acceptance",
+      "ef423f3 Consolidate the next-agent handoff",
+      "951708a fix: scope readiness and member lists to selected business",
+      "b864789 docs: record selected-company CI evidence and continuation",
+      "931a11e feat: add versioned company departments with safe hierarchy",
+      "161509f docs: record department CI and current continuation",
+      "1f199a2 Add consented company groups and restricted booking reports",
+      "1542b70 Record company-group acceptance and exact CI evidence"
+    ],
+    "trial_merge_conflicts": 40,
+    "migrations_with_other_meaning": [
+      "0011_delegation_grants.sql",
+      "0012_departments.sql",
+      "0013_company_groups.sql"
+    ],
+    "product_files_only_there": [
+      "api/src/gorgona_booking/business/company_groups.py",
+      "api/src/gorgona_booking/business/group_membership.py",
+      "api/src/gorgona_booking/business/group_reports.py",
+      "api/src/gorgona_booking/db/migrations/0011_delegation_grants.sql",
+      "api/src/gorgona_booking/db/migrations/0012_departments.sql",
+      "api/src/gorgona_booking/db/migrations/0013_company_groups.sql",
+      "web/components/company-groups.tsx",
+      "web/lib/group-api.ts"
+    ]
+  },
+  "repository_settings": {
+    "default_branch": "main",
+    "visibility": "public",
+    "main_protected": false,
+    "open_pull_requests": 22,
+    "all_draft": true,
+    "conversation_comments": 23,
+    "review_comments": 0,
+    "workflow_triggers": {
+      "ci.yml": [
+        "pull_request",
+        "push"
+      ],
+      "deploy-staging.yml": [
+        "workflow_dispatch"
+      ],
+      "promote-production.yml": [
+        "workflow_dispatch"
+      ]
+    }
+  },
+  "ci_of_tip": {
+    "run_id": 38317477223,
+    "url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38317477223",
+    "conclusion": "success"
+  },
+  "local": {
+    "branches": 57,
+    "branches_outside_main_line": [
+      "claude/keen-mayer-lg9ift",
+      "codex/booking-state-isolation",
+      "codex/company-departments",
+      "codex/company-groups",
+      "codex/package-i4-review",
+      "codex/readiness-validation"
+    ],
+    "worktrees": 28,
+    "worktrees_with_uncommitted_changes": [
+      {
+        "path": "C:/Users/alexa/Documents/ChatGPT/Gorgona Booking",
+        "head": "2f16380",
+        "changed_paths": 19
+      },
+      {
+        "path": "C:/Users/alexa/.codex/worktrees/package-g-independent-review/Gorgona Booking",
+        "head": "151472a",
+        "changed_paths": 40
+      },
+      {
+        "path": "C:/Users/alexa/.codex/worktrees/package-i4-corrections-review/Gorgona Booking",
+        "head": "490652b",
+        "changed_paths": 9
+      },
+      {
+        "path": "C:/Users/alexa/Documents/ChatGPT/gorgona-e2-documents",
+        "head": "151472a",
+        "changed_paths": 9
+      },
+      {
+        "path": "C:/Users/alexa/Documents/ChatGPT/gorgona-package-i1-review",
+        "head": "1419073",
+        "changed_paths": 23
+      },
+      {
+        "path": "C:/Users/alexa/Documents/ChatGPT/gorgona-package-i2-review",
+        "head": "69270cc",
+        "changed_paths": 16
+      },
+      {
+        "path": "C:/Users/alexa/Documents/ChatGPT/gorgona-package-i3-review",
+        "head": "49276bf",
+        "changed_paths": 14
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "`main` — начало линии: `git merge-base --is-ancestor`",
+      "result": "PASS"
+    },
+    {
+      "check": "Линия прямая: 111 коммитов, merge-коммитов 0",
+      "result": "PASS"
+    },
+    {
+      "check": "Все 25 веток линии лежат на ней по порядку; головы 22 PR совпадают с головами веток",
+      "result": "PASS"
+    },
+    {
+      "check": "Идентификаторы из реестра готовности (5) достижимы из вершины",
+      "result": "PASS"
+    },
+    {
+      "check": "Пробное слияние старой линии в вершину (`git merge-tree`, без записи): 40 конфликтов",
+      "result": "FAIL — ожидаемо; поэтому старая линия не сливается"
+    },
+    {
+      "check": "CI вершины `79115a5`: [run 38317477223](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38317477223)",
+      "result": "PASS"
+    },
+    {
+      "check": "Оба workflow развёртывания запускаются только вручную",
+      "result": "PASS"
+    },
+    {
+      "check": "Единственный локальный коммит вне обеих линий: его файл уже есть в вершине байт в байт",
+      "result": "PASS"
+    },
+    {
+      "check": "Поведение страниц PR после слияния",
+      "result": "NOT TESTED"
+    },
+    {
+      "check": "Разрешённые способы слияния и правила репозитория: без входа в GitHub не читаются",
+      "result": "NOT TESTED"
+    },
+    {
+      "check": "Содержимое незакоммиченных изменений в 7 рабочих копиях",
+      "result": "NOT TESTED"
+    },
+    {
+      "check": "CI каждой промежуточной головы PR заново не перечитывался",
+      "result": "NOT TESTED"
+    }
+  ],
+  "not_done": [
+    "no merge",
+    "no pull request changed",
+    "no branch deleted",
+    "no setting changed"
+  ]
+}

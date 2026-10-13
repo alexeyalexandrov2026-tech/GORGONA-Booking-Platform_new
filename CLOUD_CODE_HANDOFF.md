@@ -15,6 +15,9 @@ FAIL: 2 high. Обновлены `next` 16.3.7 → 16.3.8 и `source-map-js` 1.2
 
 Состояние Package I не изменилось и описано в следующем разделе.
 
+План слияния веток в `main` подготовлен и ждёт решения владельца: [план](docs/plan/MERGE_PLAN_2026-10-12.md).
+Ничего не слито.
+
 [Актуальный handoff](docs/plan/NEXT_AGENT_WEB_DEPENDENCY_AUDIT_2026-10-12.md),
 [готовый prompt](docs/plan/NEXT_AGENT_WEB_DEPENDENCY_AUDIT_PROMPT_2026-10-12.md),
 [запись о срезе](docs/plan/evidence/2026-10-12-web-dependency-audit/VALIDATION.md).

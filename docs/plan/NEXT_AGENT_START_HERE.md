@@ -8,8 +8,9 @@ Read the [handoff](NEXT_AGENT_WEB_DEPENDENCY_AUDIT_2026-10-12.md) first, then th
 `codex/web-dependency-audit` (published; CI success; base `4630ca3`, the published head of
 `codex/package-i4-review-corrections`). `npm audit --omit=dev` is clean after `next`
 16.3.8 and `source-map-js` 1.2.2; the full audit still reports 5 high in one
-development-only `braces` chain that has no fixed release. Open: a pull request and
-the merge order of the unmerged stack, and package H's two items named below. Merge, deployment and production migration are
+development-only `braces` chain that has no fixed release. Open: the owner's decision
+on the [merge plan](MERGE_PLAN_2026-10-12.md) (prepared on the local branch `codex/merge-plan`; nothing is
+merged), and package H's two items named below. Merge, deployment and production migration are
 not authorized. Read the actual HEAD, remote, PR and CI state before continuing.
 
 ## Previous: package I accepted technically — 2026-10-12
