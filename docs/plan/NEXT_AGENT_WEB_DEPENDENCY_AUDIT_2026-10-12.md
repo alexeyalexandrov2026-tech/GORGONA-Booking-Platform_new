@@ -12,8 +12,9 @@
   менялась.
 - Коммиты поверх основы: `ab3e6b6` — обновление зависимостей (два файла); `8a1a7ab` —
   запись и документы; следующий коммит — только запись публикации и CI.
-- Поверх `79115a5` есть локальная, не опубликованная ветка `codex/merge-plan` с одним
-  коммитом документов — планом слияния. Checkout стоит на ней.
+- Поверх `79115a5` идёт ветка `codex/merge-plan`: план слияния и запись решений владельца.
+  Checkout стоит на ней. 2026-10-12 владелец выбрал перемотку `main` на её вершину; где
+  сейчас `main`, читать из `git ls-remote origin main`.
 - [Запись о срезе](evidence/2026-10-12-web-dependency-audit/VALIDATION.md), [её проверки](evidence/2026-10-12-web-dependency-audit/CHECKS.json).
 
 Сначала status, branch, HEAD, log, worktrees и remotes. `git rev-parse HEAD:<путь>` для
@@ -66,8 +67,8 @@ reviewer `C:/Users/alexa/.codex/worktrees/package-i4-corrections-review/Gorgona 
 
 Выбор за владельцем; каждый — отдельный срез со своей веткой и проверками.
 
-1. Решение владельца по [плану слияния](MERGE_PLAN_2026-10-12.md) и его выполнение. План подготовлен
-   2026-10-12; ничего не слито и ни один PR не изменён.
+1. Выполнение [плана слияния](MERGE_PLAN_2026-10-12.md) по решению владельца от 2026-10-12 и оставшиеся
+   решения из его раздела «Что нужно решить» (пункты 4–6). PR #2–#5 не сливать.
 2. Следующий пакет этапа 2 по master plan.
 3. Проверка экранов «Персонала» в ситуациях, перечисленных как непроверенные.
 
@@ -94,8 +95,9 @@ CI: задание `api` занимает около 12 минут на быст
 Не выполнять push, PR, merge, rebase, amend, reset, clean, force-push, изменение
 готовности, CodeRabbit, Azure, production migrations, deploy, provider, funds и
 credential actions без отдельного прямого разрешения владельца. Разрешения на
-публикацию от 2026-10-12 относятся к веткам `codex/package-i4-review-corrections` и
-`codex/web-dependency-audit`, и только к ним.
+публикацию от 2026-10-12 относятся к веткам `codex/package-i4-review-corrections`,
+`codex/web-dependency-audit` и `codex/merge-plan`; для `main` разрешена одна перемотка на вершину
+`codex/merge-plan`. Других разрешений нет.
 Миграции 0001–0035 неизменяемы. Статусы `pilot_accepted` и `production_approved`
 требуют отдельных решений владельца. KA Nails — отдельный проект, не требование
 этой платформы.

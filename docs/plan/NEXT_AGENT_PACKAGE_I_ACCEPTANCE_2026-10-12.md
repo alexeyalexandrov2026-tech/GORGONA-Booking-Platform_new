@@ -15,8 +15,9 @@ FAIL: 2 high. Обновлены `next` 16.3.7 → 16.3.8 и `source-map-js` 1.2
 
 Состояние Package I не изменилось и описано в следующем разделе.
 
-План слияния веток в `main` подготовлен и ждёт решения владельца: [план](MERGE_PLAN_2026-10-12.md).
-Ничего не слито.
+Владелец 2026-10-12 выбрал перемотку `main` на вершину ветки `codex/merge-plan`
+([план](MERGE_PLAN_2026-10-12.md)); PR #2–#5 считаются заменёнными и не сливаются. Где сейчас
+`main`, читать из `git ls-remote origin main`; запись о выполнении — на ветке `codex/merge-plan`.
 
 [Актуальный handoff](NEXT_AGENT_WEB_DEPENDENCY_AUDIT_2026-10-12.md),
 [готовый prompt](NEXT_AGENT_WEB_DEPENDENCY_AUDIT_PROMPT_2026-10-12.md),
