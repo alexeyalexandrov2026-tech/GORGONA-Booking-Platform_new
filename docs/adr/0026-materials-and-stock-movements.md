@@ -1,6 +1,6 @@
 # ADR-0026 — Basic materials: owner-linked stock documents, moving-average cost and ledger postings
 
-- Status: **Proposed (2026-10-13)**. Slices J1 and J2 are implemented locally (see the
+- Status: **Proposed (2026-10-13)**. Slices J1, J2 and J3 are implemented locally (see the
   implementation notes below); the other slices are not. The owner chose the twelve options
   of the [package J plan](../plan/PACKAGE_J_PLAN_2026-10-13.md) on 2026-10-13; this text
   follows them. It becomes Accepted only with the technical acceptance of STOCK-01.
@@ -241,6 +241,42 @@ Choices made while implementing; none of them changes an owner decision:
 
 Implemented from decision 2 for receipts: an archived material and an archived place
 take no receipt.
+
+## Implementation notes — slice J3 (2026-10-13)
+
+Slice J3 is commit `565b68f` on the local branch `codex/package-j3-writeoffs`, on top of
+slice J2: migration 0038 and write-offs at the moving-average cost, with their outbound
+movements, balances, cost and `stock` journal entry. Returns and transfers are not
+implemented. Record:
+[validation](../plan/evidence/2026-10-13-j3-writeoffs/VALIDATION.md).
+
+Choices made while implementing; none of them changes an owner decision:
+
+1. Migration 0038 adds no table. It replaces the two checks of a document, so that a
+   reason belongs to its kind in the database, and five functions.
+2. Decision 6 says `round(V * q / Q)`. The database computes it half up with whole
+   numbers, `floor((2 * V * q + Q) / (2 * Q))`, so the result never depends on a rounded
+   quotient; `q = Q` takes exactly `V`.
+3. The valuation trigger computes the amount of an outbound line and refuses any other.
+   A writer still sends the amount, because the posting row with the document total
+   precedes the valuations; the service computes it with the same formula under the
+   ledger lock. The command of a write-off carries no amount.
+4. An outbound movement lowers the balance with one conditional update of the balance
+   row: it waits for a concurrent writer of that row and compares with what that writer
+   left. A shortage is SQLSTATE `GBS02` in the database and 409 `STOCK_INSUFFICIENT` in
+   the API, with the line number and the available quantity. The cost row refuses the
+   same way when the owner as a whole holds less.
+5. The posting command names its kind: `kind` is required and selects the strict shape
+   of a receipt or of a write-off. In slice J2 a body without it was a receipt.
+6. The packaged schema check now also verifies `gba.assert_stock_document`, the function
+   that the consistency triggers call. Slice J2 verified trigger functions only, so a
+   replaced body of this function would not have been noticed.
+7. A balance row and a cost row brought to zero stay and read as zero. One line of a
+   write-off leaves at most 999,999,999,999,999 minor units, the line limit of slice J2;
+   a larger value leaves in parts.
+
+Implemented from decision 2 for write-offs: an archived material and an archived place
+still allow outbound movements.
 
 ## Acceptance and status
 
