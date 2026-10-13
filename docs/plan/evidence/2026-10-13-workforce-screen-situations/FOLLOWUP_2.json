@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-13T05:17:18.241237+00:00",
+  "second_run": {
+    "head": "a2bd82bcd174cd1af84c9d4bb49b98f13a599e05",
+    "run_id": 38348736252,
+    "url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38348736252",
+    "conclusion": "failure",
+    "failed_step": "Run uv run pytest --junitxml=pytest-results.xml",
+    "named_by": "the annotation of the new CI step, read through the public API",
+    "failed_test": "tests.integration.test_i4_situations_browser test_i4_situations_in_a_real_browser",
+    "failed_check": "web/tests/workforce-situations.spec.ts:340 expect(alertOf(page, /\\S/)).toBeVisible(): strict mode violation, 2 elements",
+    "main_moved": false
+  },
+  "cause": "a defect of the new test, not of the product: the check accepted any non-empty alert, and on CI the route announcer of Next.js was a second one, with the page title 'Book your appointment'",
+  "earlier_assumption": "a slow CI machine ran out of time: wrong; the longer wait stays but is not the fix",
+  "first_run_cause": "not read; probably the same, because the failing check does not depend on timing",
+  "fix": "the two checks name the message 'The studio service is temporarily unavailable. Please try again.'",
+  "changes": [
+    {
+      "path": "web/tests/workforce-situations.spec.ts",
+      "sha256": "252155467bb4e8e63ad24ba74642b16a30f68f0c3fdf71b1ae1a9633ac97726d",
+      "git_blob_oid": "2748a114b0339b53df0864ad34f03ac7fa71dabf"
+    }
+  ],
+  "local_check_after_the_fix": {
+    "phase": "fix-2",
+    "exit_code": 0,
+    "seconds": 122.26
+  },
+  "why_not_seen_locally": "on the development machine the announcer was empty at that moment",
+  "observation": "every management screen carries the document title of the customer page, 'Book your appointment', and that is what the route announcer reads to a screen reader"
+}

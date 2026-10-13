@@ -71,6 +71,9 @@ const SHIFT_SAVE = /\/workforce\/shifts\/[0-9a-f-]{36}$/;
 const PRIVACY_SAVE = /\/workforce\/locations\/[0-9a-f-]{36}\/settings$/;
 const SHOWN = "Staff see the published shifts of colleagues in this location";
 const OWN_ONLY = "Staff see only their own shifts and open shifts";
+// Named in full: the page also carries the route announcer of Next.js, another alert.
+const READ_FAILED =
+  "The studio service is temporarily unavailable. Please try again.";
 
 async function signIn(page: Page, who: Person) {
   const switched = await page.request.post(`${issuer}/fixture/user/${who}`);
@@ -337,10 +340,10 @@ test("a server fault or an unreadable answer to a command is settled by its key"
   );
   const week = page.getByLabel("Week from", { exact: true });
   await week.fill(plus(faultDay, -1));
-  await expect(alertOf(page, /\S/)).toBeVisible();
+  await expect(alertOf(page, READ_FAILED)).toBeVisible();
   await page.unrouteAll({ behavior: "wait" });
   await week.fill(faultDay);
-  await expect(alertOf(page, /\S/)).toHaveCount(0);
+  await expect(alertOf(page, READ_FAILED)).toHaveCount(0);
   await expect(listed(page, `${tag} 500 · `)).toHaveCount(1);
 });
 
