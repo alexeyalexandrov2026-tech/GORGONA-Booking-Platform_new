@@ -1,8 +1,9 @@
-"""J2 commands and reads: accounts of materials for a book, receipts, balances and cost.
+"""J2 and J3 commands and reads: accounts of materials, receipts, write-offs, balances, cost.
 
-A receipt is posted whole in the caller's transaction, under the ledger posting lock:
-document, lines, movements, balances, cost and one `stock` journal entry. The database
-repeats every rule below in its triggers; this module answers sooner and names the refusal.
+A document is posted whole in the caller's transaction, under the ledger posting lock:
+document, lines, movements, balances, cost and one `stock` journal entry. A receipt
+carries its amounts; a write-off leaves at the moving-average cost. The database repeats
+every rule below in its triggers; this module answers sooner and names the refusal.
 """
 
 from collections.abc import AsyncIterator
@@ -38,7 +39,9 @@ from gorgona_booking.business.stock_contracts import (
     PostingRulesInput,
     PostingRulesView,
     ReceiptInput,
+    WriteOffInput,
     from_count,
+    issue_value,
     to_count,
 )
 from gorgona_booking.db.pool import RuntimeConnection
@@ -64,6 +67,10 @@ class StockArchivedError(ConflictError):
     code = "STOCK_ARCHIVED"
 
 
+class StockInsufficientError(ConflictError):
+    code = "STOCK_INSUFFICIENT"
+
+
 class StockDateError(DomainError):
     code = "STOCK_DATE_INVALID"
 
@@ -78,6 +85,7 @@ class StockAmountError(DomainError):
 
 _FUTURE = "The document date is in the future of the branch"
 _EARLY = "The document date is before the book's accounting start"
+_SHORT = "The place does not hold this much of the material"
 # Trigger messages and the errors they become when a check here did not answer first.
 _REFUSALS: tuple[tuple[str, type[DomainError], str], ...] = (
     ("archived", StockArchivedError, "An archived material or storage place takes no receipt"),
@@ -86,7 +94,10 @@ _REFUSALS: tuple[tuple[str, type[DomainError], str], ...] = (
     ("stock document is closed", ledger.PeriodClosedError, "This month is closed"),
     ("current posting rules", InventoryConflictError, "The posting rules have changed"),
 )
+# Positions in a posting rules row: the revision, then the seven accounts.
+_INVENTORY, _CONSUMPTION, _LOSS = 1, 5, 6
 _RECEIPT_ACCOUNT = {"purchase": 2, "opening_balance": 3, "surplus": 4}
+type _Document = ReceiptInput | WriteOffInput
 
 
 @asynccontextmanager
@@ -113,6 +124,8 @@ async def _writes(conn: RuntimeConnection, business: UUID) -> AsyncIterator[None
     except psycopg.DatabaseError as exc:
         if exc.sqlstate == "GBS01":
             raise InventoryConflictError("The posting rules revision has changed") from exc
+        if exc.sqlstate == "GBS02":
+            raise StockInsufficientError(_SHORT) from exc
         if exc.sqlstate == "23514":
             message = exc.diag.message_primary or ""
             for text, error, answer in _REFUSALS:
@@ -215,8 +228,11 @@ async def save_rules(
         return await load_rules(conn, business, book, revision)
 
 
-async def _place(conn: RuntimeConnection, business: UUID, body: ReceiptInput) -> UUID:
-    """The branch of an open place; the date is not in the future of that branch."""
+async def _place(conn: RuntimeConnection, business: UUID, body: _Document) -> UUID:
+    """The branch of the place; the date is not in the future of that branch.
+
+    An archived place takes no receipt and still lets its balance leave.
+    """
     row = await (
         await conn.execute(
             "select p.location_id,v.archived,"
@@ -231,14 +247,14 @@ async def _place(conn: RuntimeConnection, business: UUID, body: ReceiptInput) ->
     ).fetchone()
     if row is None:
         raise InvalidReferenceError("Unknown storage place", field="place_id")
-    if row[1]:
+    if row[1] and body.kind == "receipt":
         raise StockArchivedError("An archived storage place takes no receipt", field="place_id")
     if row[2]:
         raise StockDateError(_FUTURE)
     return UUID(str(row[0]))
 
 
-async def _book(conn: RuntimeConnection, business: UUID, body: ReceiptInput) -> tuple[Any, ...]:
+async def _book(conn: RuntimeConnection, business: UUID, body: _Document) -> tuple[Any, ...]:
     """The book of the owner: its id, base currency, currency scale and accounting start."""
     row = await (
         await conn.execute(
@@ -280,10 +296,13 @@ async def _require_supplier(conn: RuntimeConnection, business: UUID, supplier: U
         )
 
 
-async def _quantized(
-    conn: RuntimeConnection, business: UUID, body: ReceiptInput, currency: str, scale: int
-) -> tuple[list[int], list[int]]:
-    """Whole quantities and amounts of the lines; extra decimals are refused."""
+async def _quantities(
+    conn: RuntimeConnection, business: UUID, body: _Document
+) -> tuple[list[int], dict[UUID, int]]:
+    """Whole quantities of the lines and the scale of each material; no rounding.
+
+    An archived material takes no receipt and still lets its balance leave.
+    """
     rows = await (
         await conn.execute(
             "select s.id,s.quantity_scale,v.archived from gba.stock_items s "
@@ -295,32 +314,94 @@ async def _quantized(
     ).fetchall()
     items = {row[0]: (int(row[1]), bool(row[2])) for row in rows}
     quantities: list[int] = []
-    amounts: list[int] = []
     for number, line in enumerate(body.lines, start=1):
         item = items.get(line.item_id)
         if item is None:
             raise InvalidReferenceError("Unknown material", field="lines", line=number)
-        if item[1]:
+        if item[1] and body.kind == "receipt":
             raise StockArchivedError("An archived material takes no receipt", line=number)
         try:
             quantities.append(to_count(line.quantity, item[0], MAX_QUANTITY))
         except ValueError as exc:
             raise StockQuantityError(str(exc), line=number, quantity_scale=item[0]) from exc
+    return quantities, {item: scale for item, (scale, _) in items.items()}
+
+
+def _amounts(body: ReceiptInput, currency: str, scale: int) -> list[int]:
+    """Whole amounts of the lines of a receipt; extra decimals are refused."""
+    amounts: list[int] = []
+    for number, line in enumerate(body.lines, start=1):
         try:
             amounts.append(to_count(line.amount, scale, MAX_AMOUNT, zero=True))
         except ValueError as exc:
             raise StockAmountError(str(exc), line=number, currency=currency) from exc
-    return quantities, amounts
+    return amounts
 
 
-async def post_receipt(
+async def _issued(
+    conn: RuntimeConnection,
+    business: UUID,
+    body: WriteOffInput,
+    quantities: list[int],
+    scales: dict[UUID, int],
+    currency: str,
+) -> list[int]:
+    """What each line takes of the moving-average value; never more than the place holds.
+
+    The lines are valued in their order, each on what the lines before it left.
+    """
+    wanted = sorted({line.item_id for line in body.lines})
+    # Rule 16: balance rows are locked in the order material, place, owner.
+    held = {
+        row[0]: int(row[1])
+        for row in await (
+            await conn.execute(
+                "select item_id,quantity from gba.stock_balances where tenant_id=%s "
+                "and place_id=%s and legal_entity_id=%s and item_id=any(%s::uuid[]) "
+                "order by item_id for update",
+                (business, body.place_id, body.legal_entity_id, wanted),
+            )
+        ).fetchall()
+    }
+    costs = {
+        row[0]: (int(row[1]), int(row[2]))
+        for row in await (
+            await conn.execute(
+                "select item_id,quantity,value_minor from gba.stock_costs where tenant_id=%s "
+                "and legal_entity_id=%s and item_id=any(%s::uuid[])",
+                (business, body.legal_entity_id, wanted),
+            )
+        ).fetchall()
+    }
+    amounts: list[int] = []
+    for number, (line, quantity) in enumerate(zip(body.lines, quantities, strict=True), start=1):
+        available = held.get(line.item_id, 0)
+        if quantity > available:
+            raise StockInsufficientError(
+                _SHORT, line=number, available=from_count(available, scales[line.item_id])
+            )
+        total, value = costs[line.item_id]
+        amount = issue_value(value, total, quantity)
+        if amount > MAX_AMOUNT:
+            raise StockAmountError(
+                "The value of this line is outside the supported range",
+                line=number,
+                currency=currency,
+            )
+        held[line.item_id] = available - quantity
+        costs[line.item_id] = (total - quantity, value - amount)
+        amounts.append(amount)
+    return amounts
+
+
+async def post_document(
     conn: RuntimeConnection,
     business: UUID,
     document: UUID,
     user: UUID,
     actor: str,
     key: str,
-    body: ReceiptInput,
+    body: _Document,
 ) -> DocumentView:
     async with _writes(conn, business):
         scope = IdempotencyScope(business, actor, "inventory.document", key)
@@ -356,9 +437,21 @@ async def post_receipt(
         if closed is not None and closed[0]:
             period = month_text(body.document_date)
             raise ledger.PeriodClosedError(f"{period} is closed", period=period)
-        if body.supplier_id is not None:
-            await _require_supplier(conn, business, body.supplier_id)
-        quantities, amounts = await _quantized(conn, business, body, currency, scale)
+        supplier = body.supplier_id if isinstance(body, ReceiptInput) else None
+        if supplier is not None:
+            await _require_supplier(conn, business, supplier)
+        quantities, scales = await _quantities(conn, business, body)
+        if isinstance(body, ReceiptInput):
+            # A receipt debits inventory and credits the account of its reason.
+            way, number = "in", body.supplier_document
+            amounts = _amounts(body, currency, scale)
+            debit, credit = rules[_INVENTORY], rules[_RECEIPT_ACCOUNT[body.reason]]
+        else:
+            # A write-off debits consumption or losses and credits inventory.
+            way, number = "out", None
+            amounts = await _issued(conn, business, body, quantities, scales, currency)
+            debit = rules[_CONSUMPTION if body.reason == "used" else _LOSS]
+            credit = rules[_INVENTORY]
         items = [line.item_id for line in body.lines]
         total = sum(amounts)
         entry = uuid7() if total else None
@@ -366,17 +459,18 @@ async def post_receipt(
         await conn.execute(
             "insert into gba.stock_documents (tenant_id,id,kind,reason,legal_entity_id,"
             "place_id,location_id,document_date,supplier_id,supplier_document,line_count,"
-            "created_by) values (%s,%s,'receipt',%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            "created_by) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (
                 business,
                 document,
+                body.kind,
                 body.reason,
                 body.legal_entity_id,
                 body.place_id,
                 location,
                 body.document_date,
-                body.supplier_id,
-                body.supplier_document,
+                supplier,
+                number,
                 len(body.lines),
                 user,
             ),
@@ -394,26 +488,36 @@ async def post_receipt(
             "values (%s,%s,%s,%s,%s,%s,%s)",
             (business, document, book, rules[0], entry, total, user),
         )
+        # In the order of the lines: the database values each outbound line on what the
+        # lines before it left, exactly as `_issued` did.
         await conn.execute(
             "insert into gba.stock_valuations (tenant_id,document_id,line_no,direction,"
             "legal_entity_id,item_id,quantity,amount_minor) "
-            "select %s,%s,l.n::smallint,'in',%s,l.item,l.quantity,l.amount "
+            "select %s,%s,l.n::smallint,%s,%s,l.item,l.quantity,l.amount "
             "from unnest(%s::uuid[],%s::bigint[],%s::bigint[]) "
-            "with ordinality as l(item,quantity,amount,n)",
-            (business, document, body.legal_entity_id, items, quantities, amounts),
+            "with ordinality as l(item,quantity,amount,n) order by l.n",
+            (business, document, way, body.legal_entity_id, items, quantities, amounts),
         )
         # Rule 16: balance rows are locked in the order material, place, owner.
         await conn.execute(
             "insert into gba.stock_movements (tenant_id,document_id,line_no,direction,"
             "location_id,place_id,item_id,legal_entity_id,quantity) "
-            "select %s,%s,l.n::smallint,'in',%s,%s,l.item,%s,l.quantity "
+            "select %s,%s,l.n::smallint,%s,%s,%s,l.item,%s,l.quantity "
             "from unnest(%s::uuid[],%s::bigint[]) with ordinality as l(item,quantity,n) "
             "order by l.item,l.n",
-            (business, document, location, body.place_id, body.legal_entity_id, items, quantities),
+            (
+                business,
+                document,
+                way,
+                location,
+                body.place_id,
+                body.legal_entity_id,
+                items,
+                quantities,
+            ),
         )
         if entry is not None:
             amount = from_minor(total, scale)
-            counter = rules[_RECEIPT_ACCOUNT[body.reason]]
             await ledger.append_financial_journal(
                 conn,
                 business_id=business,
@@ -425,8 +529,8 @@ async def post_receipt(
                     currency=currency,
                     source_id=str(document),
                     lines=(
-                        LineInput(account_id=rules[1], side="debit", amount=amount),
-                        LineInput(account_id=counter, side="credit", amount=amount),
+                        LineInput(account_id=debit, side="debit", amount=amount),
+                        LineInput(account_id=credit, side="credit", amount=amount),
                     ),
                 ),
             )
@@ -438,7 +542,7 @@ async def post_receipt(
             "inventory.document",
             "stock_document",
             str(document),
-            {"kind": "receipt", "lines": len(body.lines)},
+            {"kind": body.kind, "lines": len(body.lines)},
         )
         await commands.complete(conn, scope, InventoryReceipt(subject_id=document))
         return await load_document(conn, business, document, money=True)

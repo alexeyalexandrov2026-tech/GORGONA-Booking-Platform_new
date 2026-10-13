@@ -1,4 +1,5 @@
-"""Packaged schema approvals of the inventory tables: J1 materials and places, J2 receipts.
+"""Packaged schema approvals of the inventory tables: J1 materials and places, J2 receipts,
+J3 write-offs.
 
 Never learn approvals from the target database.
 """
@@ -14,11 +15,12 @@ from gorgona_booking.errors import DatabaseUnavailableError
 _MIGRATIONS = resources.files("gorgona_booking.db") / "migrations"
 _SQL = "\n".join(
     (_MIGRATIONS / name).read_text(encoding="utf-8")
-    for name in ("0036_inventory.sql", "0037_stock_receipts.sql")
+    for name in ("0036_inventory.sql", "0037_stock_receipts.sql", "0038_stock_write_offs.sql")
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
 INVENTORY_TABLES = tuple(_BLOCKS)
-# Shared guard functions come from 0015; the stock functions from this package.
+# Shared guard functions come from 0015; the stock functions from this package. A later
+# migration replaces a function, and the last packaged text is the approved one.
 _FUNCTIONS = dict(
     re.findall(
         r"create (?:or replace )?function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;",
@@ -105,6 +107,8 @@ if _UPDATE_COLUMNS != _APPROVED_UPDATES:
     raise RuntimeError("Every inventory column UPDATE right needs an explicit approval")
 # The journal tables carry three stock triggers; the ledger guards own their other ones.
 _FOREIGN_TABLES = ("journal_entries", "journal_lines")
+# Functions that the triggers call: signature and result type; the source is packaged.
+_HELPERS = {"assert_stock_document": ("gba.assert_stock_document(uuid,uuid)", "void")}
 _DEFAULTS = ("now()", "pg_current_xact_id()")
 _TYPES = {"timestamptz": "timestamp with time zone"}
 
@@ -149,9 +153,13 @@ _CHECKS |= {
         "(inventory_account_id <> loss_account_id) AND "
         "(inventory_account_id <> difference_account_id)))"
     ),
-    "stock_documents_kind_check": "((kind = 'receipt'::text))",
+    # Migration 0038 replaced the next two: a write-off and its reasons joined the receipt.
+    "stock_documents_kind_check": "((kind = ANY (ARRAY['receipt'::text, 'write_off'::text])))",
     "stock_documents_reason_check": (
-        "((reason = ANY (ARRAY['purchase'::text, 'opening_balance'::text, 'surplus'::text])))"
+        "((((kind = 'receipt'::text) AND (reason = ANY (ARRAY['purchase'::text, "
+        "'opening_balance'::text, 'surplus'::text]))) OR ((kind = 'write_off'::text) AND "
+        "(reason = ANY (ARRAY['used'::text, 'damaged'::text, 'lost'::text, 'expired'::text, "
+        "'other'::text])))))"
     ),
     "stock_documents_number_check": (
         "((((length(supplier_document) >= 1) AND (length(supplier_document) <= 64)) AND "
@@ -304,6 +312,24 @@ async def _check(conn: RuntimeConnection) -> None:
     """,
         [*names, *_FOREIGN_TABLES],
     )
+    helpers = await _catalog(
+        conn,
+        """
+        select p.proname,p.oid=to_regprocedure(wanted.signature),p.prosrc,p.prosecdef,
+               p.proconfig,p.prorettype::regtype::text,l.lanname,p.provolatile,p.proparallel,
+               p.prokind,p.proleakproof
+          from unnest(%s::text[]) as wanted(signature)
+          join pg_proc p on p.oid=to_regprocedure(wanted.signature)
+          join pg_language l on l.oid=p.prolang
+    """,
+        [signature for signature, _ in _HELPERS.values()],
+    )
+    for function, (_, result) in _HELPERS.items():
+        _require(
+            helpers[function]
+            == [(True, _FUNCTIONS[function], False, None, result, "plpgsql", "v", "u", "f", False)],
+            f"function {function}",
+        )
     for table in INVENTORY_TABLES:
         _require(tables[table] == [(True, True, "r", True, False, False)], f"{table} access")
         _require(len(policies[table]) == 2, f"{table} policy count")

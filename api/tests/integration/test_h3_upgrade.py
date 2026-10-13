@@ -37,6 +37,20 @@ invoices = shared.invoices
 payments = shared.payments
 credits = shared.credits
 corrections = shared.corrections
+# Rows of posted stock documents and the running totals that follow them.
+STOCK_DOCUMENT_TABLES = (
+    "stock_documents",
+    "stock_document_lines",
+    "stock_movements",
+    "stock_balances",
+    "stock_document_postings",
+    "stock_valuations",
+    "stock_costs",
+)
+ISSUED = (
+    "exists (select 1 from gba.stock_documents d "
+    "where d.tenant_id=t.tenant_id and d.kind <> 'receipt')"
+)
 
 
 @pytest.fixture
@@ -125,6 +139,21 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                         " where not exists (select 1 from gba.journal_entries e "
                         "where e.tenant_id=t.tenant_id and e.id=t.entry_id "
                         "and e.source_kind='stock')"
+                    )
+            # J3 write-offs cannot be represented at migration 0037. A company that has
+            # one keeps none of its stock rows there, so every running total stays whole.
+            if target_version[0] == 37:
+                if table in STOCK_DOCUMENT_TABLES:
+                    predicate = sql.SQL(" where not " + ISSUED)
+                elif table == "journal_entries":
+                    predicate = sql.SQL(" where t.source_kind <> 'stock' or not " + ISSUED)
+                elif table == "journal_lines":
+                    predicate = sql.SQL(
+                        " where not exists (select 1 from gba.journal_entries e "
+                        "where e.tenant_id=t.tenant_id and e.id=t.entry_id "
+                        "and e.source_kind='stock' and exists (select 1 "
+                        "from gba.stock_documents d "
+                        "where d.tenant_id=e.tenant_id and d.kind <> 'receipt'))"
                     )
             cursor = before.execute(
                 sql.SQL("select {} from {} t{}").format(

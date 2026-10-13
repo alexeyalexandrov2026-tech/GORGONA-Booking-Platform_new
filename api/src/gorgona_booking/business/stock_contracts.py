@@ -1,4 +1,4 @@
-"""Strict version-one contracts of J2: accounts of materials for a book and receipts."""
+"""Strict version-one contracts of J2 and J3: accounts of materials, receipts, write-offs."""
 
 from datetime import date
 from typing import Annotated, Literal, Self
@@ -19,6 +19,8 @@ MAX_LINES = 100
 MAX_QUANTITY = 999_999_999_999
 MAX_AMOUNT = 999_999_999_999_999
 ReceiptReason = Literal["purchase", "opening_balance", "surplus"]
+# "used" debits material consumption; every other reason debits losses.
+WriteOffReason = Literal["used", "damaged", "lost", "expired", "other"]
 # Digits with at most three decimals. The scale of the material decides a quantity and
 # the scale of the book's base currency decides an amount; extra decimals are refused.
 type DecimalText = Annotated[
@@ -55,6 +57,17 @@ def to_count(text: str, scale: int, limit: int, *, zero: bool = False) -> int:
 def from_count(count: int, scale: int) -> str:
     whole, fraction = divmod(count, 10**scale)
     return str(whole) if scale == 0 else f"{whole}.{fraction:0{scale}d}"
+
+
+def issue_value(value: int, held: int, quantity: int) -> int:
+    """What `quantity` of the `held` units takes of their `value`: the moving average.
+
+    Rounded half up with whole numbers only. The whole quantity takes the whole value, so
+    rounding strands nothing. The database computes the same amount and refuses any other.
+    """
+    if quantity == held:
+        return value
+    return (2 * value * quantity + held) // (2 * held)
 
 
 class Part(BaseModel):
@@ -94,9 +107,12 @@ class PostingRulesView(InventoryModel):
     difference_account_id: UUID
 
 
-class ReceiptLine(Part):
+class Line(Part):
     item_id: UUID
     quantity: DecimalText
+
+
+class ReceiptLine(Line):
     # What the whole line cost, in the base currency of the owner's book.
     amount: DecimalText
 
@@ -104,7 +120,7 @@ class ReceiptLine(Part):
 class ReceiptInput(InventoryModel):
     """One receipt, posted whole by one command; there is no server draft."""
 
-    kind: Literal["receipt"] = "receipt"
+    kind: Literal["receipt"]
     reason: ReceiptReason
     # The legal entity that owns the materials; its book takes the entry.
     legal_entity_id: UUID
@@ -120,6 +136,25 @@ class ReceiptInput(InventoryModel):
         if named and self.reason != "purchase":
             raise ValueError("Only a purchase names a supplier")
         return self
+
+
+class WriteOffLine(Line):
+    """A quantity only: the database values an outbound line."""
+
+
+class WriteOffInput(InventoryModel):
+    """One write-off, posted whole by one command; the database values it."""
+
+    kind: Literal["write_off"]
+    reason: WriteOffReason
+    legal_entity_id: UUID
+    place_id: UUID
+    document_date: date
+    lines: tuple[WriteOffLine, ...] = Field(min_length=1, max_length=MAX_LINES)
+
+
+# A document command names its kind; each kind has its own strict shape.
+DocumentInput = Annotated[ReceiptInput | WriteOffInput, Field(discriminator="kind")]
 
 
 class DocumentLine(Part):

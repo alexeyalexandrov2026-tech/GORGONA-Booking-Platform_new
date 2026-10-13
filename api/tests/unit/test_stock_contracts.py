@@ -1,11 +1,13 @@
-"""J2 contracts: posting rules, receipts, exact decimal counts and the stock journal origin."""
+"""J2 and J3 contracts: posting rules, receipts, write-offs, exact counts and the stock origin."""
 
 from datetime import date
+from fractions import Fraction
+from math import floor
 from typing import get_args
 from uuid import uuid7
 
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from gorgona_booking.business.ledger_contracts import (
     H_OWNED_SOURCE_KINDS,
@@ -15,9 +17,12 @@ from gorgona_booking.business.ledger_contracts import (
 )
 from gorgona_booking.business.stock_contracts import (
     MAX_QUANTITY,
+    DocumentInput,
     PostingRulesInput,
     ReceiptInput,
+    WriteOffInput,
     from_count,
+    issue_value,
     to_count,
 )
 from gorgona_booking.db import financial_guard
@@ -117,6 +122,84 @@ def test_receipt_input_accepts_the_documented_shape() -> None:
 def test_receipt_input_is_strict(change: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
         ReceiptInput.model_validate(receipt(**change))
+
+
+def test_an_issue_leaves_at_the_exact_moving_average() -> None:
+    # value * quantity / held, half up; the whole quantity takes the whole value.
+    assert issue_value(2001, 150, 40) == 534
+    assert issue_value(1000, 3, 1) == 333
+    assert issue_value(667, 2, 1) == 334
+    assert issue_value(1, 2, 1) == 1
+    assert issue_value(1, 3, 1) == 0
+    assert issue_value(0, 5, 2) == 0
+    assert issue_value(1000, 5, 5) == 1000
+    # Exact where floating point is not: values and quantities at their limits.
+    assert issue_value(10**18 - 1, 3, 1) == 333_333_333_333_333_333
+    assert issue_value(10**18 - 1, 10**15 - 1, 10**12 - 1) == floor(
+        Fraction((10**18 - 1) * (10**12 - 1), 10**15 - 1) + Fraction(1, 2)
+    )
+    # Every small case agrees with exact fractions and never takes more than there is.
+    for held in range(1, 13):
+        for value in range(31):
+            assert issue_value(value, held, held) == value
+            for quantity in range(1, held):
+                amount = issue_value(value, held, quantity)
+                assert amount == floor(Fraction(value * quantity, held) + Fraction(1, 2))
+                assert 0 <= amount <= value
+
+
+def write_off(**changes: object) -> dict[str, object]:
+    return {
+        "kind": "write_off",
+        "reason": "used",
+        "legal_entity_id": str(uuid7()),
+        "place_id": str(uuid7()),
+        "document_date": "2026-10-01",
+        "lines": [{"item_id": str(uuid7()), "quantity": "1.5"}],
+        **changes,
+    }
+
+
+def test_write_off_input_accepts_the_documented_shape() -> None:
+    body = WriteOffInput.model_validate(write_off())
+    assert (body.kind, body.reason, body.document_date) == ("write_off", "used", date(2026, 10, 1))
+    assert body.lines[0].quantity == "1.5"
+    for reason in ("damaged", "lost", "expired", "other"):
+        assert WriteOffInput.model_validate(write_off(reason=reason)).reason == reason
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"kind": "receipt"},
+        {"reason": "purchase"},
+        {"reason": "entry_error"},
+        {"lines": []},
+        {"lines": [{"item_id": str(uuid7()), "quantity": "1"}] * 101},
+        {"lines": [{"item_id": str(uuid7()), "quantity": "-1"}]},
+        {"lines": [{"item_id": str(uuid7()), "quantity": 1}]},
+        # The database values a write-off; the command carries no amount.
+        {"lines": [{"item_id": str(uuid7()), "quantity": "1", "amount": "1.00"}]},
+        {"supplier_id": str(uuid7())},
+        {"supplier_document": "INV-1"},
+        {"document_date": "2026-13-01"},
+        {"note": "x"},
+        {"schema_version": 2},
+    ],
+)
+def test_write_off_input_is_strict(change: dict[str, object]) -> None:
+    with pytest.raises(ValidationError):
+        WriteOffInput.model_validate(write_off(**change))
+
+
+def test_a_document_command_names_its_kind() -> None:
+    command: TypeAdapter[ReceiptInput | WriteOffInput] = TypeAdapter(DocumentInput)
+    assert isinstance(command.validate_python(receipt()), ReceiptInput)
+    assert isinstance(command.validate_python(write_off()), WriteOffInput)
+    unnamed = {name: value for name, value in receipt().items() if name != "kind"}
+    for body in (unnamed, receipt(kind="return"), write_off(kind="receipt")):
+        with pytest.raises(ValidationError):
+            command.validate_python(body)
 
 
 def test_stock_is_a_journal_origin_with_its_own_posting() -> None:

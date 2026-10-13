@@ -1,4 +1,4 @@
-"""Stock API of J2: accounts of materials for a book, receipts, balances and cost.
+"""Stock API of J2 and J3: accounts of materials, receipts, write-offs, balances and cost.
 
 Quantities follow the branch scope of the caller. Amounts, cost and posting rules are
 company-wide finance data: a branch-limited member, a delegate and platform support
@@ -20,11 +20,11 @@ from gorgona_booking.business import stock as service
 from gorgona_booking.business.stock_contracts import (
     BalanceList,
     CostList,
+    DocumentInput,
     DocumentList,
     DocumentView,
     PostingRulesInput,
     PostingRulesView,
-    ReceiptInput,
 )
 from gorgona_booking.db.inventory_guard import assert_inventory_ready
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
@@ -164,7 +164,7 @@ async def get_document(
 async def put_document(
     business_id: UUID,
     document_id: UUID,
-    body: ReceiptInput,
+    body: DocumentInput,
     request: Request,
     principal: CurrentPrincipal,
     idempotency_key: MutationKey,
@@ -172,10 +172,11 @@ async def put_document(
     async with _company(
         request, principal, business_id, Permission.INVENTORY_MANAGE, lock=True
     ) as access:
-        # A receipt changes the books: it also needs the right to manage finance.
+        # A receipt and a write-off change the books: both also need the right to manage
+        # finance.
         if not _holds(access, Permission.FINANCE_MANAGE):
-            raise PermissionDeniedError("Posting a receipt also requires finance access")
-        return await service.post_receipt(
+            raise PermissionDeniedError("Posting a stock document also requires finance access")
+        return await service.post_document(
             access.conn,
             business_id,
             document_id,

@@ -1,4 +1,4 @@
-"""Damaged boundaries of J2 fail closed, on the executor's disposable database."""
+"""Damaged boundaries of J2 and J3 fail closed, on the executor's disposable database."""
 
 from uuid import uuid7
 
@@ -11,6 +11,7 @@ from gorgona_booking.errors import DatabaseUnavailableError
 from tests.integration import test_stock as shared
 from tests.integration.test_inventory import error
 from tests.integration.test_stock import Stock
+from tests.integration.test_stock_write_offs import write_off
 
 pytestmark = pytest.mark.anyio
 stock = shared.stock
@@ -21,12 +22,33 @@ idp = shared.idp
 manager_a = shared.manager_a
 
 COMPANY = "(gba.current_location_id() is null)"
-PERMISSIVE_ORIGIN = (
-    "create or replace function gba.enforce_stock_origin() returns trigger "
-    "language plpgsql as $$ begin return new; end; $$"
+PERMISSIVE = (
+    "create or replace function {} returns trigger language plpgsql as $$ begin return new; end; $$"
 )
-# name: (damage, repair). The function case reads its repair from the catalog.
+# name: (signature, permissive replacement). A guard of J2, a function that J3 replaced
+# and the check of a whole document that the triggers call.
+FUNCTIONS = {
+    "function": ("gba.enforce_stock_origin()", PERMISSIVE.format("gba.enforce_stock_origin()")),
+    "movement_function": (
+        "gba.apply_stock_movement()",
+        PERMISSIVE.format("gba.apply_stock_movement()"),
+    ),
+    "document_function": (
+        "gba.assert_stock_document(uuid,uuid)",
+        "create or replace function gba.assert_stock_document(tenant uuid, document uuid) "
+        "returns void language plpgsql as $$ begin end; $$",
+    ),
+}
+KINDS = (
+    "alter table gba.stock_documents drop constraint stock_documents_kind_check, "
+    "add constraint stock_documents_kind_check check (kind in ({}))"
+)
+# name: (damage, repair). The function cases read their repair from the catalog.
 DAMAGE: dict[str, tuple[str, str]] = {
+    "document_kinds": (
+        KINDS.format("'receipt', 'write_off', 'anything'"),
+        KINDS.format("'receipt', 'write_off'"),
+    ),
     "policy": (
         "alter policy stock_costs_location_scope on gba.stock_costs using (true) with check (true)",
         "alter policy stock_costs_location_scope on gba.stock_costs "
@@ -69,7 +91,7 @@ DAMAGE: dict[str, tuple[str, str]] = {
         "alter table gba.journal_lines disable trigger journal_lines_stock_consistent",
         "alter table gba.journal_lines enable trigger journal_lines_stock_consistent",
     ),
-    "function": (PERMISSIVE_ORIGIN, ""),
+    **{name: (replacement, "") for name, (_, replacement) in FUNCTIONS.items()},
 }
 
 
@@ -85,10 +107,11 @@ async def test_damaged_stock_schema_refuses_reads_and_writes(
     line: dict[str, object] = {"item_id": item["item_id"], "quantity": "1", "amount": "1.00"}
     posted = await stock.post(stock.receipt([line]))
     assert posted.status_code == 200, posted.text
+    used: dict[str, object] = {"item_id": item["item_id"], "quantity": "1"}
     change, restore = DAMAGE[damage]
-    if damage == "function":
+    if damage in FUNCTIONS:
         row = owner_conn.execute(
-            "select pg_get_functiondef('gba.enforce_stock_origin()'::regprocedure)"
+            "select pg_get_functiondef(%s::regprocedure)", (FUNCTIONS[damage][0],)
         ).fetchone()
         assert row is not None
         restore = str(row[0])
@@ -108,6 +131,7 @@ async def test_damaged_stock_schema_refuses_reads_and_writes(
         for path in reads:
             assert error(await stock.inventory.get(path)) == (503, "DATABASE_UNAVAILABLE"), path
         assert error(await stock.post(stock.receipt([line]))) == (503, "DATABASE_UNAVAILABLE")
+        assert error(await stock.post(write_off(stock, [used]))) == (503, "DATABASE_UNAVAILABLE")
         assert error(await stock.set_rules(1, surplus="4000")) == (503, "DATABASE_UNAVAILABLE")
     finally:
         owner_conn.execute(restore.encode("utf-8"))
@@ -116,4 +140,6 @@ async def test_damaged_stock_schema_refuses_reads_and_writes(
     for path in reads:
         assert (await stock.inventory.get(path)).status_code == 200, path
     assert (await stock.post(stock.receipt([line]), uuid7())).status_code == 200
-    assert stock.counts()["stock_documents"] == 2
+    assert (await stock.post(write_off(stock, [used]))).status_code == 200
+    assert stock.counts()["stock_documents"] == 3
+    assert stock.rows("select quantity,value_minor from gba.stock_costs") == [(1, 100)]
