@@ -1,6 +1,27 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
-## Current checkpoint — 2026-10-13: package J slice J1 committed locally; not published
+## Current checkpoint — 2026-10-13: package J slice J2 committed locally; not published
+
+Срез J2 пакета J (счета материалов для книги и приёмка с суммами) написан и закоммичен
+локально: `f8e1212` на ветке `codex/package-j2-receipts`, поверх среза J1. Приёмка
+проводится одной командой: документ, строки, движения, остатки, стоимость по скользящей
+средней и одна проводка `stock` в книге владельца — в одной транзакции. Миграция 0037
+добавляет восемь таблиц `stock_*`; суммы видит только участник всей компании. Списаний,
+возвратов, перемещений и экранов ещё нет. STOCK-01 остаётся `planned`, модуль в продукте
+включить нельзя; ADR-0026 остаётся Proposed.
+
+Проверки: full local **PASS: 1616 passed, 4 skipped in 1295.93s (0:21:35)**; Ruff, format и mypy
+PASS на 281 файле; web typecheck, lint, format, 102 unit и 23 страницы PASS. Независимый
+обзор и CI — NOT TESTED: ни одна ветка пакета J на момент записи не опубликована. Где
+`main` и опубликованы ли ветки, читать из `git ls-remote origin`.
+
+[Актуальный handoff](NEXT_AGENT_PACKAGE_J2_2026-10-13.md),
+[готовый prompt](NEXT_AGENT_PACKAGE_J2_PROMPT_2026-10-13.md),
+[запись о срезе](evidence/2026-10-13-j2-receipts/VALIDATION.md),
+[план пакета J](PACKAGE_J_PLAN_2026-10-13.md),
+[ADR-0026 (Proposed)](../adr/0026-materials-and-stock-movements.md).
+
+## Previous checkpoint — 2026-10-13: package J slice J1 committed locally; not published
 
 Срез J1 пакета J (материалы и места хранения, денег нет) написан и закоммичен локально:
 `39fc819` на ветке `codex/package-j1-materials`. Миграция 0036 добавляет четыре таблицы

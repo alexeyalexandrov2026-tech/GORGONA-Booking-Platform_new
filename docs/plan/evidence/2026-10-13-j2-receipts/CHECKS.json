@@ -1,0 +1,354 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-13T14:46:09.568110+00:00",
+  "branch": "codex/package-j2-receipts",
+  "base": "b4ddf48aa60112a4bc61114db857ccf794b3a4c3",
+  "published": false,
+  "changed_sources": [
+    {
+      "path": "api/src/gorgona_booking/api/app.py",
+      "sha256": "18041fcd621f28e3ecd2689891dfd9b44cd950026afcd7966bdba9a7fcacdea0",
+      "git_blob_oid": "57a73f3f17c11ed77dced006f9dba9cb4be57c5b"
+    },
+    {
+      "path": "api/src/gorgona_booking/api/stock.py",
+      "sha256": "4a3422aaf81a7ef66db0b6ba2e0f1f253640146941f809fc8a050456e7920cf6",
+      "git_blob_oid": "6c8d3afa0a5e98704392499c3252048df01f363f"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/ledger.py",
+      "sha256": "fce0e633c876fc73b9e5c3f599ff709b4c94ae17a36fa694bdcfb6bd68b471c5",
+      "git_blob_oid": "737ed24857770829802726aa83e7dc9cdb84a579"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/ledger_contracts.py",
+      "sha256": "d1bbff504cd8de9656e2e5b12b14b2be721718a02a8472aeee98b1270a82959a",
+      "git_blob_oid": "cb4fd5cdd0d5a8955da5d3c478d343b745667d2b"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/modules.py",
+      "sha256": "ffca0440b7923b0ba9a91e92ebbc6f0d8a322a662b0177de0ac22b7e36c6fc40",
+      "git_blob_oid": "1906dc8a3cbbc6188982332429483e908456234c"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/stock.py",
+      "sha256": "66624527c9a9d7a3869c13731f70b1b07654495780114a8caf1b21b9ccecc671",
+      "git_blob_oid": "f7ac9b9da9ccdade7faf3850b1ae68111f7973fc"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/stock_contracts.py",
+      "sha256": "d7ae3c6e43bbe64251d13d82e80a8e986ea198645675ab7ab1bc8fc309218e8b",
+      "git_blob_oid": "5a56f479acf0573b97d85b6b17305f275bebf8af"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/financial_guard.py",
+      "sha256": "2afc575913a4967a36b22537745dbbd34e124ff3cd4fc48c71dbc023b2c0a3e2",
+      "git_blob_oid": "41f58c516cdcc09d9f898d2e3dcbccc867c32502"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/inventory_guard.py",
+      "sha256": "4dce228c4a5679644e94ce7f3ee01c43cacfbd9b0103d91ed26bd933508eb222",
+      "git_blob_oid": "c8d92f69a66e3db2148a01a8c6607ce06edea4fc"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/migrations/0037_stock_receipts.sql",
+      "sha256": "21b840d095e7d95d0fc286d032645b7cc752be18e2732e94317e2d1c521d4a44",
+      "git_blob_oid": "b54c4ded905b9326b49f02755d52d5d519b6f719"
+    },
+    {
+      "path": "api/tests/integration/test_h3_upgrade.py",
+      "sha256": "6c50da5c40c8ac3cea48ae9ab54505d316ab5a58428828dc68a16c81718a53c9",
+      "git_blob_oid": "0364eafb15799d7bac1a5e93bf0a921a7dd2ec53"
+    },
+    {
+      "path": "api/tests/integration/test_inventory.py",
+      "sha256": "19b6734ef0f07ab145d90f552c8a07eec9f6995e8e84dc8526e08d47f21f16ef",
+      "git_blob_oid": "c3fdfdb182d4d7fadb7b8535fc700ca47f37ea56"
+    },
+    {
+      "path": "api/tests/integration/test_inventory_upgrade.py",
+      "sha256": "2cc4d31129176774b400cf5c3c2720c4aa8bc02f37352ab82f4bd72c0cfff9b2",
+      "git_blob_oid": "9393675e505be3cbd63055cd6137f84e1c8773ed"
+    },
+    {
+      "path": "api/tests/integration/test_location_access.py",
+      "sha256": "ca8b171cf1039d909c937c6278ca1a58452f5a66a1606bae06cf9d65155735c7",
+      "git_blob_oid": "7367831f371c87d6656d9a0a133e0716901197a4"
+    },
+    {
+      "path": "api/tests/integration/test_stock.py",
+      "sha256": "6521e1a63f8894203be6b9104bdb755e6d9a9c16a60350dd3102ee937d409ecb",
+      "git_blob_oid": "2f43d32081bbdaab3b0a75a1edac4f3208643856"
+    },
+    {
+      "path": "api/tests/integration/test_stock_guards.py",
+      "sha256": "e9b1bde197b07705edc7f3989d12f6699d252701cb0dc881e6b10ee2687078d7",
+      "git_blob_oid": "8b14f28c18df86505544ec41f46d763edbb70a87"
+    },
+    {
+      "path": "api/tests/integration/test_stock_upgrade.py",
+      "sha256": "e51bb59f3f3ccb4ada407350f33c8952839199e670a70f0d007c53819cb9e4b0",
+      "git_blob_oid": "408c69952801a68e999144e141757835702b7fb8"
+    },
+    {
+      "path": "api/tests/integration/test_workforce_upgrade.py",
+      "sha256": "0c44c3836570c92d45214e185de42a1f8d3f832408f7f23196e194b1d4a15b2a",
+      "git_blob_oid": "761e498b93572c71e4b19326b37584be7ee17bc9"
+    },
+    {
+      "path": "api/tests/unit/test_stock_contracts.py",
+      "sha256": "6b6aebb507ac49c0efed7ec26deb12700e8695dc78c6d28c2ecfeff3eefd09e0",
+      "git_blob_oid": "310e6ec5c744eba5fe7aecb047625f378076c27d"
+    },
+    {
+      "path": "web/lib/ledger-contracts.ts",
+      "sha256": "887f872c64ad8a9ab576782e1a9de734c4a355d91820f62ab45856708d32f24b",
+      "git_blob_oid": "13818802489fdd003fe43c55ecd4ef36675096b2"
+    },
+    {
+      "path": "web/tests/ledger-contracts.spec.ts",
+      "sha256": "c2f04b5b4258774002b9e521730c1eac147fd8c990c5f50ac1b15c4bda8e0305",
+      "git_blob_oid": "f82717a63d99662dbd720890fc76f99629b9147b"
+    }
+  ],
+  "phases": {
+    "red-2": {
+      "kind": "focused",
+      "base_sha": "b4ddf48aa60112a4bc61114db857ccf794b3a4c3",
+      "started_utc": "2026-10-13T08:59:49.526064+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.35
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.57
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 20.19
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "green-2": {
+      "kind": "focused",
+      "base_sha": "b4ddf48aa60112a4bc61114db857ccf794b3a4c3",
+      "started_utc": "2026-10-13T09:09:30.539036+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.1
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.44
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 102.36
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.16
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "green-4": {
+      "kind": "focused",
+      "base_sha": "b4ddf48aa60112a4bc61114db857ccf794b3a4c3",
+      "started_utc": "2026-10-13T09:17:17.351487+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.93
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.55
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 15.46
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "green-5": {
+      "kind": "focused",
+      "base_sha": "b4ddf48aa60112a4bc61114db857ccf794b3a4c3",
+      "started_utc": "2026-10-13T09:42:06.525448+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.39
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.65
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 15.83
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.16
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "static-7": {
+      "kind": "static",
+      "base_sha": "b4ddf48aa60112a4bc61114db857ccf794b3a4c3",
+      "started_utc": "2026-10-13T09:42:33.557342+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.19
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.17
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 1.53
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "seconds": 2.28
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "seconds": 10.87
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "seconds": 2.19
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "seconds": 2.38
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "seconds": 6.44
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 0,
+          "seconds": 1.04
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "seconds": 1.02
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": false,
+      "error": null
+    },
+    "full-4": {
+      "kind": "full",
+      "base_sha": "b4ddf48aa60112a4bc61114db857ccf794b3a4c3",
+      "started_utc": "2026-10-13T14:24:07.546974+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 4.04
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.67
+        },
+        {
+          "name": "pytest-full",
+          "exit_code": 0,
+          "seconds": 1297.99
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.27
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    }
+  },
+  "full_run": {
+    "phase": "full-4",
+    "summary": "1616 passed, 4 skipped in 1295.93s (0:21:35)",
+    "pytest_step": {
+      "name": "pytest-full",
+      "exit_code": 0,
+      "seconds": 1297.99
+    }
+  },
+  "tools": {
+    "python_packages": {
+      "pytest": "9.1.1",
+      "psycopg": "3.3.6",
+      "ruff": "0.16.9",
+      "mypy": "2.3.1",
+      "fastapi": "0.142.1",
+      "pydantic": "2.13.5"
+    },
+    "web_installed": {
+      "next": "16.3.8",
+      "eslint-config-next": "16.3.8",
+      "source-map-js": "1.2.2",
+      "postcss": "8.5.23",
+      "react": "19.3.0",
+      "@playwright/test": "1.63.0"
+    }
+  },
+  "run_folder": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-j2-20261013-b4ddf48"
+}

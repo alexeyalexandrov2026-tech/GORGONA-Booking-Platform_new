@@ -1,6 +1,22 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: package J slice J1 committed locally; not published — 2026-10-13
+## Current: package J slice J2 committed locally; not published — 2026-10-13
+
+Read the [handoff](NEXT_AGENT_PACKAGE_J2_2026-10-13.md) first, then the
+[record](evidence/2026-10-13-j2-receipts/VALIDATION.md), the [plan](PACKAGE_J_PLAN_2026-10-13.md) and
+[ADR-0026 (Proposed)](../adr/0026-materials-and-stock-movements.md).
+Checkout `C:\Users\alexa\.codex\worktrees\package-j2-receipts\Gorgona Booking`, branch
+`codex/package-j2-receipts` (base `b4ddf48`, the head of slice J1; read from
+`git ls-remote origin` where `main` is and whether any package J branch is published).
+Slice J2 is commit `f8e1212`: accounts of materials for a book and receipts with amounts.
+One command posts a receipt whole: document, lines, movements, balances, moving-average
+cost and one `stock` journal entry in the owner's book; migration 0037. The complete local
+suite passes (1616 passed, 4 skipped); there is no independent review and no CI run.
+STOCK-01 stays planned. The next slice is J3: write-offs at average cost, migration 0038.
+Deployment and production migration are not authorized. Read the actual HEAD, remote, PR
+and CI state before continuing.
+
+## Previous: package J slice J1 committed locally; not published — 2026-10-13
 
 Read the [handoff](NEXT_AGENT_PACKAGE_J1_2026-10-13.md) first, then the
 [record](evidence/2026-10-13-j1-materials/VALIDATION.md), the [plan](PACKAGE_J_PLAN_2026-10-13.md) and

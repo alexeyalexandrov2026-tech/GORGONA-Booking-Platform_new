@@ -1,7 +1,7 @@
 # ADR-0026 — Basic materials: owner-linked stock documents, moving-average cost and ledger postings
 
-- Status: **Proposed (2026-10-13)**. Slice J1 is implemented locally (see the
-  implementation notes below); nothing else is. The owner chose the twelve options
+- Status: **Proposed (2026-10-13)**. Slices J1 and J2 are implemented locally (see the
+  implementation notes below); the other slices are not. The owner chose the twelve options
   of the [package J plan](../plan/PACKAGE_J_PLAN_2026-10-13.md) on 2026-10-13; this text
   follows them. It becomes Accepted only with the technical acceptance of STOCK-01.
 - Scope: package J of the owner-approved stage 2; criterion STOCK-01 ("receipt,
@@ -199,6 +199,48 @@ Choices made while implementing; none of them changes an owner decision:
 
 Not implemented yet from decision 2: an archived material or place refuses nothing,
 because no movements exist before slice J2.
+
+## Implementation notes — slice J2 (2026-10-13)
+
+Slice J2 is commit `f8e1212` on the local branch `codex/package-j2-receipts`, on top of
+slice J1: migration 0037, the posting rules of a book and receipts with amounts, with
+their movements, balances, moving-average cost and `stock` journal entry. Write-offs,
+returns and transfers are not implemented. Record:
+[validation](../plan/evidence/2026-10-13-j2-receipts/VALIDATION.md).
+
+Choices made while implementing; none of them changes an owner decision:
+
+1. Posting rules are one versioned table per book, without a separate head row; every
+   change takes the ledger posting lock.
+2. Documents, lines, movements and balances carry the branch of their place, tied by
+   composite foreign keys, so one branch policy covers them. Migration 0037 adds the key
+   on storage places that these foreign keys need.
+3. Amounts live in three company-only tables: the posting of a document (book, rule
+   revision, entry, total), the valuation of each line and the cost of a material for
+   an owner.
+4. This codebase has no privileged functions, so the rule "only a movement changes a
+   balance" is enforced at commit: a deferred check requires every balance to equal the
+   sum of its movements, and every cost row to equal the sum of its valuations and the
+   balances of its places. The check reads all movements of that material, place and
+   owner; its cost with a long history is not measured.
+5. The `stock` origin has its own triggers on the journal tables. The functions of
+   package H are not rewritten; the ledger schema check takes the approved list of
+   source kinds from migration 0037.
+6. Reading the journal: `stock` joins the source kinds of view version 2 in the API and
+   in the web contract. View version 1 still answers that an upgrade is required. This
+   is a change to the ledger contract that the list of bounded changes above did not
+   name.
+7. A supplier and a supplier document number are accepted only for a purchase.
+8. A receipt with a zero total keeps a posting row without an entry and posts nothing.
+9. Refusals are typed: `STOCK_BOOK_REQUIRED`, `STOCK_RULES_REQUIRED` and
+   `STOCK_ARCHIVED` (409); `STOCK_DATE_INVALID`, `STOCK_QUANTITY_INVALID` and
+   `STOCK_AMOUNT_INVALID` (422); a closed month answers `LEDGER_PERIOD_CLOSED` like the
+   ledger.
+10. A line holds at most 999,999,999,999 smallest fractions of the unit and at most
+    999,999,999,999,999 minor units of money.
+
+Implemented from decision 2 for receipts: an archived material and an archived place
+take no receipt.
 
 ## Acceptance and status
 

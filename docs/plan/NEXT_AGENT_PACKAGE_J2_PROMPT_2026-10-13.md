@@ -1,0 +1,26 @@
+# Ready-to-paste prompt — package J, slice J2 committed locally
+
+```text
+Continue GORGONA Booking, stage 2 package J (basic materials, STOCK-01): slices J1 and J2 are committed locally and are NOT published.
+
+First read:
+C:\Users\alexa\.codex\worktrees\package-j2-receipts\Gorgona Booking\docs\plan\NEXT_AGENT_PACKAGE_J2_2026-10-13.md
+
+Canonical checkout: C:\Users\alexa\.codex\worktrees\package-j2-receipts\Gorgona Booking
+Branch: codex/package-j2-receipts, local, clean. Code and tests of J2 are commit f8e1212; one documents commit sits on top of it (read the head from git log). Local chain: main fedd0f1 -> codex/package-j-plan 9032a69 (plan and the owner's twelve decisions) -> codex/package-j1-materials b4ddf48 (slice J1) -> codex/package-j2-receipts (slice J2). Read from git ls-remote origin whether anything is published and where main is. Start with status, branch, HEAD, log, worktrees and remotes. Do not reset, clean, amend or rebase, and do not touch other checkouts.
+
+Read AGENTS.md, docs/plan/PACKAGE_J_PLAN_2026-10-13.md (approved by the owner on 2026-10-13; see its progress section), docs/adr/0026-materials-and-stock-movements.md (Proposed, with the J1 and J2 implementation notes), docs/plan/evidence/2026-10-13-j2-receipts/VALIDATION.md, docs/adr/0023-ledger-foundation.md and docs/adr/0024-invoices-obligations-and-external-settlements.md.
+
+State. J1: materials and storage places (migration 0036). J2: seven accounts of materials per book (posting rules) and receipts with amounts (migration 0037). One command posts a receipt whole: document, lines, inbound movements, balances by place, moving-average cost per material and owner, and one journal entry with source kind stock in the owner's book (inventory debited; the receipt, opening or surplus account credited). Quantities are visible by branch; amounts, cost and posting rules only to company-wide members with finance access. Balances and cost are running totals verified at commit against the sum of their movements; the stock journal entry is tied to its document and is not reversible from the ledger. Routes under /v1/businesses/{id}/inventory: /posting-rules/{book_id}, /documents, /documents/{id}, /balances, /costs. STOCK-01 stays planned; tests enable the module only by substituting readiness in fixtures.
+
+Checks of J2, in the run folder C:\Users\alexa\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\GorgonaBookingTests\package-j2-20261013-b4ddf48 (the physical folder; the Claude app shows it under AppData\Local\GorgonaBookingTests): new tests failed before the code as expected; static checks PASS (the full npm audit still fails with the known 5 high in the development-only braces chain); the complete suite PASS, 1616 passed, 4 skipped in 1295.93s (0:21:35), sources unchanged during the run, and the checked files are byte-identical to commit f8e1212. NOT TESTED: independent review, CI (nothing is published), HawkScan (no runtime or key), races with an observed wait in pg_locks, overflow of running totals, a real delegate, the ledger screen in a browser with a stock entry.
+
+Do first:
+1. Ask the owner two things, each needing a direct decision: whether to publish the package J branches and read CI (without opening a pull request, which would invoke CodeRabbit), and whether an independent review of J1 and J2 is wanted (spawn a reviewer agent only when the owner asks).
+2. Meanwhile you may continue locally with slice J3 (write-offs at average cost, migration 0038) in a new branch from the J2 head and a new worktree; do not switch this checkout. The handoff lists what to change.
+3. In J3: failing test first, then code, static, focused, the complete suite, the record, a local commit. Do not commit as green while the suite fails.
+
+Run checks with runner.py <phase> <static|full|focused> [pytest files] in a run folder; the J2 runner is bound to the J2 checkout, so copy runner.py and write_record.py to a new run folder and fix ROOT, the branch, the base and the record folder name before the first run. Python: C:\Users\alexa\.codex\worktrees\package-g-ledger-review\Gorgona Booking\api\.venv\Scripts\python.exe with -X utf8. Run static first (it rebuilds web/out), then focused or full. The complete suite takes about 23 minutes: ask the app to keep the computer awake before starting it, and never change api/, web/ or web/out while it runs. If a run is interrupted, stop only its own cluster and its own pytest processes and start a new phase. One executor per checkout and disposable PostgreSQL cluster. No secrets in logs or prompts. Never pass a backslash through a shell heredoc; edit such text with the edit tool. A race counts only with an observed wait in pg_locks. In any browser test name the expected alert text.
+
+No push/PR/merge/readiness/deploy/production/Azure/provider/funds/credential actions or CodeRabbit without separate direct owner authorization; the permissions of 2026-10-12 and 2026-10-13 are used up. Opening a pull request invokes CodeRabbit automatically. Pull requests #2-#5 are superseded and must never be merged; do not merge any open pull request with the GitHub button. Migrations 0001-0035 are immutable. Finish with changed files, exact PASS/FAIL/BLOCKED/NOT TESTED and an updated handoff.
+```
