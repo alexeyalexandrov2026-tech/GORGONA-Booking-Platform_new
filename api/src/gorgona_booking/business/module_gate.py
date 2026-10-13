@@ -19,6 +19,7 @@ MODULE_DISABLED_SQLSTATE = "GBM01"
 COUNTERPARTIES_MODULE = "counterparties"
 DOCUMENTS_MODULE = "documents"
 FINANCE_MODULE = "finance"
+INVENTORY_MODULE = "inventory"
 
 
 def _disabled(module_id: str) -> ModuleDisabledError:

@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[2] = 2
+MODULE_REGISTRY_VERSION: Literal[3] = 3
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -187,7 +187,19 @@ MODULES: tuple[PlatformModule, ...] = (
         "and credits. History, recovery and eligible non-money release continue.",
     ),
     _module("procurement", "Procurement", _OPTIONAL, ("counterparties", "finance")),
-    _module("inventory", "Inventory and customer warehouses", _OPTIONAL, ("products_services",)),
+    _module(
+        "inventory",
+        "Inventory and customer warehouses",
+        _OPTIONAL,
+        ("finance",),
+        next(scenario.status for scenario in SCENARIOS if scenario.id == "STOCK-01"),
+        "Basic materials (ADR-0026). Implemented so far: the shared material list and the "
+        "storage places of a branch, both with versions. Stock documents, balances, cost and "
+        "ledger postings are not implemented, and the module cannot be enabled before the "
+        "STOCK-01 acceptance. No customer-owned goods, batches, serial numbers or purchase "
+        "orders.",
+        "New materials and storage places and new versions of them. Reads and history continue.",
+    ),
     _module("assets", "Assets and maintenance", _OPTIONAL, ("organization",)),
     _module("communications", "Communications", _OPTIONAL, ("counterparties",)),
     _module("support", "Support", _OPTIONAL, ("counterparties",)),

@@ -46,9 +46,10 @@ async def test_nonempty_0034_upgrade_preserves_every_fact_and_prior_checksum(
         prior: dict[int, str] = dict(
             conn.execute("select version,checksum from public.gba_schema_migrations")
         )
-    applied = apply_migrations(target.owner_dsn)
+    setting_migrations = load_migrations()[:35]
+    applied = apply_migrations(target.owner_dsn, setting_migrations)
     assert [migration.version for migration in applied] == [35]
-    assert apply_migrations(target.owner_dsn) == []
+    assert apply_migrations(target.owner_dsn, setting_migrations) == []
     after = snapshot(target)
     assert {table: after[table] for table in before} == before
     assert WORKFORCE_TABLES[14:] == ("work_location_setting_versions",)

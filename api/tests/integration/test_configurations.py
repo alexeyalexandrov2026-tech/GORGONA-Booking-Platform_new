@@ -155,7 +155,7 @@ async def test_lifecycle_keeps_every_version_and_replays(
 
     validated = (await config.step(owner_a, a, 1, "validate", 1)).json()
     assert (validated["state"], validated["revision"]) == ("validated", 2)
-    assert validated["validation"] == {"registry_version": 2, "problems": [], "warnings": []}
+    assert validated["validation"] == {"registry_version": 3, "problems": [], "warnings": []}
     publish_key = str(uuid7())
     published = (await config.step(owner_a, a, 1, "publish", 2, key=publish_key)).json()
     assert (published["state"], published["revision"]) == ("published", 3)
@@ -444,7 +444,7 @@ async def test_database_rules_hold_for_direct_sql(
     versions = "update gba.business_configuration_versions set "
     for statement, error in (
         (
-            versions + "registry_version = 3, revision = revision + 1 where version = 1",
+            versions + "registry_version = 4, revision = revision + 1 where version = 1",
             psycopg.errors.CheckViolation,
         ),
         (
@@ -664,7 +664,7 @@ async def test_registry_v2_preserves_published_v1_finance_and_admits_h_only_when
         patch.setattr(config_service, "MODULE_REGISTRY_VERSION", 1)
         await config.publish(owner_a, a, 0, [BOOKING, "finance", "counterparties"])
     current = (await config.get(owner_a, a)).json()
-    assert current["registry_version"] == 2
+    assert current["registry_version"] == 3
     assert current["published"]["registry_version"] == 1
     assert "finance" in current["effective_module_ids"]
     assert "finance_documents" not in current["effective_module_ids"]
@@ -697,7 +697,7 @@ async def test_registry_v2_preserves_published_v1_finance_and_admits_h_only_when
     published = await config.step(owner_a, a, 2, "publish", 2)
     assert published.status_code == 200, published.text
     final = (await config.get(owner_a, a)).json()
-    assert final["published"]["registry_version"] == 2
+    assert final["published"]["registry_version"] == 3
     assert "finance_documents" in final["effective_module_ids"]
 
 

@@ -13,6 +13,7 @@ from psycopg import sql
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.auth.principal import Principal
 from gorgona_booking.booking.service import BookingService
+from gorgona_booking.db.inventory_guard import INVENTORY_TABLES, assert_inventory_ready
 from gorgona_booking.db.migrate import load_migrations
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction
 from gorgona_booking.db.provider_admission_guard import ADMISSION_TABLES, assert_admission_ready
@@ -411,7 +412,12 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 r"create policy \w+_location_scope\b.*?;", workforce, re.DOTALL
             )
             assert len(workforce_policies) == len(WORKFORCE_TABLES)
-            for policy in workforce_policies:
+            inventory = next(m.sql for m in load_migrations() if m.version == 36)
+            inventory_policies = re.findall(
+                r"create policy \w+_location_scope\b.*?;", inventory, re.DOTALL
+            )
+            assert len(inventory_policies) == len(INVENTORY_TABLES)
+            for policy in workforce_policies + inventory_policies:
                 # Child policies can depend on the parent relation rather than
                 # the dropped helper itself, so CASCADE may leave them intact.
                 declaration = re.match(r"create policy (\w+) on gba\.(\w+)", policy)
@@ -444,6 +450,7 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
     async with tenant_transaction(app_pool, world.a.tenant_id) as conn:
         await assert_admission_ready(conn)
         await assert_workforce_ready(conn)
+        await assert_inventory_ready(conn)
 
 
 async def test_owner_can_issue_immutable_branch_invitation_and_acceptance_keeps_scope(

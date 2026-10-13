@@ -5,7 +5,7 @@ Roles come from server-side memberships and platform roles, never from token cla
 
 from enum import StrEnum
 
-PERMISSIONS_VERSION = 6
+PERMISSIONS_VERSION = 7
 
 
 class Permission(StrEnum):
@@ -27,6 +27,8 @@ class Permission(StrEnum):
     WORKFORCE_SELF = "workforce.self"
     WORKFORCE_READ = "workforce.read"
     WORKFORCE_MANAGE = "workforce.manage"
+    INVENTORY_READ = "inventory.read"
+    INVENTORY_MANAGE = "inventory.manage"
     MEMBERS_MANAGE = "members.manage"
     MEMBERS_MANAGE_ADMINS = "members.manage_admins"
     SETTINGS_MANAGE = "settings.manage"
@@ -59,6 +61,8 @@ _MANAGER = _FRONT_DESK | {
     Permission.STAFF_MANAGE,
     Permission.WORKFORCE_READ,
     Permission.WORKFORCE_MANAGE,
+    Permission.INVENTORY_READ,
+    Permission.INVENTORY_MANAGE,
     Permission.MEMBERS_MANAGE,
     Permission.SETTINGS_MANAGE,
     Permission.READINESS_READ,

@@ -19,6 +19,7 @@ from gorgona_booking.api import (
     groups,
     health,
     holds,
+    inventory,
     ledger,
     legal_entities,
     members,
@@ -138,6 +139,7 @@ def create_app(
     app.include_router(shift_changes.router)
     app.include_router(timesheets.router)
     app.include_router(workforce_desk.router)
+    app.include_router(inventory.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

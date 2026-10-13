@@ -18,7 +18,7 @@ from gorgona_booking.db.workforce_guard import _expression
 
 
 def test_workforce_permissions_are_explicit_and_private() -> None:
-    assert PERMISSIONS_VERSION == 6
+    assert PERMISSIONS_VERSION == 7
     rights = {Permission.WORKFORCE_SELF, Permission.WORKFORCE_READ, Permission.WORKFORCE_MANAGE}
     assert not rights & DELEGABLE_PERMISSIONS
     assert not rights & PLATFORM_SUPPORT_PERMISSIONS
