@@ -28,7 +28,10 @@ SourceKindV2 = Literal[
     "credit",
     "payment_correction",
     "credit_void",
+    "stock",
 ]
+# A journal owned by a stock document (ADR-0026); only a stock document corrects it.
+STOCK_SOURCE_KIND = "stock"
 # Journals owned by a financial document; G never reverses them generically.
 H_OWNED_SOURCE_KINDS = (
     "invoice",
@@ -246,6 +249,13 @@ class CreditVoidPosting(_PostingFields):
     source_id: str = Field(pattern=SOURCE_ID_PATTERN)
 
 
+class StockPosting(_PostingFields):
+    """Stock document of package J; SQL requires its document and its exact two lines."""
+
+    source_kind: Literal["stock"] = "stock"
+    source_id: str = Field(pattern=SOURCE_ID_PATTERN)
+
+
 FinancialPosting = (
     InvoicePosting
     | AccrualPosting
@@ -253,6 +263,7 @@ FinancialPosting = (
     | CreditPosting
     | PaymentCorrectionPosting
     | CreditVoidPosting
+    | StockPosting
 )
 
 

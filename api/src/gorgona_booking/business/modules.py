@@ -193,12 +193,13 @@ MODULES: tuple[PlatformModule, ...] = (
         _OPTIONAL,
         ("finance",),
         next(scenario.status for scenario in SCENARIOS if scenario.id == "STOCK-01"),
-        "Basic materials (ADR-0026). Implemented so far: the shared material list and the "
-        "storage places of a branch, both with versions. Stock documents, balances, cost and "
-        "ledger postings are not implemented, and the module cannot be enabled before the "
-        "STOCK-01 acceptance. No customer-owned goods, batches, serial numbers or purchase "
-        "orders.",
-        "New materials and storage places and new versions of them. Reads and history continue.",
+        "Basic materials (ADR-0026). Implemented so far: the shared material list, the "
+        "storage places of a branch, the accounts of materials for a book and receipts with "
+        "amounts, which post to the ledger. Write-offs, returns, transfers and screens are "
+        "not implemented, and the module cannot be enabled before the STOCK-01 acceptance. "
+        "No customer-owned goods, batches, serial numbers or purchase orders.",
+        "New materials, storage places, posting rules and stock documents. Reads and history "
+        "continue.",
     ),
     _module("assets", "Assets and maintenance", _OPTIONAL, ("organization",)),
     _module("communications", "Communications", _OPTIONAL, ("counterparties",)),

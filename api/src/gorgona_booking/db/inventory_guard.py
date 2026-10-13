@@ -1,4 +1,7 @@
-"""J1 packaged schema approvals. Never learn approvals from the target database."""
+"""Packaged schema approvals of the inventory tables: J1 materials and places, J2 receipts.
+
+Never learn approvals from the target database.
+"""
 
 import re
 from collections import defaultdict
@@ -9,7 +12,10 @@ from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import DatabaseUnavailableError
 
 _MIGRATIONS = resources.files("gorgona_booking.db") / "migrations"
-_SQL = (_MIGRATIONS / "0036_inventory.sql").read_text(encoding="utf-8")
+_SQL = "\n".join(
+    (_MIGRATIONS / name).read_text(encoding="utf-8")
+    for name in ("0036_inventory.sql", "0037_stock_receipts.sql")
+)
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
 INVENTORY_TABLES = tuple(_BLOCKS)
 # Shared guard functions come from 0015; the stock functions from this package.
@@ -22,7 +28,8 @@ _FUNCTIONS = dict(
 )
 _TRIGGERS = tuple(
     re.findall(
-        "create (constraint )?trigger (\\w+) (before|after) (update or delete|insert) "
+        "create (constraint )?trigger (\\w+) (before|after) "
+        "(update or delete|insert or update|insert|delete) "
         "on gba\\.(\\w+)\\s*(deferrable initially deferred )?"
         r"for each row execute function gba\.(\w+)\(([^)]*)\);",
         _SQL,
@@ -40,7 +47,8 @@ _INSERTS = {
 _COLUMNS = {
     table: tuple(
         re.findall(
-            r"^    (\w+) (uuid|text|integer|boolean|timestamptz)(?=[\s,])([^\n]*)",
+            r"^    (\w+) (uuid|text|integer|boolean|timestamptz|bigint|smallint|date|xid8)"
+            r"(?=[\s,])([^\n]*)",
             block,
             re.MULTILINE,
         )
@@ -54,6 +62,11 @@ _KEYS = {
     }
     for table, block in _BLOCKS.items()
 }
+# A key that a later migration adds to an earlier table.
+for _table, _key in re.findall(
+    r"alter table gba\.(\w+) add constraint \w+ unique \(([^)]+)\);", _SQL
+):
+    _KEYS[_table].add(("unique", tuple(x.strip() for x in _key.split(","))))
 _FKS = {
     table: {
         (
@@ -73,8 +86,26 @@ _FKS = {
     }
     for table, block in _BLOCKS.items()
 }
-# The head rows carry the row lock of their versions, hence a column UPDATE right.
-_LOCK_COLUMNS = {("stock_items", "id"), ("stock_places", "id")}
+# Head rows carry the row lock of their versions; balances and costs are running totals.
+# Hence a column UPDATE right on these columns, and nothing else is ever updated.
+_UPDATE_COLUMNS = {
+    (table, column.strip())
+    for columns, tables in re.findall(r"grant update \(([^)]+)\) on ([^;]+?) to gba_runtime", _SQL)
+    for table in re.findall(r"gba\.(\w+)", tables)
+    for column in columns.split(",")
+}
+_APPROVED_UPDATES = {
+    ("stock_items", "id"),
+    ("stock_places", "id"),
+    ("stock_balances", "quantity"),
+    ("stock_costs", "quantity"),
+    ("stock_costs", "value_minor"),
+}
+if _UPDATE_COLUMNS != _APPROVED_UPDATES:
+    raise RuntimeError("Every inventory column UPDATE right needs an explicit approval")
+# The journal tables carry three stock triggers; the ledger guards own their other ones.
+_FOREIGN_TABLES = ("journal_entries", "journal_lines")
+_DEFAULTS = ("now()", "pg_current_xact_id()")
 _TYPES = {"timestamptz": "timestamp with time zone"}
 
 
@@ -105,7 +136,55 @@ _CHECKS = {
     "stock_place_versions_revision_check": "((revision > 0))",
     "stock_place_versions_name_check": _NAME,
 }
+_QUANTITY = "(((quantity >= 1) AND (quantity <= '999999999999'::bigint)))"
+_HELD = "(((quantity >= 0) AND (quantity <= '999999999999999'::bigint)))"
+_DIRECTION = "((direction = ANY (ARRAY['in'::text, 'out'::text])))"
+_CHECKS |= {
+    "stock_posting_rules_revision_check": "((revision > 0))",
+    "stock_posting_rules_distinct_check": (
+        "(((inventory_account_id <> receipt_account_id) AND "
+        "(inventory_account_id <> opening_account_id) AND "
+        "(inventory_account_id <> surplus_account_id) AND "
+        "(inventory_account_id <> consumption_account_id) AND "
+        "(inventory_account_id <> loss_account_id) AND "
+        "(inventory_account_id <> difference_account_id)))"
+    ),
+    "stock_documents_kind_check": "((kind = 'receipt'::text))",
+    "stock_documents_reason_check": (
+        "((reason = ANY (ARRAY['purchase'::text, 'opening_balance'::text, 'surplus'::text])))"
+    ),
+    "stock_documents_number_check": (
+        "((((length(supplier_document) >= 1) AND (length(supplier_document) <= 64)) AND "
+        "(supplier_document = btrim(supplier_document)) AND "
+        "(supplier_document !~ '[[:cntrl:]]'::text)))"
+    ),
+    "stock_documents_lines_check": "(((line_count >= 1) AND (line_count <= 100)))",
+    "stock_documents_supplier_check": (
+        "((((supplier_id IS NULL) AND (supplier_document IS NULL)) OR (reason = 'purchase'::text)))"
+    ),
+    "stock_document_lines_number_check": "(((line_no >= 1) AND (line_no <= 100)))",
+    "stock_document_lines_quantity_check": _QUANTITY,
+    "stock_movements_direction_check": _DIRECTION,
+    "stock_movements_quantity_check": _QUANTITY,
+    "stock_balances_quantity_check": _HELD,
+    "stock_document_postings_total_check": (
+        "(((total_minor >= 0) AND (total_minor <= '999999999999999999'::bigint)))"
+    ),
+    "stock_document_postings_entry_check": "(((entry_id IS NULL) = (total_minor = 0)))",
+    "stock_valuations_direction_check": _DIRECTION,
+    "stock_valuations_quantity_check": _QUANTITY,
+    "stock_valuations_amount_check": (
+        "(((amount_minor >= 0) AND (amount_minor <= '999999999999999'::bigint)))"
+    ),
+    "stock_costs_quantity_check": _HELD,
+    "stock_costs_value_check": (
+        "(((value_minor >= 0) AND (value_minor <= '999999999999999999'::bigint)))"
+    ),
+    "stock_costs_empty_check": "(((quantity > 0) OR (value_minor = 0)))",
+}
 _BRANCH = "((gba.current_location_id() IS NULL) OR (location_id = gba.current_location_id()))"
+# Amounts, cost and the link to a book: company-wide members only, like the ledger.
+_COMPANY = "(gba.current_location_id() IS NULL)"
 _PLACE_BRANCH = (
     "((gba.current_location_id() IS NULL) OR (EXISTS ( SELECT 1\n"
     "   FROM gba.stock_places p\n"
@@ -118,7 +197,17 @@ _POLICIES = {
     "stock_item_versions": ("true", "(gba.current_location_id() IS NULL)"),
     "stock_places": (_BRANCH, _BRANCH),
     "stock_place_versions": (_PLACE_BRANCH, _PLACE_BRANCH),
+    "stock_posting_rules": (_COMPANY, _COMPANY),
+    "stock_documents": (_BRANCH, _BRANCH),
+    "stock_document_lines": (_BRANCH, _BRANCH),
+    "stock_movements": (_BRANCH, _BRANCH),
+    "stock_balances": (_BRANCH, _BRANCH),
+    "stock_document_postings": (_COMPANY, _COMPANY),
+    "stock_valuations": (_COMPANY, _COMPANY),
+    "stock_costs": (_COMPANY, _COMPANY),
 }
+if set(_POLICIES) != set(INVENTORY_TABLES):
+    raise RuntimeError("Every inventory table needs an explicit location policy approval")
 _TENANT = "(tenant_id = gba.current_tenant_id())"
 
 
@@ -213,7 +302,7 @@ async def _check(conn: RuntimeConnection) -> None:
           join pg_language l on l.oid=p.prolang
          where cl.relnamespace='gba'::regnamespace and cl.relname=any(%s) and not t.tgisinternal
     """,
-        names,
+        [*names, *_FOREIGN_TABLES],
     )
     for table in INVENTORY_TABLES:
         _require(tables[table] == [(True, True, "r", True, False, False)], f"{table} access")
@@ -239,9 +328,9 @@ async def _check(conn: RuntimeConnection) -> None:
                     name,
                     _TYPES.get(kind, kind),
                     "not null" in tail,
-                    "now()" if "default now()" in tail else None,
+                    next((d for d in _DEFAULTS if f"default {d}" in tail), None),
                     name in _INSERTS[table],
-                    (table, name) in _LOCK_COLUMNS,
+                    (table, name) in _UPDATE_COLUMNS,
                     False,
                     False,
                 ),
@@ -306,8 +395,12 @@ async def _check(conn: RuntimeConnection) -> None:
         _require(found is not None, f"trigger {name}")
         if found is None:
             return
-        # Row triggers: before insert 7, before update or delete 27, after insert 5.
-        kind = 27 if event == "update or delete" else 7 if when == "before" else 5
+        # Row trigger bits: row 1, before 2, insert 4, delete 8, update 16.
+        kind = (
+            1
+            + (2 if when == "before" else 0)
+            + sum(b for word, b in (("insert", 4), ("delete", 8), ("update", 16)) if word in event)
+        )
         _require(
             found[:5]
             == (

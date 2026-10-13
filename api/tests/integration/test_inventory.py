@@ -28,6 +28,7 @@ client = shared.client
 idp = shared.idp
 manager_a = shared.manager_a
 ENABLED = ["booking_resources", "finance", "inventory"]
+J1_TABLES = ("stock_items", "stock_item_versions", "stock_places", "stock_place_versions")
 ITEM_VERSION = (
     "insert into gba.stock_item_versions (tenant_id,item_id,revision,name,archived,created_by) "
     "values (%s,%s,%s,'FAKE direct',false,%s)"
@@ -189,11 +190,16 @@ async def refused_sql(
 async def test_packaged_inventory_schema_passes_guard(
     app_pool: RuntimePool, world: BookingWorld
 ) -> None:
-    assert INVENTORY_TABLES == (
-        "stock_items",
-        "stock_item_versions",
-        "stock_places",
-        "stock_place_versions",
+    assert INVENTORY_TABLES[:4] == J1_TABLES
+    assert INVENTORY_TABLES[4:] == (
+        "stock_posting_rules",
+        "stock_documents",
+        "stock_document_lines",
+        "stock_movements",
+        "stock_balances",
+        "stock_document_postings",
+        "stock_valuations",
+        "stock_costs",
     )
     async with tenant_transaction(app_pool, world.a.tenant_id) as conn:
         await assert_inventory_ready(conn)
@@ -450,7 +456,7 @@ async def test_sql_keeps_versions_ordered_authored_and_immutable(
         assert await refused(bad, (tenant, uuid7())) == "23514"
 
     # Nothing recorded is rewritten or removed, by the runtime role or by the schema owner.
-    for table in INVENTORY_TABLES:
+    for table in J1_TABLES:
         assert await refused(f"delete from gba.{table} where tenant_id=%s", (tenant,)) == "42501"
         assert (
             await refused(

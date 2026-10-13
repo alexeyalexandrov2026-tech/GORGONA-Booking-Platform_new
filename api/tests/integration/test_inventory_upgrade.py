@@ -1,4 +1,4 @@
-"""Nonempty I4 data upgrades to the J1 inventory tables without rewriting facts."""
+"""Nonempty I4 data upgrades to the inventory tables of J1 and J2 without rewriting facts."""
 
 import psycopg
 import pytest
@@ -42,9 +42,9 @@ async def test_nonempty_0035_upgrade_preserves_every_fact_and_prior_checksum(
         prior: dict[int, str] = dict(
             conn.execute("select version,checksum from public.gba_schema_migrations")
         )
-    inventory_migrations = load_migrations()[:36]
+    inventory_migrations = load_migrations()[:37]
     applied = apply_migrations(target.owner_dsn, inventory_migrations)
-    assert [migration.version for migration in applied] == [36]
+    assert [migration.version for migration in applied] == [36, 37]
     assert apply_migrations(target.owner_dsn, inventory_migrations) == []
     after = snapshot(target)
     assert {table: after[table] for table in before} == before

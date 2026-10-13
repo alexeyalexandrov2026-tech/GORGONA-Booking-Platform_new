@@ -30,6 +30,9 @@ _SQL = "\n".join(_PACKAGED)
 _G = (resources.files("gorgona_booking.db") / "migrations" / "0020_ledger.sql").read_text(
     encoding="utf-8"
 )
+_J_SQL = (
+    resources.files("gorgona_booking.db") / "migrations" / "0037_stock_receipts.sql"
+).read_text(encoding="utf-8")
 _SOURCES = dict(
     re.findall(
         r"create (?:or replace )?function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;",
@@ -238,6 +241,18 @@ def _approved_checks() -> tuple[_ApprovedCheck, ...]:
             raise RuntimeError("Every packaged H CHECK needs one explicit approved predicate")
         approved.update({(row.table, row.name): row for row in rows})
         unlisted = set()
+    # Package J adds the `stock` origin (ADR-0026). Its migration approves that one
+    # journal CHECK and nothing else of package H.
+    later = tuple(
+        _ApprovedCheck.model_validate(json.loads(line.removeprefix(_MARK)))
+        for line in _J_SQL.splitlines()
+        if line.startswith(_MARK)
+    )
+    if [(row.table, row.name) for row in later] != [
+        (_H1_JOURNAL_SOURCES.table, _H1_JOURNAL_SOURCES.name)
+    ]:
+        raise RuntimeError("Package J approves exactly the journal source kinds")
+    approved.update({(row.table, row.name): row for row in later})
     return tuple(approved.values())
 
 

@@ -116,6 +116,16 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                         " where not exists (select 1 from gba.resources r "
                         "where r.tenant_id=t.tenant_id and r.id=t.resource_id and r.kind='staff')"
                     )
+            # J2 `stock` journals cannot be represented before migration 0037 either.
+            if target_version[0] < 37:
+                if table == "journal_entries":
+                    predicate = sql.SQL(" where t.source_kind <> 'stock'")
+                elif table == "journal_lines":
+                    predicate = sql.SQL(
+                        " where not exists (select 1 from gba.journal_entries e "
+                        "where e.tenant_id=t.tenant_id and e.id=t.entry_id "
+                        "and e.source_kind='stock')"
+                    )
             cursor = before.execute(
                 sql.SQL("select {} from {} t{}").format(
                     names, sql.Identifier("gba", table), predicate

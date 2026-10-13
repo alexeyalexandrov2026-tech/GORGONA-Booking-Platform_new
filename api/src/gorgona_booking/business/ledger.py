@@ -26,6 +26,7 @@ from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.business import commands
 from gorgona_booking.business.ledger_contracts import (
     H_OWNED_SOURCE_KINDS,
+    STOCK_SOURCE_KIND,
     AccountInput,
     AccountReceipt,
     AccountType,
@@ -1240,6 +1241,8 @@ async def reverse_entry(
     ).fetchone()
     if origin is not None and origin[0] in H_OWNED_SOURCE_KINDS:
         raise LedgerStateError("Correct this entry through its financial document")
+    if origin is not None and origin[0] == STOCK_SOURCE_KIND:
+        raise LedgerStateError("Correct this entry through a stock document")
     original = await load_entry(conn, business_id, book_id, entry_id)
     if original is None:
         raise NotFoundError("Journal entry not found")

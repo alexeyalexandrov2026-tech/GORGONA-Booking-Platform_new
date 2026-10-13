@@ -116,7 +116,7 @@ const entryRecord = summary.extend({
     .min(2)
     .max(200),
 });
-// Finite v2 origins: G kinds plus journals owned by a financial document.
+// Finite v2 origins: G kinds plus journals owned by a financial or a stock document.
 const sourceKindV2 = z.enum([
   "manual",
   "opening",
@@ -127,6 +127,7 @@ const sourceKindV2 = z.enum([
   "credit",
   "payment_correction",
   "credit_void",
+  "stock",
 ]);
 const entryRecordV2 = entryRecord.extend({
   schema_version: z.literal(2),

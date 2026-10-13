@@ -66,10 +66,19 @@ async def test_nonempty_0031_upgrade_preserves_booking_occupancy_and_checksums(
     await pool.open()
     try:
         async with tenant_transaction(pool, salon.tenant_id) as conn:
-            await assert_location_scope_ready(conn)
-            # The CURRENT application requires I2 as well; a preserved I1-only
-            # upgrade remains a valid historical step, not current readiness.
+            # The CURRENT application requires every later migration as well: I2 for
+            # workforce, and J2 for the journal source kinds its access check approves.
+            # A preserved I1-only upgrade remains a valid historical step, not current
+            # readiness.
+            with pytest.raises(DatabaseUnavailableError):
+                await assert_location_scope_ready(conn)
             with pytest.raises(DatabaseUnavailableError):
                 await assert_workforce_ready(conn)
+        # Finishing the upgrade makes the same company ready for the current application.
+        finished = apply_migrations(database.owner_dsn, load_migrations())
+        assert finished[0].version == 33
+        async with tenant_transaction(pool, salon.tenant_id) as conn:
+            await assert_location_scope_ready(conn)
+            await assert_workforce_ready(conn)
     finally:
         await pool.close()
