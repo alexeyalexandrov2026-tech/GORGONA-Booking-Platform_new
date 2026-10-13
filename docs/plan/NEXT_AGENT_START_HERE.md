@@ -1,6 +1,17 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-12)
 
-## Current: production dependency audit cleared — 2026-10-12
+## Current: main fast-forwarded to the head of the stack — 2026-10-12
+
+Read the [handoff](NEXT_AGENT_AFTER_MERGE_2026-10-12.md) first, then the [merge plan and its execution](MERGE_PLAN_2026-10-12.md).
+`main` is at `8a34a80` and holds the whole platform (113 commits, migrations 0001–0035); CI on
+`main` succeeded (run 38338644832). Start new work from `main` in a new branch and a new
+worktree; do not switch or clean existing checkouts. Pull requests #2–#5 are superseded and
+must not be merged. Pull request pages: marked merged: #1; closed without merge: none; still open: #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16, #17, #18, #19, #20, #21, #22.
+The execution record is one documents commit ahead of `main` on `codex/merge-plan`. Nothing is
+deployed; readiness statuses did not change; deployment and production migration are not
+authorized. Read the actual HEAD, remote, PR and CI state before continuing.
+
+## Previous: production dependency audit cleared — 2026-10-12
 
 Read the [handoff](NEXT_AGENT_WEB_DEPENDENCY_AUDIT_2026-10-12.md) first, then the
 [record](evidence/2026-10-12-web-dependency-audit/VALIDATION.md). Checkout

@@ -1,0 +1,305 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-13T03:08:14.521318+00:00",
+  "repository": "alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new",
+  "owner_decision": "the owner chose 'Yes, fast-forward main (Recommended)' when asked on 2026-10-12",
+  "main_before": "46cd866e059597aee75da4181dbb8c0928bbe57d",
+  "main_after": "8a34a8035f268cd757612e885b306c7b8b2ffcda",
+  "commits_added_to_main": 113,
+  "merge_commits": 0,
+  "method": "one push without --force of the exact commit to refs/heads/main; no pull request",
+  "push_output": [
+    "To https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new.git",
+    "   46cd866..8a34a80  8a34a8035f268cd757612e885b306c7b8b2ffcda -> main"
+  ],
+  "ci_on_branch": {
+    "run_id": 38337136801,
+    "url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38337136801",
+    "conclusion": "success"
+  },
+  "ci_on_main": {
+    "run_id": 38338644832,
+    "url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38338644832",
+    "event": "push",
+    "conclusion": "success",
+    "started": "2026-10-13T02:48:22Z",
+    "updated": "2026-10-13T03:06:54Z",
+    "job_seconds": 1108,
+    "steps": [
+      {
+        "name": "Set up job",
+        "conclusion": "success",
+        "seconds": 1
+      },
+      {
+        "name": "Run actions/checkout@v5",
+        "conclusion": "success",
+        "seconds": 2
+      },
+      {
+        "name": "Run astral-sh/setup-uv@v6",
+        "conclusion": "success",
+        "seconds": 2
+      },
+      {
+        "name": "Run uv python install 3.14",
+        "conclusion": "success",
+        "seconds": 1
+      },
+      {
+        "name": "Run uv sync --locked",
+        "conclusion": "success",
+        "seconds": 2
+      },
+      {
+        "name": "Run actions/setup-node@v5",
+        "conclusion": "success",
+        "seconds": 1
+      },
+      {
+        "name": "Build and check customer web",
+        "conclusion": "success",
+        "seconds": 72
+      },
+      {
+        "name": "Start PostgreSQL 18",
+        "conclusion": "success",
+        "seconds": 17
+      },
+      {
+        "name": "Build the production image",
+        "conclusion": "success",
+        "seconds": 35
+      },
+      {
+        "name": "Run uv run ruff format --check .",
+        "conclusion": "success",
+        "seconds": 0
+      },
+      {
+        "name": "Run uv run ruff check .",
+        "conclusion": "success",
+        "seconds": 0
+      },
+      {
+        "name": "Run uv run mypy",
+        "conclusion": "success",
+        "seconds": 10
+      },
+      {
+        "name": "Run uv run pytest",
+        "conclusion": "success",
+        "seconds": 958
+      },
+      {
+        "name": "Post Run actions/setup-node@v5",
+        "conclusion": "success",
+        "seconds": 3
+      },
+      {
+        "name": "Post Run astral-sh/setup-uv@v6",
+        "conclusion": "success",
+        "seconds": 1
+      },
+      {
+        "name": "Post Run actions/checkout@v5",
+        "conclusion": "success",
+        "seconds": 0
+      },
+      {
+        "name": "Complete job",
+        "conclusion": "success",
+        "seconds": 0
+      }
+    ],
+    "log_text": "NOT READ: the logs endpoint answers 403 without sign-in"
+  },
+  "main_protected": false,
+  "other_remote_branches_unchanged": true,
+  "pull_requests_after": [
+    {
+      "number": 1,
+      "state": "closed",
+      "draft": true,
+      "merged_at": "2026-10-13T02:48:18Z",
+      "base": "main",
+      "head": "codex/universal-business-foundation"
+    },
+    {
+      "number": 2,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/universal-business-foundation",
+      "head": "claude/keen-mayer-lg9ift"
+    },
+    {
+      "number": 3,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "claude/keen-mayer-lg9ift",
+      "head": "codex/booking-state-isolation"
+    },
+    {
+      "number": 4,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/booking-state-isolation",
+      "head": "codex/company-departments"
+    },
+    {
+      "number": 5,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/company-departments",
+      "head": "codex/company-groups"
+    },
+    {
+      "number": 6,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/universal-business-foundation",
+      "head": "codex/package-e-isolation-audit"
+    },
+    {
+      "number": 7,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-e-isolation-audit",
+      "head": "codex/package-e1-counterparties"
+    },
+    {
+      "number": 8,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-e1-counterparties",
+      "head": "codex/package-e2-file-validation"
+    },
+    {
+      "number": 9,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-e2-file-validation",
+      "head": "claude/package-e2-documents"
+    },
+    {
+      "number": 10,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "claude/package-e2-documents",
+      "head": "claude/package-e3-agreements"
+    },
+    {
+      "number": 11,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "claude/package-e3-agreements",
+      "head": "claude/package-f-occupancy"
+    },
+    {
+      "number": 12,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "claude/stage2-finance-plan",
+      "head": "codex/package-g-ledger-review"
+    },
+    {
+      "number": 13,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-g-ledger-review",
+      "head": "codex/package-h-finance-plan"
+    },
+    {
+      "number": 14,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-h-finance-plan",
+      "head": "codex/package-h-invoices"
+    },
+    {
+      "number": 15,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-h-invoices",
+      "head": "codex/package-h1-persistence"
+    },
+    {
+      "number": 16,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-h1-persistence",
+      "head": "codex/package-h2-settlements"
+    },
+    {
+      "number": 17,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-h2-settlements",
+      "head": "codex/package-h3-settlement-guards"
+    },
+    {
+      "number": 18,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-h3-settlement-guards",
+      "head": "codex/package-h3-credits"
+    },
+    {
+      "number": 19,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-h3-credits",
+      "head": "codex/package-h3-payment-corrections"
+    },
+    {
+      "number": 20,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-h3-payment-corrections",
+      "head": "codex/package-h3-credit-voids"
+    },
+    {
+      "number": 21,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/package-h3-credit-voids",
+      "head": "codex/h3-forward-corrections"
+    },
+    {
+      "number": 22,
+      "state": "open",
+      "draft": true,
+      "merged_at": null,
+      "base": "codex/h3-forward-corrections",
+      "head": "codex/package-h4-ui-admission"
+    }
+  ],
+  "not_done": [
+    "no deployment",
+    "no readiness change",
+    "no branch deleted",
+    "no repository setting changed",
+    "no pull request edited by the executor",
+    "this record is not on main"
+  ]
+}

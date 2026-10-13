@@ -1,7 +1,7 @@
 # Передача следующему агенту — аудит зависимостей web, 2026-10-12
 
-**Production-аудит зависимостей чист. Ветка опубликована, CI — PASS.** Этот документ —
-актуальный вход. [Готовый prompt](NEXT_AGENT_WEB_DEPENDENCY_AUDIT_PROMPT_2026-10-12.md).
+**Production-аудит зависимостей чист. Ветка опубликована, CI — PASS.** Актуальный вход
+после переноса `main` — [новый handoff](NEXT_AGENT_AFTER_MERGE_2026-10-12.md); этот документ описывает срез аудита. [Готовый prompt](NEXT_AGENT_WEB_DEPENDENCY_AUDIT_PROMPT_2026-10-12.md).
 Состояние Package I описывает [handoff приёмки](NEXT_AGENT_PACKAGE_I_CORRECTIONS_2026-10-12.md); оно не изменилось.
 
 ## Где продолжать

@@ -1,5 +1,7 @@
 # Ready-to-paste prompt — after the web dependency audit slice
 
+Superseded on 2026-10-12 by the [prompt after the merge](NEXT_AGENT_AFTER_MERGE_PROMPT_2026-10-12.md); kept as the record of that slice.
+
 ```text
 Continue GORGONA Booking after the web dependency audit slice.
 

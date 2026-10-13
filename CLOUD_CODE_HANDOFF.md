@@ -1,6 +1,21 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-12: production dependency audit cleared
+## Current checkpoint — 2026-10-12: main fast-forwarded to the head of the stack
+
+`main` перенесён с `46cd866` на `8a34a80` одним обычным push без force по решению владельца
+от 2026-10-12. В `main` теперь вся основная линия: 113 коммитов, миграции 0001–0035.
+CI на `main`: **PASS**, [run 38338644832](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38338644832) на `8a34a80`: задание 1108 с, pytest 958 с; текст логов не читался.
+Ничего не развёрнуто; статусы готовности не менялись. PR #2–#5 признаны заменёнными и не
+сливаются. Страницы PR: отмечены как слитые: #1; закрыты без слияния: нет; остаются открытыми: #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16, #17, #18, #19, #20, #21, #22.
+
+Новая работа начинается от `main`. Запись о выполнении лежит на ветке `codex/merge-plan`, на один
+коммит документов впереди `main`.
+
+[Актуальный handoff](docs/plan/NEXT_AGENT_AFTER_MERGE_2026-10-12.md),
+[готовый prompt](docs/plan/NEXT_AGENT_AFTER_MERGE_PROMPT_2026-10-12.md),
+[план слияния и его выполнение](docs/plan/MERGE_PLAN_2026-10-12.md).
+
+## Previous checkpoint — 2026-10-12: production dependency audit cleared
 
 Production-аудит зависимостей web (`npm audit --omit=dev`) — **PASS: 0 находок**; было
 FAIL: 2 high. Обновлены `next` 16.3.7 → 16.3.8 и `source-map-js` 1.2.1 → 1.2.2. Код
@@ -19,7 +34,7 @@ FAIL: 2 high. Обновлены `next` 16.3.7 → 16.3.8 и `source-map-js` 1.2
 ([план](docs/plan/MERGE_PLAN_2026-10-12.md)); PR #2–#5 считаются заменёнными и не сливаются. Где сейчас
 `main`, читать из `git ls-remote origin main`; запись о выполнении — на ветке `codex/merge-plan`.
 
-[Актуальный handoff](docs/plan/NEXT_AGENT_WEB_DEPENDENCY_AUDIT_2026-10-12.md),
+[Handoff среза аудита](docs/plan/NEXT_AGENT_WEB_DEPENDENCY_AUDIT_2026-10-12.md),
 [готовый prompt](docs/plan/NEXT_AGENT_WEB_DEPENDENCY_AUDIT_PROMPT_2026-10-12.md),
 [запись о срезе](docs/plan/evidence/2026-10-12-web-dependency-audit/VALIDATION.md).
 
