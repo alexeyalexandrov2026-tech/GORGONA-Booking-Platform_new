@@ -1,6 +1,18 @@
-# GORGONA — начните здесь (актуальное продолжение, 2026-10-12)
+# GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: workforce screens checked in eight untested situations — 2026-10-13
+## Current: package J plan awaits the owner's approval — 2026-10-13
+
+Read the [handoff](NEXT_AGENT_PACKAGE_J_PLAN_2026-10-13.md) first, then the [plan](PACKAGE_J_PLAN_2026-10-13.md) and
+[ADR-0026 (Proposed)](../adr/0026-materials-and-stock-movements.md).
+Checkout `C:\Users\alexa\.codex\worktrees\package-j-plan\Gorgona Booking`, branch
+`codex/package-j-plan` (base `fedd0f1`, which was `main` when the slice started; read from
+`git ls-remote origin` where `main` is and whether the branch is published). Documents only:
+a plan for stage 2 package J (basic materials, STOCK-01) with eight owner decisions and a
+proposed ADR. No package J code exists, and none may start before the owner answers.
+Deployment and production migration are not authorized. Read the actual HEAD, remote, PR
+and CI state before continuing.
+
+## Previous: workforce screens checked in eight untested situations — 2026-10-13
 
 Read the [handoff](NEXT_AGENT_WORKFORCE_SCREENS_2026-10-13.md) first, then the [record](evidence/2026-10-13-workforce-screen-situations/VALIDATION.md).
 Checkout `C:\Users\alexa\.codex\worktrees\workforce-screen-situations\Gorgona Booking`, branch

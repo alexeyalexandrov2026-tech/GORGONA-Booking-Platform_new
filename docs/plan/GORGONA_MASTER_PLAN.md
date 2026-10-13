@@ -1,6 +1,23 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
-## Current checkpoint — 2026-10-13: workforce screens checked in eight untested situations
+## Current checkpoint — 2026-10-13: package J plan awaits the owner's approval
+
+Подготовлены план пакета J этапа 2 (базовые материалы, STOCK-01) и ADR-0026 (Proposed).
+Кода пакета нет: изменены только документы. План называет восемь решений владельца; в
+каждом рекомендован вариант A. Главное — решение 2: считать только количества или сразу
+стоимость и проводки. До согласования код пакета J не начинается.
+
+Проверки: `git diff --check` PASS; ссылки новых документов ведут на существующие файлы.
+Тесты и CI — NOT TESTED: кода в срезе нет, ветка `codex/package-j-plan` на момент записи не
+опубликована. Основа — `main` на `fedd0f1`; где `main` сейчас, читать из
+`git ls-remote origin main`. Сервер, API, миграции и статусы готовности не менялись.
+
+[Актуальный handoff](NEXT_AGENT_PACKAGE_J_PLAN_2026-10-13.md),
+[готовый prompt](NEXT_AGENT_PACKAGE_J_PLAN_PROMPT_2026-10-13.md),
+[план пакета J](PACKAGE_J_PLAN_2026-10-13.md),
+[ADR-0026 (Proposed)](../adr/0026-materials-and-stock-movements.md).
+
+## Previous checkpoint — 2026-10-13: workforce screens checked in eight untested situations
 
 Экраны «Персонала» проверены в настоящем браузере в восьми ситуациях, которые приёмка
 Package I назвала непроверенными: 16 из 16 на компьютере и телефоне. Найдены и исправлены
