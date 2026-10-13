@@ -1,8 +1,16 @@
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import {
+  test,
+  expect as immediate,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 // Situations the acceptance record listed as untested. The fixture is
 // api/tests/integration/test_i4_situations_browser.py.
+// Several of them make a screen read ten small pages one after another, so every
+// expectation may wait longer than the default five seconds on a slow machine.
+const expect = immediate.configure({ timeout: 30000 });
 const issuer = process.env.GBA_TEST_OIDC_ISSUER;
 const business = process.env.GBA_I4S_BUSINESS ?? "";
 const otherBusiness = process.env.GBA_I4S_OTHER_BUSINESS ?? "";

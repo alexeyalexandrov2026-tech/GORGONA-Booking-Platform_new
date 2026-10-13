@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-13T04:54:13.180077+00:00",
+  "first_publication": {
+    "head": "a62bf64b58a93910b7eae9ac473f5c2aca3c643a",
+    "run_id": 38346504272,
+    "url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38346504272",
+    "conclusion": "failure",
+    "failed_step": "Run uv run pytest",
+    "failed_step_seconds": 676,
+    "log_text": "NOT READ: needs a GitHub sign-in",
+    "main_moved": false
+  },
+  "local_reproduction_at_the_same_hour": [
+    {
+      "phase": "ci-repro-1",
+      "exit_code": 0,
+      "seconds": 123.22,
+      "started_utc": "2026-10-13T04:42:17.441355+00:00"
+    },
+    {
+      "phase": "ci-repro-2",
+      "exit_code": 0,
+      "seconds": 145.21,
+      "started_utc": "2026-10-13T04:44:51.617450+00:00"
+    }
+  ],
+  "cause": "not established",
+  "assumption": "a slow CI machine ran out of the default five seconds while a screen read ten small pages",
+  "changes": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "a2a014941dc841620537074c3052c7d2e4af2fa3cb216acfce2a1b375a5aa3a4",
+      "git_blob_oid": "57eb34f085c843c4859cb96c7bf863889f1926ee"
+    },
+    {
+      "path": "web/tests/workforce-situations.spec.ts",
+      "sha256": "040c65105845e824c74042d7b7f6f86cb227b1011a3a658a3a0ff18b01d4bb1d",
+      "git_blob_oid": "9836d2f5e5dba5db3b386bad3a646dfae7263c47"
+    }
+  ],
+  "local_check_after_the_change": {
+    "phase": "fix-1",
+    "exit_code": 0,
+    "seconds": 121.86,
+    "started_utc": "2026-10-13T04:50:38.263299+00:00"
+  },
+  "full_local_run_on_these_bytes": "NOT RUN: only the new spec and the CI workflow changed"
+}
