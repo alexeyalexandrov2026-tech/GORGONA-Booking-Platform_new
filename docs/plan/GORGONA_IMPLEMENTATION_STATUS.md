@@ -1,6 +1,31 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-13: package J slices J1–J3 published; CI success; not merged
+## Current checkpoint — 2026-10-13: package J slice J4 part one (transfers) committed; J1–J3 published
+
+Первая часть среза J4 пакета J (перемещение между местами хранения) написана и
+закоммичена: `0d923a4` на ветке `codex/package-j4-transfers`, поверх опубликованной вершины
+среза J3 (`07bde5b`). Перемещение проводится одной командой: документ, строки и по два
+движения на строку — расход из места документа и приход в место назначения. Денег оно
+не двигает: нет денежной части, оценки и проводки, стоимость владельца не меняется,
+блокировка книги не берётся. Внутри филиала его проводит менеджер филиала, между
+филиалами — владелец или менеджер всей компании. Миграция 0039 таблиц не добавляет.
+Возврата и экранов ещё нет. STOCK-01 остаётся `planned`, модуль в продукте включить
+нельзя; ADR-0026 остаётся Proposed.
+
+Проверки: full local **PASS: 1676 passed, 4 skipped in 1876.88s (0:31:16)**; Ruff, format и mypy
+PASS на 283 файлах; web typecheck, lint, format, 102 unit и сборка PASS. Пять вариантов
+гонок засчитаны с наблюдаемым ожиданием блокировки строки в `pg_locks`. Независимый
+обзор — NOT TESTED: исполнитель решил провести его один раз после обеих частей J4. CI
+этой ветки на момент записи — NOT TESTED: запись сделана до публикации. `main` не
+переносился. Где `main` и что опубликовано, читать из `git ls-remote origin`.
+
+[Актуальный handoff](NEXT_AGENT_PACKAGE_J4_TRANSFERS_2026-10-13.md),
+[готовый prompt](NEXT_AGENT_PACKAGE_J4_TRANSFERS_PROMPT_2026-10-13.md),
+[запись о срезе](evidence/2026-10-13-j4-transfers/VALIDATION.md),
+[план пакета J](PACKAGE_J_PLAN_2026-10-13.md),
+[ADR-0026 (Proposed)](../adr/0026-materials-and-stock-movements.md).
+
+## Previous checkpoint — 2026-10-13: package J slices J1–J3 published; CI success; not merged
 
 Срез J3 пакета J (списание по средней цене) написан, закоммичен и опубликован:
 `565b68f` на ветке `codex/package-j3-writeoffs`, поверх среза J2. Списание проводится одной

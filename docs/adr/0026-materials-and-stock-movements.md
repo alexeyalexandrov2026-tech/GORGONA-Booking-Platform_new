@@ -1,7 +1,8 @@
 # ADR-0026 — Basic materials: owner-linked stock documents, moving-average cost and ledger postings
 
-- Status: **Proposed (2026-10-13)**. Slices J1, J2 and J3 are implemented locally (see the
-  implementation notes below); the other slices are not. The owner chose the twelve options
+- Status: **Proposed (2026-10-13)**. Slices J1, J2, J3 and the transfers of slice J4 are
+  implemented (see the implementation notes below); returns and the screens are not. The
+  owner chose the twelve options
   of the [package J plan](../plan/PACKAGE_J_PLAN_2026-10-13.md) on 2026-10-13; this text
   follows them. It becomes Accepted only with the technical acceptance of STOCK-01.
 - Scope: package J of the owner-approved stage 2; criterion STOCK-01 ("receipt,
@@ -277,6 +278,47 @@ Choices made while implementing; none of them changes an owner decision:
 
 Implemented from decision 2 for write-offs: an archived material and an archived place
 still allow outbound movements.
+
+## Implementation notes — slice J4, transfers (2026-10-13)
+
+The first part of slice J4 is commit `0d923a4` on the branch `codex/package-j4-transfers`,
+on top of slice J3: migration 0039 and transfers between storage places. Returns are the
+second part and are not implemented. Record:
+[validation](../plan/evidence/2026-10-13-j4-transfers/VALIDATION.md).
+
+Choices made while implementing; none of them changes an owner decision:
+
+1. Slice J4 is done in two parts, transfers first (migration 0039) and returns second
+   (migration 0040). The scope of the package is unchanged.
+2. Migration 0039 adds no table. A document gains two nullable columns, the destination
+   place and its branch, with a foreign key and a check: only a transfer names a
+   destination, and never its own place. The migration replaces the two checks of kinds
+   and reasons and five functions.
+3. A transfer has one fixed reason, `relocation`; its command carries no reason and no
+   amount.
+4. A transfer moves no money. Every line has exactly two movements, out of the place of
+   the document and into the destination, with the same owner, material and quantity, so
+   what the owner holds and its cost row do not change. The database refuses a posting
+   row, a valuation and a `stock` journal entry for a transfer. It needs no book and no
+   posting rules, and neither the accounting start nor a closed period applies to it.
+5. A transfer takes no ledger lock. Balance rows order it with every other document: the
+   service locks the rows of both places in the order material, place before it writes,
+   and writes the movements in that order. A write-off locks its rows in the same order.
+6. Who may transfer is enforced from the membership of the author: a company-wide owner
+   or manager, or an owner or manager whose branch is the branch of both places. The API
+   runs a transfer in the branch scope of the caller with `inventory.manage` alone; the
+   finance right that a receipt and a write-off need is not asked for.
+7. A document belongs to the branch it leaves. A transfer between branches is therefore
+   read by the source branch, and the destination branch reads its balance. The date is
+   not in the future of the source branch.
+8. From decision 2: an archived place takes no transfer in and still lets its balance be
+   moved out. An archived material is not transferred at all, because a transfer is also
+   an inbound movement; its balance leaves by a write-off.
+9. The owner legal entity of a transfer is not looked up separately, because a
+   branch-limited member cannot read legal entities. An unknown owner holds nothing, and
+   the answer is the typed shortage, which discloses nothing.
+10. The packaged schema check learned the columns and foreign keys that a later migration
+    adds to an earlier table, and adds up insert grants across migrations.
 
 ## Acceptance and status
 
