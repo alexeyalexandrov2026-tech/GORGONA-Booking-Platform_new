@@ -1,9 +1,13 @@
-"""J2 and J3 commands and reads: accounts of materials, receipts, write-offs, balances, cost.
+"""J2 to J4 commands and reads: accounts of materials, receipts, write-offs, transfers,
+balances and cost.
 
-A document is posted whole in the caller's transaction, under the ledger posting lock:
-document, lines, movements, balances, cost and one `stock` journal entry. A receipt
-carries its amounts; a write-off leaves at the moving-average cost. The database repeats
-every rule below in its triggers; this module answers sooner and names the refusal.
+A receipt or a write-off is posted whole in the caller's transaction, under the ledger
+posting lock: document, lines, movements, balances, cost and one `stock` journal entry.
+A receipt carries its amounts; a write-off leaves at the moving-average cost. A transfer
+moves quantities between two places of one owner and no money: it takes no posting lock,
+and the rows of the balances it touches order it with every other document. The database
+repeats every rule below in its triggers; this module answers sooner and names the
+refusal.
 """
 
 from collections.abc import AsyncIterator
@@ -39,6 +43,7 @@ from gorgona_booking.business.stock_contracts import (
     PostingRulesInput,
     PostingRulesView,
     ReceiptInput,
+    TransferInput,
     WriteOffInput,
     from_count,
     issue_value,
@@ -88,7 +93,7 @@ _EARLY = "The document date is before the book's accounting start"
 _SHORT = "The place does not hold this much of the material"
 # Trigger messages and the errors they become when a check here did not answer first.
 _REFUSALS: tuple[tuple[str, type[DomainError], str], ...] = (
-    ("archived", StockArchivedError, "An archived material or storage place takes no receipt"),
+    ("archived", StockArchivedError, "An archived material or storage place takes nothing in"),
     ("future of its branch", StockDateError, _FUTURE),
     ("accounting start", StockDateError, _EARLY),
     ("stock document is closed", ledger.PeriodClosedError, "This month is closed"),
@@ -97,16 +102,21 @@ _REFUSALS: tuple[tuple[str, type[DomainError], str], ...] = (
 # Positions in a posting rules row: the revision, then the seven accounts.
 _INVENTORY, _CONSUMPTION, _LOSS = 1, 5, 6
 _RECEIPT_ACCOUNT = {"purchase": 2, "opening_balance": 3, "surplus": 4}
-type _Document = ReceiptInput | WriteOffInput
+type _MoneyDocument = ReceiptInput | WriteOffInput
+type _Document = _MoneyDocument | TransferInput
 
 
 @asynccontextmanager
-async def _writes(conn: RuntimeConnection, business: UUID) -> AsyncIterator[None]:
+async def _writes(
+    conn: RuntimeConnection, business: UUID, *, money: bool = True
+) -> AsyncIterator[None]:
     await require_inventory(conn, business)
+    gated = (INVENTORY_MODULE, FINANCE_MODULE) if money else (INVENTORY_MODULE,)
     try:
-        async with conn.transaction(), module_writes(INVENTORY_MODULE, FINANCE_MODULE):
-            # Rule 16: a money document takes the posting lock of the company first.
-            await conn.execute("select gba.lock_ledger(%s)", (business,))
+        async with conn.transaction(), module_writes(*gated):
+            if money:
+                # Rule 16: a money document takes the posting lock of the company first.
+                await conn.execute("select gba.lock_ledger(%s)", (business,))
             yield
             # Surface deferred integrity failures before returning the API result.
             await conn.execute("set constraints all immediate")
@@ -229,7 +239,7 @@ async def save_rules(
 
 
 async def _place(conn: RuntimeConnection, business: UUID, body: _Document) -> UUID:
-    """The branch of the place; the date is not in the future of that branch.
+    """The branch of the place of a document; the date is not in the future of that branch.
 
     An archived place takes no receipt and still lets its balance leave.
     """
@@ -254,7 +264,25 @@ async def _place(conn: RuntimeConnection, business: UUID, body: _Document) -> UU
     return UUID(str(row[0]))
 
 
-async def _book(conn: RuntimeConnection, business: UUID, body: _Document) -> tuple[Any, ...]:
+async def _destination(conn: RuntimeConnection, business: UUID, place: UUID) -> UUID:
+    """The branch of the place a transfer arrives at; an archived place takes nothing in."""
+    row = await (
+        await conn.execute(
+            "select p.location_id,v.archived from gba.stock_places p "
+            "join lateral (select archived from gba.stock_place_versions "
+            "where tenant_id=p.tenant_id and place_id=p.id order by revision desc limit 1) v "
+            "on true where p.tenant_id=%s and p.id=%s",
+            (business, place),
+        )
+    ).fetchone()
+    if row is None:
+        raise InvalidReferenceError("Unknown storage place", field="to_place_id")
+    if row[1]:
+        raise StockArchivedError("An archived storage place takes no transfer", field="to_place_id")
+    return UUID(str(row[0]))
+
+
+async def _book(conn: RuntimeConnection, business: UUID, body: _MoneyDocument) -> tuple[Any, ...]:
     """The book of the owner: its id, base currency, currency scale and accounting start."""
     row = await (
         await conn.execute(
@@ -301,7 +329,7 @@ async def _quantities(
 ) -> tuple[list[int], dict[UUID, int]]:
     """Whole quantities of the lines and the scale of each material; no rounding.
 
-    An archived material takes no receipt and still lets its balance leave.
+    An archived material takes no receipt and no transfer and still lets its balance leave.
     """
     rows = await (
         await conn.execute(
@@ -318,8 +346,10 @@ async def _quantities(
         item = items.get(line.item_id)
         if item is None:
             raise InvalidReferenceError("Unknown material", field="lines", line=number)
-        if item[1] and body.kind == "receipt":
-            raise StockArchivedError("An archived material takes no receipt", line=number)
+        if item[1] and body.kind != "write_off":
+            raise StockArchivedError(
+                "An archived material takes no receipt and no transfer", line=number
+            )
         try:
             quantities.append(to_count(line.quantity, item[0], MAX_QUANTITY))
         except ValueError as exc:
@@ -338,6 +368,33 @@ def _amounts(body: ReceiptInput, currency: str, scale: int) -> list[int]:
     return amounts
 
 
+async def _held(
+    conn: RuntimeConnection, business: UUID, body: WriteOffInput | TransferInput
+) -> dict[UUID, int]:
+    """What the place of the document holds of its materials, under their row locks.
+
+    Rule 16: balance rows are locked in the order material, place, owner. A transfer
+    also locks the rows of the place it arrives at, in that same order.
+    """
+    places = [body.place_id]
+    if isinstance(body, TransferInput):
+        places.append(body.to_place_id)
+    rows = await (
+        await conn.execute(
+            "select item_id,place_id,quantity from gba.stock_balances where tenant_id=%s "
+            "and legal_entity_id=%s and place_id=any(%s::uuid[]) and item_id=any(%s::uuid[]) "
+            "order by item_id,place_id for update",
+            (
+                business,
+                body.legal_entity_id,
+                places,
+                sorted({line.item_id for line in body.lines}),
+            ),
+        )
+    ).fetchall()
+    return {row[0]: int(row[2]) for row in rows if row[1] == body.place_id}
+
+
 async def _issued(
     conn: RuntimeConnection,
     business: UUID,
@@ -351,18 +408,7 @@ async def _issued(
     The lines are valued in their order, each on what the lines before it left.
     """
     wanted = sorted({line.item_id for line in body.lines})
-    # Rule 16: balance rows are locked in the order material, place, owner.
-    held = {
-        row[0]: int(row[1])
-        for row in await (
-            await conn.execute(
-                "select item_id,quantity from gba.stock_balances where tenant_id=%s "
-                "and place_id=%s and legal_entity_id=%s and item_id=any(%s::uuid[]) "
-                "order by item_id for update",
-                (business, body.place_id, body.legal_entity_id, wanted),
-            )
-        ).fetchall()
-    }
+    held = await _held(conn, business, body)
     costs = {
         row[0]: (int(row[1]), int(row[2]))
         for row in await (
@@ -401,8 +447,9 @@ async def post_document(
     user: UUID,
     actor: str,
     key: str,
-    body: _Document,
+    body: _MoneyDocument,
 ) -> DocumentView:
+    """A receipt or a write-off: quantities, cost and one journal entry of the owner's book."""
     async with _writes(conn, business):
         scope = IdempotencyScope(business, actor, "inventory.document", key)
         receipt = await commands.claim(
@@ -548,15 +595,124 @@ async def post_document(
         return await load_document(conn, business, document, money=True)
 
 
+async def post_transfer(
+    conn: RuntimeConnection,
+    business: UUID,
+    document: UUID,
+    user: UUID,
+    actor: str,
+    key: str,
+    body: TransferInput,
+) -> DocumentView:
+    """A transfer: every line leaves one place and arrives at another of the same owner.
+
+    It asks for no book and no posting rules and does not depend on the periods of a
+    book. The branch scope of the caller decides which places exist for it.
+    """
+    async with _writes(conn, business, money=False):
+        scope = IdempotencyScope(business, actor, "inventory.document", key)
+        receipt = await commands.claim(
+            conn,
+            scope,
+            commands.fingerprint({"id": str(document), **body.model_dump(mode="json")}),
+            InventoryReceipt,
+        )
+        if receipt is not None:
+            return await load_document(conn, business, receipt.subject_id, money=False)
+        posted = await (
+            await conn.execute(
+                "select 1 from gba.stock_documents where tenant_id=%s and id=%s",
+                (business, document),
+            )
+        ).fetchone()
+        if posted is not None:
+            raise InventoryConflictError("This document is already posted")
+        location = await _place(conn, business, body)
+        arrival = await _destination(conn, business, body.to_place_id)
+        quantities, scales = await _quantities(conn, business, body)
+        held = await _held(conn, business, body)
+        for number, (line, quantity) in enumerate(
+            zip(body.lines, quantities, strict=True), start=1
+        ):
+            available = held.get(line.item_id, 0)
+            if quantity > available:
+                raise StockInsufficientError(
+                    _SHORT, line=number, available=from_count(available, scales[line.item_id])
+                )
+            held[line.item_id] = available - quantity
+        items = [line.item_id for line in body.lines]
+
+        await conn.execute(
+            "insert into gba.stock_documents (tenant_id,id,kind,reason,legal_entity_id,"
+            "place_id,location_id,to_place_id,to_location_id,document_date,line_count,"
+            "created_by) values (%s,%s,'transfer','relocation',%s,%s,%s,%s,%s,%s,%s,%s)",
+            (
+                business,
+                document,
+                body.legal_entity_id,
+                body.place_id,
+                location,
+                body.to_place_id,
+                arrival,
+                body.document_date,
+                len(body.lines),
+                user,
+            ),
+        )
+        await conn.execute(
+            "insert into gba.stock_document_lines "
+            "(tenant_id,document_id,line_no,location_id,item_id,quantity) "
+            "select %s,%s,l.n::smallint,%s,l.item,l.quantity "
+            "from unnest(%s::uuid[],%s::bigint[]) with ordinality as l(item,quantity,n)",
+            (business, document, location, items, quantities),
+        )
+        # Rule 16: balance rows are locked in the order material, place, owner. Every
+        # line moves out of its place and into the destination.
+        await conn.execute(
+            "insert into gba.stock_movements (tenant_id,document_id,line_no,direction,"
+            "location_id,place_id,item_id,legal_entity_id,quantity) "
+            "select %s,%s,l.n::smallint,m.direction,m.location,m.place,l.item,%s,l.quantity "
+            "from unnest(%s::uuid[],%s::bigint[]) with ordinality as l(item,quantity,n) "
+            "cross join (values ('out',%s::uuid,%s::uuid),('in',%s::uuid,%s::uuid)) "
+            "as m(direction,location,place) order by l.item,m.place,l.n",
+            (
+                business,
+                document,
+                body.legal_entity_id,
+                items,
+                quantities,
+                location,
+                body.place_id,
+                arrival,
+                body.to_place_id,
+            ),
+        )
+        # Identifiers, the kind and the line count only: no names or notes.
+        await commands.audit(
+            conn,
+            business,
+            actor,
+            "inventory.document",
+            "stock_document",
+            str(document),
+            {"kind": body.kind, "lines": len(body.lines)},
+        )
+        await commands.complete(conn, scope, InventoryReceipt(subject_id=document))
+        return await load_document(conn, business, document, money=False)
+
+
 async def load_document(
     conn: RuntimeConnection, business: UUID, document: UUID, *, money: bool
 ) -> DocumentView:
-    """A posted document. Amounts are read only for a company-wide finance reader."""
+    """A posted document. Amounts are read only for a company-wide finance reader.
+
+    A transfer has no amounts for any reader.
+    """
     head = await (
         await conn.execute(
             "select id,kind,reason,legal_entity_id,place_id,location_id,document_date,"
-            "supplier_id,supplier_document,created_at from gba.stock_documents "
-            "where tenant_id=%s and id=%s",
+            "supplier_id,supplier_document,created_at,to_place_id,to_location_id "
+            "from gba.stock_documents where tenant_id=%s and id=%s",
             (business, document),
         )
     ).fetchone()
@@ -603,6 +759,8 @@ async def load_document(
         legal_entity_id=head[3],
         place_id=head[4],
         location_id=head[5],
+        to_place_id=head[10],
+        to_location_id=head[11],
         document_date=head[6],
         supplier_id=head[7],
         supplier_document=head[8],
@@ -635,13 +793,16 @@ async def list_documents(
     after: UUID | None,
     limit: int,
 ) -> DocumentList:
+    """Posted documents in the caller's branch scope; a place lists what left it, what was
+    posted at it and what arrived there.
+    """
     rows = await (
         await conn.execute(
             "select id,kind,reason,legal_entity_id,place_id,location_id,document_date,"
-            "line_count,created_at from gba.stock_documents where tenant_id=%s "
-            "and (%s::uuid is null or place_id=%s) and (%s::uuid is null or id>%s) "
-            "order by id limit %s",
-            (business, place, place, after, after, limit + 1),
+            "line_count,created_at,to_place_id,to_location_id from gba.stock_documents "
+            "where tenant_id=%s and (%s::uuid is null or place_id=%s or to_place_id=%s) "
+            "and (%s::uuid is null or id>%s) order by id limit %s",
+            (business, place, place, place, after, after, limit + 1),
         )
     ).fetchall()
     items = tuple(
@@ -652,6 +813,8 @@ async def list_documents(
             legal_entity_id=row[3],
             place_id=row[4],
             location_id=row[5],
+            to_place_id=row[9],
+            to_location_id=row[10],
             document_date=row[6],
             line_count=row[7],
             created_at=row[8],

@@ -201,6 +201,8 @@ async def test_write_off_leaves_at_the_moving_average_and_posts_one_entry(stock:
         "legal_entity_id": str(stock.entity),
         "place_id": stock.place["place_id"],
         "location_id": stock.place["location_id"],
+        "to_place_id": None,
+        "to_location_id": None,
         "document_date": DAY,
         "supplier_id": None,
         "supplier_document": None,

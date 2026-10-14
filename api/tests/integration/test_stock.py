@@ -254,6 +254,8 @@ async def test_receipts_post_movements_cost_and_one_journal_entry(stock: Stock) 
         "legal_entity_id": str(stock.entity),
         "place_id": stock.place["place_id"],
         "location_id": stock.place["location_id"],
+        "to_place_id": None,
+        "to_location_id": None,
         "document_date": DAY,
         "supplier_id": None,
         "supplier_document": None,

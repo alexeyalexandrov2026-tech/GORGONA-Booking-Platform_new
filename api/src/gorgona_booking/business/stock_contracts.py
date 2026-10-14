@@ -1,4 +1,6 @@
-"""Strict version-one contracts of J2 and J3: accounts of materials, receipts, write-offs."""
+"""Strict version-one contracts of J2 to J4: accounts of materials, receipts, write-offs
+and transfers between storage places.
+"""
 
 from datetime import date
 from typing import Annotated, Literal, Self
@@ -153,8 +155,34 @@ class WriteOffInput(InventoryModel):
     lines: tuple[WriteOffLine, ...] = Field(min_length=1, max_length=MAX_LINES)
 
 
+class TransferLine(Line):
+    """A quantity only: a transfer moves no money."""
+
+
+class TransferInput(InventoryModel):
+    """One transfer between two storage places of one owner, posted whole by one command.
+
+    It has one fixed reason and carries no amount: the owner holds the same quantity at
+    the same cost before and after.
+    """
+
+    kind: Literal["transfer"]
+    legal_entity_id: UUID
+    # The place the materials leave; the document belongs to its branch.
+    place_id: UUID
+    to_place_id: UUID
+    document_date: date
+    lines: tuple[TransferLine, ...] = Field(min_length=1, max_length=MAX_LINES)
+
+    @model_validator(mode="after")
+    def places_differ(self) -> Self:
+        if self.to_place_id == self.place_id:
+            raise ValueError("A transfer names two different storage places")
+        return self
+
+
 # A document command names its kind; each kind has its own strict shape.
-DocumentInput = Annotated[ReceiptInput | WriteOffInput, Field(discriminator="kind")]
+DocumentInput = Annotated[ReceiptInput | WriteOffInput | TransferInput, Field(discriminator="kind")]
 
 
 class DocumentLine(Part):
@@ -181,6 +209,9 @@ class DocumentSummary(Part):
     legal_entity_id: UUID
     place_id: UUID
     location_id: UUID
+    # Where a transfer arrives; absent for every other kind.
+    to_place_id: UUID | None
+    to_location_id: UUID | None
     document_date: date
     line_count: int
     created_at: AwareDatetime
@@ -194,12 +225,15 @@ class DocumentView(InventoryModel):
     legal_entity_id: UUID
     place_id: UUID
     location_id: UUID
+    # Where a transfer arrives; absent for every other kind.
+    to_place_id: UUID | None
+    to_location_id: UUID | None
     document_date: date
     supplier_id: UUID | None
     supplier_document: str | None
     created_at: AwareDatetime
     lines: tuple[DocumentLine, ...]
-    # Absent for a reader without company-wide finance access.
+    # Absent for a reader without company-wide finance access, and for a transfer.
     money: DocumentMoney | None
 
 

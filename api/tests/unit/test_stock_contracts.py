@@ -20,6 +20,7 @@ from gorgona_booking.business.stock_contracts import (
     DocumentInput,
     PostingRulesInput,
     ReceiptInput,
+    TransferInput,
     WriteOffInput,
     from_count,
     issue_value,
@@ -192,12 +193,63 @@ def test_write_off_input_is_strict(change: dict[str, object]) -> None:
         WriteOffInput.model_validate(write_off(**change))
 
 
+def transfer(**changes: object) -> dict[str, object]:
+    return {
+        "kind": "transfer",
+        "legal_entity_id": str(uuid7()),
+        "place_id": str(uuid7()),
+        "to_place_id": str(uuid7()),
+        "document_date": "2026-10-01",
+        "lines": [{"item_id": str(uuid7()), "quantity": "1.5"}],
+        **changes,
+    }
+
+
+def test_transfer_input_accepts_the_documented_shape() -> None:
+    body = TransferInput.model_validate(transfer())
+    assert (body.kind, body.document_date) == ("transfer", date(2026, 10, 1))
+    assert body.place_id != body.to_place_id
+    assert body.lines[0].quantity == "1.5"
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"kind": "write_off"},
+        {"lines": []},
+        {"lines": [{"item_id": str(uuid7()), "quantity": "1"}] * 101},
+        {"lines": [{"item_id": str(uuid7()), "quantity": "-1"}]},
+        # A transfer moves no money and has one fixed reason of its own.
+        {"lines": [{"item_id": str(uuid7()), "quantity": "1", "amount": "1.00"}]},
+        {"reason": "relocation"},
+        {"supplier_id": str(uuid7())},
+        {"document_date": "2026-13-01"},
+        {"note": "x"},
+        {"schema_version": 2},
+    ],
+)
+def test_transfer_input_is_strict(change: dict[str, object]) -> None:
+    with pytest.raises(ValidationError):
+        TransferInput.model_validate(transfer(**change))
+
+
+def test_a_transfer_names_two_different_places() -> None:
+    same = str(uuid7())
+    with pytest.raises(ValidationError):
+        TransferInput.model_validate(transfer(place_id=same, to_place_id=same))
+    with pytest.raises(ValidationError):
+        TransferInput.model_validate(
+            {name: value for name, value in transfer().items() if name != "to_place_id"}
+        )
+
+
 def test_a_document_command_names_its_kind() -> None:
-    command: TypeAdapter[ReceiptInput | WriteOffInput] = TypeAdapter(DocumentInput)
+    command: TypeAdapter[ReceiptInput | WriteOffInput | TransferInput] = TypeAdapter(DocumentInput)
     assert isinstance(command.validate_python(receipt()), ReceiptInput)
     assert isinstance(command.validate_python(write_off()), WriteOffInput)
+    assert isinstance(command.validate_python(transfer()), TransferInput)
     unnamed = {name: value for name, value in receipt().items() if name != "kind"}
-    for body in (unnamed, receipt(kind="return"), write_off(kind="receipt")):
+    for body in (unnamed, receipt(kind="return"), write_off(kind="receipt"), transfer(kind="x")):
         with pytest.raises(ValidationError):
             command.validate_python(body)
 

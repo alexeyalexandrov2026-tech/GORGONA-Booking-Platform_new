@@ -412,7 +412,7 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 r"create policy \w+_location_scope\b.*?;", workforce, re.DOTALL
             )
             assert len(workforce_policies) == len(WORKFORCE_TABLES)
-            inventory = "\n".join(m.sql for m in load_migrations() if m.version in (36, 37, 38))
+            inventory = "\n".join(m.sql for m in load_migrations() if m.version in (36, 37, 38, 39))
             inventory_policies = re.findall(
                 r"create policy \w+_location_scope\b.*?;", inventory, re.DOTALL
             )

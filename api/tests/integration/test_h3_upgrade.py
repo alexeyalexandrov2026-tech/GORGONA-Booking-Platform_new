@@ -47,10 +47,8 @@ STOCK_DOCUMENT_TABLES = (
     "stock_valuations",
     "stock_costs",
 )
-ISSUED = (
-    "exists (select 1 from gba.stock_documents d "
-    "where d.tenant_id=t.tenant_id and d.kind <> 'receipt')"
-)
+# The kinds of stock documents that a schema stopped at this migration can hold.
+STOCK_KINDS: dict[int, tuple[str, ...]] = {37: ("receipt",), 38: ("receipt", "write_off")}
 
 
 @pytest.fixture
@@ -108,6 +106,15 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
             )
         )
         for (table,) in tables:
+            # A later migration may add a column: an older schema takes the columns it has.
+            kept = {
+                row[0]
+                for row in after.execute(
+                    "select attname from pg_catalog.pg_attribute "
+                    "where attrelid=pg_catalog.to_regclass(%s) and attnum>0 and not attisdropped",
+                    ("gba." + table,),
+                )
+            }
             columns = [
                 row[0]
                 for row in before.execute(
@@ -116,12 +123,13 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                     "and not attisdropped and attgenerated='' order by attnum",
                     ("gba." + table,),
                 ).fetchall()
+                if row[0] in kept
             ]
             names = sql.SQL(",").join(sql.Identifier(column) for column in columns)
             # Historical upgrade fixtures exercise their own earlier schemas.
             # I1 rows cannot be represented there; omit staff and their dependent
             # resource rows instead of making the test order decide COPY success.
-            predicate = sql.SQL("")
+            predicate: sql.Composable = sql.SQL("")
             if target_version[0] < 32:
                 if table == "resources":
                     predicate = sql.SQL(" where t.kind <> 'staff'")
@@ -140,21 +148,28 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                         "where e.tenant_id=t.tenant_id and e.id=t.entry_id "
                         "and e.source_kind='stock')"
                     )
-            # J3 write-offs cannot be represented at migration 0037. A company that has
-            # one keeps none of its stock rows there, so every running total stays whole.
-            if target_version[0] == 37:
+            # A schema stopped at 0037 or 0038 cannot hold the stock documents of later
+            # kinds. A company that has one keeps none of its stock rows there, so every
+            # running total stays whole.
+            kinds = STOCK_KINDS.get(target_version[0])
+            if kinds is not None:
+                later = sql.SQL(
+                    "exists (select 1 from gba.stock_documents d "
+                    "where d.tenant_id={}.tenant_id and not d.kind = any({}))"
+                )
+                held = sql.Literal(list(kinds))
                 if table in STOCK_DOCUMENT_TABLES:
-                    predicate = sql.SQL(" where not " + ISSUED)
+                    predicate = sql.SQL(" where not ") + later.format(sql.SQL("t"), held)
                 elif table == "journal_entries":
-                    predicate = sql.SQL(" where t.source_kind <> 'stock' or not " + ISSUED)
+                    predicate = sql.SQL(" where t.source_kind <> 'stock' or not ") + later.format(
+                        sql.SQL("t"), held
+                    )
                 elif table == "journal_lines":
                     predicate = sql.SQL(
                         " where not exists (select 1 from gba.journal_entries e "
                         "where e.tenant_id=t.tenant_id and e.id=t.entry_id "
-                        "and e.source_kind='stock' and exists (select 1 "
-                        "from gba.stock_documents d "
-                        "where d.tenant_id=e.tenant_id and d.kind <> 'receipt'))"
-                    )
+                        "and e.source_kind='stock' and {})"
+                    ).format(later.format(sql.SQL("e"), held))
             cursor = before.execute(
                 sql.SQL("select {} from {} t{}").format(
                     names, sql.Identifier("gba", table), predicate

@@ -1,8 +1,9 @@
-"""Stock API of J2 and J3: accounts of materials, receipts, write-offs, balances and cost.
+"""Stock API of J2 to J4: accounts of materials, receipts, write-offs, transfers, balances
+and cost.
 
-Quantities follow the branch scope of the caller. Amounts, cost and posting rules are
-company-wide finance data: a branch-limited member, a delegate and platform support
-never receive them.
+Quantities follow the branch scope of the caller, and so does a transfer, which moves
+quantities only. Amounts, cost and posting rules are company-wide finance data: a
+branch-limited member, a delegate and platform support never receive them.
 """
 
 from collections.abc import AsyncIterator
@@ -25,6 +26,7 @@ from gorgona_booking.business.stock_contracts import (
     DocumentView,
     PostingRulesInput,
     PostingRulesView,
+    TransferInput,
 )
 from gorgona_booking.db.inventory_guard import assert_inventory_ready
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
@@ -44,14 +46,17 @@ CostCursor = Annotated[str | None, Query(pattern=f"^{_UUID}:{_UUID}$")]
 
 @asynccontextmanager
 async def _branch(
-    request: Request, principal: CurrentPrincipal, business_id: UUID
+    request: Request,
+    principal: CurrentPrincipal,
+    business_id: UUID,
+    permission: Permission = Permission.INVENTORY_READ,
 ) -> AsyncIterator[TenantAccess]:
-    """Quantity reads: the branch scope of the caller applies."""
+    """Quantities, read or moved between places: the branch scope of the caller applies."""
     async with authorized_tenant(
         runtime_pool(request),
         principal,
         business_id,
-        Permission.INVENTORY_READ,
+        permission,
         allow_location_scope=True,
         request_id=get_request_id(request),
     ) as access:
@@ -169,6 +174,19 @@ async def put_document(
     principal: CurrentPrincipal,
     idempotency_key: MutationKey,
 ) -> DocumentView:
+    if isinstance(body, TransferInput):
+        # A transfer moves quantities only: no posting lock and no finance right. The
+        # branch scope decides which places exist for the caller.
+        async with _branch(request, principal, business_id, Permission.INVENTORY_MANAGE) as access:
+            return await service.post_transfer(
+                access.conn,
+                business_id,
+                document_id,
+                principal.user_id,
+                principal.actor,
+                idempotency_key,
+                body,
+            )
     async with _company(
         request, principal, business_id, Permission.INVENTORY_MANAGE, lock=True
     ) as access:

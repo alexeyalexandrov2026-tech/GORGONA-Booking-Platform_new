@@ -1,5 +1,5 @@
 """Packaged schema approvals of the inventory tables: J1 materials and places, J2 receipts,
-J3 write-offs.
+J3 write-offs, J4 transfers.
 
 Never learn approvals from the target database.
 """
@@ -15,7 +15,12 @@ from gorgona_booking.errors import DatabaseUnavailableError
 _MIGRATIONS = resources.files("gorgona_booking.db") / "migrations"
 _SQL = "\n".join(
     (_MIGRATIONS / name).read_text(encoding="utf-8")
-    for name in ("0036_inventory.sql", "0037_stock_receipts.sql", "0038_stock_write_offs.sql")
+    for name in (
+        "0036_inventory.sql",
+        "0037_stock_receipts.sql",
+        "0038_stock_write_offs.sql",
+        "0039_stock_transfers.sql",
+    )
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
 INVENTORY_TABLES = tuple(_BLOCKS)
@@ -42,21 +47,18 @@ if {trigger[1] for trigger in _TRIGGERS} != set(
     re.findall(r"create (?:constraint )?trigger (\w+)", _SQL)
 ):
     raise RuntimeError("Every inventory trigger must have an explicit packaged approval")
-_INSERTS = {
-    table: set(columns.split(","))
-    for columns, table in re.findall(r"grant insert \(([^)]+)\) on gba\.(\w+)", _SQL)
-}
+_INSERTS: defaultdict[str, set[str]] = defaultdict(set)
+# A later migration grants the columns that it adds to an earlier table.
+for _columns, _table in re.findall(r"grant insert \(([^)]+)\) on gba\.(\w+)", _SQL):
+    _INSERTS[_table].update(_columns.split(","))
+_COLUMN = r"(\w+) (uuid|text|integer|boolean|timestamptz|bigint|smallint|date|xid8)"
 _COLUMNS = {
-    table: tuple(
-        re.findall(
-            r"^    (\w+) (uuid|text|integer|boolean|timestamptz|bigint|smallint|date|xid8)"
-            r"(?=[\s,])([^\n]*)",
-            block,
-            re.MULTILINE,
-        )
-    )
+    table: tuple(re.findall(rf"^    {_COLUMN}(?=[\s,])([^\n]*)", block, re.MULTILINE))
     for table, block in _BLOCKS.items()
 }
+# A column that a later migration adds to an earlier table follows the first ones.
+for _table, *_column in re.findall(rf"alter table gba\.(\w+) add column {_COLUMN}([^;\n]*);", _SQL):
+    _COLUMNS[_table] += (tuple(_column),)
 _KEYS = {
     table: {
         (kind, tuple(x.strip() for x in columns.split(",")))
@@ -88,6 +90,19 @@ _FKS = {
     }
     for table, block in _BLOCKS.items()
 }
+# A foreign key that a later migration adds to an earlier table.
+for _table, _own, _parent, _targets in re.findall(
+    r"alter table gba\.(\w+) add constraint \w+\s+foreign key \(([^)]+)\)\s*"
+    r"references gba\.(\w+)\(([^)]+)\);",
+    _SQL,
+):
+    _FKS[_table].add(
+        (
+            tuple(x.strip() for x in _own.split(",")),
+            _parent,
+            tuple(x.strip() for x in _targets.split(",")),
+        )
+    )
 # Head rows carry the row lock of their versions; balances and costs are running totals.
 # Hence a column UPDATE right on these columns, and nothing else is ever updated.
 _UPDATE_COLUMNS = {
@@ -153,13 +168,22 @@ _CHECKS |= {
         "(inventory_account_id <> loss_account_id) AND "
         "(inventory_account_id <> difference_account_id)))"
     ),
-    # Migration 0038 replaced the next two: a write-off and its reasons joined the receipt.
-    "stock_documents_kind_check": "((kind = ANY (ARRAY['receipt'::text, 'write_off'::text])))",
+    # Migrations 0038 and 0039 replaced the next two: a write-off and a transfer, each
+    # with its own reasons, joined the receipt.
+    "stock_documents_kind_check": (
+        "((kind = ANY (ARRAY['receipt'::text, 'write_off'::text, 'transfer'::text])))"
+    ),
     "stock_documents_reason_check": (
         "((((kind = 'receipt'::text) AND (reason = ANY (ARRAY['purchase'::text, "
         "'opening_balance'::text, 'surplus'::text]))) OR ((kind = 'write_off'::text) AND "
         "(reason = ANY (ARRAY['used'::text, 'damaged'::text, 'lost'::text, 'expired'::text, "
-        "'other'::text])))))"
+        "'other'::text]))) OR ((kind = 'transfer'::text) AND (reason = 'relocation'::text))))"
+    ),
+    # Only a transfer names a destination, with its branch, and never its own place.
+    "stock_documents_destination_check": (
+        "((((kind = 'transfer'::text) = (to_place_id IS NOT NULL)) AND "
+        "((to_place_id IS NULL) = (to_location_id IS NULL)) AND "
+        "(to_place_id IS DISTINCT FROM place_id)))"
     ),
     "stock_documents_number_check": (
         "((((length(supplier_document) >= 1) AND (length(supplier_document) <= 64)) AND "
