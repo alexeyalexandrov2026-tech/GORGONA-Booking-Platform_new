@@ -1,5 +1,5 @@
-"""Stock API of J2 to J4: accounts of materials, receipts, write-offs, transfers, balances
-and cost.
+"""Stock API of J2 to J4: accounts of materials, receipts, write-offs, transfers, returns,
+balances and cost.
 
 Quantities follow the branch scope of the caller, and so does a transfer, which moves
 quantities only. Amounts, cost and posting rules are company-wide finance data: a
@@ -190,8 +190,8 @@ async def put_document(
     async with _company(
         request, principal, business_id, Permission.INVENTORY_MANAGE, lock=True
     ) as access:
-        # A receipt and a write-off change the books: both also need the right to manage
-        # finance.
+        # A receipt, a write-off and a return change the books: they also need the right
+        # to manage finance.
         if not _holds(access, Permission.FINANCE_MANAGE):
             raise PermissionDeniedError("Posting a stock document also requires finance access")
         return await service.post_document(

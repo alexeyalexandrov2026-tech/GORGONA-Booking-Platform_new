@@ -48,7 +48,11 @@ STOCK_DOCUMENT_TABLES = (
     "stock_costs",
 )
 # The kinds of stock documents that a schema stopped at this migration can hold.
-STOCK_KINDS: dict[int, tuple[str, ...]] = {37: ("receipt",), 38: ("receipt", "write_off")}
+STOCK_KINDS: dict[int, tuple[str, ...]] = {
+    37: ("receipt",),
+    38: ("receipt", "write_off"),
+    39: ("receipt", "write_off", "transfer"),
+}
 
 
 @pytest.fixture

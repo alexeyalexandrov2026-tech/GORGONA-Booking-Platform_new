@@ -1,4 +1,6 @@
-"""Damaged boundaries of J2, J3 and J4 fail closed, on the executor's disposable database."""
+"""Damaged boundaries of J2, J3 and both parts of J4 fail closed, on the executor's disposable
+database.
+"""
 
 from uuid import uuid7
 
@@ -11,6 +13,7 @@ from gorgona_booking.errors import DatabaseUnavailableError
 from tests.integration import test_stock as shared
 from tests.integration.test_inventory import error
 from tests.integration.test_stock import Stock
+from tests.integration.test_stock_returns import back, giving_back
 from tests.integration.test_stock_transfers import transfer
 from tests.integration.test_stock_write_offs import write_off
 
@@ -26,10 +29,14 @@ COMPANY = "(gba.current_location_id() is null)"
 PERMISSIVE = (
     "create or replace function {} returns trigger language plpgsql as $$ begin return new; end; $$"
 )
-# name: (signature, permissive replacement). A guard of J2, a function that J3 replaced
-# and the check of a whole document that the triggers call.
+# name: (signature, permissive replacement). A guard of J2, functions that later slices
+# replaced and the check of a whole document that the triggers call.
 FUNCTIONS = {
     "function": ("gba.enforce_stock_origin()", PERMISSIVE.format("gba.enforce_stock_origin()")),
+    "valuation_function": (
+        "gba.apply_stock_valuation()",
+        PERMISSIVE.format("gba.apply_stock_valuation()"),
+    ),
     "movement_function": (
         "gba.apply_stock_movement()",
         PERMISSIVE.format("gba.apply_stock_movement()"),
@@ -47,8 +54,13 @@ KINDS = (
 # name: (damage, repair). The function cases read their repair from the catalog.
 DAMAGE: dict[str, tuple[str, str]] = {
     "document_kinds": (
-        KINDS.format("'receipt', 'write_off', 'transfer', 'anything'"),
-        KINDS.format("'receipt', 'write_off', 'transfer'"),
+        KINDS.format("'receipt', 'write_off', 'transfer', 'return', 'anything'"),
+        KINDS.format("'receipt', 'write_off', 'transfer', 'return'"),
+    ),
+    # The right that lets a return lock its source line.
+    "source_lock_grant": (
+        "revoke update (line_no) on gba.stock_document_lines from gba_runtime",
+        "grant update (line_no) on gba.stock_document_lines to gba_runtime",
     ),
     "destination_grant": (
         "revoke insert (to_place_id) on gba.stock_documents from gba_runtime",
@@ -140,6 +152,8 @@ async def test_damaged_stock_schema_refuses_reads_and_writes(
         assert error(await stock.post(write_off(stock, [used]))) == (503, "DATABASE_UNAVAILABLE")
         moved = await stock.post(transfer(stock, shelf, [used]))
         assert error(moved) == (503, "DATABASE_UNAVAILABLE")
+        given = await stock.post(giving_back(stock, posted.json()["document_id"], [back(1, "1")]))
+        assert error(given) == (503, "DATABASE_UNAVAILABLE")
         assert error(await stock.set_rules(1, surplus="4000")) == (503, "DATABASE_UNAVAILABLE")
     finally:
         owner_conn.execute(restore.encode("utf-8"))
@@ -150,6 +164,11 @@ async def test_damaged_stock_schema_refuses_reads_and_writes(
     assert (await stock.post(stock.receipt([line]), uuid7())).status_code == 200
     assert (await stock.post(write_off(stock, [used]))).status_code == 200
     assert (await stock.post(transfer(stock, shelf, [used]))).status_code == 200
-    assert stock.counts()["stock_documents"] == 4
-    assert stock.rows("select quantity,value_minor from gba.stock_costs") == [(1, 100)]
-    assert stock.rows("select quantity from gba.stock_balances order by quantity") == [(0,), (1,)]
+    # The unit that was moved goes back to the supplier against the first receipt.
+    back_to_supplier = giving_back(
+        stock, posted.json()["document_id"], [back(1, "1")], place_id=shelf["place_id"]
+    )
+    assert (await stock.post(back_to_supplier)).status_code == 200
+    assert stock.counts()["stock_documents"] == 5
+    assert stock.rows("select quantity,value_minor from gba.stock_costs") == [(0, 0)]
+    assert stock.rows("select quantity from gba.stock_balances order by quantity") == [(0,), (0,)]

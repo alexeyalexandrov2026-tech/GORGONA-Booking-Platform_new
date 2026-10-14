@@ -47,6 +47,8 @@ RULE_CODES = {
     "loss": "6900",
     "difference": "6900",
 }
+# What a document line reads when it returns nothing: only a return line names a source.
+NO_SOURCE: dict[str, object] = {"source_line_no": None, "source_amount": None}
 
 
 @dataclass(frozen=True)
@@ -256,10 +258,11 @@ async def test_receipts_post_movements_cost_and_one_journal_entry(stock: Stock) 
         "location_id": stock.place["location_id"],
         "to_place_id": None,
         "to_location_id": None,
+        "source_document_id": None,
         "document_date": DAY,
         "supplier_id": None,
         "supplier_document": None,
-        "lines": [{"line_no": number, **line} for number, line in enumerate(lines, 1)],
+        "lines": [{"line_no": number, **line, **NO_SOURCE} for number, line in enumerate(lines, 1)],
         "money": {
             "book_id": str(stock.book),
             "rule_revision": 1,
@@ -627,7 +630,7 @@ async def test_branch_scope_rights_and_hidden_amounts(stock: Stock) -> None:
     assert seen.status_code == 200, seen.text
     assert seen.json()["money"] is None
     assert seen.json()["lines"] == [
-        {"line_no": 1, "item_id": item["item_id"], "quantity": "5", "amount": None}
+        {"line_no": 1, "item_id": item["item_id"], "quantity": "5", "amount": None, **NO_SOURCE}
     ]
     hidden = await stock.inventory.get(f"/documents/{there.json()['document_id']}", headers=branch)
     assert error(hidden) == (404, "NOT_FOUND")

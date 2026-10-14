@@ -1,5 +1,5 @@
 """Packaged schema approvals of the inventory tables: J1 materials and places, J2 receipts,
-J3 write-offs, J4 transfers.
+J3 write-offs, J4 transfers and returns.
 
 Never learn approvals from the target database.
 """
@@ -20,6 +20,7 @@ _SQL = "\n".join(
         "0037_stock_receipts.sql",
         "0038_stock_write_offs.sql",
         "0039_stock_transfers.sql",
+        "0040_stock_returns.sql",
     )
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
@@ -103,8 +104,9 @@ for _table, _own, _parent, _targets in re.findall(
             tuple(x.strip() for x in _targets.split(",")),
         )
     )
-# Head rows carry the row lock of their versions; balances and costs are running totals.
-# Hence a column UPDATE right on these columns, and nothing else is ever updated.
+# Head rows carry the row lock of their versions and a document line the row lock of its
+# returns; balances and costs are running totals. Hence a column UPDATE right on these
+# columns, and nothing else is ever updated.
 _UPDATE_COLUMNS = {
     (table, column.strip())
     for columns, tables in re.findall(r"grant update \(([^)]+)\) on ([^;]+?) to gba_runtime", _SQL)
@@ -114,6 +116,7 @@ _UPDATE_COLUMNS = {
 _APPROVED_UPDATES = {
     ("stock_items", "id"),
     ("stock_places", "id"),
+    ("stock_document_lines", "line_no"),
     ("stock_balances", "quantity"),
     ("stock_costs", "quantity"),
     ("stock_costs", "value_minor"),
@@ -168,16 +171,30 @@ _CHECKS |= {
         "(inventory_account_id <> loss_account_id) AND "
         "(inventory_account_id <> difference_account_id)))"
     ),
-    # Migrations 0038 and 0039 replaced the next two: a write-off and a transfer, each
-    # with its own reasons, joined the receipt.
+    # Migrations 0038 to 0040 replaced the next two: a write-off, a transfer and a
+    # return, each with its own reasons, joined the receipt.
     "stock_documents_kind_check": (
-        "((kind = ANY (ARRAY['receipt'::text, 'write_off'::text, 'transfer'::text])))"
+        "((kind = ANY (ARRAY['receipt'::text, 'write_off'::text, 'transfer'::text, "
+        "'return'::text])))"
     ),
     "stock_documents_reason_check": (
         "((((kind = 'receipt'::text) AND (reason = ANY (ARRAY['purchase'::text, "
         "'opening_balance'::text, 'surplus'::text]))) OR ((kind = 'write_off'::text) AND "
         "(reason = ANY (ARRAY['used'::text, 'damaged'::text, 'lost'::text, 'expired'::text, "
-        "'other'::text]))) OR ((kind = 'transfer'::text) AND (reason = 'relocation'::text))))"
+        "'other'::text]))) OR ((kind = 'transfer'::text) AND (reason = 'relocation'::text)) OR "
+        "((kind = 'return'::text) AND (reason = ANY (ARRAY['supplier_return'::text, "
+        "'unused'::text, 'entry_error'::text])))))"
+    ),
+    # Only a return names a source document, and never itself.
+    "stock_documents_source_check": (
+        "((((kind = 'return'::text) = (source_document_id IS NOT NULL)) AND "
+        "(source_document_id IS DISTINCT FROM id)))"
+    ),
+    "stock_document_lines_source_check": (
+        "(((source_document_id IS NULL) = (source_line_no IS NULL)))"
+    ),
+    "stock_valuations_basis_check": (
+        "(((basis_minor >= 0) AND (basis_minor <= '999999999999999'::bigint)))"
     ),
     # Only a transfer names a destination, with its branch, and never its own place.
     "stock_documents_destination_check": (
@@ -191,8 +208,10 @@ _CHECKS |= {
         "(supplier_document !~ '[[:cntrl:]]'::text)))"
     ),
     "stock_documents_lines_check": "(((line_count >= 1) AND (line_count <= 100)))",
+    # Migration 0040 replaced the next one: a return to the supplier may name the supplier.
     "stock_documents_supplier_check": (
-        "((((supplier_id IS NULL) AND (supplier_document IS NULL)) OR (reason = 'purchase'::text)))"
+        "((((supplier_id IS NULL) AND (supplier_document IS NULL)) OR "
+        "(reason = ANY (ARRAY['purchase'::text, 'supplier_return'::text]))))"
     ),
     "stock_document_lines_number_check": "(((line_no >= 1) AND (line_no <= 100)))",
     "stock_document_lines_quantity_check": _QUANTITY,
@@ -202,7 +221,9 @@ _CHECKS |= {
     "stock_document_postings_total_check": (
         "(((total_minor >= 0) AND (total_minor <= '999999999999999999'::bigint)))"
     ),
-    "stock_document_postings_entry_check": "(((entry_id IS NULL) = (total_minor = 0)))",
+    # Migration 0040 replaced the next one: a return can post an entry with nothing on the
+    # inventory account. The check of the whole document decides whether an entry exists.
+    "stock_document_postings_entry_check": "(((entry_id IS NOT NULL) OR (total_minor = 0)))",
     "stock_valuations_direction_check": _DIRECTION,
     "stock_valuations_quantity_check": _QUANTITY,
     "stock_valuations_amount_check": (

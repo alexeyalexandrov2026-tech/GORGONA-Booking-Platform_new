@@ -1,5 +1,5 @@
-"""Strict version-one contracts of J2 to J4: accounts of materials, receipts, write-offs
-and transfers between storage places.
+"""Strict version-one contracts of J2 to J4: accounts of materials, receipts, write-offs,
+transfers between storage places and returns against a source line.
 """
 
 from datetime import date
@@ -23,6 +23,9 @@ MAX_AMOUNT = 999_999_999_999_999
 ReceiptReason = Literal["purchase", "opening_balance", "surplus"]
 # "used" debits material consumption; every other reason debits losses.
 WriteOffReason = Literal["used", "damaged", "lost", "expired", "other"]
+# A receipt goes back to the supplier and a write-off comes back unused; either may have
+# been entered by mistake.
+ReturnReason = Literal["supplier_return", "unused", "entry_error"]
 # Digits with at most three decimals. The scale of the material decides a quantity and
 # the scale of the book's base currency decides an amount; extra decimals are refused.
 type DecimalText = Annotated[
@@ -181,16 +184,60 @@ class TransferInput(InventoryModel):
         return self
 
 
+class ReturnLine(Part):
+    """A line of the source document and the quantity that goes back.
+
+    The material is the material of that line, and the database values the return.
+    """
+
+    source_line_no: int = Field(ge=1, le=MAX_LINES)
+    quantity: DecimalText
+
+
+class ReturnInput(InventoryModel):
+    """One return against lines of one earlier receipt or write-off of the same owner.
+
+    A receipt is returned out of a place, a write-off back into one; the place is the one
+    the material is in or comes to, not necessarily the place of the source document.
+    """
+
+    kind: Literal["return"]
+    reason: ReturnReason
+    legal_entity_id: UUID
+    place_id: UUID
+    document_date: date
+    source_document_id: UUID
+    supplier_id: UUID | None = None
+    supplier_document: SupplierDocument | None = None
+    lines: tuple[ReturnLine, ...] = Field(min_length=1, max_length=MAX_LINES)
+
+    @model_validator(mode="after")
+    def supplier_and_source_lines(self) -> Self:
+        named = self.supplier_id is not None or self.supplier_document is not None
+        if named and self.reason != "supplier_return":
+            raise ValueError("Only a return to the supplier names a supplier")
+        if len({line.source_line_no for line in self.lines}) != len(self.lines):
+            raise ValueError("A return names a source line once")
+        return self
+
+
 # A document command names its kind; each kind has its own strict shape.
-DocumentInput = Annotated[ReceiptInput | WriteOffInput | TransferInput, Field(discriminator="kind")]
+DocumentInput = Annotated[
+    ReceiptInput | WriteOffInput | TransferInput | ReturnInput, Field(discriminator="kind")
+]
 
 
 class DocumentLine(Part):
     line_no: int
     item_id: UUID
     quantity: str
-    # Absent for a reader without company-wide finance access.
+    # What the line moves into or out of the inventory account. Absent for a reader
+    # without company-wide finance access, and for a transfer.
     amount: str | None
+    # The line of the source document that a return line returns; absent otherwise.
+    source_line_no: int | None
+    # What a return line takes of the amount of that source line; absent like `amount`.
+    source_amount: str | None
 
 
 class DocumentMoney(Part):
@@ -212,6 +259,8 @@ class DocumentSummary(Part):
     # Where a transfer arrives; absent for every other kind.
     to_place_id: UUID | None
     to_location_id: UUID | None
+    # The receipt or the write-off that a return returns; absent for every other kind.
+    source_document_id: UUID | None
     document_date: date
     line_count: int
     created_at: AwareDatetime
@@ -228,6 +277,8 @@ class DocumentView(InventoryModel):
     # Where a transfer arrives; absent for every other kind.
     to_place_id: UUID | None
     to_location_id: UUID | None
+    # The receipt or the write-off that a return returns; absent for every other kind.
+    source_document_id: UUID | None
     document_date: date
     supplier_id: UUID | None
     supplier_document: str | None

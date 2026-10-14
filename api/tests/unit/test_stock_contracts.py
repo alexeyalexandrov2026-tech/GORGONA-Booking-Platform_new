@@ -1,4 +1,6 @@
-"""J2 and J3 contracts: posting rules, receipts, write-offs, exact counts and the stock origin."""
+"""J2 to J4 contracts: posting rules, receipts, write-offs, transfers, returns, exact counts
+and the stock origin.
+"""
 
 from datetime import date
 from fractions import Fraction
@@ -20,6 +22,7 @@ from gorgona_booking.business.stock_contracts import (
     DocumentInput,
     PostingRulesInput,
     ReceiptInput,
+    ReturnInput,
     TransferInput,
     WriteOffInput,
     from_count,
@@ -243,11 +246,96 @@ def test_a_transfer_names_two_different_places() -> None:
         )
 
 
+def returned(**changes: object) -> dict[str, object]:
+    return {
+        "kind": "return",
+        "reason": "supplier_return",
+        "legal_entity_id": str(uuid7()),
+        "place_id": str(uuid7()),
+        "document_date": "2026-10-01",
+        "source_document_id": str(uuid7()),
+        "lines": [{"source_line_no": 1, "quantity": "1.5"}],
+        **changes,
+    }
+
+
+def test_return_input_accepts_the_documented_shape() -> None:
+    body = ReturnInput.model_validate(
+        returned(supplier_id=str(uuid7()), supplier_document=" CN-1 ")
+    )
+    assert (body.kind, body.reason, body.supplier_document) == (
+        "return",
+        "supplier_return",
+        "CN-1",
+    )
+    assert (body.lines[0].source_line_no, body.lines[0].quantity) == (1, "1.5")
+    for reason in ("unused", "entry_error"):
+        assert ReturnInput.model_validate(returned(reason=reason)).supplier_id is None
+    several = returned(lines=[{"source_line_no": number, "quantity": "1"} for number in (3, 1, 2)])
+    assert [line.source_line_no for line in ReturnInput.model_validate(several).lines] == [3, 1, 2]
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"kind": "receipt"},
+        {"reason": "purchase"},
+        {"reason": "used"},
+        {"lines": []},
+        # One return names a source line once.
+        {"lines": [{"source_line_no": 1, "quantity": "1"}] * 2},
+        {"lines": [{"source_line_no": 0, "quantity": "1"}]},
+        {"lines": [{"source_line_no": 101, "quantity": "1"}]},
+        {"lines": [{"source_line_no": 1, "quantity": "-1"}]},
+        {"lines": [{"quantity": "1"}]},
+        # The material and the amounts come from the source line, never from the command.
+        {"lines": [{"source_line_no": 1, "quantity": "1", "amount": "1.00"}]},
+        {"lines": [{"source_line_no": 1, "quantity": "1", "item_id": str(uuid7())}]},
+        # Only a return to the supplier names a supplier.
+        {"reason": "unused", "supplier_id": str(uuid7())},
+        {"reason": "entry_error", "supplier_document": "CN-1"},
+        {"to_place_id": str(uuid7())},
+        {"document_date": "2026-13-01"},
+        {"note": "x"},
+        {"schema_version": 2},
+    ],
+)
+def test_return_input_is_strict(change: dict[str, object]) -> None:
+    with pytest.raises(ValidationError):
+        ReturnInput.model_validate(returned(**change))
+
+
+def test_a_return_names_its_source_document() -> None:
+    with pytest.raises(ValidationError):
+        ReturnInput.model_validate(
+            {name: value for name, value in returned().items() if name != "source_document_id"}
+        )
+
+
+def test_shares_of_a_source_line_add_up_to_its_amount() -> None:
+    # Every return takes its share of what is left of the line, so however a line is
+    # returned in parts, no share exceeds what is left and the parts give back its amount.
+    for quantity in range(1, 9):
+        for amount in range(40):
+            for step in range(1, quantity + 1):
+                left_quantity, left_amount, shares = quantity, amount, []
+                while left_quantity:
+                    part = min(step, left_quantity)
+                    share = issue_value(left_amount, left_quantity, part)
+                    assert 0 <= share <= left_amount
+                    left_quantity, left_amount = left_quantity - part, left_amount - share
+                    shares.append(share)
+                assert sum(shares) == amount
+
+
 def test_a_document_command_names_its_kind() -> None:
-    command: TypeAdapter[ReceiptInput | WriteOffInput | TransferInput] = TypeAdapter(DocumentInput)
+    command: TypeAdapter[ReceiptInput | WriteOffInput | TransferInput | ReturnInput] = TypeAdapter(
+        DocumentInput
+    )
     assert isinstance(command.validate_python(receipt()), ReceiptInput)
     assert isinstance(command.validate_python(write_off()), WriteOffInput)
     assert isinstance(command.validate_python(transfer()), TransferInput)
+    assert isinstance(command.validate_python(returned()), ReturnInput)
     unnamed = {name: value for name, value in receipt().items() if name != "kind"}
     for body in (unnamed, receipt(kind="return"), write_off(kind="receipt"), transfer(kind="x")):
         with pytest.raises(ValidationError):

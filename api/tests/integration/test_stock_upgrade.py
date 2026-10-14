@@ -14,7 +14,8 @@ from tests.integration.test_h3_upgrade import copy_fixture_data, snapshot
 from tests.integration.test_inventory import J1_TABLES, Inventory
 from tests.integration.test_provider_admission_upgrade import previous_admission_database
 from tests.integration.test_stock import Stock
-from tests.integration.test_stock_transfers import hand_transfer
+from tests.integration.test_stock_returns import hand_return
+from tests.integration.test_stock_transfers import hand_transfer, transfer
 from tests.integration.test_stock_write_offs import hand_write_off, received, write_off
 
 pytestmark = pytest.mark.anyio
@@ -25,13 +26,38 @@ accepted = shared.accepted
 client = shared.client
 idp = shared.idp
 manager_a = shared.manager_a
-LATEST = 39
-# The columns of a document that every schema since 0037 has; later slices only add to them.
-DOCUMENTS = (
-    "select tenant_id,id,kind,reason,legal_entity_id,place_id,location_id,document_date,"
-    "supplier_id,supplier_document,line_count,created_by,created_at,created_transaction::text "
-    "from gba.stock_documents order by tenant_id,id"
+LATEST = 40
+# The columns that every schema since 0037 has in the tables later slices only add to.
+GAINED = {
+    "stock_documents": (
+        "select tenant_id,id,kind,reason,legal_entity_id,place_id,location_id,document_date,"
+        "supplier_id,supplier_document,line_count,created_by,created_at,"
+        "created_transaction::text from gba.stock_documents order by tenant_id,id"
+    ),
+    "stock_document_lines": (
+        "select tenant_id,document_id,line_no,location_id,item_id,quantity "
+        "from gba.stock_document_lines order by tenant_id,document_id,line_no"
+    ),
+    "stock_valuations": (
+        "select tenant_id,document_id,line_no,direction,legal_entity_id,item_id,quantity,"
+        "amount_minor from gba.stock_valuations order by tenant_id,document_id,line_no"
+    ),
+}
+# What migration 0040 adds, and the destination of a transfer that 0039 added.
+FRESH = (
+    "select (select count(*) from gba.stock_documents where source_document_id is not null),"
+    "(select count(*) from gba.stock_document_lines "
+    "where source_document_id is not null or source_line_no is not null),"
+    "(select count(*) from gba.stock_valuations where basis_minor is not null),"
+    "(select count(*) from gba.stock_documents where to_place_id is not null)"
 )
+# After the upgrade one unit goes back to the supplier, one is used and one is moved:
+# the cost row of the owner and what the two places hold, by the schema the data came from.
+LEFT = {
+    37: ((3, 600), [(1,), (2,)]),
+    38: ((2, 400), [(1,), (1,)]),
+    39: ((2, 400), [(0,), (2,)]),
+}
 
 
 def checksums(database: ProvisionedDatabase) -> dict[int, str]:
@@ -78,8 +104,8 @@ async def test_nonempty_0036_upgrade_keeps_materials_places_and_prior_checksums(
         await pool.close()
 
 
-@pytest.mark.parametrize("start", [37, 38])
-async def test_nonempty_documents_upgrade_and_earlier_stock_leaves_and_moves(
+@pytest.mark.parametrize("start", sorted(LEFT))
+async def test_nonempty_documents_upgrade_and_earlier_stock_returns_leaves_and_moves(
     stock: Stock,
     test_database: ProvisionedDatabase,
     previous_stock_database: ProvisionedDatabase,
@@ -89,10 +115,18 @@ async def test_nonempty_documents_upgrade_and_earlier_stock_leaves_and_moves(
     shelf = await stock.inventory.place(stock.inventory.world.a.location_id)
     item = (await stock.inventory.item(quantity_scale=0))["item_id"]
     await received(stock, item, "5", "10.00")
-    if start == 38:
+    source = stock.rows(
+        "select id from gba.stock_documents where legal_entity_id=%s", stock.entity
+    )[0][0]
+    one: dict[str, object] = {"item_id": item, "quantity": "1"}
+    if start >= 38:
         # The schema of write-offs also holds one: four units worth 8.00 are left.
-        used = await stock.post(write_off(stock, [{"item_id": item, "quantity": "1"}]))
+        used = await stock.post(write_off(stock, [one]))
         assert used.status_code == 200, used.text
+    if start >= 39:
+        # The schema of transfers also holds one: three units here and one on the shelf.
+        moved = await stock.post(transfer(stock, shelf, [one]))
+        assert moved.status_code == 200, moved.text
     target = previous_stock_database
     apply_migrations(target.owner_dsn, load_migrations()[:start])
     copy_fixture_data(test_database, target)
@@ -101,24 +135,24 @@ async def test_nonempty_documents_upgrade_and_earlier_stock_leaves_and_moves(
     assert before["stock_documents"][0] >= start - 36
     assert before["stock_costs"][0] >= 1
     with psycopg.connect(target.admin_dsn) as conn:
-        rows = conn.execute(DOCUMENTS).fetchall()
+        rows = {table: conn.execute(query).fetchall() for table, query in GAINED.items()}
     prior = checksums(target)
     latest = load_migrations()[:LATEST]
     applied = apply_migrations(target.owner_dsn, latest)
     assert [migration.version for migration in applied] == list(range(start + 1, LATEST + 1))
     assert apply_migrations(target.owner_dsn, latest) == []
-    # No table is added and no row is rewritten: a document only gains its empty
-    # destination columns.
+    # No table is added and no row is rewritten: documents, lines and valuations only gain
+    # empty columns.
     after = snapshot(target)
     assert set(after) == set(before)
-    assert all(after[table] == before[table] for table in before if table != "stock_documents")
+    assert all(after[table] == before[table] for table in before if table not in GAINED)
     with psycopg.connect(target.admin_dsn) as conn:
-        assert conn.execute(DOCUMENTS).fetchall() == rows
-        moved = conn.execute(
-            "select count(*) from gba.stock_documents "
-            "where to_place_id is not null or to_location_id is not null"
-        ).fetchone()
-    assert moved == (0,)
+        for table, query in GAINED.items():
+            assert conn.execute(query).fetchall() == rows[table], table
+        fresh = conn.execute(FRESH).fetchone()
+    assert fresh is not None
+    assert fresh[:3] == (0, 0, 0)
+    assert fresh[3] >= 1 if start >= 39 else fresh[3] == 0
     current = checksums(target)
     assert {number: current[number] for number in prior} == prior
     pool = create_runtime_pool(target.app_dsn, min_size=1, max_size=2)
@@ -127,8 +161,19 @@ async def test_nonempty_documents_upgrade_and_earlier_stock_leaves_and_moves(
         async with tenant_transaction(pool, stock.tenant) as conn:
             await assert_location_scope_ready(conn)
             await assert_inventory_ready(conn)
-        # Stock received before the upgrade leaves after it at its average cost, and moves.
-        await hand_write_off(stock, item, pool, quantity=2, amount=400)
+        # Stock received before the upgrade goes back to its supplier after it, leaves at
+        # its average cost, and moves.
+        await hand_return(
+            stock,
+            source,
+            item,
+            pool,
+            quantity=1,
+            amount=200,
+            basis=200,
+            journal=[("1400", "debit", 200), ("1300", "credit", 200)],
+        )
+        await hand_write_off(stock, item, pool, quantity=1, amount=200)
         await hand_transfer(stock, item, shelf, pool, quantity=1)
         async with tenant_transaction(pool, stock.tenant) as conn:
             cost = await (
@@ -142,8 +187,6 @@ async def test_nonempty_documents_upgrade_and_earlier_stock_leaves_and_moves(
                     (item,),
                 )
             ).fetchall()
-        left = 40 - start
-        assert cost == (left, left * 200)
-        assert places == [(1,), (left - 1,)]
+        assert (cost, places) == LEFT[start]
     finally:
         await pool.close()

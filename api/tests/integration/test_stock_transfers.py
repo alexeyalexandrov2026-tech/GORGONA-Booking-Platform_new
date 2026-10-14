@@ -17,7 +17,7 @@ from tests.integration.configuration_support import Config
 from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.seed import seed_other_branch, seed_user
 from tests.integration.test_inventory import error, material_input, refused_sql
-from tests.integration.test_stock import DAY, Stock, entity_with_book
+from tests.integration.test_stock import DAY, NO_SOURCE, Stock, entity_with_book
 from tests.integration.test_stock_write_offs import received, write_off
 
 pytestmark = pytest.mark.anyio
@@ -197,11 +197,12 @@ async def test_transfer_moves_quantity_without_touching_cost_or_the_books(stock:
         "location_id": stock.place["location_id"],
         "to_place_id": shelf["place_id"],
         "to_location_id": shelf["location_id"],
+        "source_document_id": None,
         "document_date": DAY,
         "supplier_id": None,
         "supplier_document": None,
         # A transfer carries no amount and has no posting, even for a finance reader.
-        "lines": [{"line_no": 1, "item_id": dye, "quantity": "4.0", "amount": None}],
+        "lines": [{"line_no": 1, "item_id": dye, "quantity": "4.0", "amount": None, **NO_SOURCE}],
         "money": None,
     }
     assert (await stock.inventory.get(f"/documents/{document}")).json() == view

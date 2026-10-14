@@ -250,7 +250,9 @@ class CreditVoidPosting(_PostingFields):
 
 
 class StockPosting(_PostingFields):
-    """Stock document of package J; SQL requires its document and its exact two lines."""
+    """Stock document of package J; SQL requires its document and its exact lines, one per
+    account: two, or three for a return with a price difference.
+    """
 
     source_kind: Literal["stock"] = "stock"
     source_id: str = Field(pattern=SOURCE_ID_PATTERN)

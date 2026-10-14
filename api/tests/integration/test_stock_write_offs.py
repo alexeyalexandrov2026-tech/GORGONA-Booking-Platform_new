@@ -16,7 +16,7 @@ from tests.integration import test_stock as shared
 from tests.integration.configuration_support import Config
 from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.test_inventory import error, material_input, refused_sql
-from tests.integration.test_stock import DAY, RULE_CODES, Stock, entity_with_book
+from tests.integration.test_stock import DAY, NO_SOURCE, RULE_CODES, Stock, entity_with_book
 
 pytestmark = pytest.mark.anyio
 stock = shared.stock
@@ -203,10 +203,11 @@ async def test_write_off_leaves_at_the_moving_average_and_posts_one_entry(stock:
         "location_id": stock.place["location_id"],
         "to_place_id": None,
         "to_location_id": None,
+        "source_document_id": None,
         "document_date": DAY,
         "supplier_id": None,
         "supplier_document": None,
-        "lines": [{"line_no": 1, "item_id": dye, "quantity": "4.0", "amount": "5.34"}],
+        "lines": [{"line_no": 1, "item_id": dye, "quantity": "4.0", "amount": "5.34", **NO_SOURCE}],
         "money": {
             "book_id": str(stock.book),
             "rule_revision": 1,
@@ -458,7 +459,7 @@ async def test_write_off_is_idempotent_and_posted_by_company_wide_finance_only(
     seen = await stock.inventory.get(f"/documents/{document}", headers=branch)
     assert (seen.status_code, seen.json()["money"]) == (200, None), seen.text
     assert seen.json()["lines"] == [
-        {"line_no": 1, "item_id": item, "quantity": "2", "amount": None}
+        {"line_no": 1, "item_id": item, "quantity": "2", "amount": None, **NO_SOURCE}
     ]
     head = (
         "insert into gba.stock_documents (tenant_id,id,kind,reason,legal_entity_id,place_id,"
