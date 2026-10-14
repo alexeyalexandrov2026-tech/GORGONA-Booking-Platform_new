@@ -14,7 +14,8 @@ concurrency:
 jobs:
   api:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # Recent runs took 1517-1563 s of the former 1800 s limit; the suite keeps growing.
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: api
