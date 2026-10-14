@@ -27,7 +27,7 @@ accepted = shared.accepted
 client = shared.client
 idp = shared.idp
 manager_a = shared.manager_a
-LATEST = 42
+LATEST = 43
 # The columns that every schema since 0037 has in the tables later slices only add to.
 GAINED = {
     # Migration 0042 gives every movement its place in the history of its balance.

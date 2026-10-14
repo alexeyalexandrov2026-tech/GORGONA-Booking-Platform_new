@@ -23,6 +23,7 @@ _SQL = "\n".join(
         "0040_stock_returns.sql",
         "0041_stock_review_fixes.sql",
         "0042_stock_running_totals.sql",
+        "0043_stock_review_fixes.sql",
     )
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))

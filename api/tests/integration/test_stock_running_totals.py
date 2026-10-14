@@ -17,6 +17,7 @@ from gorgona_booking.auth.principal import set_user_context
 from gorgona_booking.db.pool import tenant_transaction
 from tests.integration import test_stock as shared
 from tests.integration.conftest import ProvisionedDatabase
+from tests.integration.seed import seed_other_branch
 from tests.integration.test_inventory import refused_sql
 from tests.integration.test_stock import DAY, Stock
 from tests.integration.test_stock_transfers import ROW_WAITERS, transfer, transfer_sql
@@ -156,6 +157,54 @@ async def test_a_forged_total_is_refused_even_when_a_movement_follows(stock: Sto
             await forged_then_moved(forgery)
         assert (caught.value.sqlstate, caught.value.diag.message_primary) == ("23514", message)
     assert history(stock, item, stock.place["place_id"]) == [(1, "in", 5, 5)]
+    chained(stock)
+
+
+async def test_a_forged_total_is_refused_when_the_context_changes_before_commit(
+    stock: Stock,
+) -> None:
+    """Finding H1 of the review of J5 and J6: a check that cannot see the total refuses it.
+
+    The runtime role sets the company and the branch of its own session; after forging a
+    total it may hide the rows from the checks at commit by changing them.
+    """
+    assert (await stock.set_rules()).status_code == 200
+    item = (await stock.inventory.item(quantity_scale=0))["item_id"]
+    await received(stock, item, "5", "10.00")
+    other = (await stock.inventory.item(quantity_scale=0))["item_id"]
+    away, _ = seed_other_branch(stock.inventory.owner_conn, stock.inventory.world.a)
+    user = stock.inventory.manager.user_id
+    place, home = stock.place["place_id"], stock.place["location_id"]
+    forgeries: tuple[tuple[str, tuple[object, ...]], ...] = (
+        ("update gba.stock_balances set quantity=quantity+1000 where item_id=%s", (item,)),
+        ("update gba.stock_costs set value_minor=value_minor+1 where item_id=%s", (item,)),
+        # A balance with no history at all, of a material that the place never held.
+        (
+            "insert into gba.stock_balances (tenant_id,item_id,place_id,legal_entity_id,"
+            "location_id,quantity) values (%s,%s,%s,%s,%s,7)",
+            (stock.tenant, other, place, stock.entity, home),
+        ),
+    )
+    hidings: tuple[tuple[str, tuple[object, ...]], ...] = (
+        ("select set_config('gba.tenant_id','',true)", ()),
+        ("select set_config('gba.location_id',%s,true)", (str(away),)),
+    )
+
+    async def forged_then_hidden(
+        forgery: tuple[str, tuple[object, ...]], hiding: tuple[str, tuple[object, ...]]
+    ) -> None:
+        async with tenant_transaction(stock.pool, stock.tenant) as conn:
+            await set_user_context(conn, user)
+            await conn.execute(forgery[0].encode("utf-8"), forgery[1])
+            await conn.execute(hiding[0].encode("utf-8"), hiding[1])
+
+    for forgery in forgeries:
+        for hiding in hidings:
+            with pytest.raises(psycopg.DatabaseError) as caught:
+                await forged_then_hidden(forgery, hiding)
+            assert caught.value.sqlstate == "23514", (forgery[0], hiding[0])
+    assert history(stock, item, place) == [(1, "in", 5, 5)]
+    assert stock.rows("select count(*) from gba.stock_balances") == [(1,)]
     chained(stock)
 
 
