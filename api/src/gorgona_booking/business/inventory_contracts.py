@@ -1,9 +1,9 @@
 """Strict version-one inventory contracts of J1: materials and storage places, no money."""
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 type Label = Annotated[
     str,
@@ -70,6 +70,38 @@ class PlaceView(InventoryModel):
 class InventoryReceipt(InventoryModel):
     subject_id: UUID
     revision: int = 0
+
+
+# What a command produces, for settling one whose answer was lost: a material, a place, the
+# accounts of materials of a book, or a stock document.
+CommandOperation = Literal["item", "place", "posting_rules", "document"]
+CommandState = Literal["committed", "cancelled", "unresolved"]
+
+
+class CommandReference(InventoryModel):
+    """What the sender expected a command to produce; identifiers only, never amounts."""
+
+    operation: CommandOperation
+    subject_id: UUID
+    # The revision a material, place or set of accounts reached; a document has none (0).
+    revision: int = Field(strict=True, ge=0, le=2147483647)
+
+    @model_validator(mode="after")
+    def revision_fits(self) -> Self:
+        if (self.operation == "document") != (self.revision == 0):
+            raise ValueError("A document names no revision; everything else names its revision")
+        return self
+
+
+class CancelledCommand(CommandReference):
+    cancelled: Literal[True] = True
+
+
+class CommandStatus(InventoryModel):
+    business_id: UUID
+    key: str
+    operation: CommandOperation
+    state: CommandState
 
 
 class ItemList(InventoryModel):

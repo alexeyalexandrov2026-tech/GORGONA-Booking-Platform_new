@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ledgerResponseSchema } from "./ledger-contracts";
+import { inventoryResponseSchema } from "./inventory-contracts";
 import { financialResponseSchema } from "./financial-contracts";
 import { admissionResponseSchema } from "./admission-contracts";
 import { counterpartyResponseSchema } from "./counterparty-contracts";
@@ -212,6 +213,8 @@ export function managementResponseSchema(
     if (admission) return admission;
     const ledger = ledgerResponseSchema(business[1] ?? "", method);
     if (ledger) return ledger;
+    const inventory = inventoryResponseSchema(business[1] ?? "", method);
+    if (inventory) return inventory;
     const counterparties = counterpartyResponseSchema(
       business[1] ?? "",
       method,

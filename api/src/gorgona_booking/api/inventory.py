@@ -1,18 +1,21 @@
-"""Inventory API of J1; its permissions never delegate or grant support access."""
+"""Inventory API of J1 and J5; its permissions never delegate or grant support access."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Path, Query, Request
 
 from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import inventory as service
+from gorgona_booking.business import inventory_commands
 from gorgona_booking.business.inventory_contracts import (
+    CommandReference,
+    CommandStatus,
     ItemInput,
     ItemList,
     ItemView,
@@ -143,4 +146,37 @@ async def put_place(
             principal.actor,
             idempotency_key,
             body,
+        )
+
+
+# J5: a command whose answer was lost is settled by its key. Only the caller's own keys are
+# read; cancelling an unresolved command makes its late copy a refused, reused key.
+CommandKey = Annotated[str, Path(min_length=8, max_length=255, pattern=r"^[A-Za-z0-9._:-]+$")]
+
+
+@router.post("/commands/{key}/resolve")
+async def resolve_command(
+    business_id: UUID,
+    key: CommandKey,
+    body: CommandReference,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> CommandStatus:
+    async with _access(request, principal, business_id) as access:
+        return await inventory_commands.resolve_command(
+            access.conn, business_id, principal.actor, key, body
+        )
+
+
+@router.post("/commands/{key}/cancel")
+async def cancel_command(
+    business_id: UUID,
+    key: CommandKey,
+    body: CommandReference,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> CommandStatus:
+    async with _access(request, principal, business_id) as access:
+        return await inventory_commands.cancel_command(
+            access.conn, business_id, principal.actor, key, body
         )

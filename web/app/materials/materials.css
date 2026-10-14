@@ -1,0 +1,57 @@
+.materials {
+  min-width: 0;
+}
+.materials section,
+.materials form {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 18px;
+  margin: 20px 0;
+  background: #fff;
+  min-width: 0;
+}
+.materials section form {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.materials form > label,
+.materials section > label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  max-width: 420px;
+}
+.materials label:has(> input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.materials .table-scroll {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+.materials table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.materials th,
+.materials td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #d2d6da;
+  overflow-wrap: anywhere;
+}
+.materials .warning {
+  border-left: 3px solid #8a5a00;
+  padding: 14px 18px;
+  background: #fbf1dc;
+  color: #4a3000;
+}
+.materials .warning h2 {
+  margin-top: 0;
+}
+.materials .warning button {
+  margin: 8px 8px 0 0;
+}
