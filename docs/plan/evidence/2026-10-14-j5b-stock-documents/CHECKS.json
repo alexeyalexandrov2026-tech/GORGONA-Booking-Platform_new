@@ -1,0 +1,773 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-14T11:31:31.976123+00:00",
+  "branch": "codex/package-j5b-stock-documents",
+  "base": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+  "published": false,
+  "changed_sources": [
+    {
+      "path": "api/tests/integration/test_stock_documents_browser.py",
+      "sha256": "3cf89fea03d9dc7d2c58ee8a94c7642e053a8775a68e70ab584c8f44aa587316",
+      "git_blob_oid": "db45384253f0338b3cf6b514742de7fe422406ed"
+    },
+    {
+      "path": "web/app/inventory.css",
+      "sha256": "bc2c6c3f75ac20d84a624154d5e7041038a249d7b36a9d4dc7f9b3f204e90d51",
+      "git_blob_oid": "c2e7b698821f9eacb2f438dbcffc34be85f41eba"
+    },
+    {
+      "path": "web/app/materials/materials.css",
+      "deleted": true
+    },
+    {
+      "path": "web/app/materials/page.tsx",
+      "sha256": "6a65569a0fd77c1d74c0894f46662e6674cc291445b0e631db30556da6a2003d",
+      "git_blob_oid": "1c2d9e9e5f11a379a1ae36a05c37105d431b2b0d"
+    },
+    {
+      "path": "web/app/stock-documents/page.tsx",
+      "sha256": "426c681dbad54e2b815941453870afcfa7dd8694fbf4c1cc6fe05e79e15be949",
+      "git_blob_oid": "7972d4d2dd9868f4ca831267e24a31b0b32c7a55"
+    },
+    {
+      "path": "web/components/inventory-commands.tsx",
+      "sha256": "b9c5d1675e2d8b63a35f37969734a4025e1c77bdda2c831430b118835b3fee8a",
+      "git_blob_oid": "745d88bcd4d1d48215fd9e56102cb449e42ad18b"
+    },
+    {
+      "path": "web/components/management-layout.tsx",
+      "sha256": "27cf9f0c1d92d59c5cc1d24adf7c24592978d969467fbac369c8b933363770ef",
+      "git_blob_oid": "a387b7ed8c68533091e2061934dbd91788a2537f"
+    },
+    {
+      "path": "web/components/materials.tsx",
+      "sha256": "d63246a4c262133f5b7ab1dac7550d23e9c5b3d52b7ba24ec531dab4c52ae7b9",
+      "git_blob_oid": "85211e41cc605121f51578bfaeca7b1f568402f5"
+    },
+    {
+      "path": "web/components/stock-documents.tsx",
+      "sha256": "4ddeaefb4c65fcdacd1a15924428f8cf094d136bafd53f7fa84b9d3e859ee4f6",
+      "git_blob_oid": "4719a170fbf9bc1b95b841422acbe8d7954d54ac"
+    },
+    {
+      "path": "web/lib/inventory-api.ts",
+      "sha256": "3e7c2e6bfcacc880b1c0cc579107e79efad6ca0dd7ded8e2fd14633293628c91",
+      "git_blob_oid": "cf99d1fd2b7d5c95706bd834fec5ce345b20b987"
+    },
+    {
+      "path": "web/lib/inventory-contracts.ts",
+      "sha256": "73d7fc61c282cd7873bee012e3c3f902774b967123bbb5a6f14faf75ac526238",
+      "git_blob_oid": "48a9f4b5d23067dd345d0383c02fa2b2bf38c0ff"
+    },
+    {
+      "path": "web/lib/inventory-recovery.ts",
+      "sha256": "28b518a8f60ac3a87449fb0e4bc0d6abeb458f3d5ec937b6944ea24b9fa19cd5",
+      "git_blob_oid": "2aca1795522f0c33852bf6163cdce1fc1563e205"
+    },
+    {
+      "path": "web/package.json",
+      "sha256": "b4a861aa4cfeb52d091cb49d40e24adc148a75b73a81e4b4ec7c3ee2bf00230e",
+      "git_blob_oid": "5d74476719d9172d76c96e7dd1a16df63a7f570f"
+    },
+    {
+      "path": "web/tests/materials.spec.ts",
+      "sha256": "4e0919c481479f6d90299e2d1bf8f20812c2774717c6e911e0a4a4255813a6ab",
+      "git_blob_oid": "3ba82723b1f506d32bfa164fbd5e69648a9c63ab"
+    },
+    {
+      "path": "web/tests/stock-document-contracts.spec.ts",
+      "sha256": "80c8e3eb8db56a6001fe5755615f9badbe3fc18098385b8127c589ee3c13a6da",
+      "git_blob_oid": "a8227ac8ae9f8064b7a2874b4689d9681d8585b9"
+    },
+    {
+      "path": "web/tests/stock-documents.spec.ts",
+      "sha256": "632ea9194e45224e2a35dc550bf484c93dc04fcaf821c0fe2d3963fac25ffeab",
+      "git_blob_oid": "550190d33364b55a3479668210ee63e3adcfa3d7"
+    }
+  ],
+  "phases": {
+    "red-1": {
+      "kind": "static",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:39:54.534680+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.22
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.16
+        },
+        {
+          "name": "mypy",
+          "exit_code": 1,
+          "seconds": 15.77
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "mypy failed; inspect the redacted log"
+    },
+    "red-2": {
+      "kind": "focused",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:40:11.202099+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.02
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.44
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 4.41
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.14
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "red-3": {
+      "kind": "static",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:40:31.769834+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.13
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.13
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 1.54
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 2,
+          "seconds": 1.61
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "web-typecheck failed; inspect the redacted log"
+    },
+    "static-1": {
+      "kind": "static",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:46:37.854328+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.15
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.15
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 0.7
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "seconds": 1.47
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "seconds": 9.6
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "seconds": 2.15
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "seconds": 2.4
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "seconds": 12.23
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 0,
+          "seconds": 0.66
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "seconds": 0.91
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": false,
+      "error": null
+    },
+    "focused-1": {
+      "kind": "focused",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:47:13.359719+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.74
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.42
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 10.94
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.14
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "focused-2": {
+      "kind": "focused",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:47:36.762078+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.46
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.33
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 25.9
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "static-2": {
+      "kind": "static",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:48:31.326860+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.15
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.16
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 0.69
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "seconds": 7.23
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "seconds": 9.42
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "seconds": 2.14
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "seconds": 2.04
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "seconds": 5.07
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 0,
+          "seconds": 0.73
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "seconds": 0.78
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": false,
+      "error": null
+    },
+    "focused-3": {
+      "kind": "focused",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:49:00.252155+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.83
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.33
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 68.23
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "static-3": {
+      "kind": "static",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:51:02.711603+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.17
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.15
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 0.65
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "seconds": 2.22
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "seconds": 9.44
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "seconds": 2.21
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "seconds": 2.06
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "seconds": 5.53
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 0,
+          "seconds": 0.92
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "seconds": 0.77
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": false,
+      "error": null
+    },
+    "focused-4": {
+      "kind": "focused",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:51:27.307357+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.67
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.43
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 71.91
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.18
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "static-4": {
+      "kind": "static",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:54:55.009590+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.15
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.14
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 0.63
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "seconds": 1.55
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "seconds": 9.87
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "seconds": 2.16
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "seconds": 2.08
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "seconds": 4.98
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 0,
+          "seconds": 0.65
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "seconds": 0.87
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": false,
+      "error": null
+    },
+    "focused-5": {
+      "kind": "focused",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:55:18.531739+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.85
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.32
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 70.28
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "debug-1": {
+      "kind": "focused",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T08:53:48.933758+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.62
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.43
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 34.46
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.14
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "debug-2": {
+      "kind": "focused",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T11:02:00.930744+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.63
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.31
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 34.83
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "static-5": {
+      "kind": "static",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T11:02:53.944027+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.14
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.13
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 0.62
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "seconds": 1.5
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "seconds": 10.56
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "seconds": 2.16
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "seconds": 2.1
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "seconds": 5.09
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 0,
+          "seconds": 0.65
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "seconds": 0.96
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": false,
+      "error": null
+    },
+    "focused-6": {
+      "kind": "focused",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T11:03:18.350024+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 1.5
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.52
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 61.59
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.14
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "full-1": {
+      "kind": "full",
+      "base_sha": "b003b75e7adf1e943a3ca501f698fab00c0afb56",
+      "started_utc": "2026-10-14T11:04:39.685901+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 1.74
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.31
+        },
+        {
+          "name": "pytest-full",
+          "exit_code": 0,
+          "seconds": 1589.53
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.29
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    }
+  },
+  "full_run": {
+    "phase": "full-1",
+    "summary": "1735 passed, 4 skipped in 1587.30s (0:26:27)",
+    "pytest_step": {
+      "name": "pytest-full",
+      "exit_code": 0,
+      "seconds": 1589.53
+    }
+  },
+  "tools": {
+    "python_packages": {
+      "pytest": "9.1.1",
+      "psycopg": "3.3.6",
+      "ruff": "0.16.9",
+      "mypy": "2.3.1",
+      "fastapi": "0.142.1",
+      "pydantic": "2.13.5"
+    },
+    "web_installed": {
+      "next": "16.3.8",
+      "eslint-config-next": "16.3.8",
+      "source-map-js": "1.2.2",
+      "postcss": "8.5.23",
+      "react": "19.3.0",
+      "@playwright/test": "1.63.0"
+    }
+  },
+  "run_folder": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-j5b-20261014-b003b75"
+}

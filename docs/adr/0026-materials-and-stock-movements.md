@@ -405,6 +405,20 @@ two, as J4: J5a is this screen, J5b the Stock documents screen.
 3. The browser keeps only the key and the reference of an unconfirmed change, never a
    name, quantity, amount or token. No migration.
 
+## Implementation notes — slice J5b, the Stock documents screen (2026-10-14)
+
+Commit `c3da59d` on `codex/package-j5b-stock-documents`:
+[record](../plan/evidence/2026-10-14-j5b-stock-documents/VALIDATION.md). With it slice J5
+is complete.
+
+1. The screen `/stock-documents/` lists, opens and posts receipts, write-offs, transfers
+   and returns through the routes of J2–J4; no server change and no migration. A branch
+   manager posts transfers only, reads no amounts and knows the owner as "Company".
+2. The command centre of J5a is shared by both inventory screens: one unconfirmed
+   inventory command per person and business, settled by its key; a document names no
+   version.
+3. A refusal of the server is shown next to the submit button with a named text.
+
 ## Acceptance and status
 
 The matrix J-01–J-14 is in the plan. The module stays closed by the readiness lock until

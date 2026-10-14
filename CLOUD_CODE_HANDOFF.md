@@ -1,6 +1,19 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-14: package J slice J5a (Materials screen) committed; not merged
+## Current checkpoint — 2026-10-14: package J slice J5b (Stock documents screen) committed; J5 complete; not merged
+
+Вторая часть среза J5 — экран «Складские документы» (`/stock-documents/`) —
+закоммичена: `c3da59d` на ветке `codex/package-j5b-stock-documents`; срез J5 завершён. Полный локальный
+прогон — **PASS: 1735 passed, 4 skipped in 1587.30s (0:26:27)**. Browser-тест на компьютере и телефоне: доступность без
+нарушений, потеря ответа без второго документа, отказ с названной причиной, менеджер
+филиала — только перемещения и без сумм. Ветка J5a опубликована, CI её вершины `b003b75`
+— PASS. Открыты M2, L6, тесты J-12 и J-13, обзор J5 и приёмка. CI этой ветки на момент
+записи — NOT TESTED. `main` не переносился.
+
+[Актуальный handoff](docs/plan/NEXT_AGENT_PACKAGE_J5B_STOCK_DOCUMENTS_2026-10-14.md),
+[запись о срезе](docs/plan/evidence/2026-10-14-j5b-stock-documents/VALIDATION.md).
+
+## Previous checkpoint — 2026-10-14: package J slice J5a (Materials screen) committed; not merged
 
 Первая часть среза J5 — экран «Материалы» (`/materials/`) и проверка неопределённой
 команды запасов по ключу — закоммичена: `afda55b` на ветке `codex/package-j5-screens`. Полный

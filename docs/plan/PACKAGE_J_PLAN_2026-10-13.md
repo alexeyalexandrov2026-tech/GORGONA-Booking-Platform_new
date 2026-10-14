@@ -2,8 +2,8 @@
 
 Статус: **согласован владельцем 2026-10-13.** Двенадцать решений ниже владелец выбрал в
 ответах на вопросы исполнителя. Срезы J1–J3 и первая часть J4 опубликованы, вторая часть
-J4 (возврат) закоммичена и опубликована; экран «Материалы» (J5a) закоммичен, экрана
-«Складские документы» ещё нет: см.
+J4 (возврат) закоммичена и опубликована; экраны «Материалы» (J5a) и «Складские
+документы» (J5b) закоммичены: см.
 «Ход работ». Основа — `main` на
 `fedd0f1`: этапы 0 и 1 закрыты технически, в этапе 2 технически приняты FIN-01, FIN-03 и
 WORK-01. Остаются STOCK-01 (этот пакет) и FIN-02 (пакет K, ему нужен допуск Stripe в
@@ -126,7 +126,7 @@ STOCK-01 не объявляется принятым после отдельн�
 | J2 | Закоммичен локально: `f8e1212` на ветке `codex/package-j2-receipts`. Full local PASS: 1616 passed, 4 skipped. Независимый обзор и CI — NOT TESTED: ветка не опубликована | [запись](evidence/2026-10-13-j2-receipts/VALIDATION.md) |
 | J3 | Закоммичен `565b68f` на ветке `codex/package-j3-writeoffs`; ветка опубликована 2026-10-13. Full local PASS: 1651 passed, 4 skipped. CI точного коммита `c4a2422` — PASS (run 38482480419). Независимый обзор — NOT TESTED | [запись](evidence/2026-10-13-j3-writeoffs/VALIDATION.md) |
 | J4 | Часть 1, перемещение (миграция 0039): закоммичена `0d923a4` на ветке `codex/package-j4-transfers`. Full local PASS: 1676 passed, 4 skipped. Ветка опубликована 2026-10-13; CI точного коммита `7e31cc8` — PASS (run 38498098941). Независимый обзор — NOT TESTED. Часть 2, возврат (миграция 0040): закоммичена `4bd346c` на ветке `codex/package-j4-returns`. Full local PASS: 1709 passed, 4 skipped. Ветка опубликована 2026-10-13; CI точного коммита `c7c94ed` — PASS (run 38505095541). Независимый обзор — NOT TESTED | [запись о части 1](evidence/2026-10-13-j4-transfers/VALIDATION.md), [о части 2](evidence/2026-10-13-j4-returns/VALIDATION.md) |
-| J5 | Часть a, экран «Материалы» и проверка команды по ключу: закоммичена `afda55b` на ветке `codex/package-j5-screens`. Full local PASS: 1734 passed, 4 skipped. CI и независимый обзор — NOT TESTED на момент записи. Часть b, «Складские документы», не начата | [запись о части a](evidence/2026-10-14-j5-screens/VALIDATION.md) |
+| J5 | Часть a, экран «Материалы» и проверка команды по ключу: закоммичена `afda55b` на ветке `codex/package-j5-screens`. Full local PASS: 1734 passed, 4 skipped. CI вершины `b003b75` — PASS (run 38531463790); независимый обзор — NOT TESTED. Часть b, экран «Складские документы»: закоммичена `c3da59d` на ветке `codex/package-j5b-stock-documents`. Full local PASS: 1735 passed, 4 skipped. CI и независимый обзор — NOT TESTED на момент записи | [запись о части a](evidence/2026-10-14-j5-screens/VALIDATION.md), [о части b](evidence/2026-10-14-j5b-stock-documents/VALIDATION.md) |
 | Приёмка | Не начата: все строки J-01–J-14 остаются NOT TESTED | — |
 
 Отступление от порядка работы: ветка J1 начата от ветки плана (`9032a69`), а не от `main`:
@@ -152,7 +152,9 @@ CI её вершины `7e31cc8` — PASS: см.
 [запись](evidence/2026-10-14-j-review-fixes/VALIDATION.md). Ветка опубликована без PR; CI
 её вершины `5e3a801` — PASS (run 38523399133).
 Срез J5 разделён на две части; часть a — ветка `codex/package-j5-screens` от `5e3a801`, без миграций:
-[запись](evidence/2026-10-14-j5-screens/VALIDATION.md).
+[запись](evidence/2026-10-14-j5-screens/VALIDATION.md). Ветка опубликована без PR; CI её
+вершины `b003b75` — PASS (run 38531463790). Часть b — ветка `codex/package-j5b-stock-documents` от `b003b75`,
+без миграций: [запись](evidence/2026-10-14-j5b-stock-documents/VALIDATION.md).
 
 ## Данные
 

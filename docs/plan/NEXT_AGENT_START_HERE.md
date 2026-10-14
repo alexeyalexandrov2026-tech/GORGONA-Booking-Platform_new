@@ -1,6 +1,13 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: package J slice J5a (Materials screen) committed; not merged — 2026-10-14
+## Current: package J slice J5b (Stock documents screen) committed; J5 complete; not merged — 2026-10-14
+
+Read the [handoff](NEXT_AGENT_PACKAGE_J5B_STOCK_DOCUMENTS_2026-10-14.md) first. The Stock
+documents screen is committed as `c3da59d` on `codex/package-j5b-stock-documents` (complete local suite
+1735 passed, 4 skipped); slice J5 is complete. Open: M2, L6, J-12 and J-13 tests, a review of J5
+and the acceptance. Read from `git ls-remote origin` what is published.
+
+## Previous: package J slice J5a (Materials screen) committed; not merged — 2026-10-14
 
 Read the [handoff](NEXT_AGENT_PACKAGE_J5_MATERIALS_2026-10-14.md) first. The Materials
 screen and settling an uncertain inventory command are committed as `afda55b` on
