@@ -15,6 +15,7 @@ from tests.integration.test_inventory import J1_TABLES, Inventory
 from tests.integration.test_provider_admission_upgrade import previous_admission_database
 from tests.integration.test_stock import Stock
 from tests.integration.test_stock_returns import hand_return
+from tests.integration.test_stock_running_totals import UNCHAINED
 from tests.integration.test_stock_transfers import hand_transfer, transfer
 from tests.integration.test_stock_write_offs import hand_write_off, received, write_off
 
@@ -26,9 +27,15 @@ accepted = shared.accepted
 client = shared.client
 idp = shared.idp
 manager_a = shared.manager_a
-LATEST = 41
+LATEST = 42
 # The columns that every schema since 0037 has in the tables later slices only add to.
 GAINED = {
+    # Migration 0042 gives every movement its place in the history of its balance.
+    "stock_movements": (
+        "select tenant_id,document_id,line_no,direction,location_id,place_id,item_id,"
+        "legal_entity_id,quantity,created_at from gba.stock_movements "
+        "order by tenant_id,document_id,line_no,direction"
+    ),
     "stock_documents": (
         "select tenant_id,id,kind,reason,legal_entity_id,place_id,location_id,document_date,"
         "supplier_id,supplier_document,line_count,created_by,created_at,"
@@ -150,6 +157,9 @@ async def test_nonempty_documents_upgrade_and_earlier_stock_returns_leaves_and_m
         for table, query in GAINED.items():
             assert conn.execute(query).fetchall() == rows[table], table
         fresh = conn.execute(FRESH).fetchone()
+        # The upgraded history carries its running totals and ends in today's totals.
+        broken = {name: conn.execute(query).fetchone() for name, query in UNCHAINED.items()}
+    assert broken == dict.fromkeys(UNCHAINED, (0,))
     assert fresh is not None
     assert fresh[:3] == (0, 0, 0)
     assert fresh[3] >= 1 if start >= 39 else fresh[3] == 0

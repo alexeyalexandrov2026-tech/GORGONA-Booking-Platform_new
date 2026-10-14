@@ -112,6 +112,11 @@ _FUTURE = "The document date is in the future of the branch"
 _EARLY = "The document date is before the book's accounting start"
 _SHORT = "The place does not hold this much of the material"
 _OVER = "No more than this is left to return of the source line"
+# Running totals that a document would carry past the limits of their columns.
+_QUANTITY_LIMITS = frozenset({"stock_balances_quantity_check", "stock_costs_quantity_check"})
+_VALUE_LIMITS = frozenset({"stock_costs_value_check"})
+_HOLDS_TOO_MUCH = "The place or the owner would hold more of the material than is supported"
+_WORTH_TOO_MUCH = "The material of the owner would be worth more than is supported"
 # Trigger messages and the errors they become when a check here did not answer first.
 _REFUSALS: tuple[tuple[str, type[DomainError], str], ...] = (
     ("archived", StockArchivedError, "An archived material or storage place takes nothing in"),
@@ -168,6 +173,10 @@ async def _writes(
         if exc.sqlstate == "GBS03":
             raise StockReturnExceededError(_OVER) from exc
         if exc.sqlstate == "23514":
+            if exc.diag.constraint_name in _QUANTITY_LIMITS:
+                raise StockQuantityError(_HOLDS_TOO_MUCH) from exc
+            if exc.diag.constraint_name in _VALUE_LIMITS:
+                raise StockAmountError(_WORTH_TOO_MUCH) from exc
             message = exc.diag.message_primary or ""
             for text, error, answer in _REFUSALS:
                 if text in message:

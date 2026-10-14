@@ -1,5 +1,5 @@
 """Packaged schema approvals of the inventory tables: J1 materials and places, J2 receipts,
-J3 write-offs, J4 transfers and returns.
+J3 write-offs, J4 transfers and returns, and the running totals of their histories.
 
 Never learn approvals from the target database.
 """
@@ -22,6 +22,7 @@ _SQL = "\n".join(
         "0039_stock_transfers.sql",
         "0040_stock_returns.sql",
         "0041_stock_review_fixes.sql",
+        "0042_stock_running_totals.sql",
     )
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
@@ -61,6 +62,14 @@ _COLUMNS = {
 # A column that a later migration adds to an earlier table follows the first ones.
 for _table, *_column in re.findall(rf"alter table gba\.(\w+) add column {_COLUMN}([^;\n]*);", _SQL):
     _COLUMNS[_table] += (tuple(_column),)
+# A column that a later migration fills and then requires.
+for _table, _required in re.findall(
+    r"alter table gba\.(\w+) alter column (\w+) set not null;", _SQL
+):
+    _COLUMNS[_table] = tuple(
+        (name, kind, tail + " not null" if name == _required else tail)
+        for name, kind, tail in _COLUMNS[_table]
+    )
 _KEYS = {
     table: {
         (kind, tuple(x.strip() for x in columns.split(",")))
