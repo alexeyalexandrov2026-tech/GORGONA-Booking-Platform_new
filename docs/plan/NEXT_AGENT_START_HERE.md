@@ -1,6 +1,13 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: package J review fixes committed; J1–J4 published — 2026-10-14
+## Current: package J slice J5a (Materials screen) committed; not merged — 2026-10-14
+
+Read the [handoff](NEXT_AGENT_PACKAGE_J5_MATERIALS_2026-10-14.md) first. The Materials
+screen and settling an uncertain inventory command are committed as `afda55b` on
+`codex/package-j5-screens` (complete local suite 1734 passed, 4 skipped); open: J5b (Stock documents), M2, L6
+and the acceptance. Read from `git ls-remote origin` what is published.
+
+## Previous: package J review fixes committed; J1–J4 published — 2026-10-14
 
 Read the [handoff](NEXT_AGENT_PACKAGE_J_REVIEW_FIXES_2026-10-14.md) first. The findings
 of the independent review of J1–J4 are fixed in commit `33a3ec6` on `codex/package-j-review-fixes`

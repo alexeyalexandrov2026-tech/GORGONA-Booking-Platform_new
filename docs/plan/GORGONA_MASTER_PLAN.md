@@ -1,6 +1,19 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
-## Current checkpoint — 2026-10-14: package J review fixes committed; J1–J4 published
+## Current checkpoint — 2026-10-14: package J slice J5a (Materials screen) committed; not merged
+
+Первая часть среза J5 — экран «Материалы» (`/materials/`) и проверка неопределённой
+команды запасов по ключу — закоммичена: `afda55b` на ветке `codex/package-j5-screens`. Полный
+локальный прогон — **PASS: 1734 passed, 4 skipped in 1279.06s (0:21:19)**. Browser-тест на компьютере и телефоне: доступность
+без нарушений, потеря ответа и её проверка после перезагрузки, повтор тем же ключом,
+отмена с отказом поздней копии. Ветка исправлений по обзору опубликована, CI её
+вершины `5e3a801` — PASS. Открыты J5b «Складские документы», M2, L6 и приёмка. CI этой
+ветки на момент записи — NOT TESTED. `main` не переносился.
+
+[Актуальный handoff](NEXT_AGENT_PACKAGE_J5_MATERIALS_2026-10-14.md),
+[запись о срезе](evidence/2026-10-14-j5-screens/VALIDATION.md).
+
+## Previous checkpoint — 2026-10-14: package J review fixes committed; J1–J4 published
 
 Независимый обзор J1–J4 проведён; его находки M1, L1, L2, L4, L5 и часть L3 исправлены и
 закоммичены: `33a3ec6` на ветке `codex/package-j-review-fixes`. Главное — перемещение и приёмка

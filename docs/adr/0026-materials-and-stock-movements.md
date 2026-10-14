@@ -387,6 +387,24 @@ An independent read-only review of J1–J4 found no critical or high defect. Com
    the grantee of insert rights. Names, units and supplier document numbers refuse C1
    control characters.
 
+## Implementation notes — slice J5a, the Materials screen (2026-10-14)
+
+Commit `afda55b` on `codex/package-j5-screens`:
+[record](../plan/evidence/2026-10-14-j5-screens/VALIDATION.md). The executor split J5 in
+two, as J4: J5a is this screen, J5b the Stock documents screen.
+
+1. An uncertain command is settled by its key: `POST .../inventory/commands/{key}/resolve`
+   and `/cancel`, the approach of the workforce screens without a new table. The reference
+   names the operation, the subject and the version the command produces (0 for a
+   document). A discard claims the key with a 410 marker, at most 20 per person a day, and
+   is audited; the late copy of the command is refused as a reused key.
+2. The screen `/materials/` shows materials, places, balances, the cost at the moving
+   average and the accounts of materials, each only to whom the server serves it. Without
+   a ledger book it explains that the accounts belong to the owner's book and links to the
+   ledger.
+3. The browser keeps only the key and the reference of an unconfirmed change, never a
+   name, quantity, amount or token. No migration.
+
 ## Acceptance and status
 
 The matrix J-01–J-14 is in the plan. The module stays closed by the readiness lock until
