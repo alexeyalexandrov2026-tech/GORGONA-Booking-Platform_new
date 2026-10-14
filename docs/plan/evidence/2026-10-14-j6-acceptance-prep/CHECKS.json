@@ -1,0 +1,709 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-14T18:13:09.781605+00:00",
+  "branch": "codex/package-j-acceptance-prep",
+  "base": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+  "published": false,
+  "changed_sources": [
+    {
+      "path": "api/src/gorgona_booking/business/stock.py",
+      "sha256": "769621c6d41ef51a8781bb38c6f90aa46fbea562e20cc3471920679aaca209b9",
+      "git_blob_oid": "c56035a3557cf429775dbb08d7b424edc10f0684"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/inventory_guard.py",
+      "sha256": "2d74656648cca797bacbe7bbd077520a0b528375f16293b6060624908d5369ae",
+      "git_blob_oid": "5ead4abe52685cc51956563986bc31d631babc29"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/migrations/0042_stock_running_totals.sql",
+      "sha256": "7c8b091c8e9d51140611065db11f410fe1c1f1201a8243df7ac146abb819545c",
+      "git_blob_oid": "acbd59d669e756929b7c49cf39c71b5edcb82375"
+    },
+    {
+      "path": "api/tests/integration/test_inventory_upgrade.py",
+      "sha256": "9cebc1a82facb42ff84a6c954fbea09dfa9ce22b20241c5f91a5d6b3801aea70",
+      "git_blob_oid": "0d3c8d4c58db7c617887d0ebb5bb7b8729f0fe72"
+    },
+    {
+      "path": "api/tests/integration/test_stock_acceptance.py",
+      "sha256": "e970a8e55e944818acad276bfacaa08ad774af098cef02c1dddaae2529aa1e5d",
+      "git_blob_oid": "364ea0fd1fa06ae899aff5f2b25fa53b28570eb4"
+    },
+    {
+      "path": "api/tests/integration/test_stock_running_totals.py",
+      "sha256": "b718386ed34ad73331a6a703c96cf776d1c478abebb4dd799c6df775f311a79b",
+      "git_blob_oid": "5ed6d1ab6166ee0606aba2a888000e6f5eacc152"
+    },
+    {
+      "path": "api/tests/integration/test_stock_scale.py",
+      "sha256": "17692b59fbd307941b386d2d44f65cfd086039010f34a197b611d98c36f84146",
+      "git_blob_oid": "c0f334dbccb12b65338e4f4c0f2009ef30926cdb"
+    },
+    {
+      "path": "api/tests/integration/test_stock_upgrade.py",
+      "sha256": "5fb84a551ffa57e5eccc3b0aea5695aace7fba64f722a61b252ce8e961e87ed9",
+      "git_blob_oid": "81d0c429d8f4d0c87d042fa33b536fa10e1a0c55"
+    }
+  ],
+  "phases": {
+    "red-1": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T16:53:15.832736+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.49
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.53
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 36.7
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "green-1": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T16:56:48.330525+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.92
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.32
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 68.81
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.14
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "green-2": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T16:58:16.178686+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.8
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.32
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 66.08
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.14
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "measure-0": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T16:43:06.862747+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.04
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.33
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 7.16
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "measure-1": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T16:43:26.099498+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.69
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.41
+        },
+        {
+          "name": "focused",
+          "exit_code": 2,
+          "seconds": 1.2
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.14
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "measure-2": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T16:43:44.312275+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.45
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.52
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 7.1
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "measure-3": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T16:44:02.053582+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.97
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.32
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 24.98
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "measure-4": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T16:45:21.859157+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.86
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.42
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 26.56
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.17
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "measure-5": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T16:59:32.408708+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.0
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.44
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 17.72
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "profile-1": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T17:00:42.698291+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.77
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.3
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 17.15
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.14
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "profile-2": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T17:03:53.854967+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.85
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.45
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 13.82
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "profile-3": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T17:04:34.177595+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 1.94
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.45
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 10.52
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "red-2": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T17:02:24.905505+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.33
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.45
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 10.02
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.14
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "red-3": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T17:03:08.761208+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.97
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.34
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 18.34
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "green-3": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T17:05:02.856318+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 1.92
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.32
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 231.43
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.26
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "green-4": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T17:09:15.532273+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.3
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.45
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 9.88
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "red-4": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T17:12:04.402592+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.93
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.45
+        },
+        {
+          "name": "focused",
+          "exit_code": 1,
+          "seconds": 29.9
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.14
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": "focused failed; inspect the redacted log"
+    },
+    "green-5": {
+      "kind": "focused",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T17:13:19.381830+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 3.15
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.34
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "seconds": 26.81
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.15
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    },
+    "static-1": {
+      "kind": "static",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T17:14:03.020532+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "seconds": 0.28
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "seconds": 0.2
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "seconds": 7.84
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "seconds": 7.99
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "seconds": 14.43
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "seconds": 2.54
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "seconds": 3.16
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "seconds": 15.08
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 0,
+          "seconds": 0.9
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "seconds": 1.09
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": false,
+      "error": null
+    },
+    "full-1": {
+      "kind": "full",
+      "base_sha": "f5215286fd5f6a8f414c8e2f32ea4e690cd01987",
+      "started_utc": "2026-10-14T17:15:01.679633+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "seconds": 2.91
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "seconds": 0.33
+        },
+        {
+          "name": "pytest-full",
+          "exit_code": 0,
+          "seconds": 1648.46
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "seconds": 0.14
+        }
+      ],
+      "source_unchanged_during_run": true,
+      "web_out_unchanged": true,
+      "error": null
+    }
+  },
+  "full_run": {
+    "phase": "full-1",
+    "summary": "1745 passed, 4 skipped in 1646.70s (0:27:26)",
+    "pytest_step": {
+      "name": "pytest-full",
+      "exit_code": 0,
+      "seconds": 1648.46
+    }
+  },
+  "tools": {
+    "python_packages": {
+      "pytest": "9.1.1",
+      "psycopg": "3.3.6",
+      "ruff": "0.16.9",
+      "mypy": "2.3.1",
+      "fastapi": "0.142.1",
+      "pydantic": "2.13.5"
+    },
+    "web_installed": {
+      "next": "16.3.8",
+      "eslint-config-next": "16.3.8",
+      "source-map-js": "1.2.2",
+      "postcss": "8.5.23",
+      "react": "19.3.0",
+      "@playwright/test": "1.63.0"
+    }
+  },
+  "run_folder": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-j6-20261014-f521528"
+}

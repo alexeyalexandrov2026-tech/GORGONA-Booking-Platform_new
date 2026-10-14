@@ -419,6 +419,24 @@ is complete.
    version.
 3. A refusal of the server is shown next to the submit button with a named text.
 
+## Implementation notes — acceptance preparation, M2 (2026-10-14)
+
+Commit `35227cd` on `codex/package-j-acceptance-prep`:
+[record](../plan/evidence/2026-10-14-j6-acceptance-prep/VALIDATION.md).
+
+1. Migration 0042 gives every movement its place in the history of its balance and the
+   balance after it, and every valuation the quantity and value after it. Only the insert
+   triggers write them, from the head of the history after checking the stored total
+   against it; the checks at commit compare a total with that head. A forged total is
+   refused as before.
+2. The guard of a stock journal entry finds its document by key; it read every stock
+   document of the company. Two indexes that the new keys begin with are dropped.
+3. A total that a document would carry past its limit is refused by name:
+   `STOCK_QUANTITY_INVALID` or `STOCK_AMOUNT_INVALID`.
+4. Measured with 100,000 movements of one balance: a posting took 960 ms before and 43 ms
+   after (45 ms with no history). Migration 0042 rewrites every movement and valuation:
+   like 0037, it needs a maintenance window when deployed.
+
 ## Acceptance and status
 
 The matrix J-01–J-14 is in the plan. The module stays closed by the readiness lock until

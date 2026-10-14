@@ -1,6 +1,18 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-14: package J slice J5b (Stock documents screen) committed; J5 complete; not merged
+## Current checkpoint — 2026-10-14: package J acceptance preparation (J6) committed; M2 fixed; not merged
+
+Находка M2 независимого обзора измерена и устранена миграцией 0042: при 100 000 движений
+одной строки остатка проводка шла 960 мс, теперь 43 мс (45 мс без истории). Добавлены
+тесты строк J-12 и J-13 и пробела 10; закоммичено `35227cd` на ветке `codex/package-j-acceptance-prep`.
+Полный локальный прогон — **PASS: 1745 passed, 4 skipped in 1646.70s (0:27:26)**. Ветка J5b опубликована, CI её вершины
+`f521528` — PASS. Открыты независимый обзор J5 и J6 и сама приёмка STOCK-01. CI этой
+ветки на момент записи — NOT TESTED. `main` не переносился.
+
+[Актуальный handoff](NEXT_AGENT_PACKAGE_J6_ACCEPTANCE_PREP_2026-10-14.md),
+[запись о срезе](evidence/2026-10-14-j6-acceptance-prep/VALIDATION.md).
+
+## Previous checkpoint — 2026-10-14: package J slice J5b (Stock documents screen) committed; J5 complete; not merged
 
 Вторая часть среза J5 — экран «Складские документы» (`/stock-documents/`) —
 закоммичена: `c3da59d` на ветке `codex/package-j5b-stock-documents`; срез J5 завершён. Полный локальный

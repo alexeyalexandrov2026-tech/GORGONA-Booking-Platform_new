@@ -1,6 +1,13 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: package J slice J5b (Stock documents screen) committed; J5 complete; not merged — 2026-10-14
+## Current: package J acceptance preparation (J6) committed; M2 fixed; not merged — 2026-10-14
+
+Read the [handoff](NEXT_AGENT_PACKAGE_J6_ACCEPTANCE_PREP_2026-10-14.md) first. Finding
+M2 is fixed by migration 0042 and rows J-12 and J-13 are tested: `35227cd` on
+`codex/package-j-acceptance-prep` (complete local suite 1745 passed, 4 skipped). Open: a review of J5 and J6 and the
+acceptance. Read from `git ls-remote origin` what is published.
+
+## Previous: package J slice J5b (Stock documents screen) committed; J5 complete; not merged — 2026-10-14
 
 Read the [handoff](NEXT_AGENT_PACKAGE_J5B_STOCK_DOCUMENTS_2026-10-14.md) first. The Stock
 documents screen is committed as `c3da59d` on `codex/package-j5b-stock-documents` (complete local suite
