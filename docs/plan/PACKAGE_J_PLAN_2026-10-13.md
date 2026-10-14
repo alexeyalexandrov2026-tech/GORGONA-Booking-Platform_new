@@ -2,7 +2,7 @@
 
 Статус: **согласован владельцем 2026-10-13.** Двенадцать решений ниже владелец выбрал в
 ответах на вопросы исполнителя. Срезы J1–J3 и первая часть J4 опубликованы, вторая часть
-J4 (возврат) закоммичена, экранов нет: см.
+J4 (возврат) закоммичена и опубликована, экранов нет: см.
 «Ход работ». Основа — `main` на
 `fedd0f1`: этапы 0 и 1 закрыты технически, в этапе 2 технически приняты FIN-01, FIN-03 и
 WORK-01. Остаются STOCK-01 (этот пакет) и FIN-02 (пакет K, ему нужен допуск Stripe в
@@ -124,7 +124,7 @@ STOCK-01 не объявляется принятым после отдельн�
 | J1 | Закоммичен локально: `39fc819` на ветке `codex/package-j1-materials`. Full local PASS: 1573 passed, 4 skipped. Независимый обзор и CI — NOT TESTED: ветка не опубликована | [запись](evidence/2026-10-13-j1-materials/VALIDATION.md) |
 | J2 | Закоммичен локально: `f8e1212` на ветке `codex/package-j2-receipts`. Full local PASS: 1616 passed, 4 skipped. Независимый обзор и CI — NOT TESTED: ветка не опубликована | [запись](evidence/2026-10-13-j2-receipts/VALIDATION.md) |
 | J3 | Закоммичен `565b68f` на ветке `codex/package-j3-writeoffs`; ветка опубликована 2026-10-13. Full local PASS: 1651 passed, 4 skipped. CI точного коммита `c4a2422` — PASS (run 38482480419). Независимый обзор — NOT TESTED | [запись](evidence/2026-10-13-j3-writeoffs/VALIDATION.md) |
-| J4 | Часть 1, перемещение (миграция 0039): закоммичена `0d923a4` на ветке `codex/package-j4-transfers`. Full local PASS: 1676 passed, 4 skipped. Ветка опубликована 2026-10-13; CI точного коммита `7e31cc8` — PASS (run 38498098941). Независимый обзор — NOT TESTED. Часть 2, возврат (миграция 0040): закоммичена `4bd346c` на ветке `codex/package-j4-returns`. Full local PASS: 1709 passed, 4 skipped. Независимый обзор — NOT TESTED; CI — NOT TESTED на момент записи | [запись о части 1](evidence/2026-10-13-j4-transfers/VALIDATION.md), [о части 2](evidence/2026-10-13-j4-returns/VALIDATION.md) |
+| J4 | Часть 1, перемещение (миграция 0039): закоммичена `0d923a4` на ветке `codex/package-j4-transfers`. Full local PASS: 1676 passed, 4 skipped. Ветка опубликована 2026-10-13; CI точного коммита `7e31cc8` — PASS (run 38498098941). Независимый обзор — NOT TESTED. Часть 2, возврат (миграция 0040): закоммичена `4bd346c` на ветке `codex/package-j4-returns`. Full local PASS: 1709 passed, 4 skipped. Ветка опубликована 2026-10-13; CI точного коммита `c7c94ed` — PASS (run 38505095541). Независимый обзор — NOT TESTED | [запись о части 1](evidence/2026-10-13-j4-transfers/VALIDATION.md), [о части 2](evidence/2026-10-13-j4-returns/VALIDATION.md) |
 | J5 | Не начат | — |
 | Приёмка | Не начата: все строки J-01–J-14 остаются NOT TESTED | — |
 
@@ -143,6 +143,9 @@ STOCK-01 не объявляется принятым после отдельн�
 В тот же день так же, без PR, опубликована ветка первой части J4, `codex/package-j4-transfers`;
 CI её вершины `7e31cc8` — PASS: см.
 [запись о первой части J4](evidence/2026-10-13-j4-transfers/VALIDATION.md).
+Затем так же опубликована ветка второй части J4, `codex/package-j4-returns`; CI её
+вершины `c7c94ed` — PASS: см.
+[запись о второй части J4](evidence/2026-10-13-j4-returns/VALIDATION.md).
 
 ## Данные
 
