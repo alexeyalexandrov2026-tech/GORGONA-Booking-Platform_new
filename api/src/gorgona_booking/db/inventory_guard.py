@@ -21,6 +21,7 @@ _SQL = "\n".join(
         "0038_stock_write_offs.sql",
         "0039_stock_transfers.sql",
         "0040_stock_returns.sql",
+        "0041_stock_review_fixes.sql",
     )
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
@@ -50,7 +51,7 @@ if {trigger[1] for trigger in _TRIGGERS} != set(
     raise RuntimeError("Every inventory trigger must have an explicit packaged approval")
 _INSERTS: defaultdict[str, set[str]] = defaultdict(set)
 # A later migration grants the columns that it adds to an earlier table.
-for _columns, _table in re.findall(r"grant insert \(([^)]+)\) on gba\.(\w+)", _SQL):
+for _columns, _table in re.findall(r"grant insert \(([^)]+)\) on gba\.(\w+) to gba_runtime;", _SQL):
     _INSERTS[_table].update(_columns.split(","))
 _COLUMN = r"(\w+) (uuid|text|integer|boolean|timestamptz|bigint|smallint|date|xid8)"
 _COLUMNS = {
@@ -369,6 +370,15 @@ async def _check(conn: RuntimeConnection) -> None:
     """,
         [signature for signature, _ in _HELPERS.values()],
     )
+    # No rewrite rule may redirect or swallow a statement on these tables.
+    rules = await (
+        await conn.execute(
+            "select count(*) from pg_rewrite r join pg_class c on c.oid=r.ev_class "
+            "where c.relnamespace='gba'::regnamespace and c.relname=any(%s)",
+            ([*names, *_FOREIGN_TABLES],),
+        )
+    ).fetchone()
+    _require(rules is not None and rules[0] == 0, "rewrite rules")
     for function, (_, result) in _HELPERS.items():
         _require(
             helpers[function]

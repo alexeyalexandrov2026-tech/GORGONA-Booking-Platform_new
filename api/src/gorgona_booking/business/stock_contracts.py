@@ -34,7 +34,7 @@ type DecimalText = Annotated[
 type SupplierDocument = Annotated[
     str,
     StringConstraints(
-        strip_whitespace=True, min_length=1, max_length=64, pattern=r"^[^\x00-\x1f\x7f]+$"
+        strip_whitespace=True, min_length=1, max_length=64, pattern=r"^[^\x00-\x1f\x7f-\x9f]+$"
     ),
 ]
 RULE_ACCOUNTS = (

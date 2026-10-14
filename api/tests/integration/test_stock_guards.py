@@ -57,6 +57,22 @@ DAMAGE: dict[str, tuple[str, str]] = {
         KINDS.format("'receipt', 'write_off', 'transfer', 'return', 'anything'"),
         KINDS.format("'receipt', 'write_off', 'transfer', 'return'"),
     ),
+    # A rewrite rule, a dropped key and a trigger function running with its owner's rights.
+    "rewrite_rule": (
+        "create rule stock_movements_ignored as on update to gba.stock_movements "
+        "do instead nothing",
+        "drop rule stock_movements_ignored on gba.stock_movements",
+    ),
+    "source_key": (
+        "alter table gba.stock_document_lines drop constraint stock_document_lines_source_fkey",
+        "alter table gba.stock_document_lines add constraint stock_document_lines_source_fkey "
+        "foreign key (tenant_id, source_document_id, source_line_no) "
+        "references gba.stock_document_lines(tenant_id, document_id, line_no)",
+    ),
+    "definer": (
+        "alter function gba.guard_stock_document() security definer",
+        "alter function gba.guard_stock_document() security invoker",
+    ),
     # The right that lets a return lock its source line.
     "source_lock_grant": (
         "revoke update (line_no) on gba.stock_document_lines from gba_runtime",

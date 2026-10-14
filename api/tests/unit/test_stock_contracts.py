@@ -118,6 +118,7 @@ def test_receipt_input_accepts_the_documented_shape() -> None:
         {"reason": "opening_balance", "supplier_document": "INV-1"},
         {"supplier_document": "x" * 65},
         {"supplier_document": "two\nlines"},
+        {"supplier_document": "CN\u0085X"},
         {"document_date": "2026-13-01"},
         {"note": "x"},
         {"schema_version": 2},

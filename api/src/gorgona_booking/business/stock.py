@@ -84,6 +84,14 @@ class StockReturnExceededError(ConflictError):
     code = "STOCK_RETURN_EXCEEDED"
 
 
+class StockAccountArchivedError(ConflictError):
+    code = "STOCK_ACCOUNT_ARCHIVED"
+
+
+class StockBusyError(ConflictError):
+    code = "STOCK_BUSY"
+
+
 class StockReturnError(DomainError):
     code = "STOCK_RETURN_INVALID"
 
@@ -136,6 +144,12 @@ async def _writes(
             # Surface deferred integrity failures before returning the API result.
             await conn.execute("set constraints all immediate")
             await conn.execute("set constraints all deferred")
+    except psycopg.errors.DeadlockDetected as exc:
+        # PostgreSQL aborted this document to break a lock cycle; the same command with the
+        # same key can simply be repeated.
+        raise StockBusyError(
+            "Another stock document took the same balances at the same moment; repeat it"
+        ) from exc
     except psycopg.errors.SerializationFailure as exc:
         raise DatabaseUnavailableError(
             "Required ledger transaction settings are not ready"
@@ -559,6 +573,29 @@ def _entry(nets: list[tuple[UUID, int]]) -> list[tuple[UUID, Side, int]]:
     return lines
 
 
+async def _accounts_open(
+    conn: RuntimeConnection, business: UUID, book: UUID, accounts: list[UUID]
+) -> None:
+    """Every account of the entry is open. The ledger would refuse an archived one too,
+    only later and without naming it; nothing is written before this check.
+    """
+    if not accounts:
+        return
+    row = await (
+        await conn.execute(
+            "select a.id from gba.ledger_accounts a join lateral (select archived "
+            "from gba.ledger_account_versions where tenant_id=a.tenant_id and account_id=a.id "
+            "order by revision desc limit 1) v on true where a.tenant_id=%s and a.book_id=%s "
+            "and a.id=any(%s::uuid[]) and v.archived order by a.id limit 1",
+            (business, book, accounts),
+        )
+    ).fetchone()
+    if row is not None:
+        raise StockAccountArchivedError(
+            "An account of this journal entry is archived", account_id=str(row[0])
+        )
+
+
 async def post_document(
     conn: RuntimeConnection,
     business: UUID,
@@ -621,6 +658,9 @@ async def post_document(
             # A receipt debits inventory and credits the account of its reason.
             items = [line.item_id for line in body.lines]
             quantities, scales = await _quantities(conn, business, body)
+            # Rule 16: an inbound document takes the balance rows that exist before it
+            # inserts new ones, in the order material, place, like every other writer.
+            await _held(conn, business, body.legal_entity_id, body.place_id, items)
             amounts = _amounts(body, currency, scale)
             total = sum(amounts)
             nets = [(rules[_INVENTORY], total), (rules[_RECEIPT_ACCOUNT[body.reason]], -total)]
@@ -649,7 +689,9 @@ async def post_document(
             basis = sum(taken)
             if inbound:
                 # A returned write-off enters inventory at its share of the cost, from the
-                # account the write-off debited.
+                # account the write-off debited. Like a receipt, it takes the balance rows
+                # that exist before it inserts new ones.
+                await _held(conn, business, body.legal_entity_id, body.place_id, items)
                 amounts, total = taken, basis
                 spent = before[_CONSUMPTION if source[1] == "used" else _LOSS]
                 nets = [(rules[_INVENTORY], total), (spent, -total)]
@@ -665,6 +707,7 @@ async def post_document(
                     (rules[_INVENTORY], -total),
                 ]
         posted_lines = _entry(nets)
+        await _accounts_open(conn, business, book, [account for account, _, _ in posted_lines])
         entry = uuid7() if posted_lines else None
         origin = body.source_document_id if isinstance(body, ReturnInput) else None
 
@@ -946,8 +989,10 @@ async def load_document(
         to_location_id=head[11],
         source_document_id=head[12],
         document_date=head[6],
-        supplier_id=head[7],
-        supplier_document=head[8],
+        # The supplier is company-wide data, like the counterparty it names: it is read only
+        # together with the amounts.
+        supplier_id=head[7] if money else None,
+        supplier_document=head[8] if money else None,
         created_at=head[9],
         lines=tuple(_line(row, amounts.get(int(row[0])), scale) for row in rows),
         money=DocumentMoney(

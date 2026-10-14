@@ -82,6 +82,9 @@ def test_material_and_place_inputs_accept_the_documented_shape() -> None:
         {"quantity_scale": 1.5},
         {"name": ""},
         {"name": "FAKE\ndye"},
+        # Control characters of the C1 range too: PostgreSQL may refuse them as well.
+        {"name": "FAKE\u0085dye"},
+        {"unit": "m\u009fl"},
         {"expected_revision": -1},
         {"schema_version": 2},
         {"price": "1.00"},
@@ -99,6 +102,7 @@ def test_material_input_is_strict(change: dict[str, object]) -> None:
         {"code": ""},
         {"location_id": "not-a-uuid"},
         {"name": " "},
+        {"name": "FAKE\u0080room"},
         {"expected_revision": 2147483647},
         {"capacity": 5},
     ],

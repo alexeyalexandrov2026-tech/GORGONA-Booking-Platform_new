@@ -8,13 +8,13 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 type Label = Annotated[
     str,
     StringConstraints(
-        strip_whitespace=True, min_length=1, max_length=200, pattern=r"^[^\x00-\x1f\x7f]+$"
+        strip_whitespace=True, min_length=1, max_length=200, pattern=r"^[^\x00-\x1f\x7f-\x9f]+$"
     ),
 ]
 type Unit = Annotated[
     str,
     StringConstraints(
-        strip_whitespace=True, min_length=1, max_length=16, pattern=r"^[^\x00-\x1f\x7f]+$"
+        strip_whitespace=True, min_length=1, max_length=16, pattern=r"^[^\x00-\x1f\x7f-\x9f]+$"
     ),
 ]
 type Code = Annotated[str, StringConstraints(pattern=r"^[A-Z0-9][A-Z0-9_-]{0,63}$")]

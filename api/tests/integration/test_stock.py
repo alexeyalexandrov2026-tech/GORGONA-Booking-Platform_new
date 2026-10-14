@@ -132,7 +132,22 @@ class Stock:
         return {**counted, "stock_entries": int(str(entries[0][0]))}
 
     def reconciled(self) -> tuple[int, int]:
-        """Rule 14: the value of the materials and the stock lines on the inventory account."""
+        """Rule 14: the value of the materials and the stock lines on the inventory account.
+
+        Its quantity half is asserted here: for every material of the owner the cost
+        quantity, the balances of all places and the signed movements agree.
+        """
+        apart = self.rows(
+            "select c.item_id from gba.stock_costs c where c.legal_entity_id=%s and ("
+            "c.quantity<>(select coalesce(sum(b.quantity),0) from gba.stock_balances b "
+            "where b.tenant_id=c.tenant_id and b.legal_entity_id=c.legal_entity_id "
+            "and b.item_id=c.item_id) or c.quantity<>(select coalesce(sum(case m.direction "
+            "when 'in' then m.quantity else -m.quantity end),0) from gba.stock_movements m "
+            "where m.tenant_id=c.tenant_id and m.legal_entity_id=c.legal_entity_id "
+            "and m.item_id=c.item_id))",
+            self.entity,
+        )
+        assert apart == [], apart
         value = self.rows(
             "select coalesce(sum(value_minor),0) from gba.stock_costs where legal_entity_id=%s",
             self.entity,
@@ -589,10 +604,11 @@ async def test_refused_receipts_leave_no_parts(stock: Stock) -> None:
     sealed = await stock.post(stock.receipt([line], place_id=shut["place_id"]))
     assert error(sealed) == (409, "STOCK_ARCHIVED"), sealed.text
 
-    # A failure at the last step, the journal entry, leaves nothing behind either.
+    # An archived account of the entry is named before anything is written.
     await stock.account("1400", "asset", "Prepaid expenses", 1, True)
     broken = await stock.post(stock.receipt([line]))
-    assert error(broken) == (409, "LEDGER_STATE_INVALID"), broken.text
+    assert error(broken) == (409, "STOCK_ACCOUNT_ARCHIVED"), broken.text
+    assert broken.json()["error"]["details"] == {"account_id": str(stock.accounts["1400"])}
     assert set(stock.counts().values()) == {0}
 
     # With the account reopened the same receipt posts, with its supplier.

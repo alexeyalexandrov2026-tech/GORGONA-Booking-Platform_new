@@ -26,7 +26,7 @@ accepted = shared.accepted
 client = shared.client
 idp = shared.idp
 manager_a = shared.manager_a
-LATEST = 40
+LATEST = 41
 # The columns that every schema since 0037 has in the tables later slices only add to.
 GAINED = {
     "stock_documents": (
