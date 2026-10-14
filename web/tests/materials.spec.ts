@@ -52,6 +52,8 @@ async function accessible(page: Page, testInfo: TestInfo, name: string) {
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  // A phone widens its layout viewport to fit a wider page: compare with the screen too.
+  expect(await page.evaluate(() => innerWidth <= screen.width)).toBe(true);
   await page.screenshot({
     path: testInfo.outputPath(`${name}.png`),
     fullPage: true,

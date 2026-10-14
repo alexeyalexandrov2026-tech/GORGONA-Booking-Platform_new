@@ -1,0 +1,111 @@
+/* The Materials and Stock documents screens. */
+.inventory-screen {
+  min-width: 0;
+}
+.inventory-screen section,
+.inventory-screen form {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 18px;
+  margin: 20px 0;
+  background: #fff;
+  min-width: 0;
+}
+.inventory-screen section form {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.inventory-screen form > label,
+.inventory-screen section > label,
+.inventory-screen .stock-line label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  max-width: 420px;
+}
+.inventory-screen label:has(> input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.inventory-screen fieldset {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin: 16px 0;
+  padding: 12px 16px;
+  min-width: 0;
+}
+.inventory-screen .stock-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0 16px;
+  border-bottom: 1px solid #ebe6df;
+  padding-bottom: 8px;
+}
+.inventory-screen .stock-line label {
+  flex: 1 1 180px;
+}
+.inventory-screen .stock-line p {
+  margin: 12px 0;
+}
+.inventory-screen dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 16px;
+}
+.inventory-screen dt {
+  font-weight: 600;
+}
+.inventory-screen dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.inventory-screen .table-scroll {
+  overflow-x: auto;
+  margin: 1rem 0;
+  /* Hidden header text is placed inside this box, so it never widens the page. */
+  position: relative;
+}
+.inventory-screen table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.inventory-screen th,
+.inventory-screen td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #d2d6da;
+  overflow-wrap: anywhere;
+}
+/* The document list has many columns: on a phone it scrolls inside its box (its rows
+   hold buttons, so the box is reachable by keyboard) instead of breaking every word. */
+.inventory-screen table.wide {
+  min-width: 36rem;
+}
+.inventory-screen table.wide th,
+.inventory-screen table.wide td {
+  overflow-wrap: break-word;
+}
+.inventory-screen .warning {
+  border-left: 3px solid #8a5a00;
+  padding: 14px 18px;
+  background: #fbf1dc;
+  color: #4a3000;
+}
+.inventory-screen .warning h2 {
+  margin-top: 0;
+}
+.inventory-screen .warning button {
+  margin: 8px 8px 0 0;
+}
+.inventory-screen .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

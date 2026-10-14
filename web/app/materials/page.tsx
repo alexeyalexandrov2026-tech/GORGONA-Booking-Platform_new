@@ -1,7 +1,7 @@
 "use client";
 import { ManagementLayout } from "../../components/management-layout";
 import { Materials } from "../../components/materials";
-import "./materials.css";
+import "../inventory.css";
 
 export default function MaterialsPage() {
   return (

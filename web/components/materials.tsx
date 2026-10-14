@@ -1,288 +1,30 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ManagementApiError,
-  fetchWorkspace,
-  type LocationItem,
-} from "../lib/management-api";
+import { useCallback, useEffect, useState } from "react";
+import { fetchWorkspace, type LocationItem } from "../lib/management-api";
 import { fetchAccounts, fetchLedger } from "../lib/ledger-api";
 import {
-  executeMaterialsCommand,
   fetchBalances,
   fetchCosts,
   fetchItems,
   fetchPlaces,
   fetchPostingRules,
-  settleInventoryCommand,
 } from "../lib/inventory-api";
 import {
   RULE_ACCOUNTS,
   type Balance,
   type Cost,
   type Item,
-  type MaterialsCommand,
   type Place,
   type PostingRules,
   type RuleAccount,
 } from "../lib/inventory-contracts";
 import {
-  clearInventoryRecovery,
-  discardUnreadableInventoryRecovery,
-  preserveInventoryRecovery,
-  readInventoryRecovery,
-  type InventoryRecovery,
-} from "../lib/inventory-recovery";
-
-const REFUSALS: Record<string, string> = {
-  MODULE_DISABLED:
-    "Materials are switched off for this business. What was recorded stays readable; new changes are unavailable.",
-  MODULE_NOT_READY: "Materials are not available for this business yet.",
-  IDEMPOTENCY_KEY_REUSED:
-    "This change was already discarded. Start it again from the current record.",
-  TOO_MANY_DISCARDED_COMMANDS:
-    "Too many changes were discarded today. Check the result again later.",
-  PERMISSION_DENIED: "Your access does not allow this change.",
-};
-const explain = (error: unknown) =>
-  error instanceof ManagementApiError
-    ? (REFUSALS[error.code] ?? error.message)
-    : error instanceof Error
-      ? error.message
-      : "Unable to complete this action.";
-/** No answer, a broken answer or a server fault: the command may have been recorded. */
-const uncertain = (error: unknown) =>
-  !(error instanceof ManagementApiError) ||
-  error.status === undefined ||
-  error.status >= 500;
-
-type Center = {
-  busy: boolean;
-  blocked: boolean;
-  error: string | null;
-  message: string | null;
-  recovery: InventoryRecovery | null;
-  unresolved: boolean;
-  canResend: boolean;
-  run: (command: MaterialsCommand, done: string) => Promise<boolean>;
-  check: () => Promise<void>;
-  resend: () => Promise<void>;
-  discard: () => Promise<void>;
-};
-
-/**
- * One change at a time. Its key and the version it should produce are saved before
- * sending; a lost answer is settled with the server by that key, never by a new one.
- */
-function useMaterialsCommands(
-  businessId: string,
-  actorId: string,
-  refresh: () => Promise<void>,
-): Center {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [recovery, setRecovery] = useState<InventoryRecovery | null>(null);
-  const [unresolved, setUnresolved] = useState(false);
-  const [canResend, setCanResend] = useState(false);
-  const pending = useRef<{ command: MaterialsCommand; done: string } | null>(
-    null,
-  );
-  const running = useRef(false);
-  const latest = useRef(refresh);
-  useEffect(() => {
-    latest.current = refresh;
-  }, [refresh]);
-
-  const reloaded = useCallback(async () => {
-    try {
-      await latest.current();
-    } catch (failure) {
-      setError(explain(failure));
-    }
-  }, []);
-  const finish = useCallback(
-    (key: string, text: string) => {
-      clearInventoryRecovery(actorId, businessId, key);
-      pending.current = null;
-      setRecovery(null);
-      setUnresolved(false);
-      setCanResend(false);
-      setMessage(text);
-    },
-    [actorId, businessId],
-  );
-  const settle = useCallback(
-    async (saved: InventoryRecovery, cancel: boolean) => {
-      if (running.current) return;
-      running.current = true;
-      setBusy(true);
-      setError(null);
-      try {
-        const outcome = await settleInventoryCommand(
-          businessId,
-          saved.key,
-          saved.reference,
-          cancel,
-        );
-        if (outcome.state === "unresolved") setUnresolved(true);
-        else {
-          await reloaded();
-          finish(
-            saved.key,
-            outcome.state === "committed"
-              ? "Your earlier change was recorded."
-              : "The earlier change was discarded. Nothing was recorded.",
-          );
-        }
-      } catch (failure) {
-        setError(explain(failure));
-      } finally {
-        running.current = false;
-        setBusy(false);
-      }
-    },
-    [businessId, finish, reloaded],
-  );
-  useEffect(() => {
-    let active = true;
-    void Promise.resolve().then(async () => {
-      let saved: InventoryRecovery | null;
-      try {
-        saved = readInventoryRecovery(actorId, businessId);
-      } catch {
-        discardUnreadableInventoryRecovery(actorId, businessId);
-        if (active)
-          setError(
-            "A saved reference to an earlier change could not be read and was removed. Check the lists.",
-          );
-        return;
-      }
-      if (!saved || !active) return;
-      setRecovery(saved);
-      // After a reload the body is gone; the server answers by the original key.
-      await settle(saved, false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [actorId, businessId, settle]);
-
-  async function send(command: MaterialsCommand, done: string) {
-    try {
-      await executeMaterialsCommand(businessId, command);
-      await reloaded();
-      finish(command.key, done);
-      return true;
-    } catch (failure) {
-      if (uncertain(failure)) {
-        pending.current = { command, done };
-        setCanResend(true);
-        setUnresolved(false);
-        setRecovery(readInventoryRecovery(actorId, businessId));
-        return false;
-      }
-      clearInventoryRecovery(actorId, businessId, command.key);
-      pending.current = null;
-      setRecovery(null);
-      setUnresolved(false);
-      setCanResend(false);
-      setError(explain(failure));
-      await reloaded();
-      return false;
-    }
-  }
-  return {
-    busy,
-    blocked: busy || recovery !== null,
-    error,
-    message,
-    recovery,
-    unresolved,
-    canResend,
-    run: async (command, done) => {
-      // A second activation before the screen re-renders is ignored, not queued.
-      if (running.current) return false;
-      if (recovery) {
-        setError("Settle the earlier change before starting another.");
-        return false;
-      }
-      running.current = true;
-      setBusy(true);
-      setError(null);
-      setMessage(null);
-      try {
-        preserveInventoryRecovery(actorId, businessId, command);
-        return await send(command, done);
-      } catch (failure) {
-        setError(explain(failure));
-        return false;
-      } finally {
-        running.current = false;
-        setBusy(false);
-      }
-    },
-    check: async () => {
-      if (recovery && !busy) await settle(recovery, false);
-    },
-    resend: async () => {
-      const again = pending.current;
-      if (!again || running.current) return;
-      running.current = true;
-      setBusy(true);
-      setError(null);
-      try {
-        await send(again.command, again.done);
-      } finally {
-        running.current = false;
-        setBusy(false);
-      }
-    },
-    discard: async () => {
-      if (recovery && !busy) await settle(recovery, true);
-    },
-  };
-}
-
-function Notices({ center }: { center: Center }) {
-  return (
-    <>
-      {center.error && (
-        <p role="alert" className="error">
-          {center.error}
-        </p>
-      )}
-      {center.message && <p role="status">{center.message}</p>}
-      {center.recovery && (
-        <section aria-label="Materials change recovery" className="warning">
-          <h2>Result not confirmed</h2>
-          <p>
-            {center.unresolved
-              ? "The server has no record of your last change yet. It may still be in progress: check again in a moment, send the same change again, or discard it before starting anything else."
-              : "We could not confirm whether your last change was recorded. Check the result before starting anything else."}
-          </p>
-          <button disabled={center.busy} onClick={() => void center.check()}>
-            Check the result
-          </button>
-          {center.unresolved && center.canResend && (
-            <button disabled={center.busy} onClick={() => void center.resend()}>
-              Send the same change again
-            </button>
-          )}
-          {center.unresolved && (
-            <button
-              className="secondary"
-              disabled={center.busy}
-              onClick={() => void center.discard()}
-            >
-              Discard this change
-            </button>
-          )}
-        </section>
-      )}
-    </>
-  );
-}
+  InventoryNotices,
+  explain,
+  useInventoryCommands,
+  type CommandCenter,
+} from "./inventory-commands";
 
 const CODE = /^[A-Z0-9][A-Z0-9_-]{0,63}$/;
 const TEXT = /^[^\u0000-\u001f\u007f-\u009f]+$/;
@@ -358,7 +100,7 @@ export function Materials({
       active = false;
     };
   }, [read, show]);
-  const center = useMaterialsCommands(businessId, actorId, load);
+  const center = useInventoryCommands(businessId, actorId, load);
   const itemName = (id: string) => {
     const item = items.find((x) => x.item_id === id);
     return item ? `${item.code} · ${item.name}` : id;
@@ -371,14 +113,14 @@ export function Materials({
     owners.find((x) => x.id === id)?.label ?? id;
 
   return (
-    <div className="materials">
+    <div className="inventory-screen materials">
       <h1>Materials</h1>
       {failed && (
         <p role="alert" className="error">
           {failed}
         </p>
       )}
-      <Notices center={center} />
+      <InventoryNotices center={center} label="Materials change recovery" />
       <section aria-label="Material list">
         <h2>Materials</h2>
         {items.length === 0 ? (
@@ -513,7 +255,13 @@ export function Materials({
   );
 }
 
-function ItemEditor({ items, center }: { items: Item[]; center: Center }) {
+function ItemEditor({
+  items,
+  center,
+}: {
+  items: Item[];
+  center: CommandCenter;
+}) {
   const [editing, setEditing] = useState("");
   const current = items.find((x) => x.item_id === editing) ?? null;
   const [code, setCode] = useState("");
@@ -631,7 +379,7 @@ function PlaceEditor({
 }: {
   places: Place[];
   locations: LocationItem[];
-  center: Center;
+  center: CommandCenter;
 }) {
   const [editing, setEditing] = useState("");
   const current = places.find((x) => x.place_id === editing) ?? null;
@@ -746,7 +494,7 @@ function RulesEditor({
 }: {
   businessId: string;
   owners: Owner[];
-  center: Center;
+  center: CommandCenter;
 }) {
   const booked = owners.filter((x) => x.book !== null);
   const [owner, setOwner] = useState("");
@@ -840,7 +588,7 @@ function RulesForm({
   book: string;
   accounts: Account[];
   rules: PostingRules | null;
-  center: Center;
+  center: CommandCenter;
 }) {
   const [chosen, setChosen] = useState<Partial<Record<RuleAccount, string>>>(
     () =>

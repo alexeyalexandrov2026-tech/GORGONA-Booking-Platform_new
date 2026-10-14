@@ -156,8 +156,191 @@ export type MaterialsCommand =
   | { type: "place"; id: string; key: string; body: PlaceBody }
   | { type: "posting_rules"; book: string; key: string; body: RulesBody };
 
+export const DOCUMENT_KINDS = [
+  ["receipt", "Receipt"],
+  ["write_off", "Write-off"],
+  ["transfer", "Transfer"],
+  ["return", "Return"],
+] as const;
+export type DocumentKind = (typeof DOCUMENT_KINDS)[number][0];
+/** The reasons of each kind, in the order the server names them. */
+export const DOCUMENT_REASONS = {
+  receipt: [
+    ["purchase", "Purchase"],
+    ["opening_balance", "Opening balance"],
+    ["surplus", "Surplus"],
+  ],
+  write_off: [
+    ["used", "Used"],
+    ["damaged", "Damaged"],
+    ["lost", "Lost"],
+    ["expired", "Expired"],
+    ["other", "Other"],
+  ],
+  transfer: [["relocation", "Relocation"]],
+  return: [
+    ["supplier_return", "Return to supplier"],
+    ["unused", "Unused, back to stock"],
+    ["entry_error", "Entry error"],
+  ],
+} as const;
+type LineBody = { item_id: string; quantity: string };
+type Dated = {
+  schema_version: 1;
+  legal_entity_id: string;
+  place_id: string;
+  document_date: string;
+};
+export type DocumentBody =
+  | (Dated & {
+      kind: "receipt";
+      reason: string;
+      supplier_id: string | null;
+      supplier_document: string | null;
+      lines: (LineBody & { amount: string })[];
+    })
+  | (Dated & { kind: "write_off"; reason: string; lines: LineBody[] })
+  | (Dated & { kind: "transfer"; to_place_id: string; lines: LineBody[] })
+  | (Dated & {
+      kind: "return";
+      reason: string;
+      source_document_id: string;
+      supplier_id: string | null;
+      supplier_document: string | null;
+      lines: { source_line_no: number; quantity: string }[];
+    });
+/** Every command whose answer can be settled by its key. */
+export type InventoryCommand =
+  | MaterialsCommand
+  | { type: "document"; id: string; key: string; body: DocumentBody };
+
+const day = z.iso.date();
+const instant = z.iso.datetime({ offset: true });
+const amount = z.string().regex(/^(0|[1-9]\d{0,14})(\.\d{1,3})?$/);
+const documentKind = z.enum(["receipt", "write_off", "transfer", "return"]);
+type Placed = {
+  kind: DocumentKind;
+  reason: string;
+  to_place_id: string | null;
+  to_location_id: string | null;
+  source_document_id: string | null;
+};
+/** A transfer names where it arrives, a return what it returns, and nothing else does. */
+const placed = (v: Placed) =>
+  (DOCUMENT_REASONS[v.kind] as readonly (readonly string[])[]).some(
+    ([reason]) => reason === v.reason,
+  ) &&
+  (v.kind === "transfer") === (v.to_place_id !== null) &&
+  (v.to_place_id === null) === (v.to_location_id === null) &&
+  (v.kind === "return") === (v.source_document_id !== null);
+const documentSummarySchema = z
+  .strictObject({
+    document_id: id,
+    kind: documentKind,
+    reason: z.string(),
+    legal_entity_id: id,
+    place_id: id,
+    location_id: id,
+    to_place_id: id.nullable(),
+    to_location_id: id.nullable(),
+    source_document_id: id.nullable(),
+    document_date: day,
+    line_count: z.number().int().min(1).max(100),
+    created_at: instant,
+  })
+  .refine(placed, "Inconsistent document.");
+export type DocumentSummary = z.infer<typeof documentSummarySchema>;
+export const documentListSchema = z
+  .strictObject({
+    ...version,
+    items: z.array(documentSummarySchema).max(100),
+    next_cursor: id.nullable(),
+  })
+  .refine((v) => unique(v.items, (x) => x.document_id), "Duplicate documents.");
+const documentLineSchema = z.strictObject({
+  line_no: z.number().int().min(1).max(100),
+  item_id: id,
+  quantity,
+  amount: amount.nullable(),
+  source_line_no: z.number().int().min(1).max(100).nullable(),
+  source_amount: amount.nullable(),
+});
+export const documentSchema = z
+  .strictObject({
+    ...envelope,
+    document_id: id,
+    kind: documentKind,
+    reason: z.string(),
+    legal_entity_id: id,
+    place_id: id,
+    location_id: id,
+    to_place_id: id.nullable(),
+    to_location_id: id.nullable(),
+    source_document_id: id.nullable(),
+    document_date: day,
+    supplier_id: id.nullable(),
+    supplier_document: z.string().min(1).max(64).nullable(),
+    created_at: instant,
+    lines: z.array(documentLineSchema).min(1).max(100),
+    money: z
+      .strictObject({
+        book_id: id,
+        rule_revision: revision,
+        currency: z.string().regex(/^[A-Z]{3}$/),
+        total: amount,
+        entry_id: id.nullable(),
+      })
+      .nullable(),
+  })
+  .refine(placed, "Inconsistent document.")
+  .refine(
+    (v) => unique(v.lines, (x) => String(x.line_no)),
+    "Duplicate document lines.",
+  )
+  // Amounts come with the money of the document or not at all; a transfer has none.
+  .refine(
+    (v) =>
+      (v.kind !== "transfer" || v.money === null) &&
+      v.lines.every(
+        (line) =>
+          (line.amount === null) === (v.money === null) &&
+          (line.source_line_no === null) === (v.kind !== "return") &&
+          (line.source_amount === null ||
+            (v.kind === "return" && v.money !== null)),
+      ),
+    "Amounts and money disagree.",
+  );
+export type StockDocument = z.infer<typeof documentSchema>;
+
+function count(text: string, scale: number): bigint | null {
+  const match = /^(0|[1-9]\d{0,14})(?:\.(\d{1,3}))?$/.exec(text);
+  if (!match || (match[2]?.length ?? 0) > scale) return null;
+  return (
+    BigInt(match[1]!) * 10n ** BigInt(scale) +
+    BigInt((match[2] ?? "").padEnd(scale, "0") || "0")
+  );
+}
+/** A positive quantity within the decimal places of its material and the server's limit. */
+export function quantityFits(text: string, scale: number) {
+  const value = count(text, scale);
+  return value !== null && value >= 1n && value <= 999_999_999_999n;
+}
+/** An amount within the minor units of the book's currency and the server's limit. */
+export function amountFits(text: string, scale: number) {
+  const value = count(text, scale);
+  return value !== null && value <= 999_999_999_999_999n;
+}
+
 /** The reference a command will resolve to once it has taken effect. */
-export function commandReference(command: MaterialsCommand): CommandReference {
+export function commandReference(command: InventoryCommand): CommandReference {
+  // A document is posted once and has no versions.
+  if (command.type === "document")
+    return {
+      schema_version: 1,
+      operation: "document",
+      subject_id: command.id,
+      revision: 0,
+    };
   const revision = command.body.expected_revision + 1;
   if (command.type === "posting_rules")
     return {
@@ -206,5 +389,12 @@ export function inventoryResponseSchema(
     ["GET", "PUT"].includes(method)
   )
     return postingRulesSchema;
+  if (suffix === "/inventory/documents" && method === "GET")
+    return documentListSchema;
+  if (
+    /^\/inventory\/documents\/[0-9a-f-]{36}$/i.test(suffix) &&
+    ["GET", "PUT"].includes(method)
+  )
+    return documentSchema;
   return null;
 }

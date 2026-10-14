@@ -4,13 +4,15 @@ import {
   balanceListSchema,
   commandStatusSchema,
   costListSchema,
+  documentListSchema,
+  documentSchema,
   itemListSchema,
   itemSchema,
   placeListSchema,
   placeSchema,
   postingRulesSchema,
   type CommandReference,
-  type MaterialsCommand,
+  type InventoryCommand,
 } from "./inventory-contracts";
 
 const base = (business: string) => `/v1/businesses/${business}/inventory`;
@@ -80,15 +82,35 @@ export async function fetchPostingRules(business: string, book: string) {
   }
 }
 
-export async function executeMaterialsCommand(
+export const fetchDocuments = (
   business: string,
-  command: MaterialsCommand,
+  place?: string,
+  after?: string,
+) =>
+  read(
+    business,
+    documentListSchema,
+    `${base(business)}/documents${query({ place_id: place, after })}`,
+  );
+export const fetchDocument = (business: string, document: string) =>
+  read(business, documentSchema, `${base(business)}/documents/${document}`);
+
+export async function executeInventoryCommand(
+  business: string,
+  command: InventoryCommand,
 ) {
   const init = {
     method: "PUT",
     body: JSON.stringify(command.body),
     headers: { "Idempotency-Key": command.key },
   };
+  if (command.type === "document")
+    return read(
+      business,
+      documentSchema,
+      `${base(business)}/documents/${command.id}`,
+      init,
+    );
   if (command.type === "item")
     return read(
       business,

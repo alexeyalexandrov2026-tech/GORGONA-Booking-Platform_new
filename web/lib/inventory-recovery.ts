@@ -3,7 +3,7 @@ import {
   commandKeySchema,
   commandReference,
   commandReferenceSchema,
-  type MaterialsCommand,
+  type InventoryCommand,
 } from "./inventory-contracts";
 
 export const inventoryRecoverySchema = z.strictObject({
@@ -35,7 +35,7 @@ export function readInventoryRecovery(
 export function preserveInventoryRecovery(
   actor: string,
   business: string,
-  command: MaterialsCommand,
+  command: InventoryCommand,
 ): InventoryRecovery {
   const earlier = readInventoryRecovery(actor, business);
   const reference = commandReference(command);
