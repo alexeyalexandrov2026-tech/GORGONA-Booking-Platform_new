@@ -157,7 +157,10 @@ CI её вершины `7e31cc8` — PASS: см.
 без миграций: [запись](evidence/2026-10-14-j5b-stock-documents/VALIDATION.md). Ветка
 опубликована без PR; CI её вершины `f521528` — PASS (run 38557234709).
 Подготовка к приёмке — срез J6, ветка `codex/package-j-acceptance-prep` от `f521528`, миграция 0042:
-[запись](evidence/2026-10-14-j6-acceptance-prep/VALIDATION.md).
+[запись](evidence/2026-10-14-j6-acceptance-prep/VALIDATION.md). Ветка опубликована без PR;
+CI её вершины `b3982ba` — PASS (run 38613331894). Независимый обзор J5 и J6:
+[запись](evidence/2026-10-14-j5-j6-review/REVIEW.md); H1 исправлена миграцией 0043:
+[запись](evidence/2026-10-14-j5-j6-review-fixes/VALIDATION.md).
 
 ## Данные
 

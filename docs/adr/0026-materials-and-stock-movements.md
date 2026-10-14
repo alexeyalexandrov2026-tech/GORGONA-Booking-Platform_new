@@ -437,6 +437,14 @@ Commit `35227cd` on `codex/package-j-acceptance-prep`:
    after (45 ms with no history). Migration 0042 rewrites every movement and valuation:
    like 0037, it needs a maintenance window when deployed.
 
+## Implementation notes — review of J5 and J6, part 1 (2026-10-14)
+
+An independent read-only review found that the commit-time checks of migration 0042 passed
+a forged total when the session changed its company or branch before commit, because an
+unseen total equalled an unseen head. Migration 0043 (`f366afe`) refuses a total that a
+check cannot see. [Review](../plan/evidence/2026-10-14-j5-j6-review/REVIEW.md),
+[record](../plan/evidence/2026-10-14-j5-j6-review-fixes/VALIDATION.md).
+
 ## Acceptance and status
 
 The matrix J-01–J-14 is in the plan. The module stays closed by the readiness lock until

@@ -1,6 +1,17 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-14: package J acceptance preparation (J6) committed; M2 fixed; not merged
+## Current checkpoint — 2026-10-14: review of J5 and J6 done; H1 fixed (part 1); not merged
+
+Независимый обзор J5 и J6 проведён: высокая находка H1 (подделка остатка проходила проверку
+0042 при смене контекста перед фиксацией) исправлена миграцией 0043: `f366afe` на ветке
+`codex/package-j-review2-fixes`. Полный локальный прогон — **PASS: 1746 passed, 4 skipped in 1428.69s (0:23:48)**. Ветка J6 опубликована, CI её
+вершины `b3982ba` — PASS. Открыты M1, L2, L3 и тест гонки (часть 2), затем приёмка.
+CI этой ветки на момент записи — NOT TESTED. `main` не переносился.
+
+[Актуальный handoff](docs/plan/NEXT_AGENT_PACKAGE_J_REVIEW2_FIXES_2026-10-14.md),
+[запись обзора](docs/plan/evidence/2026-10-14-j5-j6-review/REVIEW.md).
+
+## Previous checkpoint — 2026-10-14: package J acceptance preparation (J6) committed; M2 fixed; not merged
 
 Находка M2 независимого обзора измерена и устранена миграцией 0042: при 100 000 движений
 одной строки остатка проводка шла 960 мс, теперь 43 мс (45 мс без истории). Добавлены

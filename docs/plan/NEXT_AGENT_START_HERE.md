@@ -1,6 +1,12 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: package J acceptance preparation (J6) committed; M2 fixed; not merged — 2026-10-14
+## Current: review of J5 and J6 done; H1 fixed (part 1); not merged — 2026-10-14
+
+Read the [handoff](NEXT_AGENT_PACKAGE_J_REVIEW2_FIXES_2026-10-14.md) first. H1 of the
+review of J5 and J6 is fixed by migration 0043: `f366afe` on `codex/package-j-review2-fixes` (complete local
+suite 1746 passed, 4 skipped). Open: part 2 of the fixes and the acceptance.
+
+## Previous: package J acceptance preparation (J6) committed; M2 fixed; not merged — 2026-10-14
 
 Read the [handoff](NEXT_AGENT_PACKAGE_J6_ACCEPTANCE_PREP_2026-10-14.md) first. Finding
 M2 is fixed by migration 0042 and rows J-12 and J-13 are tested: `35227cd` on
