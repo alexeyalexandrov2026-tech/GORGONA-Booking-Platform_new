@@ -1,6 +1,31 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-13: package J slice J4 part one (transfers) published; CI success; not merged
+## Current checkpoint — 2026-10-13: package J slice J4 part two (returns) committed; part one published
+
+Вторая часть среза J4 пакета J (возврат по строке исходного документа) написана и
+закоммичена: `4bd346c` на ветке `codex/package-j4-returns`, поверх опубликованной вершины
+первой части (`014e611`). Возврат называет приёмку или списание того же владельца и их
+строки, движется обратно источнику и не превышает количества исходной строки. Строка
+возврата забирает долю суммы исходной строки; по приёмке запасы уходят по средней цене,
+а разница идёт на счёт разницы цен; по списанию материал возвращается по доле его
+стоимости. Миграция 0040 таблиц не добавляет. Срез J4 этим закончен; экранов ещё нет.
+STOCK-01 остаётся `planned`, модуль в продукте включить нельзя; ADR-0026 остаётся
+Proposed.
+
+Проверки: full local **PASS: 1709 passed, 4 skipped in 1637.88s (0:27:17)**; Ruff, format и mypy
+PASS на 284 файлах; web typecheck, lint, format, 102 unit и сборка PASS. Гонка двух
+возвратов последнего количества засчитана с наблюдаемым ожиданием в `pg_locks`.
+Независимый обзор J1–J4 — NOT TESTED: исполнитель проводит его после этой части. CI этой
+ветки на момент записи — NOT TESTED: запись сделана до публикации. `main` не
+переносился. Где `main` и что опубликовано, читать из `git ls-remote origin`.
+
+[Актуальный handoff](NEXT_AGENT_PACKAGE_J4_RETURNS_2026-10-13.md),
+[готовый prompt](NEXT_AGENT_PACKAGE_J4_RETURNS_PROMPT_2026-10-13.md),
+[запись о срезе](evidence/2026-10-13-j4-returns/VALIDATION.md),
+[план пакета J](PACKAGE_J_PLAN_2026-10-13.md),
+[ADR-0026 (Proposed)](../adr/0026-materials-and-stock-movements.md).
+
+## Previous checkpoint — 2026-10-13: package J slice J4 part one (transfers) published; CI success; not merged
 
 Первая часть среза J4 пакета J (перемещение между местами хранения) написана,
 закоммичена и опубликована: `0d923a4` на ветке `codex/package-j4-transfers`, поверх опубликованной вершины

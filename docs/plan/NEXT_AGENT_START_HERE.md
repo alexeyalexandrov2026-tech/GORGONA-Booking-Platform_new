@@ -1,6 +1,25 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: package J slice J4 part one (transfers) published, CI success; not merged — 2026-10-13
+## Current: package J slice J4 part two (returns) committed; part one published — 2026-10-13
+
+Read the [handoff](NEXT_AGENT_PACKAGE_J4_RETURNS_2026-10-13.md) first, then the
+[record](evidence/2026-10-13-j4-returns/VALIDATION.md), the [plan](PACKAGE_J_PLAN_2026-10-13.md) and
+[ADR-0026 (Proposed)](../adr/0026-materials-and-stock-movements.md).
+Checkout `C:\Users\alexa\.codex\worktrees\package-j4-returns\Gorgona Booking`, branch
+`codex/package-j4-returns` (base `014e611`, the published head of the first part of J4). Read
+from `git ls-remote origin` where `main` is and what is published; package J branches are
+pushed without a pull request, for CI.
+This part is commit `4bd346c`: returns against a line of an earlier receipt or write-off.
+A return moves against its source, never exceeds the quantity of the source line and takes
+its share of the amount of that line; against a receipt the difference to the average cost
+goes to the price-difference account; migration 0040. The complete local suite passes
+(1709 passed, 4 skipped); there is no independent review yet and no CI result at the time
+of this record. Slice J4 is complete; STOCK-01 stays planned. Next: one independent review
+of J1–J4, then the screens (J5) and the acceptance.
+Deployment and production migration are not authorized. Read the actual HEAD, remote, PR
+and CI state before continuing.
+
+## Previous: package J slice J4 part one (transfers) published, CI success; not merged — 2026-10-13
 
 Read the [handoff](NEXT_AGENT_PACKAGE_J4_TRANSFERS_2026-10-13.md) first, then the
 [record](evidence/2026-10-13-j4-transfers/VALIDATION.md), the [plan](PACKAGE_J_PLAN_2026-10-13.md) and

@@ -1,7 +1,7 @@
 # ADR-0026 — Basic materials: owner-linked stock documents, moving-average cost and ledger postings
 
-- Status: **Proposed (2026-10-13)**. Slices J1, J2, J3 and the transfers of slice J4 are
-  implemented (see the implementation notes below); returns and the screens are not. The
+- Status: **Proposed (2026-10-13)**. Slices J1 to J4 are implemented (see the
+  implementation notes below); the screens are not. The
   owner chose the twelve options
   of the [package J plan](../plan/PACKAGE_J_PLAN_2026-10-13.md) on 2026-10-13; this text
   follows them. It becomes Accepted only with the technical acceptance of STOCK-01.
@@ -319,6 +319,52 @@ Choices made while implementing; none of them changes an owner decision:
    the answer is the typed shortage, which discloses nothing.
 10. The packaged schema check learned the columns and foreign keys that a later migration
     adds to an earlier table, and adds up insert grants across migrations.
+
+## Implementation notes — slice J4, returns (2026-10-13)
+
+The second part of slice J4 is commit `4bd346c` on the branch `codex/package-j4-returns`,
+on top of the transfers: migration 0040 and returns against a source line. Record:
+[validation](../plan/evidence/2026-10-13-j4-returns/VALIDATION.md).
+
+Choices made while implementing; none of them changes an owner decision:
+
+1. Migration 0040 adds no table. A document gains its source document; a line gains its
+   source document and source line, with a key that lets one return name a source line
+   once; a valuation gains the share of the amount of the source line. The migration
+   replaces four checks and five functions.
+2. One return names one source document. A line names a line of it and a quantity; the
+   material is the material of that line and the command carries no amount.
+3. The reasons follow the source: `supplier_return` or `entry_error` against a receipt,
+   `unused` or `entry_error` against a write-off. The database refuses the others.
+4. A return has its own storage place: where the material leaves from or comes back to.
+   It need not be the place of the source document, because a transfer may have moved
+   the material since.
+5. The limit of decision 9 is checked by the line trigger under `for update` of the
+   source line. A line never changes, so the runtime role had no right to lock one: it
+   now holds UPDATE on one column of a line, and the immutability trigger still refuses
+   every change. The refusal is SQLSTATE `GBS03`, 409 `STOCK_RETURN_EXCEEDED` in the API.
+   Returns are money documents and queue on the ledger lock first, so this row lock is a
+   second line of defence.
+6. The share of a line amount is taken from what is left of the line: left amount times
+   the returned quantity over the left quantity, half up with whole numbers. It is
+   proportional to the quantity, the return that completes the line takes the remainder,
+   and no share can exceed what is left. The valuation trigger computes it and refuses
+   any other.
+7. The account that a return moves for its source comes from the posting rules the
+   source was posted with; the price-difference account comes from the current rules,
+   which the return itself is posted with.
+8. A journal entry carries one line per account, so two accounts that coincide are
+   netted. The whole-document check compares the set of accounts and amounts for every
+   kind of money document instead of two lines in a fixed order.
+9. The total of a document is what it moves on the inventory account. A return of a
+   receipt can post an entry with a zero total, when only the receipt account and the
+   difference move; the table check therefore asks for an entry only when the total is
+   above zero, and the whole-document check decides the rest.
+10. A return to the supplier may name the supplier and the supplier's document number.
+    The supplier is not compared with the supplier of the receipt.
+11. The date of a return is not compared with the date of its source: cost follows the
+    order of posting, as decision 6 says. From decision 2, an archived place and an
+    archived material let a return leave and take none in.
 
 ## Acceptance and status
 
