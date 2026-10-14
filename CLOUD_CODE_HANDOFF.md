@@ -1,9 +1,9 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-13: package J slice J4 part one (transfers) committed; J1–J3 published
+## Current checkpoint — 2026-10-13: package J slice J4 part one (transfers) published; CI success; not merged
 
-Первая часть среза J4 пакета J (перемещение между местами хранения) написана и
-закоммичена: `0d923a4` на ветке `codex/package-j4-transfers`, поверх опубликованной вершины
+Первая часть среза J4 пакета J (перемещение между местами хранения) написана,
+закоммичена и опубликована: `0d923a4` на ветке `codex/package-j4-transfers`, поверх опубликованной вершины
 среза J3 (`07bde5b`). Перемещение проводится одной командой: документ, строки и по два
 движения на строку — расход из места документа и приход в место назначения. Денег оно
 не двигает: нет денежной части, оценки и проводки, стоимость владельца не меняется,
@@ -15,9 +15,9 @@
 Проверки: full local **PASS: 1676 passed, 4 skipped in 1876.88s (0:31:16)**; Ruff, format и mypy
 PASS на 283 файлах; web typecheck, lint, format, 102 unit и сборка PASS. Пять вариантов
 гонок засчитаны с наблюдаемым ожиданием блокировки строки в `pg_locks`. Независимый
-обзор — NOT TESTED: исполнитель решил провести его один раз после обеих частей J4. CI
-этой ветки на момент записи — NOT TESTED: запись сделана до публикации. `main` не
-переносился. Где `main` и что опубликовано, читать из `git ls-remote origin`.
+обзор — NOT TESTED: исполнитель решил провести его один раз после обеих частей J4. Ветка
+опубликована 2026-10-13 без PR; CI точного коммита `7e31cc8` — **PASS** (run 38498098941).
+`main` не переносился. Где `main` и что опубликовано, читать из `git ls-remote origin`.
 
 [Актуальный handoff](docs/plan/NEXT_AGENT_PACKAGE_J4_TRANSFERS_2026-10-13.md),
 [готовый prompt](docs/plan/NEXT_AGENT_PACKAGE_J4_TRANSFERS_PROMPT_2026-10-13.md),
