@@ -366,6 +366,27 @@ Choices made while implementing; none of them changes an owner decision:
     order of posting, as decision 6 says. From decision 2, an archived place and an
     archived material let a return leave and take none in.
 
+## Implementation notes — review fixes (2026-10-14)
+
+An independent read-only review of J1–J4 found no critical or high defect. Commit
+`33a3ec6` on `codex/package-j-review-fixes` fixes its findings M1, L1, L2, L4, L5 and part of L3:
+[record](../plan/evidence/2026-10-14-j-review-fixes/VALIDATION.md),
+[review](../plan/evidence/2026-10-13-j-review/REVIEW.md).
+
+1. Every writer takes the balance rows that exist before it inserts new ones, in the
+   order material, place: receipts and returned write-offs now do so too, so they no
+   longer deadlock with transfers. A deadlock that PostgreSQL still breaks answers
+   409 `STOCK_BUSY`, and the same command with the same key can be repeated.
+2. Migration 0041 replaces the balance and cost checks: a row that no movement or
+   valuation explains is refused at commit, even when it holds zero.
+3. The accounts of an entry are checked before anything is written; an archived one
+   answers 409 `STOCK_ACCOUNT_ARCHIVED` with its `account_id`. Archiving an account
+   stays allowed (owner's delegation of 2026-10-14; the executor's decision).
+4. The supplier of a document is read only together with the amounts.
+5. The schema guard refuses rewrite rules on the stock and journal tables and checks
+   the grantee of insert rights. Names, units and supplier document numbers refuse C1
+   control characters.
+
 ## Acceptance and status
 
 The matrix J-01–J-14 is in the plan. The module stays closed by the readiness lock until

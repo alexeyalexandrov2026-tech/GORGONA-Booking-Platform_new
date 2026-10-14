@@ -146,6 +146,9 @@ CI её вершины `7e31cc8` — PASS: см.
 Затем так же опубликована ветка второй части J4, `codex/package-j4-returns`; CI её
 вершины `c7c94ed` — PASS: см.
 [запись о второй части J4](evidence/2026-10-13-j4-returns/VALIDATION.md).
+Независимый обзор J1–J4 проведён 2026-10-13: [запись](evidence/2026-10-13-j-review/REVIEW.md).
+Его находки исправлены в ветке `codex/package-j-review-fixes` (миграция 0041):
+[запись](evidence/2026-10-14-j-review-fixes/VALIDATION.md).
 
 ## Данные
 

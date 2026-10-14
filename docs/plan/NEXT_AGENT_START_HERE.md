@@ -1,6 +1,13 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: package J slice J4 (transfers and returns) published, CI success; not merged — 2026-10-13
+## Current: package J review fixes committed; J1–J4 published — 2026-10-14
+
+Read the [handoff](NEXT_AGENT_PACKAGE_J_REVIEW_FIXES_2026-10-14.md) first. The findings
+of the independent review of J1–J4 are fixed in commit `33a3ec6` on `codex/package-j-review-fixes`
+(migration 0041; complete local suite 1724 passed, 4 skipped); open: M2, L6, the screens
+(J5) and the acceptance. Read from `git ls-remote origin` what is published.
+
+## Previous: package J slice J4 (transfers and returns) published, CI success; not merged — 2026-10-13
 
 **Update 2026-10-13: the independent review of J1–J4 is done.** No blocking findings; two
 medium and six low findings are not fixed yet. Fix them next, in a new branch from this head:
