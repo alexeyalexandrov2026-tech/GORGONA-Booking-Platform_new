@@ -1,8 +1,8 @@
 # ADR-0027 — Provider events and reconciliation
 
-- Status: **Proposed, 2026-10-15; local design only.**
+- Status: **Proposed, 2026-10-15; integration not accepted. K1a is locally implemented.**
 - Scope: [Package K / FIN-02](../plan/PACKAGE_K_PLAN_2026-10-15.md) in the agreed stage 2.
-- Baseline: `df88c20687333668d39fe76a26eabca691e62cb0`; no runtime/schema changes.
+- Planning baseline: `df88c20687333668d39fe76a26eabca691e62cb0`; K1a source `7d25aa2d72874271a62e363817e0624fb502497c`, no schema/route changes.
 - Decision owner: the product owner. This ADR grants no provider or publication permission.
 
 ## Context and actual reuse
@@ -88,3 +88,12 @@ stay immutable. Forward migration and API/client compatibility must advance toge
 Before deployment, a reverting code commit can restore the earlier API; any created
 financial history must be preserved, with forward corrections rather than destructive
 schema rollback. No rollout/rollback action is authorized here.
+
+## K1a execution note — 2026-10-15
+
+The later local continuation implements only the signature/decoder boundary and pins
+stripe16.0.0 after MIT/source/Python3.14 checks. [Evidence](../plan/evidence/2026-10-15-k1a-event-boundary/VALIDATION.md).
+Original no-adapter/no-installed-SDK statements above describe the proposal baseline.
+No admitted connection, HTTP receipt, inbox, worker or financial effect exists.
+All complete K acceptance rows remain NOT TESTED; readiness stays planned and
+real provider execution remains separately gated. This is not acceptance of the overall ADR.

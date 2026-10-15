@@ -1,6 +1,17 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-15: Package K proposed locally; provider gate closed
+## Current checkpoint — 2026-10-15: K1a offline boundary locally verified; not published
+
+K1a source `7d25aa2d72874271a62e363817e0624fb502497c` on `codex/package-k1a-event-boundary`: signature-first strict
+test snapshot decoding with stripe16.0.0, 96 synthetic tests. Static/build/web114 PASS;
+focused **191 passed in 53.85s**; full **1844 passed, 4 skipped in 1444.23s (0:24:04)** on fresh disposable PostgreSQL.
+No HTTP route/inbox/worker/schema or money effect; full K1 and K acceptance NOT TESTED.
+Provider admission is BLOCKED by separate authorization; K push/CI NOT TESTED.
+FIN-02/STOCK-01 stay planned, ADR-0026/0027 Proposed; main remains fedd0f1.
+Runtime npm audit0; existing development audit5high FAIL. No provider/credential action.
+[K1a record](evidence/2026-10-15-k1a-event-boundary/VALIDATION.md), [handoff](NEXT_AGENT_PACKAGE_K1A_2026-10-15.md).
+
+## Previous checkpoint — 2026-10-15: Package K proposed locally; provider gate closed
 
 The next stage-2 package K / FIN-02 now has a local implementation and acceptance
 proposal on `codex/package-k-plan`, based on `df88c20687333668d39fe76a26eabca691e62cb0`.

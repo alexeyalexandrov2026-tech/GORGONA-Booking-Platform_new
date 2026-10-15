@@ -1,3 +1,9 @@
+# Historical planning checkpoint
+
+K1a has since been implemented locally; use the [current handoff](NEXT_AGENT_PACKAGE_K1A_2026-10-15.md) and [prompt](NEXT_AGENT_PACKAGE_K1A_PROMPT_2026-10-15.md). Provider, readiness and publication gates remain closed.
+
+---
+
 # Next agent — Package K planning checkpoint, 2026-10-15
 
 Current scope: **local planning only** for K / FIN-02 after Package J technical

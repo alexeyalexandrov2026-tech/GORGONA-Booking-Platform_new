@@ -1,5 +1,17 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## Execution checkpoint — 2026-10-15: K1a only
+
+A later owner `continue` was interpreted as proceeding with the bounded local offline
+foundation, without provider actions. K1a is locally implemented in `7d25aa2d72874271a62e363817e0624fb502497c`: 96 synthetic signature/
+decoder tests, focused 191 passed in 53.85s, full 1844 passed, 4 skipped in 1444.23s (0:24:04), static/build/web114 PASS.
+[Evidence](evidence/2026-10-15-k1a-event-boundary/VALIDATION.md),
+[current handoff](NEXT_AGENT_PACKAGE_K1A_2026-10-15.md).
+The complete K1 and all K-01–K-14 remain NOT TESTED. FIN-02/STOCK-01 stay planned,
+ADR-0027 Proposed; no K push/CI or actual admission. K1b connection/inbox and K2/K3
+worker/effects remain ahead. Planning-baseline statements below describe e8783f6's
+proposal; only the offline boundary and pinned SDK now exist.
+
 Status: **Proposed; local planning only, 2026-10-15.** The owner's `continue`
 is interpreted as preparing the next package in the agreed
 [stage-2 sequence](STAGE2_PLAN_2026-10-06.md). It is not an instruction to access a
