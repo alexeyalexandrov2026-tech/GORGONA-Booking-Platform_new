@@ -1,6 +1,16 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-15: Package J review fixes part 2 locally verified; acceptance pending
+## Current checkpoint — 2026-10-15: STOCK-01 technical evidence PASS; readiness unchanged
+
+J-01–J-14 technical evidence PASS against `aedbb982a696052d606499f737b1754fce362b6a` with exact CI run 157
+success. Full local **PASS: 1748 passed, 4 skipped in 1448.82s (0:24:08)**. STOCK-01 remains planned,
+ADR-0026 Proposed; readiness requires the owner's separate explicit authorization. Main
+remains fedd0f1. No PR, merge, deployment or production changes. The acceptance documentation
+commit needs its own exact-head CI read; api/web source trees are unchanged and recorded.
+[Acceptance](docs/plan/evidence/2026-10-15-stock-01-acceptance/ACCEPTANCE.md),
+[handoff](docs/plan/NEXT_AGENT_PACKAGE_J_REVIEW2_FIXES_2026-10-14.md).
+
+## Previous checkpoint — 2026-10-15: Package J review fixes part 2 locally verified; acceptance pending
 
 M1, L2, L3 and the two-source destination-insert race are fixed in `7b96fec` on
 `codex/package-j-review2-fixes`. Full local **PASS: 1748 passed, 4 skipped in 1448.82s (0:24:08)**. Static/focused PASS;

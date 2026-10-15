@@ -1,0 +1,389 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-15T07:13:55.906211+00:00",
+  "implementation_head": "aedbb982a696052d606499f737b1754fce362b6a",
+  "source_commit": "7b96feca22b430d0ea98ef8081ac89cf7e292fc6",
+  "api_tree": "157099abc4dd62c2a16ddf415604308081e4dad6",
+  "web_tree": "e0b7c6523cd831f0dae5b723232f7f5f9760de8d",
+  "ci": {
+    "id": 38693973265,
+    "run_number": 157,
+    "run_attempt": 1,
+    "head_sha": "aedbb982a696052d606499f737b1754fce362b6a",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38693973265",
+    "created_at": "2026-10-15T06:41:57Z",
+    "updated_at": "2026-10-15T07:11:44Z",
+    "head_branch": "codex/package-j-review2-fixes",
+    "name": "ci",
+    "event": "push",
+    "jobs": [
+      {
+        "id": 116286133397,
+        "name": "api",
+        "head_sha": "aedbb982a696052d606499f737b1754fce362b6a",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-15T06:42:00Z",
+        "completed_at": "2026-10-15T07:11:43Z",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-15T06:42:00Z",
+            "completed_at": "2026-10-15T06:42:02Z"
+          },
+          {
+            "name": "Run actions/checkout@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-15T06:42:02Z",
+            "completed_at": "2026-10-15T06:42:04Z"
+          },
+          {
+            "name": "Run astral-sh/setup-uv@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-15T06:42:04Z",
+            "completed_at": "2026-10-15T06:42:06Z"
+          },
+          {
+            "name": "Run uv python install 3.14",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-15T06:42:06Z",
+            "completed_at": "2026-10-15T06:42:07Z"
+          },
+          {
+            "name": "Run uv sync --locked",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-15T06:42:07Z",
+            "completed_at": "2026-10-15T06:42:09Z"
+          },
+          {
+            "name": "Run actions/setup-node@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-15T06:42:09Z",
+            "completed_at": "2026-10-15T06:42:14Z"
+          },
+          {
+            "name": "Build and check customer web",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-15T06:42:14Z",
+            "completed_at": "2026-10-15T06:43:35Z"
+          },
+          {
+            "name": "Start PostgreSQL 18",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-15T06:43:35Z",
+            "completed_at": "2026-10-15T06:43:45Z"
+          },
+          {
+            "name": "Build the production image",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-10-15T06:43:45Z",
+            "completed_at": "2026-10-15T06:44:22Z"
+          },
+          {
+            "name": "Run uv run ruff format --check .",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10,
+            "started_at": "2026-10-15T06:44:22Z",
+            "completed_at": "2026-10-15T06:44:23Z"
+          },
+          {
+            "name": "Run uv run ruff check .",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11,
+            "started_at": "2026-10-15T06:44:23Z",
+            "completed_at": "2026-10-15T06:44:23Z"
+          },
+          {
+            "name": "Run uv run mypy",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12,
+            "started_at": "2026-10-15T06:44:23Z",
+            "completed_at": "2026-10-15T06:44:36Z"
+          },
+          {
+            "name": "Run uv run pytest --junitxml=pytest-results.xml",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-10-15T06:44:36Z",
+            "completed_at": "2026-10-15T07:11:40Z"
+          },
+          {
+            "name": "Name the failed tests",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14,
+            "started_at": "2026-10-15T07:11:40Z",
+            "completed_at": "2026-10-15T07:11:40Z"
+          },
+          {
+            "name": "Post Run actions/setup-node@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 26,
+            "started_at": "2026-10-15T07:11:40Z",
+            "completed_at": "2026-10-15T07:11:40Z"
+          },
+          {
+            "name": "Post Run astral-sh/setup-uv@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 27,
+            "started_at": "2026-10-15T07:11:40Z",
+            "completed_at": "2026-10-15T07:11:40Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 28,
+            "started_at": "2026-10-15T07:11:40Z",
+            "completed_at": "2026-10-15T07:11:40Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 29,
+            "started_at": "2026-10-15T07:11:40Z",
+            "completed_at": "2026-10-15T07:11:40Z"
+          }
+        ]
+      }
+    ]
+  },
+  "matrix": {
+    "J-01": {
+      "status": "PASS",
+      "claim": "Atomic receipt, movement, costing, balanced journal, audit and replay receipt; refused postings roll back.",
+      "passed_cases": [
+        "tests.integration.test_stock::test_receipts_post_movements_cost_and_one_journal_entry",
+        "tests.integration.test_stock::test_sql_receipt_needs_every_part_and_its_exact_journal",
+        "tests.integration.test_stock::test_refused_receipts_leave_no_parts",
+        "tests.integration.test_stock_write_offs::test_sql_write_off_needs_the_average_and_its_exact_journal",
+        "tests.integration.test_stock_returns::test_sql_return_carries_exactly_the_amounts_of_the_database",
+        "tests.integration.test_stock_transfers::test_sql_transfer_needs_both_movements_and_carries_no_money"
+      ]
+    },
+    "J-02": {
+      "status": "PASS",
+      "claim": "SQL enforces document/line/owner/transaction provenance and refuses orphan or foreign rows and stock journal entries.",
+      "passed_cases": [
+        "tests.integration.test_stock::test_sql_keeps_documents_whole_and_stock_entries_owned",
+        "tests.integration.test_stock_returns::test_sql_return_carries_exactly_the_amounts_of_the_database",
+        "tests.integration.test_stock_acceptance::test_gap10_a_return_never_moves_another_owners_stock_by_sql"
+      ]
+    },
+    "J-03": {
+      "status": "PASS",
+      "claim": "Identical-key replay returns the same document; changed bodies are refused; contenders wait in pg_locks and post once.",
+      "passed_cases": [
+        "tests.integration.test_stock::test_receipt_command_is_idempotent",
+        "tests.integration.test_stock_write_offs::test_two_requests_with_one_key_post_one_document[receipt]",
+        "tests.integration.test_stock_write_offs::test_two_requests_with_one_key_post_one_document[write_off]",
+        "tests.integration.test_stock_review_fixes::test_two_transfer_requests_with_one_key_post_one_document"
+      ]
+    },
+    "J-04": {
+      "status": "PASS",
+      "claim": "Overspending is refused in API and SQL; concurrent final-balance writers have one winner after observed locking.",
+      "passed_cases": [
+        "tests.integration.test_stock_write_offs::test_write_off_never_takes_more_than_its_owner_holds_in_the_place",
+        "tests.integration.test_stock_write_offs::test_two_write_offs_of_the_last_balance_have_one_winner[False]",
+        "tests.integration.test_stock_write_offs::test_two_write_offs_of_the_last_balance_have_one_winner[True]",
+        "tests.integration.test_stock_transfers::test_two_transfers_of_the_last_balance_have_one_winner[False]",
+        "tests.integration.test_stock_transfers::test_two_transfers_of_the_last_balance_have_one_winner[True]"
+      ]
+    },
+    "J-05": {
+      "status": "PASS",
+      "claim": "Legal entities, stock and books stay separate; book/rules are required for money documents.",
+      "passed_cases": [
+        "tests.integration.test_stock::test_refused_receipts_leave_no_parts",
+        "tests.integration.test_stock_write_offs::test_write_off_never_takes_more_than_its_owner_holds_in_the_place",
+        "tests.integration.test_stock::test_receipts_post_movements_cost_and_one_journal_entry",
+        "tests.integration.test_stock_acceptance::test_gap10_a_return_never_moves_another_owners_stock_by_sql"
+      ]
+    },
+    "J-06": {
+      "status": "PASS",
+      "claim": "Moving-average costs, deterministic half-up rounding, zero residual value and reconciliation hold.",
+      "passed_cases": [
+        "tests.integration.test_stock_write_offs::test_write_off_leaves_at_the_moving_average_and_posts_one_entry",
+        "tests.integration.test_stock_write_offs::test_write_off_rounding_follows_the_running_average_and_repeats",
+        "tests.integration.test_stock_running_totals::test_every_kind_of_document_extends_its_history",
+        "tests.integration.test_stock_returns::test_shares_are_rounded_once_and_a_completed_line_returns_its_whole_amount"
+      ]
+    },
+    "J-07": {
+      "status": "PASS",
+      "claim": "Closed/future/pre-book dates are refused; closing and posting serialize in both orders, API and SQL.",
+      "passed_cases": [
+        "tests.integration.test_stock::test_refused_receipts_leave_no_parts",
+        "tests.integration.test_stock_write_offs::test_period_close_and_write_off_take_one_order[close-False]",
+        "tests.integration.test_stock_write_offs::test_period_close_and_write_off_take_one_order[close-True]",
+        "tests.integration.test_stock_write_offs::test_period_close_and_write_off_take_one_order[post-False]",
+        "tests.integration.test_stock_write_offs::test_period_close_and_write_off_take_one_order[post-True]"
+      ]
+    },
+    "J-08": {
+      "status": "PASS",
+      "claim": "Source-line return limits, two return directions, moving average/difference postings and exact final shares hold, including races.",
+      "passed_cases": [
+        "tests.integration.test_stock_returns::test_return_to_supplier_leaves_at_average_cost_and_posts_the_price_difference",
+        "tests.integration.test_stock_returns::test_return_of_a_write_off_comes_back_at_its_share_of_the_cost",
+        "tests.integration.test_stock_returns::test_return_keeps_its_limits_and_its_shape",
+        "tests.integration.test_stock_returns::test_two_returns_of_the_last_quantity_have_one_winner[False]",
+        "tests.integration.test_stock_returns::test_two_returns_of_the_last_quantity_have_one_winner[True]",
+        "tests.integration.test_stock_returns::test_shares_are_rounded_once_and_a_completed_line_returns_its_whole_amount"
+      ]
+    },
+    "J-09": {
+      "status": "PASS",
+      "claim": "Transfers move two quantities atomically without money/ownership changes; opposite transfers and branch limits hold.",
+      "passed_cases": [
+        "tests.integration.test_stock_transfers::test_transfer_moves_quantity_without_touching_cost_or_the_books",
+        "tests.integration.test_stock_transfers::test_sql_transfer_needs_both_movements_and_carries_no_money",
+        "tests.integration.test_stock_transfers::test_opposite_transfers_wait_in_one_order_and_both_pass[False]",
+        "tests.integration.test_stock_transfers::test_opposite_transfers_wait_in_one_order_and_both_pass[True]",
+        "tests.integration.test_stock_transfers::test_branch_manager_transfers_inside_the_branch_only",
+        "tests.integration.test_stock_running_totals::test_two_transfers_into_a_new_balance_wait_and_chain"
+      ]
+    },
+    "J-10": {
+      "status": "PASS",
+      "claim": "Immutable histories and identity/unit/scale/account restrictions hold; generic stock-entry reversal is refused.",
+      "passed_cases": [
+        "tests.integration.test_stock::test_sql_keeps_documents_whole_and_stock_entries_owned",
+        "tests.integration.test_stock::test_posting_rules_are_versioned_and_checked",
+        "tests.integration.test_inventory::test_sql_keeps_versions_ordered_authored_and_immutable",
+        "tests.integration.test_stock_write_offs::test_archived_material_and_place_take_no_receipt_and_still_write_off"
+      ]
+    },
+    "J-11": {
+      "status": "PASS",
+      "claim": "Exact quantity/currency text, scale/range rejection, zero-total documents and accumulated overflow refusals hold in API/SQL.",
+      "passed_cases": [
+        "tests.integration.test_stock::test_refused_receipts_leave_no_parts",
+        "tests.unit.test_stock_contracts::test_counts_are_exact_decimal_strings",
+        "tests.integration.test_stock::test_receipts_post_movements_cost_and_one_journal_entry",
+        "tests.integration.test_stock_write_offs::test_write_off_line_value_stays_in_the_supported_range",
+        "tests.integration.test_stock_acceptance::test_gap10_accumulated_totals_stay_in_range_with_a_named_refusal"
+      ]
+    },
+    "J-12": {
+      "status": "PASS",
+      "claim": "Staff/support/delegates/other companies are refused; branch managers read own quantities only and post transfers only.",
+      "passed_cases": [
+        "tests.integration.test_stock::test_branch_scope_rights_and_hidden_amounts",
+        "tests.integration.test_inventory::test_staff_support_and_other_companies_are_refused",
+        "tests.integration.test_stock_acceptance::test_j12_a_delegate_of_another_company_reaches_no_inventory_route",
+        "tests.integration.test_stock_returns::test_only_a_company_wide_finance_member_posts_a_return",
+        "tests.integration.test_stock_transfers::test_branch_manager_transfers_inside_the_branch_only"
+      ]
+    },
+    "J-13": {
+      "status": "PASS",
+      "claim": "Finance dependency, disabled/revoked gates, history/recovery, damaged-schema refusal, receipt-vs-bill clearing, and full-platform regression hold.",
+      "passed_cases": [
+        "tests.integration.test_inventory::test_inventory_cannot_be_published_without_finance",
+        "tests.integration.test_stock::test_disabled_inventory_keeps_stock_reads_and_refuses_documents",
+        "tests.integration.test_stock_acceptance::test_j13_revoked_readiness_refuses_new_actions_and_keeps_history_and_recovery",
+        "tests.integration.test_inventory_commands::test_discards_are_limited_and_settling_works_with_the_module_off",
+        "tests.integration.test_inventory_guards::test_damaged_inventory_schema_refuses_reads_and_writes[constraint]",
+        "tests.integration.test_inventory_guards::test_damaged_inventory_schema_refuses_reads_and_writes[extra_policy]",
+        "tests.integration.test_inventory_guards::test_damaged_inventory_schema_refuses_reads_and_writes[function]",
+        "tests.integration.test_inventory_guards::test_damaged_inventory_schema_refuses_reads_and_writes[grant]",
+        "tests.integration.test_inventory_guards::test_damaged_inventory_schema_refuses_reads_and_writes[immutability]",
+        "tests.integration.test_inventory_guards::test_damaged_inventory_schema_refuses_reads_and_writes[module_gate]",
+        "tests.integration.test_inventory_guards::test_damaged_inventory_schema_refuses_reads_and_writes[policy]",
+        "tests.integration.test_inventory_guards::test_damaged_inventory_schema_refuses_reads_and_writes[row_security]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[balance_check]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[constraint]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[definer]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[destination_grant]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[document_function]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[document_kinds]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[extra_policy]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[function]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[grant]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[immutability]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[journal_consistency]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[journal_origin]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[module_gate]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[movement_function]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[policy]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[rewrite_rule]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[row_security]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[source_key]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[source_lock_grant]",
+        "tests.integration.test_stock_guards::test_damaged_stock_schema_refuses_reads_and_writes[valuation_function]",
+        "tests.integration.test_stock_acceptance::test_j13_a_purchase_and_its_bill_leave_nothing_on_the_receipt_account"
+      ]
+    },
+    "J-14": {
+      "status": "PASS",
+      "claim": "Real desktop/mobile browsers with OIDC/PKCE and PostgreSQL, axe, recovery, complete catalogues; static/full checks and exact-commit CI; prior independent reviews.",
+      "passed_cases": [
+        "tests.integration.test_materials_browser::test_materials_real_browser_before_and_after_books",
+        "tests.integration.test_stock_documents_browser::test_stock_documents_real_browser[documents]",
+        "tests.integration.test_stock_documents_browser::test_stock_documents_real_browser[pagination]"
+      ]
+    }
+  },
+  "full_summary": "1748 passed, 4 skipped in 1448.82s (0:24:08)",
+  "run_folder": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-jr2p2-20261014-abbdfeb",
+  "fresh_dependency_audit_2026_10_15": {
+    "runtime": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "sha256": "a36800d2b171922176fbc60c027874263ea37d0fc24441b302727df481fca187"
+    },
+    "all": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 5,
+        "critical": 0,
+        "total": 5
+      },
+      "sha256": "782f1844e2953ba85114ab3f7392cfa89e98cbaeed4549c1e46a9c0cfca942cc"
+    }
+  },
+  "readiness_unchanged": true,
+  "adr_status": "Proposed",
+  "stock01_status": "planned",
+  "post_acceptance_documentation_head_ci": "Read exact-current-HEAD CI after publication; no source changes.",
+  "final_exact_head_ci_receipt": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-jr2p2-20261014-abbdfeb\\ci-acceptance.json"
+}

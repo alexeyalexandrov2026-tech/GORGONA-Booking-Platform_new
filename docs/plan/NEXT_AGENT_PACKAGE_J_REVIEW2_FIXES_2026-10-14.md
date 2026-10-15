@@ -1,3 +1,24 @@
+# Current acceptance checkpoint — 2026-10-15
+
+PASS: technical evidence J-01–J-14 on `aedbb982a696052d606499f737b1754fce362b6a`, exact CI run 157,
+https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38693973265. Local full 1748 passed, 4 skipped in 1448.82s (0:24:08).
+STOCK-01 remains planned and ADR-0026 Proposed. No readiness promotion authorized.
+This documentation is above the verified implementation: read exact-current-HEAD CI after
+publishing it. No source changed; api/web trees are bound in ACCEPTANCE.json. Main remains fedd0f1.
+The final receipt is `C:/Users/alexa/AppData/Local/Packages/Claude_pzs8sxrjxfjjc/LocalCache/Local/GorgonaBookingTests/package-jr2p2-20261014-abbdfeb/ci-acceptance.json`: verify its head_sha matches
+the actual HEAD and its conclusion is success. The final delivery message also links that
+exact run. This checkpoint records implementation CI before this documentation commit;
+it does not claim that a newer documentation commit bypasses CI.
+
+Read docs/plan/evidence/2026-10-15-stock-01-acceptance/ACCEPTANCE.md and ACCEPTANCE.json,
+then the part-2 CHECKS/VALIDATION and the two reviews. Inspect Git/remote state first.
+After current-head CI passes, the next product work is an owner-selected stage-2 package
+or the separate explicit readiness decision; do not promote it autonomously. Preserve
+the limits and authorization boundaries below. No additional agents.
+
+---
+Previous part-2 checkpoint and detailed execution instructions (historical):
+
 # Next agent — Package J review fixes part 2, 2026-10-15
 
 PASS: M1, L2, L3 and destination-insert race gap 2 fixed locally in `7b96feca22b430d0ea98ef8081ac89cf7e292fc6`.
