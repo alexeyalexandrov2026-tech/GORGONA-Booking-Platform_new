@@ -199,6 +199,42 @@ test("a document command names no version", () => {
   });
 });
 
+test("document totals allow 18 minor digits at the currency scale", () => {
+  for (const [currency, scale] of [
+    ["JPY", 0],
+    ["USD", 2],
+    ["KWD", 3],
+  ] as const) {
+    const text = (minor: bigint) => {
+      const digits = minor.toString().padStart(scale + 1, "0");
+      return scale
+        ? `${digits.slice(0, -scale)}.${digits.slice(-scale)}`
+        : digits;
+    };
+    const total = 999_999_999_999_999_999n;
+    const document = {
+      ...receipt,
+      money: { ...receipt.money, currency, total: text(total) },
+    };
+    expect(documentSchema.safeParse(document).success, currency).toBe(true);
+    expect(
+      documentSchema.safeParse({
+        ...document,
+        money: { ...document.money, total: text(total + 1n) },
+      }).success,
+      currency,
+    ).toBe(false);
+    if (scale === 0)
+      expect(
+        documentSchema.safeParse({
+          ...document,
+          lines: [{ ...receipt.lines[0], amount: text(total) }],
+        }).success,
+        `line limit ${currency}`,
+      ).toBe(false);
+  }
+});
+
 test("a quantity fits the material and an amount fits the currency", () => {
   expect(quantityFits("10.5", 1)).toBe(true);
   expect(quantityFits("3", 0)).toBe(true);

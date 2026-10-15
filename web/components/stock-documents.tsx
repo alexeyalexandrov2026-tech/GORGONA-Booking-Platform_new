@@ -2,11 +2,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchLedger } from "../lib/ledger-api";
 import {
-  fetchBalances,
+  fetchAllBalances,
   fetchDocument,
   fetchDocuments,
-  fetchItems,
-  fetchPlaces,
+  fetchAllItems,
+  fetchAllPlaces,
 } from "../lib/inventory-api";
 import {
   DOCUMENT_KINDS,
@@ -69,10 +69,10 @@ export function StockDocuments({
   const read = useCallback(async () => {
     const [itemList, placeList, documentList, balances, ledger] =
       await Promise.all([
-        fetchItems(businessId),
-        fetchPlaces(businessId),
+        fetchAllItems(businessId),
+        fetchAllPlaces(businessId),
         fetchDocuments(businessId, filter || undefined),
-        finance ? null : fetchBalances(businessId),
+        finance ? null : fetchAllBalances(businessId),
         finance ? fetchLedger(businessId) : null,
       ]);
     return { itemList, placeList, documentList, balances, ledger };
@@ -398,8 +398,12 @@ function DocumentForm({
   const owner = owners.find((x) => x.id === chosenOwner) ?? owners[0];
   const open = places.filter((x) => !x.archived);
   const usable = items.filter((x) => !x.archived);
-  const scale = (id: string) =>
-    items.find((x) => x.item_id === id)?.quantity_scale;
+  const fitsMaterial = (id: string, quantity: string) => {
+    const material = items.find((x) => x.item_id === id);
+    return (
+      material !== undefined && quantityFits(quantity, material.quantity_scale)
+    );
+  };
   const sources = documents.filter(
     (x) =>
       (x.kind === "receipt" || x.kind === "write_off") &&
@@ -434,8 +438,7 @@ function DocumentForm({
   }
 
   const quantities = lines.every(
-    (line) =>
-      line.item !== "" && quantityFits(line.quantity, scale(line.item) ?? 0),
+    (line) => line.item !== "" && fitsMaterial(line.item, line.quantity),
   );
   const amounts =
     kind !== "receipt" ||
@@ -454,9 +457,7 @@ function DocumentForm({
         back.length > 0 &&
         back.every(([no, value]) => {
           const line = source.lines.find((x) => x.line_no === Number(no));
-          return (
-            line !== undefined && quantityFits(value, scale(line.item_id) ?? 0)
-          );
+          return line !== undefined && fitsMaterial(line.item_id, value);
         })
       : quantities &&
         amounts &&

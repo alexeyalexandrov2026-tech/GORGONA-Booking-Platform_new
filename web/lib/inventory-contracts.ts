@@ -217,6 +217,17 @@ export type InventoryCommand =
 const day = z.iso.date();
 const instant = z.iso.datetime({ offset: true });
 const amount = z.string().regex(/^(0|[1-9]\d{0,14})(\.\d{1,3})?$/);
+// A document total has its own 18-minor-digit bound, larger than a line's limit.
+const documentTotal = z
+  .string()
+  .regex(/^(0|[1-9]\d{0,17})(\.\d{1,3})?$/)
+  .pipe(
+    z
+      .string()
+      .refine(
+        (value) => BigInt(value.replace(".", "")) <= 999_999_999_999_999_999n,
+      ),
+  );
 const documentKind = z.enum(["receipt", "write_off", "transfer", "return"]);
 type Placed = {
   kind: DocumentKind;
@@ -287,7 +298,7 @@ export const documentSchema = z
         book_id: id,
         rule_revision: revision,
         currency: z.string().regex(/^[A-Z]{3}$/),
-        total: amount,
+        total: documentTotal,
         entry_id: id.nullable(),
       })
       .nullable(),

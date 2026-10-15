@@ -33,10 +33,12 @@ from tests.integration.test_materials_browser import RULES
 from tests.support.fake_idp import FakeIdp
 
 
+@pytest.mark.parametrize("catalog", [False, True], ids=["documents", "pagination"])
 def test_stock_documents_real_browser(
     world: BookingWorld,
     owner_conn: psycopg.Connection,
     test_database: ProvisionedDatabase,
+    catalog: bool,
 ) -> None:
     if os.environ.get("GBA_REQUIRE_BROWSER") != "1":
         pytest.skip("BLOCKED: J5b browser requires GBA_REQUIRE_BROWSER=1")
@@ -149,6 +151,54 @@ def test_stock_documents_real_browser(
                 **{f"{name}_account_id": codes[code] for name, code in RULES.items()},
             },
         )
+        if catalog:
+            for n in range(101):
+                item, place = uuid7(), uuid7()
+                request(
+                    "PUT",
+                    f"inventory/items/{item}",
+                    {
+                        "expected_revision": 0,
+                        "code": f"PAGE-{n:03}",
+                        "name": f"FAKE material {n:03}",
+                        "unit": "ml",
+                        "quantity_scale": 1,
+                    },
+                )
+                request(
+                    "PUT",
+                    f"inventory/places/{place}",
+                    {
+                        "expected_revision": 0,
+                        "location_id": str(home),
+                        "code": f"PAGE-{n:03}",
+                        "name": f"FAKE place {n:03}",
+                    },
+                )
+                request(
+                    "PUT",
+                    f"inventory/documents/{uuid7()}",
+                    {
+                        "kind": "receipt",
+                        "reason": "purchase",
+                        "legal_entity_id": str(entity),
+                        "place_id": str(place),
+                        "document_date": "2026-10-01",
+                        "lines": [{"item_id": str(item), "quantity": "2.5", "amount": "10.00"}],
+                    },
+                )
+            result = subprocess.run(  # noqa: S603 - fixed repository script, located npm
+                [npm, "exec", "--", "playwright", "test", "tests/inventory-pagination.spec.ts"],
+                cwd=web,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=600,
+                check=False,
+            )
+            assert result.returncode == 0, result.stdout + result.stderr
+            print(result.stdout)  # noqa: T201 - actual browser evidence
+            return
         for project in ("DESKTOP", "MOBILE"):
             for code, unit, scale in ((f"OIL-{project}", "ml", 1), (f"FOIL-{project}", "pcs", 0)):
                 request(

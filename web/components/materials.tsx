@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchWorkspace, type LocationItem } from "../lib/management-api";
 import { fetchAccounts, fetchLedger } from "../lib/ledger-api";
 import {
-  fetchBalances,
-  fetchCosts,
-  fetchItems,
-  fetchPlaces,
+  fetchAllBalances,
+  fetchAllCosts,
+  fetchAllItems,
+  fetchAllPlaces,
   fetchPostingRules,
 } from "../lib/inventory-api";
 import {
@@ -54,11 +54,11 @@ export function Materials({
   const read = useCallback(async () => {
     const [itemList, placeList, balanceList, workspace, costList, ledger] =
       await Promise.all([
-        fetchItems(businessId),
-        fetchPlaces(businessId),
-        fetchBalances(businessId, filter || undefined),
+        fetchAllItems(businessId),
+        fetchAllPlaces(businessId),
+        fetchAllBalances(businessId, filter || undefined),
         fetchWorkspace(businessId),
-        finance ? fetchCosts(businessId) : null,
+        finance ? fetchAllCosts(businessId) : null,
         finance ? fetchLedger(businessId) : null,
       ]);
     return { itemList, placeList, balanceList, workspace, costList, ledger };

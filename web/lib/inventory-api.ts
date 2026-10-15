@@ -67,6 +67,37 @@ export const fetchBalances = (
 export const fetchCosts = (business: string, after?: string) =>
   read(business, costListSchema, `${base(business)}/costs${query({ after })}`);
 
+/** Validate each page at the API boundary; publish the catalogue only when complete. */
+async function allPages<T>(
+  fetchPage: (
+    after?: string,
+  ) => Promise<{ items: T[]; next_cursor: string | null }>,
+) {
+  const items: T[] = [];
+  const seen = new Set<string>();
+  let after: string | undefined;
+  for (;;) {
+    const page = await fetchPage(after);
+    items.push(...page.items);
+    if (page.next_cursor === null) return { items, next_cursor: null };
+    if (seen.has(page.next_cursor))
+      throw new ManagementApiError(
+        "INVALID_RESPONSE",
+        "Unable to load the complete materials list safely.",
+      );
+    seen.add(page.next_cursor);
+    after = page.next_cursor;
+  }
+}
+export const fetchAllItems = (business: string) =>
+  allPages((after) => fetchItems(business, after));
+export const fetchAllPlaces = (business: string) =>
+  allPages((after) => fetchPlaces(business, after));
+export const fetchAllBalances = (business: string, place?: string) =>
+  allPages((after) => fetchBalances(business, place, after));
+export const fetchAllCosts = (business: string) =>
+  allPages((after) => fetchCosts(business, after));
+
 /** The accounts of materials of a book, or null when none are chosen yet. */
 export async function fetchPostingRules(business: string, book: string) {
   try {
@@ -105,32 +136,61 @@ export async function executeInventoryCommand(
     headers: { "Idempotency-Key": command.key },
   };
   if (command.type === "document")
-    return read(
-      business,
-      documentSchema,
-      `${base(business)}/documents/${command.id}`,
-      init,
+    return subject(
+      command.id,
+      "document_id",
+      await read(
+        business,
+        documentSchema,
+        `${base(business)}/documents/${command.id}`,
+        init,
+      ),
     );
   if (command.type === "item")
-    return read(
-      business,
-      itemSchema,
-      `${base(business)}/items/${command.id}`,
-      init,
+    return subject(
+      command.id,
+      "item_id",
+      await read(
+        business,
+        itemSchema,
+        `${base(business)}/items/${command.id}`,
+        init,
+      ),
     );
   if (command.type === "place")
-    return read(
-      business,
-      placeSchema,
-      `${base(business)}/places/${command.id}`,
-      init,
+    return subject(
+      command.id,
+      "place_id",
+      await read(
+        business,
+        placeSchema,
+        `${base(business)}/places/${command.id}`,
+        init,
+      ),
     );
-  return read(
-    business,
-    postingRulesSchema,
-    `${base(business)}/posting-rules/${command.book}`,
-    init,
+  return subject(
+    command.book,
+    "book_id",
+    await read(
+      business,
+      postingRulesSchema,
+      `${base(business)}/posting-rules/${command.book}`,
+      init,
+    ),
   );
+}
+
+function subject<T, K extends keyof T>(
+  expected: string,
+  field: K,
+  value: T,
+): T {
+  if (value[field] !== expected)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unexpected inventory command subject.",
+    );
+  return value;
 }
 
 /** What became of a command whose answer was lost; `cancel` refuses its late copy. */

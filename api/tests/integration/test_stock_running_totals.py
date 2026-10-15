@@ -20,7 +20,7 @@ from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.seed import seed_other_branch
 from tests.integration.test_inventory import refused_sql
 from tests.integration.test_stock import DAY, Stock
-from tests.integration.test_stock_transfers import ROW_WAITERS, transfer, transfer_sql
+from tests.integration.test_stock_transfers import transfer, transfer_sql
 from tests.integration.test_stock_write_offs import received, write_off, write_off_sql
 
 pytestmark = pytest.mark.anyio
@@ -236,8 +236,10 @@ async def test_two_transfers_into_a_new_balance_wait_and_chain(
     """
     assert (await stock.set_rules()).status_code == 200
     shelf = await stock.inventory.place(stock.inventory.world.a.location_id)
+    second_source = await stock.inventory.place(stock.inventory.world.a.location_id)
     item = (await stock.inventory.item(quantity_scale=0))["item_id"]
     await received(stock, item, "5", "10.00")
+    await received(stock, item, "5", "10.00", place_id=second_source["place_id"])
     monitor = await psycopg.AsyncConnection.connect(
         test_database.admin_dsn, dbname=test_database.name, autocommit=True
     )
@@ -245,30 +247,57 @@ async def test_two_transfers_into_a_new_balance_wait_and_chain(
     try:
         async with tenant_transaction(stock.pool, stock.tenant) as leader:
             await set_user_context(leader, stock.inventory.manager.user_id)
+            identity = await (
+                await leader.execute("select pg_backend_pid(),pg_current_xact_id()::text")
+            ).fetchone()
+            assert identity is not None
             # The leader writes the first balance of the shelf and keeps it uncommitted.
             await transfer_sql(leader, stock, item, shelf, quantity=1)
             follower = asyncio.create_task(
-                stock.post(transfer(stock, shelf, [{"item_id": item, "quantity": "1"}]))
+                stock.post(
+                    transfer(
+                        stock,
+                        shelf,
+                        [{"item_id": item, "quantity": "1"}],
+                        place_id=second_source["place_id"],
+                    )
+                )
             )
             deadline = asyncio.get_running_loop().time() + 8
             while asyncio.get_running_loop().time() < deadline:
-                row = await (await monitor.execute(ROW_WAITERS)).fetchone()
-                if row is not None and row[0] >= 1:
+                row = await (
+                    await monitor.execute(
+                        "select a.pid from pg_catalog.pg_locks l "
+                        "join pg_catalog.pg_stat_activity a on a.pid=l.pid "
+                        "where not l.granted and l.locktype='transactionid' "
+                        "and l.transactionid::text=%s and %s=any(pg_blocking_pids(l.pid)) "
+                        "and a.datname=current_database() "
+                        "and a.query like 'insert into gba.stock_movements %%'",
+                        (identity[1], identity[0]),
+                    )
+                ).fetchone()
+                if row is not None:
                     break
                 await asyncio.sleep(0.01)
             else:
-                pytest.fail("The follower must be seen in pg_locks waiting for a row lock")
+                pytest.fail("The follower must wait on the destination insert in pg_locks")
             assert not follower.done()
         moved = await asyncio.wait_for(follower, 15)
     finally:
         if follower is not None and not follower.done():
             follower.cancel()
+        if follower is not None:
+            await asyncio.gather(follower, return_exceptions=True)
         await monitor.close()
     assert getattr(moved, "status_code", None) == 200, getattr(moved, "text", moved)
     assert history(stock, item, shelf["place_id"]) == [(1, "in", 1, 1), (2, "in", 1, 2)]
     assert history(stock, item, stock.place["place_id"]) == [
         (1, "in", 5, 5),
         (2, "out", 1, 4),
-        (3, "out", 1, 3),
     ]
+    assert history(stock, item, second_source["place_id"]) == [
+        (1, "in", 5, 5),
+        (2, "out", 1, 4),
+    ]
+    assert stock.reconciled() == (2000, 2000)
     chained(stock)

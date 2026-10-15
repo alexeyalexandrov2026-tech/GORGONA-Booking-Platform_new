@@ -15,6 +15,8 @@ import psycopg
 import pytest
 
 from gorgona_booking.auth.principal import set_user_context
+from gorgona_booking.business import modules
+from gorgona_booking.business.readiness_registry import Readiness
 from gorgona_booking.db.pool import tenant_transaction
 from gorgona_booking.db.provisioning import add_membership
 from tests.integration import test_stock as shared
@@ -24,9 +26,10 @@ from tests.integration.seed import seed_user
 from tests.integration.test_counterparties import card
 from tests.integration.test_delegations import Parties
 from tests.integration.test_inventory import ITEM_VERSION, error, item_body, refused_sql
+from tests.integration.test_inventory_commands import reference, settle
 from tests.integration.test_stock import DAY, Stock, entity_with_book
-from tests.integration.test_stock_transfers import ROW_WAITERS
-from tests.integration.test_stock_write_offs import received
+from tests.integration.test_stock_transfers import ROW_WAITERS, transfer
+from tests.integration.test_stock_write_offs import received, write_off
 
 pytestmark = pytest.mark.anyio
 stock = shared.stock
@@ -35,6 +38,77 @@ accepted = shared.accepted
 client = shared.client
 idp = shared.idp
 manager_a = shared.manager_a
+
+
+async def test_j13_revoked_readiness_refuses_new_actions_and_keeps_history_and_recovery(
+    stock: Stock,
+) -> None:
+    """Revoke only this fixture's simulated acceptance after a real posting exists."""
+    assert (await stock.set_rules()).status_code == 200
+    item = (await stock.inventory.item(quantity_scale=0))["item_id"]
+    shelf = await stock.inventory.place(stock.inventory.world.a.location_id)
+    body = stock.receipt([{"item_id": item, "quantity": "5", "amount": "10.00"}])
+    document, key = uuid7(), str(uuid7())
+    posted = await stock.post(body, document, key)
+    assert posted.status_code == 200, posted.text
+    before = stock.counts()
+    current = modules.MODULES_BY_ID["inventory"]
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setitem(
+            modules.MODULES_BY_ID,
+            "inventory",
+            current.model_copy(update={"enableable": False, "readiness": Readiness.IMPLEMENTED}),
+        )
+        commands = [
+            stock.inventory.put(f"/items/{uuid7()}", item_body()),
+            stock.inventory.put(
+                f"/places/{uuid7()}",
+                {
+                    "expected_revision": 0,
+                    "location_id": shelf["location_id"],
+                    "code": "REVOKED",
+                    "name": "FAKE revoked place",
+                },
+            ),
+            stock.set_rules(1, surplus="4000"),
+            stock.post(body),
+            stock.post(write_off(stock, [{"item_id": item, "quantity": "1"}])),
+            stock.post(transfer(stock, shelf, [{"item_id": item, "quantity": "1"}])),
+            stock.post(
+                {
+                    "kind": "return",
+                    "reason": "supplier_return",
+                    "legal_entity_id": str(stock.entity),
+                    "place_id": stock.place["place_id"],
+                    "document_date": DAY,
+                    "source_document_id": str(document),
+                    "lines": [{"source_line_no": 1, "quantity": "1"}],
+                }
+            ),
+        ]
+        for command in commands:
+            response = await command
+            assert error(response) == (409, "MODULE_NOT_READY"), response.text
+        for path in (
+            "/items",
+            "/places",
+            "/balances",
+            "/costs",
+            "/documents",
+            f"/documents/{document}",
+            f"/posting-rules/{stock.book}",
+        ):
+            assert (await stock.inventory.get(path)).status_code == 200, path
+        assert (await stock.inventory.get(f"/documents/{document}")).json() == posted.json()
+        recovered = await settle(stock, key, reference("document", document))
+        assert recovered.status_code == 200, recovered.text
+        assert recovered.json()["state"] == "committed"
+        missing = reference("document", uuid7())
+        cancelled = await settle(stock, str(uuid7()), missing, "cancel")
+        assert cancelled.status_code == 200, cancelled.text
+        assert cancelled.json()["state"] == "cancelled"
+    assert stock.counts() == before
+    assert stock.reconciled() == (1000, 1000)
 
 
 async def test_j12_a_delegate_of_another_company_reaches_no_inventory_route(
