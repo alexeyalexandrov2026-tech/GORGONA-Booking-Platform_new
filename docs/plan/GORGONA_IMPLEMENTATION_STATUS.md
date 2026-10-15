@@ -1,6 +1,19 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-15: STOCK-01 technical evidence PASS; readiness unchanged
+## Current checkpoint — 2026-10-15: Package K proposed locally; provider gate closed
+
+The next stage-2 package K / FIN-02 now has a local implementation and acceptance
+proposal on `codex/package-k-plan`, based on `df88c20687333668d39fe76a26eabca691e62cb0`.
+Documentation only: no K route, worker, schema, dependency or provider operation.
+K-01–K-14 are NOT TESTED; actual Stripe test admission is BLOCKED by the separate
+provider/credential authorization rule. The K branch is not authorized for push.
+FIN-02 and STOCK-01 stay planned; ADR-0026/0027 Proposed. Main remains fedd0f1.
+Published J exact-head CI 158 PASS; its accepted technical evidence is preserved.
+[K plan](PACKAGE_K_PLAN_2026-10-15.md),
+[reuse and validation](evidence/2026-10-15-package-k-plan/ARCHITECTURE_REUSE.md),
+[current handoff](NEXT_AGENT_PACKAGE_K_PLAN_2026-10-15.md).
+
+## Previous checkpoint — 2026-10-15: STOCK-01 technical evidence PASS; readiness unchanged
 
 J-01–J-14 technical evidence PASS against `aedbb982a696052d606499f737b1754fce362b6a` with exact CI run 157
 success. Full local **PASS: 1748 passed, 4 skipped in 1448.82s (0:24:08)**. STOCK-01 remains planned,

@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-15T18:11:46.103009+00:00",
+  "result": "PASS",
+  "exit_code": 0,
+  "branch": "codex/package-k-plan",
+  "source_base": "df88c20687333668d39fe76a26eabca691e62cb0",
+  "planning_head_before_commit": "df88c20687333668d39fe76a26eabca691e62cb0",
+  "command": [
+    "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+    "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-k-plan-20261015-df88c20\\validate_plan.py"
+  ],
+  "changed_files": [
+    "CLOUD_CODE_HANDOFF.md",
+    "docs/adr/0027-provider-events-and-reconciliation.md",
+    "docs/plan/GORGONA_IMPLEMENTATION_STATUS.md",
+    "docs/plan/GORGONA_MASTER_PLAN.md",
+    "docs/plan/NEXT_AGENT_PACKAGE_K_PLAN_2026-10-15.md",
+    "docs/plan/NEXT_AGENT_PACKAGE_K_PROMPT_2026-10-15.md",
+    "docs/plan/PACKAGE_K_PLAN_2026-10-15.md",
+    "docs/plan/evidence/2026-10-15-package-k-plan/ARCHITECTURE_REUSE.md",
+    "docs/plan/evidence/2026-10-15-package-k-plan/CHECKS.json",
+    "docs/plan/evidence/2026-10-15-package-k-plan/VALIDATION.md"
+  ],
+  "markdown_files": 9,
+  "json_files": 1,
+  "new_local_links_checked": 51,
+  "source_files_bound": 20,
+  "inspected_sources": [
+    {
+      "path": "api/pyproject.toml",
+      "sha256": "25e574943be961240dbd36527bb39f79eac4e543ee1cd0514eb8d7858827ab47",
+      "git_blob_oid": "80577f4b69e8d6031e3809cbd666d3a1ccbdb30d"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/provider_admission_contracts.py",
+      "sha256": "c6b45eb3946d4ffe146aeebae895dc752743a29bcaebacd5c48f7a339808232c",
+      "git_blob_oid": "88cc0c28b8d3188f077b7a71057be9be2cf42be6"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/provider_admission.py",
+      "sha256": "2d7b13d9cd1cff1162f13108cd543798a3c14818f64c992c7fa80cb66c7f0204",
+      "git_blob_oid": "e774aae77ca99f480cc89821e0ea1a6f47da884d"
+    },
+    {
+      "path": "api/src/gorgona_booking/api/provider_admission.py",
+      "sha256": "a35d17534db26e389391fc80c52e97d10e290cc320e8e72106bffc5d298ea596",
+      "git_blob_oid": "05f5858bc8e14551346489e628f237e7f88781d6"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/migrations/0031_provider_admission.sql",
+      "sha256": "c82e37a2589867cf5058cf347cb89fc3b2a990c841d866d2d999f618e85469d2",
+      "git_blob_oid": "4edd0e888c88b60808835414b107f6bff8088d5b"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/provider_admission_guard.py",
+      "sha256": "8394dcc993d6ad5d36e03531ee1cb08ac5cb0fdc6cdeed5b5e45fde9e1d78334",
+      "git_blob_oid": "b62a0a75af5c8931518b029623cd4885ec9a28b5"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/settlement_contracts.py",
+      "sha256": "e0282b8cbdee4e5de3ad9b4a8afccddec0241a111f523e8b3f7195006cc9b9d7",
+      "git_blob_oid": "2f55b8a97548180cafd957683a97e8f5e46a0b50"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/settlements.py",
+      "sha256": "2abd3b20bd12190fd6c3936ce14cad2a2437d7091a9fd93afe193e8c25d26cb9",
+      "git_blob_oid": "b9cd35e95d826f03fd12be0681db9d22036a0039"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/ledger.py",
+      "sha256": "fce0e633c876fc73b9e5c3f599ff709b4c94ae17a36fa694bdcfb6bd68b471c5",
+      "git_blob_oid": "737ed24857770829802726aa83e7dc9cdb84a579"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/migrations/0024_external_payments.sql",
+      "sha256": "063490c38129571b99c6b0a9112fbeae76af7ca653ec508a8f5f02c7a24375a4",
+      "git_blob_oid": "b1f13277e35a4e21f51cbb6e3a0efaba5e9e5760"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/commands.py",
+      "sha256": "afdfae443fc05d7c19ce103aabcb0b136e64c755b702c518d03b4e13fbddd6ba",
+      "git_blob_oid": "4327d8a676902b293efe55ce08caaa27cca10538"
+    },
+    {
+      "path": "api/src/gorgona_booking/booking/idempotency.py",
+      "sha256": "1129f0f3c3fc4b4837775206f0a0a57af8fc2ba3ec1a42aa4e0a2c76d34d85fc",
+      "git_blob_oid": "1f5dcb3e041958a81f330b85c873bbef20b95383"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/pool.py",
+      "sha256": "384707c2491361499af1e448ec408ccfaf76d4a6e2806bd7f8ffcd478f192fbc",
+      "git_blob_oid": "2ec333a7f05821fee2ad72780fe2535e6bb135d7"
+    },
+    {
+      "path": "api/src/gorgona_booking/tenancy/authorization.py",
+      "sha256": "cf9c84638708623218eea08c104eb11227ea4cd5419cf0c1baa4b2ded033a158",
+      "git_blob_oid": "2fa817be48f4aa8f9cf093a878cd5b4c4ca1bb59"
+    },
+    {
+      "path": "api/src/gorgona_booking/tenancy/resolver.py",
+      "sha256": "fb3ae14f2b53ab181214146fafb83d7b3b4e0d0fb6c96f61049e707397f57815",
+      "git_blob_oid": "cc1875374c0d8dfdee5b3332d3c8d5eee987fcd4"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/migrations/0001_tenancy.sql",
+      "sha256": "4617081d175e95cde6761d1d21025aaefd0d4b732c17fe19f8ad80dfccc6bcc7",
+      "git_blob_oid": "2aa636b17b593ab72f8151059a61c534a29d956e"
+    },
+    {
+      "path": "api/src/gorgona_booking/api/app.py",
+      "sha256": "18041fcd621f28e3ecd2689891dfd9b44cd950026afcd7966bdba9a7fcacdea0",
+      "git_blob_oid": "57a73f3f17c11ed77dced006f9dba9cb4be57c5b"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/readiness_registry.py",
+      "sha256": "4c15facd659d9be4df0c4796ec820111364fe16f623dd1fbf07e782cfc77f52c",
+      "git_blob_oid": "0b01aaeb093dd59f43eb0bcf907643a36f91a307"
+    },
+    {
+      "path": "api/src/gorgona_booking/business/modules.py",
+      "sha256": "0ca414220bacfc5ab61be4576e01be067d5acc6269da63c2b81af07a5d3f3941",
+      "git_blob_oid": "d6e6fc04befed526b0bd9366e98e250fbe6f55b8"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "e81cb94c41de67f066f5f7bc4d2bec8721cc07617124e563cad82ddded0d4c78",
+      "git_blob_oid": "da79066d4a63b9a06d704f7bcc6260136c9b5edb"
+    }
+  ],
+  "api_tree": "157099abc4dd62c2a16ddf415604308081e4dad6",
+  "web_tree": "e0b7c6523cd831f0dae5b723232f7f5f9760de8d",
+  "remote_refs": {
+    "refs/heads/codex/package-j-review2-fixes": "df88c20687333668d39fe76a26eabca691e62cb0",
+    "refs/heads/main": "fedd0f115f24aad52f6256298296e8c5123fb427"
+  },
+  "preserved_baseline_ci": {
+    "id": 38697747829,
+    "run_number": 158,
+    "head_sha": "df88c20687333668d39fe76a26eabca691e62cb0",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38697747829"
+  },
+  "k_implementation": "NOT TESTED",
+  "k_acceptance_rows": "14 NOT TESTED",
+  "k_provider_execution": "BLOCKED: separate direct owner authorization required",
+  "k_publication": "NOT TESTED: no K push authorization",
+  "k_exact_head_ci": "NOT TESTED",
+  "readiness_unchanged": true,
+  "fin02": "planned",
+  "stock01": "planned",
+  "adr0027": "Proposed",
+  "runtime_dependencies_migrations_workflows_unchanged": true
+}
