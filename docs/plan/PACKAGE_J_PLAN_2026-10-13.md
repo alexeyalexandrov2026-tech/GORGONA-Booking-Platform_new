@@ -360,3 +360,10 @@ CI её вершины `b3982ba` — PASS (run 38613331894). Независим�
 Один исполнитель на рабочую копию и на одноразовый кластер PostgreSQL. Без merge,
 force-push, изменения опубликованной истории, развёртывания, production-миграций и
 действий в Azure. Новые библиотеки не нужны: текущий стек покрывает план.
+
+## Review fixes part 2 — 2026-10-15
+
+M1, L2, L3 and race gap 2 locally verified in `7b96fec`; full PASS: 1748 passed, 4 skipped in 1448.82s (0:24:08).
+[Record](evidence/2026-10-14-j5-j6-review-fixes-part2/VALIDATION.md). Exact new CI and
+J-01–J-14 technical acceptance pending. STOCK-01 remains planned; readiness is a separate
+owner decision. L1: intermediate balance_after/quantity_after/value_after values backfilled by 0042 are approximate: transaction ids order transaction starts, not commit order; final totals remain the authoritative reconciliation. L4: cancellation tombstones expire after 24 hours with idempotency keys; a late command after expiry can be executed. These are recorded limits, not fixes. Earlier review L6: migrations 0037 and 0042 require a maintenance window and coordinated application/schema deployment; no deployment is authorized. The platform-wide current-user/current-tenant function body guard remains outside Package J. Review-2 gaps 3–5 remain unmeasured or untested as described in REVIEW.md; no new claim closes them. Additional pre-existing UI follow-up, confirmed by code inspection only: DocumentForm filters archived materials and places out of outbound selectors too, although the API permits supported outbound operations. This slice preserves that UI behavior; browser validation of that gap is NOT TESTED (web/components/stock-documents.tsx, open/usable selectors).

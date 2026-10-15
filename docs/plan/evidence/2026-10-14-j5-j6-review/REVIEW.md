@@ -70,3 +70,7 @@ Azure. Область: код коммитов `afda55b` (J5a), `c3da59d` (J5b) 
 
 Часть 1: H1 исправлена миграцией 0043 в `f366afe`:
 [запись](../2026-10-14-j5-j6-review-fixes/VALIDATION.md). Остальные находки — часть 2.
+
+Part 2: M1, L2, L3 and test gaps 2/6 fixed and tested in `7b96fec`;
+[record](../2026-10-14-j5-j6-review-fixes-part2/VALIDATION.md). L1/L4 are recorded limits.
+Gaps 3–5 remain outside the claims of this slice; see the record.

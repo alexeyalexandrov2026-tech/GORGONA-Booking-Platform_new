@@ -1,7 +1,7 @@
 # ADR-0026 — Basic materials: owner-linked stock documents, moving-average cost and ledger postings
 
-- Status: **Proposed (2026-10-13)**. Slices J1 to J4 are implemented (see the
-  implementation notes below); the screens are not. The
+- Status: **Proposed (2026-10-13)**. Slices J1–J6, both screens and the review fixes are implemented (see the
+  implementation notes below); readiness remains locked pending the owner decision. The
   owner chose the twelve options
   of the [package J plan](../plan/PACKAGE_J_PLAN_2026-10-13.md) on 2026-10-13; this text
   follows them. It becomes Accepted only with the technical acceptance of STOCK-01.
@@ -444,6 +444,15 @@ a forged total when the session changed its company or branch before commit, bec
 unseen total equalled an unseen head. Migration 0043 (`f366afe`) refuses a total that a
 check cannot see. [Review](../plan/evidence/2026-10-14-j5-j6-review/REVIEW.md),
 [record](../plan/evidence/2026-10-14-j5-j6-review-fixes/VALIDATION.md).
+
+## Implementation notes — J5/J6 review fixes part 2 (completed 2026-10-15)
+
+Commit `7b96fec`: paginated client catalogues, refusal of an unknown return material,
+the distinct document-total bound and command subject checks. The new-destination race
+uses two different sources and identifies the INSERT wait on the leader in pg_locks.
+No schema change. [Record](../plan/evidence/2026-10-14-j5-j6-review-fixes-part2/VALIDATION.md).
+
+L1: intermediate balance_after/quantity_after/value_after values backfilled by 0042 are approximate: transaction ids order transaction starts, not commit order; final totals remain the authoritative reconciliation. L4: cancellation tombstones expire after 24 hours with idempotency keys; a late command after expiry can be executed. These are recorded limits, not fixes. Earlier review L6: migrations 0037 and 0042 require a maintenance window and coordinated application/schema deployment; no deployment is authorized. The platform-wide current-user/current-tenant function body guard remains outside Package J. Review-2 gaps 3–5 remain unmeasured or untested as described in REVIEW.md; no new claim closes them. Additional pre-existing UI follow-up, confirmed by code inspection only: DocumentForm filters archived materials and places out of outbound selectors too, although the API permits supported outbound operations. This slice preserves that UI behavior; browser validation of that gap is NOT TESTED (web/components/stock-documents.tsx, open/usable selectors).
 
 ## Acceptance and status
 

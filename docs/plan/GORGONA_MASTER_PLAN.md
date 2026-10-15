@@ -1,6 +1,17 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
-## Current checkpoint — 2026-10-14: review of J5 and J6 done; H1 fixed (part 1); not merged
+## Current checkpoint — 2026-10-15: Package J review fixes part 2 locally verified; acceptance pending
+
+M1, L2, L3 and the two-source destination-insert race are fixed in `7b96fec` on
+`codex/package-j-review2-fixes`. Full local **PASS: 1748 passed, 4 skipped in 1448.82s (0:24:08)**. Static/focused PASS;
+114 web tests; production audit 0, existing development audit 5 high. No migration or
+dependency changed. Exact new CI NOT TESTED at this pre-publication checkpoint.
+STOCK-01 remains planned, ADR-0026 Proposed; technical acceptance J-01–J-14 is next.
+Main remains fedd0f1. L1/L4 are recorded limits, not fixes.
+
+[Current handoff](NEXT_AGENT_PACKAGE_J_REVIEW2_FIXES_2026-10-14.md), [part-2 record](evidence/2026-10-14-j5-j6-review-fixes-part2/VALIDATION.md).
+
+## Previous checkpoint — 2026-10-14: review of J5 and J6 done; H1 fixed (part 1); not merged
 
 Независимый обзор J5 и J6 проведён: высокая находка H1 (подделка остатка проходила проверку
 0042 при смене контекста перед фиксацией) исправлена миграцией 0043: `f366afe` на ветке
