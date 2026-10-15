@@ -1,5 +1,8 @@
 # Next agent — K1a offline event boundary, 2026-10-15
 
+Current continuation: [K1b handoff](NEXT_AGENT_PACKAGE_K1B_2026-10-15.md)
+and [prompt](NEXT_AGENT_PACKAGE_K1B_PROMPT_2026-10-15.md). K1a text below is preserved history.
+
 PASS locally: source `7d25aa2d72874271a62e363817e0624fb502497c`, `codex/package-k1a-event-boundary`, based on `e8783f63254d1cffdbf6360513b5bf8f3ff411d1`.
 Checkout: `C:/Users/alexa/.codex/worktrees/package-j-review2-fixes/Gorgona Booking`.
 The subsequent documentation commit is above the source commit: inspect actual HEAD/status.

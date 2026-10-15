@@ -1,5 +1,8 @@
 Continue GORGONA Booking stage 2 Package K from K1a, local only.
 
+Current continuation: [K1b handoff](NEXT_AGENT_PACKAGE_K1B_2026-10-15.md)
+and [prompt](NEXT_AGENT_PACKAGE_K1B_PROMPT_2026-10-15.md). K1a text below is preserved history.
+
 Use C:/Users/alexa/.codex/worktrees/package-j-review2-fixes/Gorgona Booking,
 branch codex/package-k1a-event-boundary. Source `7d25aa2d72874271a62e363817e0624fb502497c`, parent `e8783f63254d1cffdbf6360513b5bf8f3ff411d1`;
 the docs commit is above it. Inspect actual HEAD/status/remotes first. Main must

@@ -1,6 +1,6 @@
 # ADR-0027 — Provider events and reconciliation
 
-- Status: **Proposed, 2026-10-15; integration not accepted. K1a is locally implemented.**
+- Status: **Proposed, 2026-10-15; integration not accepted. K1a and K1b receipt storage are locally implemented.**
 - Scope: [Package K / FIN-02](../plan/PACKAGE_K_PLAN_2026-10-15.md) in the agreed stage 2.
 - Planning baseline: `df88c20687333668d39fe76a26eabca691e62cb0`; K1a source `7d25aa2d72874271a62e363817e0624fb502497c`, no schema/route changes.
 - Decision owner: the product owner. This ADR grants no provider or publication permission.
@@ -97,3 +97,23 @@ Original no-adapter/no-installed-SDK statements above describe the proposal base
 No admitted connection, HTTP receipt, inbox, worker or financial effect exists.
 All complete K acceptance rows remain NOT TESTED; readiness stays planned and
 real provider execution remains separately gated. This is not acceptance of the overall ADR.
+
+## K1b execution note — 2026-10-15
+
+Local source `543b73221ac1dd0aa738bd8cf33dd468366ef27a` adds migration0044 and internal receipt storage only.
+Connections are immutable, owner-provisioned, always `not_admitted`, with no stored
+secret/configuration reference. Runtime may revoke permanently, but cannot provision
+or reactivate. No global routing grant, new role or security-definer function is added.
+Future verified operational admission remains a separate authority; neither H4 nor
+archived signed facts grants it. The only supplied provisioning is a synthetic test fixture.
+
+The caller supplies a company-scoped READ COMMITTED transaction and signature-checked
+K1a model. PostgreSQL verifies shape/scope/integrity, not the MAC. No public caller is
+wired. Equal facts keep one event; distinct digest variants persist conflicts without
+overwriting. Exact retries add no rows. The result is provisional until commit, not an
+HTTP acknowledgement. Connection-row SHARE locks serialize revocation. Retention,
+global routing, worker/fencing/operation identity and financial provenance remain ahead.
+
+[Evidence](../plan/evidence/2026-10-15-k1b-receipt-inbox/VALIDATION.md):40 new tests,
+1884 passed, 4 skipped in 1502.59s (0:25:02). All complete K acceptance rows and readiness unchanged. Next0045.
+Independent review and actual admitted provider execution remain ahead.

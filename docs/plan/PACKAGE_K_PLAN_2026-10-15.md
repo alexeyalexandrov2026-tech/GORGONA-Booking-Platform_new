@@ -1,5 +1,18 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## Current checkpoint — 2026-10-15: local K1b storage foundation
+
+Source `543b73221ac1dd0aa738bd8cf33dd468366ef27a`; full 1884 passed, 4 skipped in 1502.59s (0:25:02); focused 252 passed in 79.86s (0:01:19);40 new tests PASS.
+Migration0044 and the internal repository implement receipt-only bindings, immutable
+event identity, distinct deliveries/conflicts, rollback/replay, three observed pg_locks
+races, RLS denials and a nonempty0043 upgrade. The binding always says `not_admitted`;
+it is not the proposed verified operational connection. No HTTP route/acknowledgement,
+global routing lookup, worker or money effect. Complete K1 and K-01–K-14 NOT TESTED.
+Next migration0045;0001–0044 immutable in this local history.
+[Evidence](evidence/2026-10-15-k1b-receipt-inbox/VALIDATION.md),
+[current handoff](NEXT_AGENT_PACKAGE_K1B_2026-10-15.md).
+The proposal and K1a statements below describe their historical baselines.
+
 ## Execution checkpoint — 2026-10-15: K1a only
 
 A later owner `continue` was interpreted as proceeding with the bounded local offline

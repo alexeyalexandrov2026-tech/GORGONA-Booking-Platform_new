@@ -1,6 +1,22 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-15: K1a offline boundary locally verified; not published
+## Current checkpoint — 2026-10-15: K1b receipt storage locally verified; not published
+
+K1b source `543b73221ac1dd0aa738bd8cf33dd468366ef27a`, `codex/package-k1b-inbox`, base `ffb176b3cc4bd83637eff29246f6045e0705b9d3`.
+Migration0044 adds owner-provisioned `not_admitted` receipt bindings and an append-only
+typed event/delivery inbox. Equal facts replay safely; conflicting facts never overwrite
+history. Three races observe the intended pg_locks waits.40 new tests PASS.
+Static/build/web114 PASS; focused **252 passed in 79.86s (0:01:19)**;
+full **1884 passed, 4 skipped in 1502.59s (0:25:02)**, fresh disposable PostgreSQL18.6.
+No HTTP route, global routing grant, worker, operational admission or financial effect.
+Complete K-01–K-14 NOT TESTED; FIN-02/STOCK-01 planned; ADR0026/0027 Proposed unchanged.
+K push/CI and independent review NOT TESTED. Actual provider execution separately gated.
+Runtime npm audit0 PASS; existing development audit5high FAIL. Four container/external skips.
+[Validation](evidence/2026-10-15-k1b-receipt-inbox/VALIDATION.md),
+[handoff](NEXT_AGENT_PACKAGE_K1B_2026-10-15.md),
+[prompt](NEXT_AGENT_PACKAGE_K1B_PROMPT_2026-10-15.md).
+
+## Previous checkpoint — 2026-10-15: K1a offline boundary locally verified; not published
 
 K1a source `7d25aa2d72874271a62e363817e0624fb502497c` on `codex/package-k1a-event-boundary`: signature-first strict
 test snapshot decoding with stripe16.0.0, 96 synthetic tests. Static/build/web114 PASS;
