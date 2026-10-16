@@ -4,7 +4,11 @@ No provider account, real key, HTTP route, worker or money. Keys are generated i
 """
 
 import asyncio
+import re
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import date
+from typing import Any
 from uuid import UUID, uuid7
 
 import httpx
@@ -17,6 +21,7 @@ from gorgona_booking.business.ledger_contracts import BookInput
 from gorgona_booking.db.pool import (
     RuntimeConnection,
     RuntimePool,
+    set_tenant_context,
     tenant_transaction,
     unscoped_transaction,
 )
@@ -31,7 +36,7 @@ from gorgona_booking.providers.inbox import (
     record_event,
 )
 from gorgona_booking.providers.stripe_contracts import SignedStripeEvent
-from gorgona_booking.providers.stripe_events import ProviderEventRejectedError
+from gorgona_booking.providers.stripe_events import ProviderEventRejectedError, verify_stripe_event
 from tests.integration import test_provider_event_inbox as archive
 from tests.integration import test_provider_receipt_attestations as attested
 from tests.integration.booking_support import BookingWorld
@@ -598,6 +603,146 @@ async def test_config_revocation_waits_for_an_inflight_receipt_then_refuses_the_
     with pytest.raises(ReceiptBindingRejectedError):
         await attested.receive(writer_pool, routed, attested.delivery() + b"\n")
     assert await stored(app_pool, routed.tenant_id) == (1, 1, 1)
+
+
+# K1e: bounded waits and a cheap unauthenticated path (E-08, E-12, E-13) ------
+
+_RECEIPT_WAIT = (
+    "select l.pid from pg_catalog.pg_locks l "
+    "join pg_catalog.pg_stat_activity a on a.pid=l.pid "
+    "where not l.granted and l.locktype='transactionid' "
+    "and l.transactionid::text=%s and %s=any(pg_catalog.pg_blocking_pids(l.pid)) "
+    "and a.datname=current_database() and a.query like '%%for share of v,c'"
+)
+
+
+@asynccontextmanager
+async def held_revocation(pool: RuntimePool, scope: Routed) -> AsyncIterator[tuple[int, str]]:
+    """An uncommitted config revocation; yields its backend PID and transaction ID."""
+    async with pool.connection() as conn, conn.transaction(force_rollback=True):
+        await set_tenant_context(conn, scope.tenant_id)
+        await conn.execute(
+            _REVOKE["provider_verification_configs"], (scope.verification_config_id,)
+        )
+        row = await (
+            await conn.execute("select pg_backend_pid(),pg_current_xact_id()::text")
+        ).fetchone()
+        assert row is not None
+        yield row[0], row[1]
+
+
+async def blocked_receipt(monitor: RuntimeConnection, holder: tuple[int, str]) -> int:
+    """The PID of a receipt observed waiting in pg_locks on the holder's transaction."""
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + 8
+    while loop.time() < deadline:
+        row = await (await monitor.execute(_RECEIPT_WAIT, (holder[1], holder[0]))).fetchone()
+        if row is not None:
+            return int(row[0])
+        await asyncio.sleep(0.01)
+    pytest.fail("The receipt must wait on the held revocation in pg_locks")
+
+
+async def test_a_receipt_lock_wait_is_bounded_by_its_transaction_timeout(
+    routed: Routed,
+    writer_pool: RuntimePool,
+    app_pool: RuntimePool,
+    test_database: ProvisionedDatabase,
+) -> None:
+    monitor = await psycopg.AsyncConnection.connect(
+        test_database.admin_dsn, dbname=test_database.name, autocommit=True
+    )
+    receipt: asyncio.Task[service.AuthenticatedReceiptResult] | None = None
+    try:
+        async with held_revocation(app_pool, routed) as holder:
+            receipt = asyncio.create_task(
+                attested.receive(writer_pool, routed, attested.delivery())
+            )
+            await blocked_receipt(monitor, holder)
+            with pytest.raises(psycopg.errors.LockNotAvailable):
+                await asyncio.wait_for(receipt, 15)
+    finally:
+        if receipt is not None and not receipt.done():
+            receipt.cancel()
+            await asyncio.gather(receipt, return_exceptions=True)
+        await monitor.close()
+    assert await stored(app_pool, routed.tenant_id) == (0, 0, 0)
+
+
+async def test_a_bad_signature_is_refused_without_row_locks_or_catalog_guards(
+    routed: Routed,
+    writer_pool: RuntimePool,
+    app_pool: RuntimePool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    statements: list[str] = []
+    original = writer_pool.connection
+
+    @asynccontextmanager
+    async def traced() -> AsyncIterator[Any]:
+        async with original() as conn:
+            yield attested._Traced(conn, statements)
+
+    raw = attested.delivery()
+    forged = signed.signed(raw, attested.fake_key())
+    async with held_revocation(app_pool, routed):
+        monkeypatch.setattr(writer_pool, "connection", traced)
+        with pytest.raises(ProviderEventRejectedError):
+            await asyncio.wait_for(
+                receive_routed_receipt(
+                    writer_pool,
+                    routed.ingress_id,
+                    raw,
+                    forged,
+                    key_store=routed.key_store,
+                    now=attested.NOW,
+                ),
+                15,
+            )
+        monkeypatch.undo()
+    assert statements
+    guarded = re.compile(r"for share|pg_catalog\.pg_(roles|class|policy|trigger|proc)", re.I)
+    assert not [statement for statement in statements if guarded.search(statement)]
+    assert await stored(app_pool, routed.tenant_id) == (0, 0, 0)
+
+
+@pytest.mark.parametrize("change", ["revoked", "rotated"])
+async def test_a_config_changed_after_the_unlocked_read_is_refused(
+    routed: Routed,
+    writer_pool: RuntimePool,
+    app_pool: RuntimePool,
+    owner_conn: psycopg.Connection,
+    test_database: ProvisionedDatabase,
+    monkeypatch: pytest.MonkeyPatch,
+    change: str,
+) -> None:
+    original = verify_stripe_event
+    changed: list[str] = []
+
+    def verify_then_change(*args: Any, **kwargs: Any) -> SignedStripeEvent:
+        event = original(*args, **kwargs)
+        # Another session commits the change; it must not have to wait for this receipt.
+        with psycopg.connect(test_database.app_dsn, autocommit=True) as other, other.transaction():
+            other.execute(
+                "select pg_catalog.set_config('lock_timeout','2000',true),"
+                "pg_catalog.set_config('gba.tenant_id',%s,true)",
+                (str(routed.tenant_id),),
+            )
+            other.execute(
+                _REVOKE["provider_verification_configs"], (routed.verification_config_id,)
+            )
+        if change == "rotated":
+            attested.provision_config(
+                owner_conn, routed.tenant_id, routed.connection_id, "test:k1e-" + uuid7().hex
+            )
+        changed.append(change)
+        return event
+
+    monkeypatch.setattr(service, "verify_stripe_event", verify_then_change)
+    with pytest.raises(ReceiptBindingRejectedError):
+        await attested.receive(writer_pool, routed, attested.delivery())
+    assert changed == [change]
+    assert await stored(app_pool, routed.tenant_id) == (0, 0, 0)
 
 
 # D-08 -----------------------------------------------------------------------

@@ -7,7 +7,7 @@ SQL does not verify the MAC. Operational admission is an independent future gate
 
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from psycopg.pq import TransactionStatus
@@ -19,6 +19,10 @@ from gorgona_booking.db.provider_receipt_guard import assert_provider_receipt_re
 from gorgona_booking.providers.inbox import ReceiptBindingRejectedError, ReceiptResult, record_event
 from gorgona_booking.providers.stripe_contracts import Sha256, SignedStripeEvent, StripeEventPolicy
 from gorgona_booking.providers.stripe_events import verify_stripe_event
+
+LOCK_TIMEOUT_MS = 5_000
+STATEMENT_TIMEOUT_MS = 10_000
+MAX_TIMEOUT_MS = 60_000
 
 
 class UnsafeReceiptWriterRoleError(RuntimeError):
@@ -77,10 +81,19 @@ from pg_catalog.pg_roles r where r.rolname in (current_user,session_user)
     await assert_provider_receipt_ready(conn)
 
 
-async def _resolve_authority(conn: RuntimeConnection, ingress_id: UUID) -> ReceiptAuthority:
-    """Route first, then its company context, then the active config and binding, share-locked.
+_ACTIVE_AUTHORITY = (
+    "select v.id,v.secret_ref,c.book_id,c.namespace,c.account_id,c.api_version "
+    "from gba.provider_verification_configs v join gba.provider_receipt_connections c "
+    "on c.tenant_id=v.tenant_id and c.id=v.connection_id "
+    "where v.tenant_id=%s and v.connection_id=%s and not v.revoked and not c.revoked"
+)
 
-    Only authority rows are read here: no inbox, ledger or other business data.
+
+async def _read_authority(conn: RuntimeConnection, ingress_id: UUID) -> ReceiptAuthority:
+    """Route first, then its company context, then the active config and binding, unlocked.
+
+    Only authority rows are read here: no inbox, ledger or other business data, no row lock
+    and no catalog guard, so an unauthenticated caller costs these indexed reads alone.
     """
     route = await (
         await conn.execute(
@@ -92,18 +105,26 @@ async def _resolve_authority(conn: RuntimeConnection, ingress_id: UUID) -> Recei
         raise ReceiptBindingRejectedError()
     tenant_id, connection_id = route
     await set_tenant_context(conn, tenant_id)
-    row = await (
-        await conn.execute(
-            "select v.id,v.secret_ref,c.book_id,c.namespace,c.account_id,c.api_version "
-            "from gba.provider_verification_configs v join gba.provider_receipt_connections c "
-            "on c.tenant_id=v.tenant_id and c.id=v.connection_id "
-            "where v.tenant_id=%s and v.connection_id=%s and not v.revoked and not c.revoked "
-            "and current_setting('transaction_isolation')='read committed' for share of v,c",
-            (tenant_id, connection_id),
-        )
-    ).fetchone()
+    row = await (await conn.execute(_ACTIVE_AUTHORITY, (tenant_id, connection_id))).fetchone()
     if row is None:
         raise ReceiptBindingRejectedError()
+    return _authority(tenant_id, connection_id, row)
+
+
+async def _confirm_authority(conn: RuntimeConnection, authority: ReceiptAuthority) -> None:
+    """After the signature: the same active config and binding, share-locked until commit."""
+    row = await (
+        await conn.execute(
+            _ACTIVE_AUTHORITY
+            + " and current_setting('transaction_isolation')='read committed' for share of v,c",
+            (authority.tenant_id, authority.connection_id),
+        )
+    ).fetchone()
+    if row is None or _authority(authority.tenant_id, authority.connection_id, row) != authority:
+        raise ReceiptBindingRejectedError()
+
+
+def _authority(tenant_id: UUID, connection_id: UUID, row: tuple[Any, ...]) -> ReceiptAuthority:
     config_id, secret_ref, book_id, namespace, account_id, api_version = row
     return ReceiptAuthority(
         tenant_id=tenant_id,
@@ -144,27 +165,48 @@ async def receive_routed_receipt(
     *,
     key_store: Mapping[str, SecretStr],
     now: datetime | None = None,
+    lock_timeout_ms: int = LOCK_TIMEOUT_MS,
+    statement_timeout_ms: int = STATEMENT_TIMEOUT_MS,
 ) -> AuthenticatedReceiptResult:
     """Resolve server-owned authority, verify raw bytes, then archive and attest in one commit.
 
     The ingress ID is the only routing input; company, connection, book, account policy and
-    key come from owner-provisioned rows and the server-held key store. Return only after
-    the transaction commits. A verified conflicting variant is retained, not applied. No
-    original archive row is retroactively trusted, overwritten or relabeled. No raw bytes
-    or keys are stored. The writer is a trusted verifier, not a financial worker.
+    key come from owner-provisioned rows and the server-held key store. Before the signature
+    check only a cheap writer-membership check runs and nothing is locked; after it the full
+    guards run and the same active config and binding are share-locked before any write.
+    Every lock wait and statement is
+    bounded by the transaction-local timeouts. Return only after the transaction commits. A
+    verified conflicting variant is retained, not applied. No original archive row is
+    retroactively trusted, overwritten or relabeled. No raw bytes or keys are stored. The
+    writer is a trusted verifier, not a financial worker.
     """
+    if not (1 <= lock_timeout_ms <= MAX_TIMEOUT_MS and 1 <= statement_timeout_ms <= MAX_TIMEOUT_MS):
+        raise ValueError("Receipt timeouts are out of range")
     async with pool.connection() as conn:
         if conn.info.transaction_status is not TransactionStatus.IDLE:
             raise ReceiptBindingRejectedError()
         async with conn.transaction():
-            await assert_safe_receipt_writer_role(conn)
-            authority = await _resolve_authority(conn, ingress_id)
+            writer = await (
+                await conn.execute(
+                    "select pg_catalog.set_config('lock_timeout',%s,true),"
+                    "pg_catalog.set_config('statement_timeout',%s,true),"
+                    "pg_catalog.pg_has_role(current_user,'gba_receipt_writer','USAGE') "
+                    "and not pg_catalog.pg_has_role(session_user,'gba_runtime','MEMBER')",
+                    (str(lock_timeout_ms), str(statement_timeout_ms)),
+                )
+            ).fetchone()
+            if writer is None or writer[2] is not True:
+                # Fail fast for the ordinary runtime; the full role scan follows the signature.
+                raise UnsafeReceiptWriterRoleError("Receipt writer database role is unsafe")
+            authority = await _read_authority(conn, ingress_id)
             key = key_store.get(authority.secret_ref)
             if key is None:
                 raise ReceiptBindingRejectedError()
             event = verify_stripe_event(
                 payload, signature, policy=authority.policy, signing_keys=(key,), now=now
             )
+            await assert_safe_receipt_writer_role(conn)
+            await _confirm_authority(conn, authority)
             result = await record_event(conn, authority.connection_id, event)
             if result.book_id != authority.book_id:
                 raise ReceiptBindingRejectedError()
