@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { businessDateTime, shiftDate } from "../lib/business-time";
 import { ManagementApiError } from "../lib/management-api";
 import {
@@ -94,7 +94,13 @@ export function MyShifts({
   const from =
     picked ||
     today(zoneOf(workspace?.locations, desk?.profile?.location_id ?? ""));
+  const activeView = useRef<{ businessId: string; from: string } | null>(null);
+  const loadGeneration = useRef(0);
   const load = useCallback(async () => {
+    const view = activeView.current;
+    if (view === null || view.businessId !== businessId || view.from !== from)
+      return;
+    const generation = ++loadGeneration.current;
     const window = dayWindow(from, DAYS);
     const [own, vacant, requests, team] = await Promise.all([
       fetchShifts(businessId, "my-shifts", window.starts, window.ends),
@@ -121,6 +127,9 @@ export function MyShifts({
       if (part.status === "fulfilled")
         for (const item of part.value)
           if (!map.has(item.shift_id)) map.set(item.shift_id, item);
+    // A previous date, business or superseded refresh cannot replace this view.
+    if (activeView.current !== view || generation !== loadGeneration.current)
+      return;
     setShifts(soonest(own.items.filter((item) => item.status === "published")));
     setFree(soonest(vacant.items));
     setChanges(latest(requests.items));
@@ -135,16 +144,20 @@ export function MyShifts({
   }, [reload, load]);
   const center = useWorkforceCommands(businessId, actorId, refresh);
   useEffect(() => {
+    activeView.current = { businessId, from };
     let active = true;
     void Promise.resolve()
-      .then(load)
+      .then(() => {
+        if (active) return load();
+      })
       .catch((error: unknown) => {
         if (active) setLoadError(explain(error));
       });
     return () => {
       active = false;
+      activeView.current = null;
     };
-  }, [load]);
+  }, [load, businessId, from]);
 
   const open = desk?.writes === "open";
   const hidden = desk?.colleague_shifts === "hidden";

@@ -3,8 +3,10 @@ import {
   expect as immediate,
   type Locator,
   type Page,
+  type Request,
 } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { shiftListSchema } from "../lib/workforce-contracts";
 
 // Situations the acceptance record listed as untested. The fixture is
 // api/tests/integration/test_i4_situations_browser.py.
@@ -258,6 +260,96 @@ test("lists longer than one page are read to the end, and a cut list says so", a
   await expect(listed(vacant, tag)).toHaveCount(10);
   await accessible(page);
   await fits(page);
+});
+
+test("a slower previous date never replaces the selected open shifts", async ({
+  page,
+}, testInfo) => {
+  const project = testInfo.project.name;
+  const actor: Person = project === "desktop" ? "ada" : "ben";
+  const week =
+    (project === "desktop"
+      ? process.env.GBA_I4S_PAGED_DESKTOP
+      : process.env.GBA_I4S_PAGED_MOBILE) ?? "";
+  const tag = "FAKE " + project + " page";
+  const pending = new Set<Request>();
+  let released = false;
+  let oldDetails = 0;
+  const tracked = (request: Request) =>
+    request.method() === "GET" &&
+    new URL(request.url()).pathname.includes("/workforce/");
+  const started = (request: Request) => {
+    if (tracked(request)) pending.add(request);
+  };
+  const finished = (request: Request) => {
+    pending.delete(request);
+    if (
+      released &&
+      /\/my-changes\/[0-9a-f-]+\/shifts$/.test(new URL(request.url()).pathname)
+    )
+      oldDetails++;
+  };
+  const failed = (request: Request) => {
+    pending.delete(request);
+  };
+  let releaseOld!: () => void;
+  let oldReady = false;
+  let oldTagCount = -1;
+  const release = new Promise<void>((resolve) => {
+    releaseOld = resolve;
+  });
+  let held = false;
+  await signIn(page, actor);
+  page.on("request", started);
+  page.on("requestfinished", finished);
+  page.on("requestfailed", failed);
+  await open(page, "My shifts");
+  const from = page.getByLabel("Show four weeks from", { exact: true });
+  await expect(from).toBeVisible();
+  // Track only finite workforce reads; authentication can keep other traffic open.
+  await expect.poll(() => pending.size).toBe(0);
+  await page.route(OPEN_LIST, async (route) => {
+    if (held || route.request().method() !== "GET") return route.continue();
+    held = true;
+    const response = await route.fetch();
+    // Earlier scenarios may leave unrelated shifts in the old date window.
+    oldTagCount = shiftListSchema
+      .parse(await response.json())
+      .items.filter((shift) => shift.position.startsWith(tag)).length;
+    oldReady = true;
+    await release;
+    await route.fulfill({ response });
+  });
+  try {
+    await from.fill(firstDay);
+    await expect.poll(() => oldReady).toBe(true);
+    expect(oldTagCount).toBe(0);
+    await from.fill(week);
+    const vacant = within(page, "Open shifts");
+    await expect(listed(vacant, tag)).toHaveCount(pagedCount);
+    // Only the held old response remains; all lookups for the new date finished.
+    await expect.poll(() => pending.size).toBe(1);
+    released = true;
+    releaseOld();
+    // The old load reads the latest twenty request details after its held list.
+    await expect.poll(() => oldDetails).toBe(20);
+    await expect.poll(() => pending.size).toBe(0);
+    // Let that completed load publish its state and paint, without a timed sleep.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    await expect(from).toHaveValue(week);
+    await expect(listed(vacant, tag)).toHaveCount(pagedCount);
+  } finally {
+    releaseOld();
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+    page.off("request", started);
+    page.off("requestfinished", finished);
+    page.off("requestfailed", failed);
+  }
 });
 
 test("a server fault or an unreadable answer to a command is settled by its key", async ({

@@ -6,12 +6,13 @@ is a superuser. Passwords are sent pre-hashed (SCRAM), never in clear text.
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import psycopg
 from psycopg import sql
 
 RUNTIME_GROUP = "gba_runtime"
+RECEIPT_WRITER_GROUP = "gba_receipt_writer"
 _IDENTIFIER = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
 _SAFE_ATTRIBUTES = sql.SQL("NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS")
 
@@ -24,32 +25,61 @@ class BootstrapError(RuntimeError):
 class BootstrapSpec:
     database: str
     owner_role: str
-    owner_password: str
+    owner_password: str = field(repr=False)
     app_role: str
-    app_password: str
+    app_password: str = field(repr=False)
+    receipt_writer_role: str | None = None
+    receipt_writer_password: str | None = field(default=None, repr=False)
 
     def validate(self) -> None:
-        for name in (self.database, self.owner_role, self.app_role):
+        if (self.receipt_writer_role is None) != (self.receipt_writer_password is None):
+            raise BootstrapError("receipt writer role and password must be supplied together")
+        writer = (self.receipt_writer_role,) if self.receipt_writer_role is not None else ()
+        for name in (self.database, self.owner_role, self.app_role, *writer):
             if not _IDENTIFIER.fullmatch(name):
                 raise BootstrapError(f"invalid identifier: {name!r}")
-        if len({self.owner_role, self.app_role, RUNTIME_GROUP}) != 3:
-            raise BootstrapError("owner role, runtime role and runtime group must all differ")
+        roles = (self.owner_role, self.app_role, RUNTIME_GROUP, RECEIPT_WRITER_GROUP, *writer)
+        if len(set(roles)) != len(roles):
+            raise BootstrapError("owner, runtime, receipt writer and groups must all differ")
         if min(len(self.owner_password), len(self.app_password)) < 12:
             raise BootstrapError("role passwords must be at least 12 characters")
+        if self.receipt_writer_password is not None and len(self.receipt_writer_password) < 12:
+            raise BootstrapError("receipt writer password must be at least 12 characters")
 
 
 def bootstrap(admin_conninfo: str, spec: BootstrapSpec) -> None:
     spec.validate()
     with psycopg.connect(admin_conninfo, autocommit=True) as conn:
         _ensure_role(conn, RUNTIME_GROUP, password=None)
+        _ensure_role(conn, RECEIPT_WRITER_GROUP, password=None)
         _ensure_role(conn, spec.owner_role, password=spec.owner_password)
         _ensure_role(conn, spec.app_role, password=spec.app_password)
+        if spec.receipt_writer_role is not None:
+            _ensure_role(conn, spec.receipt_writer_role, password=spec.receipt_writer_password)
+            conn.execute(
+                sql.SQL("grant {} to {}").format(
+                    sql.Identifier(RECEIPT_WRITER_GROUP), sql.Identifier(spec.receipt_writer_role)
+                )
+            )
         conn.execute(
             sql.SQL("grant {} to {}").format(
                 sql.Identifier(RUNTIME_GROUP), sql.Identifier(spec.app_role)
             )
         )
-        for member, role in ((spec.app_role, spec.owner_role), (spec.owner_role, RUNTIME_GROUP)):
+        forbidden = [
+            (spec.app_role, spec.owner_role),
+            (spec.owner_role, RUNTIME_GROUP),
+            (spec.owner_role, RECEIPT_WRITER_GROUP),
+            (spec.app_role, RECEIPT_WRITER_GROUP),
+            (RUNTIME_GROUP, RECEIPT_WRITER_GROUP),
+            (RECEIPT_WRITER_GROUP, RUNTIME_GROUP),
+        ]
+        if spec.receipt_writer_role is not None:
+            forbidden += [
+                (spec.receipt_writer_role, spec.owner_role),
+                (spec.receipt_writer_role, RUNTIME_GROUP),
+            ]
+        for member, role in forbidden:
             if _is_member(conn, member, role):
                 raise BootstrapError(f"{member} must not be a member of {role}")
 
@@ -74,6 +104,12 @@ def bootstrap(admin_conninfo: str, spec: BootstrapSpec) -> None:
                 sql.Identifier(spec.database), sql.Identifier(RUNTIME_GROUP)
             )
         )
+        if spec.receipt_writer_role is not None:
+            conn.execute(
+                sql.SQL("grant connect on database {} to {}").format(
+                    sql.Identifier(spec.database), sql.Identifier(spec.receipt_writer_role)
+                )
+            )
 
 
 def _ensure_role(conn: psycopg.Connection, name: str, password: str | None) -> None:

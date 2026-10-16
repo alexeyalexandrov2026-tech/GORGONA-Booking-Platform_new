@@ -424,6 +424,15 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
             receipts = next(m.sql for m in load_migrations() if m.version == 44)
             receipt_policies = re.findall(r"create policy \w+_company\b.*?;", receipts, re.DOTALL)
             assert len(receipt_policies) == 3
+            attestations = next(m.sql for m in load_migrations() if m.version == 45)
+            attestation_policies = re.findall(
+                r"create policy \w+_company\b.*?;", attestations, re.DOTALL
+            )
+            assert len(attestation_policies) == 1
+            receipt_policies += attestation_policies
+            owner_conn.execute(
+                "grant execute on function gba.current_location_id() to gba_receipt_writer"
+            )
             for policy in workforce_policies + inventory_policies + receipt_policies:
                 # Child policies can depend on the parent relation rather than
                 # the dropped helper itself, so CASCADE may leave them intact.

@@ -10,9 +10,17 @@ from gorgona_booking.errors import DatabaseUnavailableError
 _SQL = (
     resources.files("gorgona_booking.db") / "migrations" / "0044_provider_receipt_inbox.sql"
 ).read_text(encoding="utf-8")
+_SQL += (
+    resources.files("gorgona_booking.db") / "migrations" / "0045_provider_receipt_attestations.sql"
+).read_text(encoding="utf-8")
 _FUNCTIONS = re.findall(r"create function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;", _SQL, re.DOTALL)
 _FUNCTIONS.append(("reject_ledger_mutation", LEDGER_IMMUTABLE_SOURCE))
-_TABLES = ("provider_receipt_connections", "provider_event_inbox", "provider_event_deliveries")
+_TABLES = (
+    "provider_receipt_connections",
+    "provider_event_inbox",
+    "provider_event_deliveries",
+    "provider_event_attestations",
+)
 _COLUMNS = [
     [
         table,
@@ -22,8 +30,10 @@ _COLUMNS = [
         "s" if "generated always" in tail else "",
         f"(facts ->> '{name if name != 'provider_event_id' else 'event_id'}'::text)"
         if "generated always" in tail
-        else "'not_admitted'::text"
-        if "default 'not_admitted'" in tail
+        else "'" + re.findall(r"default '([^']+)'", tail)[0] + "'::text"
+        if re.search(r"default '[^']+'", tail)
+        else "CURRENT_USER"
+        if "default current_user" in tail
         else "false"
         if "default false" in tail
         else "now()"
@@ -67,6 +77,20 @@ _TRIGGERS = (
         "provider_receipt_has_delivery",
         True,
     ),
+    (
+        "provider_event_attestations",
+        "provider_event_attestations_check",
+        7,
+        "check_provider_receipt_attestation",
+        False,
+    ),
+    (
+        "provider_event_attestations",
+        "provider_event_attestations_immutable",
+        27,
+        "reject_ledger_mutation",
+        False,
+    ),
 )
 _CHECKS = (
     ("provider_receipt_connections", "(namespace ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$'::text)"),
@@ -80,6 +104,8 @@ _CHECKS = (
     ("provider_event_inbox", "gba.provider_receipt_facts_valid(facts)"),
     ("provider_event_deliveries", "(delivery_sha256 ~ '^[0-9a-f]{64}$'::text)"),
     ("provider_event_deliveries", "gba.provider_receipt_facts_valid(facts)"),
+    ("provider_event_attestations", "(delivery_sha256 ~ '^[0-9a-f]{64}$'::text)"),
+    ("provider_event_attestations", "(verifier = 'stripe_snapshot_v1'::text)"),
 )
 _KEYS = (
     ("provider_receipt_connections", "p", ["tenant_id", "id"], None, None),
@@ -106,6 +132,28 @@ _KEYS = (
         "f",
         ["tenant_id", "event_id"],
         "provider_event_inbox",
+        ["tenant_id", "id"],
+    ),
+    ("provider_event_attestations", "p", ["tenant_id", "event_id", "delivery_sha256"], None, None),
+    (
+        "provider_event_attestations",
+        "f",
+        ["tenant_id", "event_id", "delivery_sha256"],
+        "provider_event_deliveries",
+        ["tenant_id", "event_id", "delivery_sha256"],
+    ),
+    (
+        "provider_event_attestations",
+        "f",
+        ["tenant_id", "connection_id"],
+        "provider_receipt_connections",
+        ["tenant_id", "id"],
+    ),
+    (
+        "provider_event_attestations",
+        "f",
+        ["tenant_id", "book_id"],
+        "ledger_books",
         ["tenant_id", "id"],
     ),
 )
@@ -176,7 +224,8 @@ select
   from pg_attribute a join pg_class c on c.oid=a.attrelid
   join pg_namespace n on n.oid=c.relnamespace
   left join pg_attrdef d on d.adrelid=c.oid and d.adnum=a.attnum
-  where n.nspname='gba' and c.relname=any(%s) and a.attnum>0 and not a.attisdropped)
+  where n.nspname='gba' and c.relname=any(%s) and a.attnum>0 and not a.attisdropped),
+ pg_catalog.pg_has_role(current_user,'gba_receipt_writer','USAGE')
 """,
             (
                 tables,
@@ -192,7 +241,7 @@ select
     ).fetchone()
     valid = row is not None
     if row is not None:
-        boundary, policies, triggers, functions, checks, keys, privileges, columns = row
+        boundary, policies, triggers, functions, checks, keys, privileges, columns, is_writer = row
         valid = sorted(boundary or []) == sorted(
             [[t, True, True, True, False, False] for t in tables]
         )
@@ -247,6 +296,14 @@ select
             "provider_receipt_connections": set(),
             "provider_event_inbox": {"tenant_id", "id", "connection_id", "facts"},
             "provider_event_deliveries": {"tenant_id", "event_id", "delivery_sha256", "facts"},
+            "provider_event_attestations": {
+                "tenant_id",
+                "event_id",
+                "delivery_sha256",
+                "verification_config_id",
+            }
+            if is_writer
+            else set(),
         }
         valid &= all(
             insert == (column in inserts[table])

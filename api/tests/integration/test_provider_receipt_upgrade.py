@@ -65,7 +65,7 @@ async def test_nonempty_0043_upgrade_preserves_all_existing_facts_and_checksums(
             "select version,checksum from public.gba_schema_migrations order by version"
         ).fetchall()
     assert len(checksums) == 43
-    applied = apply_migrations(previous_receipt_database.owner_dsn)
+    applied = apply_migrations(previous_receipt_database.owner_dsn, load_migrations()[:44])
     assert [m.version for m in applied] == [44]
     after = snapshot(previous_receipt_database)
     assert {name: after[name] for name in before} == before
@@ -83,4 +83,4 @@ async def test_nonempty_0043_upgrade_preserves_all_existing_facts_and_checksums(
             ).fetchall()
             == checksums
         )
-    assert apply_migrations(previous_receipt_database.owner_dsn) == []
+    assert apply_migrations(previous_receipt_database.owner_dsn, load_migrations()[:44]) == []

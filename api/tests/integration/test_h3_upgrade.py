@@ -7,7 +7,7 @@ the ordinary runtime or dedicated migration-owner role. No original DB is edited
 
 import hashlib
 from collections.abc import Iterator
-from uuid import uuid7
+from uuid import UUID, uuid7
 
 import psycopg
 import pytest
@@ -103,6 +103,20 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
             "select max(version) from public.gba_schema_migrations"
         ).fetchone()
         assert target_version is not None
+        kinds = STOCK_KINDS.get(target_version[0])
+        # Decide incompatible companies once. Correlating this absence check to
+        # every historical row can scan 100,000 documents 100,000 times when a
+        # nested-loop plan is chosen before autovacuum updates the statistics.
+        omitted: list[UUID] = []
+        if kinds is not None and any(row[0] == "stock_documents" for row in source_tables):
+            omitted = [
+                row[0]
+                for row in before.execute(
+                    "select distinct tenant_id from gba.stock_documents where not kind=any(%s)",
+                    (list(kinds),),
+                )
+            ]
+        incompatible = sql.SQL("{}::uuid[]").format(sql.Literal(omitted))
         after.execute("set local session_replication_role=replica")
         after.execute(
             sql.SQL("truncate {} cascade").format(
@@ -155,25 +169,19 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
             # A schema stopped at 0037 or 0038 cannot hold the stock documents of later
             # kinds. A company that has one keeps none of its stock rows there, so every
             # running total stays whole.
-            kinds = STOCK_KINDS.get(target_version[0])
             if kinds is not None:
-                later = sql.SQL(
-                    "exists (select 1 from gba.stock_documents d "
-                    "where d.tenant_id={}.tenant_id and not d.kind = any({}))"
-                )
-                held = sql.Literal(list(kinds))
                 if table in STOCK_DOCUMENT_TABLES:
-                    predicate = sql.SQL(" where not ") + later.format(sql.SQL("t"), held)
+                    predicate = sql.SQL(" where t.tenant_id <> all ({})").format(incompatible)
                 elif table == "journal_entries":
-                    predicate = sql.SQL(" where t.source_kind <> 'stock' or not ") + later.format(
-                        sql.SQL("t"), held
-                    )
+                    predicate = sql.SQL(
+                        " where t.source_kind <> 'stock' or t.tenant_id <> all ({})"
+                    ).format(incompatible)
                 elif table == "journal_lines":
                     predicate = sql.SQL(
                         " where not exists (select 1 from gba.journal_entries e "
                         "where e.tenant_id=t.tenant_id and e.id=t.entry_id "
-                        "and e.source_kind='stock' and {})"
-                    ).format(later.format(sql.SQL("e"), held))
+                        "and e.source_kind='stock' and e.tenant_id=any({}))"
+                    ).format(incompatible)
             cursor = before.execute(
                 sql.SQL("select {} from {} t{}").format(
                     names, sql.Identifier("gba", table), predicate
