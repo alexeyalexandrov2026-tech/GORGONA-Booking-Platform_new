@@ -1,11 +1,39 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the proposed isolated verifier foundation;
+[validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
+Status remains Proposed. Operational admission/payment authority and readiness unchanged.
+
+## K1c local implementation decision — 2026-10-16, Proposed
+
+Use a separate NOLOGIN `gba_receipt_writer` group and an explicitly configured,
+non-owner writer login. Reuse K1a raw signature verification and K1b archive writes.
+Add migration0045 with an immutable, company-scoped attestation per archived delivery,
+an opaque verification configuration ID, decoder version and database writer attribution.
+The ordinary runtime can read attestations but cannot insert, mutate or assume the writer
+role. The writer must have no unrelated business/financial table privileges. Refuse mixed
+roles, including an unsafe session login hidden by SET ROLE. Owner bootstrap may create
+an optional writer login; current ordinary bootstrap callers keep their existing behavior.
+
+Only an internal raw-body entry point may attest after verification against trusted
+server-supplied tenant/connection/book/account policy. Commit archive and attestation
+together before returning. Test refusals, rollback/commit, duplicates/conflicts, RLS,
+revocation, role/schema drift and nonempty0044 upgrade on disposable PostgreSQL; races
+require observed pg_locks waits. Preserve0001–0044. No new dependency or security-definer.
+
+The trusted writer can assert a false receipt if its own credential/code is compromised;
+PostgreSQL does not independently verify a Stripe MAC. This is a protected verifier
+attestation, not operational admission or payment authority. Production process/credential
+separation and independent review remain gates before exposure. No public HTTP, global
+routing, actual provider account/key/action, worker, financial effect or readiness change
+is authorized by this local slice. H4 declarations and manual attestation stay unchanged.
+
 Local K1b guard review source `db96f005442201428700995c09f028e1b6da08c0` adds schema conformance checks and six
 regressions; [validation](../plan/evidence/2026-10-15-k1b-guard-review/VALIDATION.md).
 Receipt archive remains unauthenticated for financial authority. No status/readiness,
 operational admission, HTTP, worker or financial effects are added by this slice.
 
-- Status: **Proposed, 2026-10-15; integration not accepted. K1a and K1b receipt storage are locally implemented.**
+- Status: **Proposed, 2026-10-15; integration not accepted. K1a verification, K1b storage and K1c isolated writer attestations are locally implemented.**
 - Scope: [Package K / FIN-02](../plan/PACKAGE_K_PLAN_2026-10-15.md) in the agreed stage 2.
 - Planning baseline: `df88c20687333668d39fe76a26eabca691e62cb0`; K1a source `7d25aa2d72874271a62e363817e0624fb502497c`, no schema/route changes.
 - Decision owner: the product owner. This ADR grants no provider or publication permission.

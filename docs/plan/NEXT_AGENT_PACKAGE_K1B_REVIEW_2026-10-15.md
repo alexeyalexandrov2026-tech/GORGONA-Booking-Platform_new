@@ -1,5 +1,8 @@
 # Next agent — K1b guard review, 2026-10-15
 
+Current successor:[K1c handoff](NEXT_AGENT_PACKAGE_K1C_2026-10-16.md).
+The K1b checkpoint below is historical;inspect current Git state.
+
 Checkout `C:/Users/alexa/.codex/worktrees/package-j-review2-fixes/Gorgona Booking`.
 Branch `codex/package-k1b-guard-review`, local source `db96f005442201428700995c09f028e1b6da08c0`, parent `84d4177e97ebc16e1743dcb995abf54c1b81269d`; a documentation commit
 follows. Inspect actual HEAD/status. No K push. Remote main=fedd0f115f24aad52f6256298296e8c5123fb427;

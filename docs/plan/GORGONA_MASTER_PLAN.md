@@ -1,6 +1,21 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
-## Current checkpoint — 2026-10-15: K1b schema guard review locally verified
+## Current checkpoint — 2026-10-16: K1c receipt attestations locally verified
+
+Source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c`,branch `codex/package-k1c-receipt-attestations`,base `f5f7987a534a518f3019b7aced28be970f18ad0d`.0045 adds protected per-delivery
+verifier attestations;ordinary archive remains untrusted. Dedicated writer validates
+raw K1a signatures before DB,refuses unsafe role ancestry/session context and commits
+archive+attestation before result.40 new tests,2 observed pg_locks waits,no auth backfill.
+Focused **369 passed in 322.44s (0:05:22)**;full **1930 passed, 4 skipped in 1685.52s (0:28:05)**;static/mypy309/web114/build PASS.
+Runtime audit0 PASS;existing development5high FAIL;4 container/external skips.
+No HTTP/global routing/operational admission/worker/money. Full K acceptance,independent
+review,production isolation and exact K CI NOT TESTED. FIN-02/STOCK-01 planned;
+ADR0026/0027 Proposed. K local only;main=fedd0f1,published J=df88c20. Next0046.
+[Validation](evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md),
+[reuse](evidence/2026-10-16-k1c-receipt-attestations/ARCHITECTURE_REUSE.md),
+[handoff](NEXT_AGENT_PACKAGE_K1C_2026-10-16.md),[prompt](NEXT_AGENT_PACKAGE_K1C_PROMPT_2026-10-16.md).
+
+## Previous checkpoint — 2026-10-15: K1b schema guard review locally verified
 
 Local source `db96f005442201428700995c09f028e1b6da08c0` on `codex/package-k1b-guard-review`, base `84d4177e97ebc16e1743dcb995abf54c1b81269d`. Six schema conformance gaps
 were reproduced before the correction; the existing guard now binds approved trigger
