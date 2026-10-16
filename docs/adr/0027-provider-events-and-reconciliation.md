@@ -1,10 +1,45 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K1e source `eb46748fa7446754e96e9290ce5261607ae45ce0` implements the K1e decision below;
+[validation](../plan/evidence/2026-10-16-k1e-http-ingress/VALIDATION.md).
 Local K1d source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` implements the K1d decision below;
 [validation](../plan/evidence/2026-10-16-k1d-receipt-routing/VALIDATION.md).
 Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the proposed isolated verifier foundation;
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
+
+## K1e local design decision — 2026-10-16, Proposed; locally implemented in `eb46748`
+
+Attach the K1d entry point to raw HTTP without moving trust into the ordinary application.
+A separate ASGI application, run by the receipt writer process with the writer pool and the
+server-held key store, serves only `POST /v1/provider-events/stripe/{ingress_id}`. The ordinary
+application gets no receipt route and never holds the writer credential or keys.
+
+The handler reads the raw body as bytes under a byte cap (K1a's 256 KiB, checked by
+`Content-Length` and while streaming) and a read-time budget, takes exactly one
+`Stripe-Signature` header and passes both unchanged to `receive_routed_receipt`. A bounded
+number of receipts run at once; a full quota answers 503 before the body is read. The receipt
+transaction sets local lock and statement timeouts before its first query.
+
+After the [independent review](../plan/evidence/2026-10-16-k1e-http-ingress/INDEPENDENT_REVIEW_K1A_K1D.md)
+(IR-01) the unauthenticated path is made cheap: before the signature check only unlocked reads
+of the route, the active config and the binding run. The writer-role and schema guards, and a
+FOR SHARE re-read that must return the same active config and binding, follow a valid signature
+and precede every write. Revocation still serializes with in-flight receipts.
+
+It answers 200 with one fixed body only after the commit (recorded, known duplicate or retained
+conflicting variant), so a lost acknowledgement is replayed safely as a duplicate. Every
+authentication, routing and decoding refusal is one 400 with a byte-identical body: no K1a
+reason, IDs or references. Unavailable storage, timeouts and guard refusals are 503 with
+`Retry-After`; anything else, including a failed commit, is 500. Never 2xx before the commit.
+
+Stored rows keep only the existing minimal typed facts; raw bodies, signature headers, keys,
+client addresses and ingress IDs are neither stored nor logged. Event identities, deliveries and
+attestations are kept permanently as duplicate identity and audit trail; a legal retention
+period is an owner decision before production. No migration, process entry point, deployment,
+provider account or key, worker, financial effect or readiness change. Edge rate limits, durable
+volume quotas and a production key store remain open. Criteria E-01–E-13 are in the
+[K plan](../plan/PACKAGE_K_PLAN_2026-10-15.md).
 
 ## K1d local design decision — 2026-10-16, Proposed; locally implemented in `e9c86bf`
 
@@ -64,7 +99,7 @@ regressions; [validation](../plan/evidence/2026-10-15-k1b-guard-review/VALIDATIO
 Receipt archive remains unauthenticated for financial authority. No status/readiness,
 operational admission, HTTP, worker or financial effects are added by this slice.
 
-- Status: **Proposed, 2026-10-15; integration not accepted. K1a verification, K1b storage, K1c isolated writer attestations and K1d verification authority and routing are locally implemented.**
+- Status: **Proposed, 2026-10-15; integration not accepted. K1a verification, K1b storage, K1c isolated writer attestations, K1d verification authority and routing and K1e raw HTTP ingress for the writer process are locally implemented.**
 - Scope: [Package K / FIN-02](../plan/PACKAGE_K_PLAN_2026-10-15.md) in the agreed stage 2.
 - Planning baseline: `df88c20687333668d39fe76a26eabca691e62cb0`; K1a source `7d25aa2d72874271a62e363817e0624fb502497c`, no schema/route changes.
 - Decision owner: the product owner. This ADR grants no provider or publication permission.

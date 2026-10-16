@@ -1,6 +1,113 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## Current checkpoint — 2026-10-16: K1d verification authority and routing locally verified
+## Current checkpoint — 2026-10-16: K1e raw HTTP ingress locally verified
+
+Source `eb46748fa7446754e96e9290ce5261607ae45ce0` on local branch `codex/package-k1e-http-ingress`,
+parent `2d434bf`. A separate writer-process ASGI application and the reordered
+`receive_routed_receipt` implement decisions 1–9 below; criteria E-01–E-13 PASS on synthetic
+data. 46 new cases; no migration. Final focused **450 passed in 273.91s (0:04:33)**; full
+**2034 passed, 4 skipped in 1700.22s (0:28:20)**; static, mypy (314 files), web 114 and build
+PASS; runtime audit 0; existing development audit 5 high FAIL; 3 container and 1 tenant-site
+skips NOT TESTED. Kept failures: a product RED on the K1d code (unbounded lock wait, share locks
+before the signature) and a design gap found in dev-1 (the ordinary runtime lost the K1c
+writer-role refusal; fixed with a cheap membership check). The owner-approved independent
+read-only review of K1a–K1d found no High, two Medium (both addressed here) and nine Low/Note
+findings. Human review, K CI, process entry point and the real provider are NOT TESTED or
+BLOCKED. FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed; K not published; next migration 0047.
+[Validation](evidence/2026-10-16-k1e-http-ingress/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-16-k1e-http-ingress/CHECKS.json),
+[review](evidence/2026-10-16-k1e-http-ingress/INDEPENDENT_REVIEW_K1A_K1D.md),
+[handoff](NEXT_AGENT_PACKAGE_K1E_2026-10-16.md), [prompt](NEXT_AGENT_PACKAGE_K1E_PROMPT_2026-10-16.md).
+
+### K1e design, recorded before code
+
+Local branch `codex/package-k1e-http-ingress` from `2d434bff8081e03d38765caa0b61f5df006dde27` (K1d docs).
+The owner answered with the handoff prompt for K1e and chose an independent read-only review of
+K1a–K1d by a separate agent, run in parallel with K1e. The review found no High issue, two
+Medium (IR-01, IR-02) and nine Low/Note findings; dispositions are in decision 9 and the
+[review record](evidence/2026-10-16-k1e-http-ingress/INDEPENDENT_REVIEW_K1A_K1D.md).
+Decision 9 and criteria E-12/E-13 were added after the review, still before code.
+
+**K1e: raw HTTP receipt ingress — local, synthetic only.**
+
+Decisions:
+
+1. **Separate writer process.** A new ASGI application, built by
+   `create_receipt_ingress_app(pool, key_store, limits=…)`, serves exactly one route:
+   `POST /v1/provider-events/stripe/{ingress_id}`. It runs with the receipt writer pool and the
+   server-held key store. The ordinary application (`create_app`) gets no receipt route and never
+   holds the writer credential or keys; its runtime role guard already refuses writer membership.
+   No settings, process entry point, container or deployment is added: pool and key store are
+   injected. No OpenAPI or other routes in the ingress application.
+2. **Bounded raw body.** Order: route and method → ingress ID syntax → a free concurrency slot →
+   `Content-Length` check → streamed read with a running cap → `receive_routed_receipt`. The body
+   cap is K1a's 256 KiB; over it → 413 (before reading by `Content-Length`, otherwise as soon as
+   the cap is passed, also when chunked). Reading the body has a time budget; over it → 408.
+   Exactly one `Stripe-Signature` header; none or several is a refusal. No framework JSON
+   parsing: the exact bytes reach the K1a check.
+3. **Acknowledgement.** 200 with one fixed body, only after `receive_routed_receipt` returned,
+   that is after the commit: for a recorded event, a known duplicate and a verified conflicting
+   variant (it is durably retained for review). No IDs, disposition or digest in the response.
+   A lost acknowledgement is safe: the retry finds a duplicate, adds no rows and gets 200.
+4. **One refusal.** Unknown or malformed ingress, missing, repeated, bad or stale signature, wrong
+   or unusable key, revoked config or connection, wrong account, version, type or shape, an empty
+   body and a foreign company's event: 400 with one byte-identical body, without a reason, IDs or
+   references. The request ID is only in `X-Request-ID`. The K1a refusal reason is never sent.
+5. **Retryable failure.** Storage unavailable — pool timeout, lost connection, lock or statement
+   timeout, serialization failure, deadlock, schema or writer-role guard refusal — and a full
+   concurrency quota: 503 with `Retry-After` and one fixed body. Any other failure, including a
+   failed commit: 500 with one fixed body. Never 2xx before the commit.
+6. **Quotas, per process.** Body 256 KiB and signature header 4096 bytes (K1a constants), a body
+   read budget, a bounded number of concurrent receipts (a full quota answers 503 without reading
+   the body), and transaction-local `lock_timeout` and `statement_timeout` set by
+   `receive_routed_receipt` before its first query. Per-source rate limits at the edge and durable
+   per-connection volume quotas are recorded limits; they need real traffic data (K0).
+7. **Retention.** Stored rows keep only typed minimal facts, the delivery digest, the config ID
+   and the writer attribution: no raw body, signature header, key, client address or ingress ID.
+   Event identities, deliveries and attestations are kept permanently: they are the duplicate
+   identity that must outlive receipts (K-04) and the audit trail; immutability triggers forbid
+   deletion. No automatic deletion in K1e; a legal retention period is an owner decision before
+   production. Logs keep the existing policy: route template, status, duration, request ID; never
+   the body, headers or the ingress ID from the path.
+8. **No schema change.** K1e needs no migration; 0047 stays free.
+9. **Cheap unauthenticated path** (added after the
+   [independent review](evidence/2026-10-16-k1e-http-ingress/INDEPENDENT_REVIEW_K1A_K1D.md), IR-01).
+   Before the signature check `receive_routed_receipt` only sets its timeouts, checks cheaply that
+   the session belongs to the writer group and not to the runtime (`pg_has_role`; the ordinary
+   runtime still gets the K1c writer-role refusal), and reads the route, then the active config
+   and binding, without row locks and without the catalog guards. After a
+   valid signature it runs the writer-role and schema guards, re-reads the config and binding
+   under FOR SHARE and refuses unless they are the same active config and binding; only then it
+   archives and attests. An unknown ingress costs one indexed read; a bad signature takes no row
+   lock and no catalog scan. This corrects the K1d claim: there, an unknown ingress also paid for
+   two catalog queries, and a bad signature took share locks. The review's other findings
+   (IR-03–IR-11) are recorded limits; IR-02 is decision 4; for IR-04 a K0 prerequisite is that
+   the endpoint subscribes only to the 11 supported event types.
+
+Acceptance criteria (failing tests first):
+
+| id | Requirement |
+|---|---|
+| E-01 | A signed delivery over HTTP to a routed ingress returns 200 with the fixed body; archive and attestation are already committed when the response arrives; no journal rows. Also over a real loopback HTTP socket |
+| E-02 | The same delivery again (acknowledgement lost) returns 200 and adds no rows; a verified conflicting variant returns 200 and is retained as a conflict delivery |
+| E-03 | Unknown and malformed ingress, missing, repeated, bad and stale signature, wrong key, revoked config, revoked connection, a foreign company's account, an unsupported type and an empty body return 400 with a byte-identical body; nothing is stored |
+| E-04 | A body over the cap returns 413: by `Content-Length` without reading, and chunked as soon as the cap is passed (also over a real socket); nothing is stored |
+| E-05 | A body that does not arrive within the read budget returns 408; nothing is stored |
+| E-06 | Storage unavailable: an exhausted writer pool returns 503 with `Retry-After`; a receipt connection terminated while it waits on a lock (observed `pg_locks` wait) returns 503; nothing is stored; the retry after recovery returns 200 |
+| E-07 | A failure at commit returns 500 with the fixed body; nothing is stored |
+| E-08 | Quotas: with every slot busy the next request returns 503 without reading its body; a receipt blocked by a held revocation lock longer than its lock timeout returns 503 (observed `pg_locks` wait) and stores nothing |
+| E-09 | Schema or writer-role drift returns 503 and stores nothing |
+| E-10 | Only `POST` on the one route; other methods and paths are refused; the ordinary application has no receipt route |
+| E-11 | Stored rows and captured logs contain no raw body, signature header, key or ingress ID; full suite green |
+| E-12 | While a revocation of the route's config is held uncommitted, a bad signature is refused at once: before the refusal no statement takes a row lock or scans the catalog |
+| E-13 | A config revoked, or rotated to a new version, between the unlocked read and the locked re-read is refused; nothing is stored |
+
+Limits: synthetic fixtures only; no provider account or key, process entry point, deployment,
+worker or money. Connections stay `not_admitted`. K-01–K-14 stay NOT TESTED: E-01–E-13 are
+partial local evidence for K-01 and K-03. FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed;
+0001–0046 unchanged; K not published.
+
+## Previous checkpoint — 2026-10-16: K1d verification authority and routing locally verified
 
 Source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` on local branch `codex/package-k1d-receipt-routing`,
 parent `46ab31d`. Migration 0046 and the routed entry point implement decisions 1–8 below;

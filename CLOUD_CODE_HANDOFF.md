@@ -1,6 +1,24 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-16: K1d verification authority and routing locally verified
+## Current checkpoint — 2026-10-16: K1e raw HTTP ingress locally verified
+
+Source `eb46748fa7446754e96e9290ce5261607ae45ce0`, local branch `codex/package-k1e-http-ingress`, parent `2d434bff8081e03d38765caa0b61f5df006dde27`.
+A separate writer-process ASGI application serves one route, `POST /v1/provider-events/stripe/{ingress_id}`:
+bounded raw body, one signature header, 200 only after the commit, one byte-identical 400 for
+every refusal, 503 + Retry-After for storage, timeouts, guards and a full concurrency quota.
+The owner-approved independent read-only review of K1a–K1d found 0 High, 2 Medium (both
+addressed: cheap unlocked pre-signature path, uniform refusals) and 9 Low/Note (recorded).
+No migration. 46 new cases. Focused **450 passed in 273.91s (0:04:33)**; full
+**2034 passed, 4 skipped in 1700.22s (0:28:20)**; static/mypy 314/web 114/build PASS; runtime
+audit 0 PASS; existing development audit 5 high FAIL; 4 container/tenant-site skips NOT TESTED.
+No process entry point, admission, worker or money. Human review, K CI and real provider
+NOT TESTED/BLOCKED. FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. K local only;
+main=fedd0f1, published J=df88c20. Next 0047.
+[Validation](docs/plan/evidence/2026-10-16-k1e-http-ingress/VALIDATION.md),
+[review](docs/plan/evidence/2026-10-16-k1e-http-ingress/INDEPENDENT_REVIEW_K1A_K1D.md),
+[handoff](docs/plan/NEXT_AGENT_PACKAGE_K1E_2026-10-16.md), [prompt](docs/plan/NEXT_AGENT_PACKAGE_K1E_PROMPT_2026-10-16.md).
+
+## Previous checkpoint — 2026-10-16: K1d verification authority and routing locally verified
 
 Source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4`, local branch `codex/package-k1d-receipt-routing`, parent `46ab31dd6f41ae820a85a09f19fd5812584fc89d`.
 Migration 0046 adds owner-provisioned, versioned verification configs (opaque key reference,
