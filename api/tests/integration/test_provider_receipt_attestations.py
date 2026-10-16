@@ -1,11 +1,13 @@
-"""Synthetic raw signatures through an isolated receipt writer; no provider account."""
+"""Synthetic raw signatures through an isolated, routed receipt writer; no provider account."""
 
 import asyncio
+import re
 import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import NoReturn
+from typing import Any
 from uuid import UUID, uuid7
 
 import psycopg
@@ -24,14 +26,15 @@ from gorgona_booking.db.pool import (
     set_tenant_context,
     tenant_transaction,
 )
+from gorgona_booking.db.provisioning import owner_tenant_transaction
 from gorgona_booking.errors import DatabaseUnavailableError
 from gorgona_booking.providers import authenticated_receipts as service
 from gorgona_booking.providers.authenticated_receipts import (
     AuthenticatedReceiptResult,
-    ReceiptVerifierBinding,
+    ReceiptAuthority,
     UnsafeReceiptWriterRoleError,
     assert_safe_receipt_writer_role,
-    receive_signed_receipt,
+    receive_routed_receipt,
 )
 from gorgona_booking.providers.inbox import ReceiptBindingRejectedError, ReceiptResult
 from gorgona_booking.providers.stripe_contracts import SignedStripeEvent, StripeEventPolicy
@@ -48,6 +51,7 @@ manager_b = shared.manager_b
 enabled = shared.enabled
 inbox = shared.inbox
 WRITER_ROLE = "gba_test_receipt_writer"
+NOW = datetime.fromtimestamp(signed.NOW, UTC)
 
 
 @pytest.fixture
@@ -76,23 +80,109 @@ async def writer_pool(test_database: ProvisionedDatabase) -> AsyncIterator[Runti
         await pool.close()
 
 
-def binding(inbox: shared.Inbox) -> ReceiptVerifierBinding:
-    return ReceiptVerifierBinding(
-        tenant_id=inbox.ledger.business,
-        connection_id=inbox.connection,
-        book_id=inbox.ledger.book,
-        verification_config_id=uuid7(),
+@dataclass(frozen=True)
+class Routed:
+    """Owner-provisioned route and verification config. The key exists only in memory."""
+
+    tenant_id: UUID
+    connection_id: UUID
+    book_id: UUID
+    ingress_id: UUID
+    verification_config_id: UUID
+    secret_ref: str
+    policy: StripeEventPolicy
+    key: SecretStr = field(repr=False)
+
+    @property
+    def key_store(self) -> dict[str, SecretStr]:
+        return {self.secret_ref: self.key}
+
+    def authority(self) -> ReceiptAuthority:
+        return ReceiptAuthority(
+            tenant_id=self.tenant_id,
+            connection_id=self.connection_id,
+            book_id=self.book_id,
+            verification_config_id=self.verification_config_id,
+            secret_ref=self.secret_ref,
+            policy=self.policy,
+        )
+
+
+def fake_key() -> SecretStr:
+    return SecretStr("whsec_" + secrets.token_urlsafe(32))
+
+
+def provision_config(
+    owner_conn: psycopg.Connection, tenant_id: UUID, connection_id: UUID, secret_ref: str
+) -> tuple[UUID, int]:
+    config = uuid7()
+    with owner_tenant_transaction(owner_conn, tenant_id):
+        owner_conn.execute(
+            "insert into gba.provider_verification_configs "
+            "(tenant_id,id,connection_id,secret_ref) values (%s,%s,%s,%s)",
+            (tenant_id, config, connection_id, secret_ref),
+        )
+        row = owner_conn.execute(
+            "select version from gba.provider_verification_configs where tenant_id=%s and id=%s",
+            (tenant_id, config),
+        ).fetchone()
+    assert row is not None
+    return config, row[0]
+
+
+def provision_route(owner_conn: psycopg.Connection, tenant_id: UUID, connection_id: UUID) -> UUID:
+    ingress = uuid7()
+    with owner_tenant_transaction(owner_conn, tenant_id):
+        owner_conn.execute(
+            "insert into gba.provider_receipt_routes (ingress_id,tenant_id,connection_id) "
+            "values (%s,%s,%s)",
+            (ingress, tenant_id, connection_id),
+        )
+    return ingress
+
+
+def provision(
+    owner_conn: psycopg.Connection,
+    *,
+    tenant_id: UUID,
+    connection_id: UUID,
+    book_id: UUID,
+    namespace: str,
+    account_id: str = "acct_FAKEreceipt",
+) -> Routed:
+    reference = "test:k1d-" + uuid7().hex
+    config, version = provision_config(owner_conn, tenant_id, connection_id, reference)
+    assert version == 1
+    return Routed(
+        tenant_id=tenant_id,
+        connection_id=connection_id,
+        book_id=book_id,
+        ingress_id=provision_route(owner_conn, tenant_id, connection_id),
+        verification_config_id=config,
+        secret_ref=reference,
         policy=StripeEventPolicy(
-            namespace=inbox.namespace,
-            account_id="acct_FAKEreceipt",
-            api_version="2026-09-30.endive",
+            namespace=namespace, account_id=account_id, api_version="2026-09-30.endive"
         ),
+        key=fake_key(),
     )
 
 
-def delivery(kind: str = "payment_intent.succeeded", amount: int = 1000) -> bytes:
+@pytest.fixture
+def routed(inbox: shared.Inbox, owner_conn: psycopg.Connection) -> Routed:
+    return provision(
+        owner_conn,
+        tenant_id=inbox.ledger.business,
+        connection_id=inbox.connection,
+        book_id=inbox.ledger.book,
+        namespace=inbox.namespace,
+    )
+
+
+def delivery(
+    kind: str = "payment_intent.succeeded", amount: int = 1000, account: str = "acct_FAKEreceipt"
+) -> bytes:
     value = signed.event(kind)
-    value["account"] = "acct_FAKEreceipt"
+    value["account"] = account
     value["data"]["object"]["amount"] = amount
     if kind.startswith("payment_intent."):
         value["data"]["object"]["amount_received"] = amount
@@ -100,16 +190,15 @@ def delivery(kind: str = "payment_intent.succeeded", amount: int = 1000) -> byte
 
 
 async def receive(
-    pool: RuntimePool, scope: ReceiptVerifierBinding, raw: bytes
+    pool: RuntimePool, scope: Routed, raw: bytes, *, signing_key: SecretStr | None = None
 ) -> AuthenticatedReceiptResult:
-    key = SecretStr("whsec_" + secrets.token_urlsafe(32))
-    return await receive_signed_receipt(
+    return await receive_routed_receipt(
         pool,
-        scope,
+        scope.ingress_id,
         raw,
-        signed.signed(raw, key),
-        signing_keys=(key,),
-        now=datetime.fromtimestamp(signed.NOW, UTC),
+        signed.signed(raw, signing_key or scope.key),
+        key_store=scope.key_store,
+        now=NOW,
     )
 
 
@@ -125,17 +214,19 @@ async def attestations(pool: RuntimePool, tenant: UUID) -> list[tuple[object, ..
 
 @pytest.mark.parametrize("kind", ["payment_intent.succeeded", "charge.succeeded", "refund.updated"])
 async def test_raw_signed_receipt_commits_minimal_attestation_and_no_money(
+    routed: Routed,
     inbox: shared.Inbox,
     writer_pool: RuntimePool,
     app_pool: RuntimePool,
     kind: str,
 ) -> None:
-    scope = binding(inbox)
+    scope = routed
     raw = delivery(kind)
     async with tenant_transaction(app_pool, scope.tenant_id) as conn:
         before = await (await conn.execute("select count(*) from gba.journal_entries")).fetchone()
     result = await receive(writer_pool, scope, raw)
     assert result.authority == "signature_checked_not_admitted"
+    assert result.verification_config_id == scope.verification_config_id
     rows = await attestations(app_pool, scope.tenant_id)
     assert len(rows) == 1
     assert rows[0][0] == result.event_id
@@ -153,7 +244,8 @@ async def test_raw_signed_receipt_commits_minimal_attestation_and_no_money(
         ).fetchone()
         assert stored is not None
         assert all(
-            word not in stored[0] for word in ("whsec_", "email", "metadata", "customer", "v1=")
+            word not in stored[0]
+            for word in ("whsec_", "email", "metadata", "customer", "v1=", scope.secret_ref)
         )
         assert (
             before
@@ -162,11 +254,11 @@ async def test_raw_signed_receipt_commits_minimal_attestation_and_no_money(
 
 
 async def test_replays_and_signed_conflicts_keep_separate_attested_delivery(
-    inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     app_pool: RuntimePool,
 ) -> None:
-    scope = binding(inbox)
+    scope = routed
     first = await receive(writer_pool, scope, delivery())
     assert (await receive(writer_pool, scope, delivery())).disposition == "duplicate"
     conflict = await receive(writer_pool, scope, delivery(amount=2000))
@@ -177,6 +269,7 @@ async def test_replays_and_signed_conflicts_keep_separate_attested_delivery(
 
 async def test_unsigned_archive_cannot_be_promoted_by_ordinary_runtime(
     inbox: shared.Inbox,
+    routed: Routed,
     app_pool: RuntimePool,
 ) -> None:
     result = await shared.receive(app_pool, inbox, inbox.event())
@@ -186,10 +279,10 @@ async def test_unsigned_archive_cannot_be_promoted_by_ordinary_runtime(
             await conn.execute(
                 "insert into gba.provider_event_attestations (tenant_id,event_id,delivery_sha256,"
                 "verification_config_id) values (%s,%s,%s,%s)",
-                (inbox.ledger.business, result.event_id, "a" * 64, uuid7()),
+                (inbox.ledger.business, result.event_id, "a" * 64, routed.verification_config_id),
             )
     with pytest.raises(UnsafeReceiptWriterRoleError):
-        await receive(app_pool, binding(inbox), delivery())
+        await receive(app_pool, routed, delivery())
     assert not await attestations(app_pool, inbox.ledger.business)
 
 
@@ -228,41 +321,62 @@ async def test_writer_cannot_access_other_business_tables_or_rewrite_history(
             await assert_safe_runtime_role(conn)
 
 
-async def test_bad_signature_is_refused_before_acquiring_a_database_connection(
+class _Traced:
+    """Delegates to a pooled connection and records each SQL text it is asked to run."""
+
+    def __init__(self, conn: RuntimeConnection, log: list[str]) -> None:
+        self._conn = conn
+        self._log = log
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._conn, name)
+
+    async def execute(self, query: Any, params: Any = None) -> Any:
+        self._log.append(str(query))
+        return await self._conn.execute(query, params)
+
+
+@pytest.mark.parametrize("signature", ["wrong-key", "missing"])
+async def test_bad_signature_is_refused_after_reading_only_authority_rows(
     inbox: shared.Inbox,
-    writer_pool: RuntimePool,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def no_connection() -> NoReturn:
-        pytest.fail("Signature failure must not reach the database")
-
-    monkeypatch.setattr(writer_pool, "connection", no_connection)
-    with pytest.raises(ProviderEventRejectedError):
-        await receive_signed_receipt(
-            writer_pool,
-            binding(inbox),
-            delivery(),
-            None,
-            signing_keys=(SecretStr("FAKE-local-signing-key"),),
-        )
-
-
-@pytest.mark.parametrize("field", ["tenant_id", "connection_id", "book_id"])
-async def test_wrong_trusted_binding_is_refused_without_partial_storage(
-    inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     app_pool: RuntimePool,
-    field: str,
+    monkeypatch: pytest.MonkeyPatch,
+    signature: str,
 ) -> None:
-    scope = binding(inbox).model_copy(update={field: uuid7()})
-    with pytest.raises(ReceiptBindingRejectedError):
-        await receive(writer_pool, scope, delivery())
+    statements: list[str] = []
+    original = writer_pool.connection
+
+    @asynccontextmanager
+    async def traced() -> AsyncIterator[Any]:
+        async with original() as conn:
+            yield _Traced(conn, statements)
+
+    monkeypatch.setattr(writer_pool, "connection", traced)
+    raw = delivery()
+    header = signed.signed(raw, fake_key()) if signature == "wrong-key" else None
+    with pytest.raises(ProviderEventRejectedError):
+        await receive_routed_receipt(
+            writer_pool, routed.ingress_id, raw, header, key_store=routed.key_store, now=NOW
+        )
+    touched = {
+        table
+        for statement in statements
+        for table in re.findall(r"\b(?:from|join|into|update)\s+gba\.(\w+)", statement, re.I)
+    }
+    assert touched == {
+        "provider_receipt_routes",
+        "provider_verification_configs",
+        "provider_receipt_connections",
+    }
+    monkeypatch.undo()
     assert await shared.counts(app_pool, inbox) == (0, 0)
     assert not await attestations(app_pool, inbox.ledger.business)
 
 
 async def test_receiver_refuses_a_borrowed_connection_with_an_outer_transaction(
-    inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -274,17 +388,18 @@ async def test_receiver_refuses_a_borrowed_connection_with_an_outer_transaction(
 
         monkeypatch.setattr(writer_pool, "connection", already_borrowed)
         with pytest.raises(ReceiptBindingRejectedError):
-            await receive(writer_pool, binding(inbox), delivery())
+            await receive(writer_pool, routed, delivery())
 
 
 @pytest.mark.parametrize("scope_kind", ["foreign", "branch", "unscoped"])
 async def test_attestation_reads_remain_tenant_and_company_scoped(
     inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     app_pool: RuntimePool,
     scope_kind: str,
 ) -> None:
-    await receive(writer_pool, binding(inbox), delivery())
+    await receive(writer_pool, routed, delivery())
     async with app_pool.connection() as conn, conn.transaction():
         if scope_kind != "unscoped":
             await set_tenant_context(
@@ -299,10 +414,11 @@ async def test_attestation_reads_remain_tenant_and_company_scoped(
 
 async def test_revocation_refuses_next_receipt_but_keeps_authenticated_history(
     inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     app_pool: RuntimePool,
 ) -> None:
-    scope = binding(inbox)
+    scope = routed
     await receive(writer_pool, scope, delivery())
     async with tenant_transaction(app_pool, scope.tenant_id) as conn:
         await conn.execute(
@@ -318,14 +434,14 @@ async def test_revocation_refuses_next_receipt_but_keeps_authenticated_history(
 @pytest.mark.parametrize("poison", [False, True])
 async def test_only_a_new_verified_delivery_can_attest_a_preexisting_untrusted_archive(
     inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     app_pool: RuntimePool,
     poison: bool,
 ) -> None:
-    scope = binding(inbox)
+    scope = routed
     raw = delivery()
-    key = SecretStr("whsec_" + secrets.token_urlsafe(32))
-    event = signed.decode(raw, signed.signed(raw, key), scope.policy, (key,))
+    event = signed.decode(raw, signed.signed(raw, scope.key), scope.policy, (scope.key,))
     untrusted = event
     if poison:
         untrusted = event.model_copy(
@@ -353,15 +469,15 @@ async def test_only_a_new_verified_delivery_can_attest_a_preexisting_untrusted_a
 @pytest.mark.parametrize("rollback", [False, True])
 async def test_attestation_duplicate_waits_on_observed_insert_then_survives_leader_outcome(
     inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     app_pool: RuntimePool,
     test_database: ProvisionedDatabase,
     rollback: bool,
 ) -> None:
-    scope = binding(inbox)
+    scope = routed
     raw = delivery()
-    key = SecretStr("whsec_" + secrets.token_urlsafe(32))
-    event = signed.decode(raw, signed.signed(raw, key), scope.policy, (key,))
+    event = signed.decode(raw, signed.signed(raw, scope.key), scope.policy, (scope.key,))
     archived = await shared.receive(app_pool, inbox, event)
     follower = None
     monitor = await psycopg.AsyncConnection.connect(
@@ -372,7 +488,7 @@ async def test_attestation_duplicate_waits_on_observed_insert_then_survives_lead
     try:
         async with writer_pool.connection() as leader, leader.transaction(force_rollback=rollback):
             await set_tenant_context(leader, scope.tenant_id)
-            await service._attest_event(leader, scope, event, archived)
+            await service._attest_event(leader, scope.authority(), event, archived)
             identity = await (
                 await leader.execute("select pg_backend_pid(),pg_current_xact_id()::text")
             ).fetchone()
@@ -410,6 +526,7 @@ async def test_attestation_duplicate_waits_on_observed_insert_then_survives_lead
 
 async def test_commit_failure_rolls_back_archive_and_attestation_before_return(
     inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     app_pool: RuntimePool,
     monkeypatch: pytest.MonkeyPatch,
@@ -418,22 +535,23 @@ async def test_commit_failure_rolls_back_archive_and_attestation_before_return(
 
     async def switch_context(
         conn: RuntimeConnection,
-        scope: ReceiptVerifierBinding,
+        authority: ReceiptAuthority,
         event: SignedStripeEvent,
         result: ReceiptResult,
     ) -> None:
-        await original(conn, scope, event, result)
+        await original(conn, authority, event, result)
         await conn.execute("select set_config('gba.location_id',%s,true)", (str(uuid7()),))
 
     monkeypatch.setattr(service, "_attest_event", switch_context)
     with pytest.raises(psycopg.errors.CheckViolation):
-        await receive(writer_pool, binding(inbox), delivery())
+        await receive(writer_pool, routed, delivery())
     assert await shared.counts(app_pool, inbox) == (0, 0)
     assert not await attestations(app_pool, inbox.ledger.business)
 
 
 async def test_writer_with_financial_privilege_drift_is_refused(
     inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     app_pool: RuntimePool,
     owner_conn: psycopg.Connection,
@@ -441,7 +559,7 @@ async def test_writer_with_financial_privilege_drift_is_refused(
     owner_conn.execute("grant select on gba.journal_entries to gba_receipt_writer")
     try:
         with pytest.raises(UnsafeReceiptWriterRoleError):
-            await receive(writer_pool, binding(inbox), delivery())
+            await receive(writer_pool, routed, delivery())
     finally:
         owner_conn.execute("revoke select on gba.journal_entries from gba_receipt_writer")
     assert await shared.counts(app_pool, inbox) == (0, 0)
@@ -449,6 +567,7 @@ async def test_writer_with_financial_privilege_drift_is_refused(
 
 async def test_schema_damage_is_refused_before_authenticating_receipt(
     inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     app_pool: RuntimePool,
     owner_conn: psycopg.Connection,
@@ -459,7 +578,7 @@ async def test_schema_damage_is_refused_before_authenticating_receipt(
     )
     try:
         with pytest.raises(DatabaseUnavailableError):
-            await receive(writer_pool, binding(inbox), delivery())
+            await receive(writer_pool, routed, delivery())
     finally:
         owner_conn.execute(
             "alter table gba.provider_event_attestations "
@@ -470,11 +589,12 @@ async def test_schema_damage_is_refused_before_authenticating_receipt(
 
 async def test_mixed_runtime_login_cannot_hide_behind_set_role_to_attest(
     inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     app_pool: RuntimePool,
     test_database: ProvisionedDatabase,
 ) -> None:
-    scope = binding(inbox)
+    scope = routed
     archived = await shared.receive(app_pool, inbox, inbox.event())
     app_role = str(conninfo_to_dict(test_database.app_dsn)["user"])
     async with await psycopg.AsyncConnection.connect(
@@ -493,7 +613,7 @@ async def test_mixed_runtime_login_cannot_hide_behind_set_role_to_attest(
                 await set_tenant_context(conn, scope.tenant_id)
                 await conn.execute("set local role gba_receipt_writer")
                 with pytest.raises(psycopg.errors.CheckViolation):
-                    await service._attest_event(conn, scope, inbox.event(), archived)
+                    await service._attest_event(conn, scope.authority(), inbox.event(), archived)
         finally:
             await admin.execute(
                 sql.SQL("revoke gba_receipt_writer from {}").format(sql.Identifier(app_role))
@@ -501,7 +621,7 @@ async def test_mixed_runtime_login_cannot_hide_behind_set_role_to_attest(
 
 
 async def test_noninherited_dangerous_parent_role_is_also_refused(
-    inbox: shared.Inbox,
+    routed: Routed,
     writer_pool: RuntimePool,
     test_database: ProvisionedDatabase,
 ) -> None:
@@ -516,7 +636,7 @@ async def test_noninherited_dangerous_parent_role_is_also_refused(
         )
         try:
             with pytest.raises(UnsafeReceiptWriterRoleError):
-                await receive(writer_pool, binding(inbox), delivery())
+                await receive(writer_pool, routed, delivery())
         finally:
             await admin.execute(
                 sql.SQL("revoke gba_test_dangerous_parent from {}").format(

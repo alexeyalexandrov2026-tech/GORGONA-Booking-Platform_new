@@ -1,10 +1,11 @@
 """Internal isolated verifier boundary. No HTTP, provider client or payment authority.
 
-The caller must supply server-owned binding/key configuration and a dedicated
-writer pool inaccessible to the ordinary API. A compromised writer can lie; SQL
-does not verify the MAC. Operational admission is an independent future gate.
+An owner-provisioned route selects the company and connection; the active verification
+config names which server-held key may check the raw bytes. A compromised writer can lie;
+SQL does not verify the MAC. Operational admission is an independent future gate.
 """
 
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
@@ -24,13 +25,14 @@ class UnsafeReceiptWriterRoleError(RuntimeError):
     """A writer credential is shared with the application or has excessive rights."""
 
 
-class ReceiptVerifierBinding(Versioned):
-    """Trusted server configuration; none of these fields may come from request metadata."""
+class ReceiptAuthority(Versioned):
+    """Read from owner-provisioned rows inside the receipt transaction, never from a request."""
 
     tenant_id: UUID
     connection_id: UUID
     book_id: UUID
     verification_config_id: UUID
+    secret_ref: str
     policy: StripeEventPolicy
 
 
@@ -38,6 +40,7 @@ class AuthenticatedReceiptResult(Versioned):
     event_id: UUID
     connection_id: UUID
     book_id: UUID
+    verification_config_id: UUID
     delivery_sha256: Sha256
     disposition: Literal["recorded", "duplicate", "conflict"]
     authority: Literal["signature_checked_not_admitted"] = "signature_checked_not_admitted"
@@ -59,7 +62,8 @@ select bool_and(not (r.rolsuper or r.rolbypassrls or r.rolcreaterole
         where n.nspname='gba' and (
             pg_catalog.pg_has_role(r.oid,c.relowner,'MEMBER') or
             (c.relname<>all(array['provider_receipt_connections','provider_event_inbox',
-                'provider_event_deliveries','provider_event_attestations']) and (
+                'provider_event_deliveries','provider_event_attestations',
+                'provider_verification_configs','provider_receipt_routes']) and (
                 pg_catalog.has_table_privilege(r.oid,c.oid,
                     'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
                 or pg_catalog.has_any_column_privilege(r.oid,c.oid,
@@ -73,9 +77,49 @@ from pg_catalog.pg_roles r where r.rolname in (current_user,session_user)
     await assert_provider_receipt_ready(conn)
 
 
+async def _resolve_authority(conn: RuntimeConnection, ingress_id: UUID) -> ReceiptAuthority:
+    """Route first, then its company context, then the active config and binding, share-locked.
+
+    Only authority rows are read here: no inbox, ledger or other business data.
+    """
+    route = await (
+        await conn.execute(
+            "select tenant_id,connection_id from gba.provider_receipt_routes where ingress_id=%s",
+            (ingress_id,),
+        )
+    ).fetchone()
+    if route is None:
+        raise ReceiptBindingRejectedError()
+    tenant_id, connection_id = route
+    await set_tenant_context(conn, tenant_id)
+    row = await (
+        await conn.execute(
+            "select v.id,v.secret_ref,c.book_id,c.namespace,c.account_id,c.api_version "
+            "from gba.provider_verification_configs v join gba.provider_receipt_connections c "
+            "on c.tenant_id=v.tenant_id and c.id=v.connection_id "
+            "where v.tenant_id=%s and v.connection_id=%s and not v.revoked and not c.revoked "
+            "and current_setting('transaction_isolation')='read committed' for share of v,c",
+            (tenant_id, connection_id),
+        )
+    ).fetchone()
+    if row is None:
+        raise ReceiptBindingRejectedError()
+    config_id, secret_ref, book_id, namespace, account_id, api_version = row
+    return ReceiptAuthority(
+        tenant_id=tenant_id,
+        connection_id=connection_id,
+        book_id=book_id,
+        verification_config_id=config_id,
+        secret_ref=secret_ref,
+        policy=StripeEventPolicy(
+            namespace=namespace, account_id=account_id, api_version=api_version
+        ),
+    )
+
+
 async def _attest_event(
     conn: RuntimeConnection,
-    scope: ReceiptVerifierBinding,
+    authority: ReceiptAuthority,
     event: SignedStripeEvent,
     result: ReceiptResult,
 ) -> None:
@@ -83,42 +127,53 @@ async def _attest_event(
         "insert into gba.provider_event_attestations "
         "(tenant_id,event_id,delivery_sha256,verification_config_id) values (%s,%s,%s,%s) "
         "on conflict do nothing",
-        (scope.tenant_id, result.event_id, event.delivery_sha256, scope.verification_config_id),
+        (
+            authority.tenant_id,
+            result.event_id,
+            event.delivery_sha256,
+            authority.verification_config_id,
+        ),
     )
 
 
-async def receive_signed_receipt(
+async def receive_routed_receipt(
     pool: RuntimePool,
-    scope: ReceiptVerifierBinding,
+    ingress_id: UUID,
     payload: bytes,
     signature: str | None,
     *,
-    signing_keys: tuple[SecretStr, ...],
+    key_store: Mapping[str, SecretStr],
     now: datetime | None = None,
 ) -> AuthenticatedReceiptResult:
-    """Verify raw bytes first; return only after the scoped transaction commits.
+    """Resolve server-owned authority, verify raw bytes, then archive and attest in one commit.
 
-    A verified conflicting variant is retained, not applied. No original archive
-    row is retroactively trusted, overwritten or relabeled. No raw bytes/keys are
-    stored. The configured writer is a trusted verifier, not a financial worker.
+    The ingress ID is the only routing input; company, connection, book, account policy and
+    key come from owner-provisioned rows and the server-held key store. Return only after
+    the transaction commits. A verified conflicting variant is retained, not applied. No
+    original archive row is retroactively trusted, overwritten or relabeled. No raw bytes
+    or keys are stored. The writer is a trusted verifier, not a financial worker.
     """
-    event = verify_stripe_event(
-        payload, signature, policy=scope.policy, signing_keys=signing_keys, now=now
-    )
     async with pool.connection() as conn:
         if conn.info.transaction_status is not TransactionStatus.IDLE:
             raise ReceiptBindingRejectedError()
         async with conn.transaction():
-            await set_tenant_context(conn, scope.tenant_id)
             await assert_safe_receipt_writer_role(conn)
-            result = await record_event(conn, scope.connection_id, event)
-            if result.book_id != scope.book_id:
+            authority = await _resolve_authority(conn, ingress_id)
+            key = key_store.get(authority.secret_ref)
+            if key is None:
                 raise ReceiptBindingRejectedError()
-            await _attest_event(conn, scope, event, result)
+            event = verify_stripe_event(
+                payload, signature, policy=authority.policy, signing_keys=(key,), now=now
+            )
+            result = await record_event(conn, authority.connection_id, event)
+            if result.book_id != authority.book_id:
+                raise ReceiptBindingRejectedError()
+            await _attest_event(conn, authority, event, result)
     return AuthenticatedReceiptResult(
         event_id=result.event_id,
         connection_id=result.connection_id,
         book_id=result.book_id,
+        verification_config_id=authority.verification_config_id,
         delivery_sha256=event.delivery_sha256,
         disposition=result.disposition,
     )

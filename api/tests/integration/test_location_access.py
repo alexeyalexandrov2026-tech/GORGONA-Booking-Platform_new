@@ -430,6 +430,10 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
             )
             assert len(attestation_policies) == 1
             receipt_policies += attestation_policies
+            routing = next(m.sql for m in load_migrations() if m.version == 46)
+            routing_policies = re.findall(r"create policy \w+_company\b.*?;", routing, re.DOTALL)
+            assert len(routing_policies) == 2
+            receipt_policies += routing_policies
             owner_conn.execute(
                 "grant execute on function gba.current_location_id() to gba_receipt_writer"
             )

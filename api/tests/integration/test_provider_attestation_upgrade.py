@@ -47,7 +47,8 @@ async def test_nonempty_0044_upgrade_preserves_rows_and_never_backfills_authenti
             "select version,checksum from public.gba_schema_migrations order by version"
         ).fetchall()
     assert len(checksums) == 44
-    assert [m.version for m in apply_migrations(previous_attestation_database.owner_dsn)] == [45]
+    upgrade = apply_migrations(previous_attestation_database.owner_dsn, load_migrations()[:45])
+    assert [m.version for m in upgrade] == [45]
     after = snapshot(previous_attestation_database)
     assert {name: after[name] for name in before} == before
     assert set(after) - set(before) == {"provider_event_attestations"}
@@ -60,4 +61,4 @@ async def test_nonempty_0044_upgrade_preserves_rows_and_never_backfills_authenti
             ).fetchall()
             == checksums
         )
-    assert apply_migrations(previous_attestation_database.owner_dsn) == []
+    assert apply_migrations(previous_attestation_database.owner_dsn, load_migrations()[:45]) == []

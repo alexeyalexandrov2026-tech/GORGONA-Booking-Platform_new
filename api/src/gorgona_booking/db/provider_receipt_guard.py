@@ -1,4 +1,4 @@
-"""Packaged K1b integrity approvals, checked before each internal receipt write."""
+"""Packaged K1b-K1d integrity approvals, checked before each internal receipt write."""
 
 import re
 from importlib import resources
@@ -7,26 +7,34 @@ from gorgona_booking.db.ledger_guard import LEDGER_IMMUTABLE_SOURCE
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import DatabaseUnavailableError
 
-_SQL = (
-    resources.files("gorgona_booking.db") / "migrations" / "0044_provider_receipt_inbox.sql"
-).read_text(encoding="utf-8")
-_SQL += (
-    resources.files("gorgona_booking.db") / "migrations" / "0045_provider_receipt_attestations.sql"
-).read_text(encoding="utf-8")
+_SQL = "".join(
+    (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
+    for name in (
+        "0044_provider_receipt_inbox.sql",
+        "0045_provider_receipt_attestations.sql",
+        "0046_provider_receipt_routing.sql",
+    )
+)
 _FUNCTIONS = re.findall(r"create function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;", _SQL, re.DOTALL)
 _FUNCTIONS.append(("reject_ledger_mutation", LEDGER_IMMUTABLE_SOURCE))
-_TABLES = (
+_ROUTES = "provider_receipt_routes"
+# Company-scoped tables: tenant and company policies, readable by the runtime and the writer.
+_SCOPED = (
     "provider_receipt_connections",
     "provider_event_inbox",
     "provider_event_deliveries",
     "provider_event_attestations",
+    "provider_verification_configs",
 )
+_TABLES = (*_SCOPED, _ROUTES)
 _COLUMNS = [
     [
         table,
         name,
         "timestamp with time zone" if kind == "timestamptz" else kind,
-        "not null" in tail or name in ("tenant_id", "id", "event_id", "delivery_sha256"),
+        "not null" in tail
+        or "primary key" in tail
+        or name in ("tenant_id", "id", "event_id", "delivery_sha256"),
         "s" if "generated always" in tail else "",
         f"(facts ->> '{name if name != 'provider_event_id' else 'event_id'}'::text)"
         if "generated always" in tail
@@ -43,7 +51,7 @@ _COLUMNS = [
     ]
     for table, block in re.findall(r"create table gba\.(\w+) \((.*?)\n\);", _SQL, re.DOTALL)
     for name, kind, tail in re.findall(
-        r"^    (\w+) (uuid|text|boolean|jsonb|timestamptz)\b([^\n]*)", block, re.MULTILINE
+        r"^    (\w+) (uuid|text|boolean|jsonb|timestamptz|integer)\b([^\n]*)", block, re.MULTILINE
     )
 ]
 _TRIGGERS = (
@@ -91,6 +99,21 @@ _TRIGGERS = (
         "reject_ledger_mutation",
         False,
     ),
+    (
+        "provider_event_attestations",
+        "provider_event_attestations_config",
+        7,
+        "check_provider_attestation_config",
+        False,
+    ),
+    (
+        "provider_verification_configs",
+        "provider_verification_configs_guard",
+        31,
+        "guard_provider_verification_config",
+        False,
+    ),
+    (_ROUTES, "provider_receipt_routes_immutable", 27, "reject_ledger_mutation", False),
 )
 _CHECKS = (
     ("provider_receipt_connections", "(namespace ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$'::text)"),
@@ -106,6 +129,12 @@ _CHECKS = (
     ("provider_event_deliveries", "gba.provider_receipt_facts_valid(facts)"),
     ("provider_event_attestations", "(delivery_sha256 ~ '^[0-9a-f]{64}$'::text)"),
     ("provider_event_attestations", "(verifier = 'stripe_snapshot_v1'::text)"),
+    ("provider_verification_configs", "(version > 0)"),
+    (
+        "provider_verification_configs",
+        "((secret_ref ~ '^[a-z][a-z0-9-]{0,30}:[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$'::text) "
+        "AND (secret_ref !~* '(^|[^A-Za-z0-9])(whsec|sk|rk|pk)_'::text))",
+    ),
 )
 _KEYS = (
     ("provider_receipt_connections", "p", ["tenant_id", "id"], None, None),
@@ -156,7 +185,72 @@ _KEYS = (
         "ledger_books",
         ["tenant_id", "id"],
     ),
+    (
+        "provider_event_attestations",
+        "f",
+        ["tenant_id", "connection_id", "verification_config_id"],
+        "provider_verification_configs",
+        ["tenant_id", "connection_id", "id"],
+    ),
+    ("provider_verification_configs", "p", ["tenant_id", "id"], None, None),
+    ("provider_verification_configs", "u", ["tenant_id", "connection_id", "version"], None, None),
+    ("provider_verification_configs", "u", ["tenant_id", "connection_id", "id"], None, None),
+    (
+        "provider_verification_configs",
+        "f",
+        ["tenant_id", "connection_id"],
+        "provider_receipt_connections",
+        ["tenant_id", "id"],
+    ),
+    (_ROUTES, "p", ["ingress_id"], None, None),
+    (_ROUTES, "u", ["tenant_id", "connection_id"], None, None),
+    (
+        _ROUTES,
+        "f",
+        ["tenant_id", "connection_id"],
+        "provider_receipt_connections",
+        ["tenant_id", "id"],
+    ),
 )
+_INDEXES = (
+    (
+        "provider_verification_configs",
+        "provider_verification_configs_active",
+        "CREATE UNIQUE INDEX provider_verification_configs_active "
+        "ON gba.provider_verification_configs USING btree (tenant_id, connection_id) "
+        "WHERE (NOT revoked)",
+    ),
+)
+_TENANT = "(tenant_id = gba.current_tenant_id())"
+_COMPANY = "(gba.current_location_id() IS NULL)"
+_POLICIES: list[tuple[str, str, bool, str, list[str], str, str]] = [
+    *(
+        (table, table + suffix, permissive, "*", ["public"], predicate, predicate)
+        for table in _SCOPED
+        for suffix, permissive, predicate in (
+            ("_tenant", True, _TENANT),
+            ("_company", False, _COMPANY),
+        )
+    ),
+    (_ROUTES, _ROUTES + "_resolve", True, "r", ["gba_receipt_writer"], "true", ""),
+    (_ROUTES, _ROUTES + "_provision", True, "a", ["public"], "", _TENANT),
+    (_ROUTES, _ROUTES + "_company", False, "a", ["public"], "", _COMPANY),
+]
+# Column privileges per group; any role running the guard is checked against its own group.
+_RUNTIME_INSERTS = {
+    ("provider_event_inbox", column) for column in ("tenant_id", "id", "connection_id", "facts")
+} | {
+    ("provider_event_deliveries", column)
+    for column in ("tenant_id", "event_id", "delivery_sha256", "facts")
+}
+_WRITER_INSERTS = _RUNTIME_INSERTS | {
+    ("provider_event_attestations", column)
+    for column in ("tenant_id", "event_id", "delivery_sha256", "verification_config_id")
+}
+_UPDATES = {
+    ("provider_receipt_connections", "revoked"),
+    ("provider_verification_configs", "revoked"),
+}
 
 
 def _compact(source: str) -> str:
@@ -173,11 +267,17 @@ select
  (select jsonb_agg(jsonb_build_array(c.relname,c.relrowsecurity,c.relforcerowsecurity,
      has_table_privilege(current_user,c.oid,'SELECT'),
      has_table_privilege(current_user,c.oid,'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'),
-     exists(select 1 from aclexplode(c.relacl) a where a.grantee=0)))
+     exists(select 1 from aclexplode(c.relacl) a where a.grantee=0),
+     has_table_privilege('gba_runtime',c.oid,'SELECT'),
+     has_table_privilege('gba_runtime',c.oid,'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'),
+     has_table_privilege('gba_receipt_writer',c.oid,'SELECT'),
+     has_table_privilege('gba_receipt_writer',c.oid,'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')))
   from pg_class c join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='gba' and c.relname=any(%s)),
  (select jsonb_agg(jsonb_build_array(c.relname,p.polname,p.polpermissive,p.polcmd,
-     p.polroles::bigint[],pg_get_expr(p.polqual,p.polrelid),pg_get_expr(p.polwithcheck,p.polrelid)))
+     array(select case when r=0 then 'public' else pg_get_userbyid(r)::text end
+       from unnest(p.polroles) r order by 1),
+     pg_get_expr(p.polqual,p.polrelid),pg_get_expr(p.polwithcheck,p.polrelid)))
   from pg_policy p join pg_class c on c.oid=p.polrelid
   join pg_namespace n on n.oid=c.relnamespace where n.nspname='gba' and c.relname=any(%s)),
  (select jsonb_agg(jsonb_build_array(c.relname,t.tgname,t.tgtype,p.proname,t.tgdeferrable,
@@ -214,7 +314,11 @@ select
   where n.nspname='gba' and c.relname=any(%s) and k.contype in ('p','u','f')),
  (select jsonb_agg(jsonb_build_array(c.relname,a.attname,
      has_column_privilege(current_user,c.oid,a.attnum,'INSERT'),
-     has_column_privilege(current_user,c.oid,a.attnum,'UPDATE')))
+     has_column_privilege(current_user,c.oid,a.attnum,'UPDATE'),
+     has_column_privilege('gba_runtime',c.oid,a.attnum,'INSERT'),
+     has_column_privilege('gba_runtime',c.oid,a.attnum,'UPDATE'),
+     has_column_privilege('gba_receipt_writer',c.oid,a.attnum,'INSERT'),
+     has_column_privilege('gba_receipt_writer',c.oid,a.attnum,'UPDATE')))
   from pg_attribute a join pg_class c on c.oid=a.attrelid
   join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='gba' and c.relname=any(%s) and a.attnum>0 and not a.attisdropped),
@@ -225,6 +329,13 @@ select
   join pg_namespace n on n.oid=c.relnamespace
   left join pg_attrdef d on d.adrelid=c.oid and d.adnum=a.attnum
   where n.nspname='gba' and c.relname=any(%s) and a.attnum>0 and not a.attisdropped),
+ (select jsonb_agg(jsonb_build_array(c.relname,i.relname,pg_get_indexdef(x.indexrelid),
+     x.indisvalid and x.indisready))
+  from pg_index x join pg_class i on i.oid=x.indexrelid join pg_class c on c.oid=x.indrelid
+  join pg_namespace n on n.oid=c.relnamespace
+  where n.nspname='gba' and c.relname=any(%s) and not exists (
+     select 1 from pg_constraint k where k.conindid=x.indexrelid and k.conrelid=x.indrelid
+       and k.contype in ('p','u','x'))),
  pg_catalog.pg_has_role(current_user,'gba_receipt_writer','USAGE')
 """,
             (
@@ -236,27 +347,45 @@ select
                 tables,
                 tables,
                 tables,
+                tables,
             ),
         )
     ).fetchone()
     valid = row is not None
     if row is not None:
-        boundary, policies, triggers, functions, checks, keys, privileges, columns, is_writer = row
+        (
+            boundary,
+            policies,
+            triggers,
+            functions,
+            checks,
+            keys,
+            privileges,
+            columns,
+            indexes,
+            is_writer,
+        ) = row
         valid = sorted(boundary or []) == sorted(
-            [[t, True, True, True, False, False] for t in tables]
-        )
-        expected_policies = [
-            [t, t + suffix, permissive, "*", [0], _compact(predicate), _compact(predicate)]
+            [
+                t,
+                True,
+                True,
+                is_writer or t != _ROUTES,
+                False,
+                False,
+                t != _ROUTES,
+                False,
+                True,
+                False,
+            ]
             for t in tables
-            for suffix, permissive, predicate in (
-                ("_tenant", True, "(tenant_id = gba.current_tenant_id())"),
-                ("_company", False, "(gba.current_location_id() IS NULL)"),
-            )
-        ]
+        )
         actual_policies = [
             [*p[:5], _compact(p[5] or ""), _compact(p[6] or "")] for p in policies or []
         ]
-        valid &= sorted(actual_policies) == sorted(expected_policies)
+        valid &= sorted(actual_policies) == sorted(
+            [*p[:5], _compact(p[5]), _compact(p[6])] for p in _POLICIES
+        )
         valid &= sorted(triggers or []) == sorted([[*list(t), t[4], "O", True] for t in _TRIGGERS])
         expected_functions = [
             [
@@ -292,24 +421,31 @@ select
             ]
             for k in _KEYS
         )
-        inserts = {
-            "provider_receipt_connections": set(),
-            "provider_event_inbox": {"tenant_id", "id", "connection_id", "facts"},
-            "provider_event_deliveries": {"tenant_id", "event_id", "delivery_sha256", "facts"},
-            "provider_event_attestations": {
-                "tenant_id",
-                "event_id",
-                "delivery_sha256",
-                "verification_config_id",
-            }
-            if is_writer
-            else set(),
-        }
+        inserts = _WRITER_INSERTS if is_writer else _RUNTIME_INSERTS
         valid &= all(
-            insert == (column in inserts[table])
-            and update == (table == "provider_receipt_connections" and column == "revoked")
-            for table, column, insert, update in privileges or []
+            [own_insert, own_update, runtime_insert, runtime_update, writer_insert, writer_update]
+            == [
+                (table, column) in inserts,
+                (table, column) in _UPDATES,
+                (table, column) in _RUNTIME_INSERTS,
+                (table, column) in _UPDATES,
+                (table, column) in _WRITER_INSERTS,
+                (table, column) in _UPDATES,
+            ]
+            for (
+                table,
+                column,
+                own_insert,
+                own_update,
+                runtime_insert,
+                runtime_update,
+                writer_insert,
+                writer_update,
+            ) in privileges or []
         )
         valid &= sorted(columns or []) == sorted(_COLUMNS)
+        valid &= sorted([i[0], i[1], _compact(i[2]), i[3]] for i in indexes or []) == sorted(
+            [table, name, _compact(definition), True] for table, name, definition in _INDEXES
+        )
     if not valid:
         raise DatabaseUnavailableError("Provider receipt schema is unavailable")
