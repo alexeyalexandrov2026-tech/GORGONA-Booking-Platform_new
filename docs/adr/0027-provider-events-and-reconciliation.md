@@ -1,5 +1,10 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K1b guard review source `db96f005442201428700995c09f028e1b6da08c0` adds schema conformance checks and six
+regressions; [validation](../plan/evidence/2026-10-15-k1b-guard-review/VALIDATION.md).
+Receipt archive remains unauthenticated for financial authority. No status/readiness,
+operational admission, HTTP, worker or financial effects are added by this slice.
+
 - Status: **Proposed, 2026-10-15; integration not accepted. K1a and K1b receipt storage are locally implemented.**
 - Scope: [Package K / FIN-02](../plan/PACKAGE_K_PLAN_2026-10-15.md) in the agreed stage 2.
 - Planning baseline: `df88c20687333668d39fe76a26eabca691e62cb0`; K1a source `7d25aa2d72874271a62e363817e0624fb502497c`, no schema/route changes.

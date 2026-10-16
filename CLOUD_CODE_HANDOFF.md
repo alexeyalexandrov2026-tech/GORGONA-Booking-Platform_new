@@ -1,6 +1,21 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-15: K1b receipt storage locally verified; not published
+## Current checkpoint — 2026-10-15: K1b schema guard review locally verified
+
+Local source `db96f005442201428700995c09f028e1b6da08c0` on `codex/package-k1b-guard-review`, base `84d4177e97ebc16e1743dcb995abf54c1b81269d`. Six schema conformance gaps
+were reproduced before the correction; the existing guard now binds approved trigger
+identity/shape, shared immutable source, FK parent schema and column PUBLIC privileges.
+Focused **316 passed in 106.89s (0:01:46)**; full **1890 passed, 4 skipped in 1454.00s (0:24:14)**; static/build/web114 PASS.
+No migration/dependency/ingress/worker/money authority. FIN-02/STOCK-01 planned;
+ADR0026/0027 Proposed; full K acceptance/independent review/exact K CI NOT TESTED.
+Runtime npm audit0 PASS, existing development5high FAIL;4 container/external skips.
+K remains local; main=fedd0f1 and published J=df88c20 unchanged.
+[Validation](docs/plan/evidence/2026-10-15-k1b-guard-review/VALIDATION.md),
+[review](docs/plan/evidence/2026-10-15-k1b-guard-review/REVIEW.md),
+[handoff](docs/plan/NEXT_AGENT_PACKAGE_K1B_REVIEW_2026-10-15.md),
+[prompt](docs/plan/NEXT_AGENT_PACKAGE_K1B_REVIEW_PROMPT_2026-10-15.md).
+
+## Previous checkpoint — 2026-10-15: K1b receipt storage locally verified; not published
 
 K1b source `543b73221ac1dd0aa738bd8cf33dd468366ef27a`, `codex/package-k1b-inbox`, base `ffb176b3cc4bd83637eff29246f6045e0705b9d3`.
 Migration0044 adds owner-provisioned `not_admitted` receipt bindings and an append-only

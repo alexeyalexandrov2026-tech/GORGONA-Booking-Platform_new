@@ -1,5 +1,8 @@
 # Next agent — K1b receipt storage, 2026-10-15
 
+Current successor: [K1b guard review handoff](NEXT_AGENT_PACKAGE_K1B_REVIEW_2026-10-15.md).
+The original K1b evidence below is historical; inspect the current Git state.
+
 Local source `543b73221ac1dd0aa738bd8cf33dd468366ef27a`, branch `codex/package-k1b-inbox`, base `ffb176b3cc4bd83637eff29246f6045e0705b9d3`.
 Checkout `C:/Users/alexa/.codex/worktrees/package-j-review2-fixes/Gorgona Booking`.
 A documentation commit follows the source; inspect actual HEAD/status. K is local only.
