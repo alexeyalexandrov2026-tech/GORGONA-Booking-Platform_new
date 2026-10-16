@@ -1,5 +1,8 @@
 # Next agent — K1c receipt attestations,2026-10-16
 
+Superseded on 2026-10-16 by [the K1d handoff](NEXT_AGENT_PACKAGE_K1D_2026-10-16.md):
+K1d (`e9c86bf`) was built on this handoff. Kept unchanged below as history.
+
 Checkout `C:/Users/alexa/.codex/worktrees/package-j-review2-fixes/Gorgona Booking`.
 Branch `codex/package-k1c-receipt-attestations`,source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c`,base `f5f7987a534a518f3019b7aced28be970f18ad0d`;a docs commit follows. Inspect actual
 HEAD/status. No K push. Remote main=fedd0f115f24aad52f6256298296e8c5123fb427 and published J

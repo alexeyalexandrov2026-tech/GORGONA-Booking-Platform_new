@@ -1,6 +1,95 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## Current checkpoint — 2026-10-16: K1c receipt attestations locally verified
+## Current checkpoint — 2026-10-16: K1d verification authority and routing locally verified
+
+Source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` on local branch `codex/package-k1d-receipt-routing`,
+parent `46ab31d`. Migration 0046 and the routed entry point implement decisions 1–8 below;
+criteria D-01–D-09 PASS on synthetic data. 60 new cases, 28 K1c cases ported. Final focused
+**404 passed in 267.91s (0:04:27)**; full **1988 passed, 4 skipped in 1970.01s (0:32:50)**;
+static, mypy (312 files), web 114 and build PASS; runtime audit 0; existing development audit
+5 high FAIL; 3 container and 1 tenant-site skips NOT TESTED. Kept failures include a genuine
+design defect: a validated key added by the migration owner did not see rows hidden by forced
+row security, so 0046 checks under a temporary owner policy. Independent review, K CI, HTTP
+ingress and the real provider are NOT TESTED or BLOCKED. FIN-02/STOCK-01 planned; ADR-0026/0027
+Proposed; K not published; next migration 0047.
+[Validation](evidence/2026-10-16-k1d-receipt-routing/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-16-k1d-receipt-routing/CHECKS.json),
+[handoff](NEXT_AGENT_PACKAGE_K1D_2026-10-16.md), [prompt](NEXT_AGENT_PACKAGE_K1D_PROMPT_2026-10-16.md).
+
+### K1d design, recorded before code
+
+The owner answered «ok» to the offer to take the K1c handoff: review K1c, then design
+and build the next small local slice. Branch `codex/package-k1d-receipt-routing` from
+`46ab31dd6f41ae820a85a09f19fd5812584fc89d`. The K1d executor's
+[K1c review](evidence/2026-10-16-k1d-receipt-routing/K1C_AUTHOR_REVIEW.md) is not
+independent; it found the two gaps K1d closes: the attested verification-config ID
+is unanchored (R1) and there is no server-controlled routing (R2).
+
+**K1d: verification-config authority and trusted routing — local, synthetic only.**
+
+Decisions:
+
+1. **Authority.** Migration 0046 adds `gba.provider_verification_configs`: per
+   connection, versioned (the trigger assigns previous + 1), at most one active
+   version per connection, an opaque `secret_ref` in `store:name` form, never a key.
+   A value that looks like a Stripe secret is refused. Rows are immutable except a
+   one-way revocation; a config cannot be created for a revoked connection.
+   Company-scoped RLS like the other K tables; `created_by` records the database principal.
+2. **Who may create and revoke.** Only the database owner (the operator path) creates
+   configs and routes, inside an explicit company context. No grant, role or
+   security-definer function lets the runtime or the writer create, change or
+   reactivate them. Runtime and writer may revoke: it only removes authority, and the
+   writer's FOR SHARE needs UPDATE(revoked), as for connections.
+3. **Not admission.** A config states which key may verify deliveries for a connection.
+   It is not operational admission: connections stay `not_admitted` and test-mode only.
+   No positive operational evidence is created; H4 stays a declaration.
+4. **Routing.** `gba.provider_receipt_routes` maps a server-generated opaque ingress ID
+   to company and connection IDs only; one route per connection; immutable. It follows
+   the `tenant_hosts` pattern, but narrower: only `gba_receipt_writer` may read it
+   without a company context; the runtime has no access.
+5. **One entry point.** `receive_routed_receipt(pool, ingress_id, raw, signature,
+   key_store=…)` replaces K1c's caller-supplied `ReceiptVerifierBinding`, which is removed.
+   Order: writer role and schema guard → route → company context from the route →
+   active config and connection binding under FOR SHARE → key by `secret_ref` from the
+   server-held key store (missing → refuse) → K1a raw-body check against the
+   connection's namespace, account and API version → K1b archive → attestation with the
+   config ID → commit → result. Before the signature check only authority rows (route,
+   config, binding) are read; no inbox, ledger or business rows. Every refusal is one
+   generic error without IDs, references or keys.
+6. **Anchored attestation.** A composite key (company, connection, config ID) from
+   attestations to configs, plus an insert trigger that takes FOR SHARE on the config and
+   refuses a revoked or foreign one. Revocation waits for in-flight receipts and applies
+   from the next transaction.
+7. **Upgrade.** An existing K1c attestation has no authority behind it, so 0046 refuses to
+   apply instead of back-filling or relabelling. K1c was never published or deployed; such
+   rows exist only in disposable test databases. The refusal is an explicit check under a
+   temporary owner policy (the 0042 precedent), dropped in the same transaction: a test
+   showed that adding the validated key alone does not see rows that forced row security
+   hides from the owner.
+8. **Guards.** The schema guard covers the two tables, new functions, triggers, policies
+   (by role name), the partial unique index and per-role privileges. Writer-role safety
+   covers six tables.
+
+Acceptance criteria (failing tests first):
+
+| id | Requirement |
+|---|---|
+| D-01 | A routed receipt commits archive and attestation with the active config ID; no journal rows |
+| D-02 | Unknown ingress, missing key, wrong key, revoked config and revoked connection refuse with no rows |
+| D-03 | Company A's ingress with an event for company B's account refuses; no rows in either company |
+| D-04 | Rotation: v1 revoked, v2 active as version 2; a delivery signed only with the old key refuses, the new one records v2; two active versions are refused |
+| D-05 | Direct SQL: runtime cannot create, change, delete or reactivate configs, nor read or write routes; writer cannot create configs or routes, nor attest with a missing, foreign or revoked config; owner cannot provision without company context; secret-like refs and configs for revoked connections are refused; routes and configs are immutable |
+| D-06 | Config revocation waits behind an in-flight receipt (observed `pg_locks` wait); the receipt commits; the next receipt refuses |
+| D-07 | 0045 with an attestation: 0046 fails and 0045 stays intact. Nonempty 0045 without attestations upgrades with rows unchanged |
+| D-08 | Schema drift (runtime read grant on routes, dropped partial index, changed route policy, changed config trigger) makes guarded operations refuse |
+| D-09 | Existing K1c tests run through the routed entry point and pass; full suite green |
+
+Limits: synthetic fixtures only (fake `acct_` IDs, keys generated in memory); no HTTP
+route, provider account or key, worker or money; no config expiry (rotation is an
+operator action). K-01–K-14 stay NOT TESTED: D-01–D-08 are partial local evidence for
+K-01/K-02. FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed; 0001–0045 immutable; K not published.
+
+## Previous checkpoint — 2026-10-16: K1c receipt attestations locally verified
 
 Source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c`,branch `codex/package-k1c-receipt-attestations`,base `f5f7987a534a518f3019b7aced28be970f18ad0d`.0045 adds protected per-delivery
 verifier attestations;ordinary archive remains untrusted. Dedicated writer validates

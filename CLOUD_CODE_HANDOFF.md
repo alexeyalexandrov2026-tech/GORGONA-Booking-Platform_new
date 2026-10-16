@@ -1,6 +1,22 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-16: K1c receipt attestations locally verified
+## Current checkpoint — 2026-10-16: K1d verification authority and routing locally verified
+
+Source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4`, local branch `codex/package-k1d-receipt-routing`, parent `46ab31dd6f41ae820a85a09f19fd5812584fc89d`.
+Migration 0046 adds owner-provisioned, versioned verification configs (opaque key reference,
+one active version, one-way revocation) and writer-only routes from an ingress ID to company
+and connection IDs. One entry point, `receive_routed_receipt`, replaces caller-supplied scope.
+60 new cases, 28 K1c cases ported. Focused **404 passed in 267.91s (0:04:27)**; full
+**1988 passed, 4 skipped in 1970.01s (0:32:50)**; static/mypy 312/web 114/build PASS; runtime
+audit 0 PASS; existing development audit 5 high FAIL; 4 container/tenant-site skips NOT TESTED.
+Finding: a validated key added by the migration owner did not see rows hidden by forced row
+security; 0046 checks under a temporary owner policy. No HTTP, admission, worker or money.
+Independent review, K CI and real provider NOT TESTED/BLOCKED. FIN-02/STOCK-01 planned;
+ADR-0026/0027 Proposed. K local only; main=fedd0f1, published J=df88c20. Next 0047.
+[Validation](docs/plan/evidence/2026-10-16-k1d-receipt-routing/VALIDATION.md),
+[handoff](docs/plan/NEXT_AGENT_PACKAGE_K1D_2026-10-16.md), [prompt](docs/plan/NEXT_AGENT_PACKAGE_K1D_PROMPT_2026-10-16.md).
+
+## Previous checkpoint — 2026-10-16: K1c receipt attestations locally verified
 
 Source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c`,branch `codex/package-k1c-receipt-attestations`,base `f5f7987a534a518f3019b7aced28be970f18ad0d`.0045 adds protected per-delivery
 verifier attestations;ordinary archive remains untrusted. Dedicated writer validates

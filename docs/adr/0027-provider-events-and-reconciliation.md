@@ -1,8 +1,39 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K1d source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` implements the K1d decision below;
+[validation](../plan/evidence/2026-10-16-k1d-receipt-routing/VALIDATION.md).
 Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the proposed isolated verifier foundation;
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
+
+## K1d local design decision — 2026-10-16, Proposed; locally implemented in `e9c86bf`
+
+Close the two K1c gaps found by the K1d executor's
+[non-independent review](../plan/evidence/2026-10-16-k1d-receipt-routing/K1C_AUTHOR_REVIEW.md):
+an unanchored verification-config ID and caller-supplied scope.
+
+Add migration 0046 with a versioned, company-scoped verification-config authority per
+connection: one active version, an opaque `store:name` secret reference (never a key;
+secret-like values refused), immutable except one-way revocation. Add a writer-only
+routing record from a server-generated ingress ID to company and connection IDs.
+Only the database owner provisions both, inside an explicit company context. The runtime
+and the writer may only revoke. No new role, security-definer function or runtime
+routing grant. Every new grant, policy and trigger gets direct-SQL denial tests.
+
+Replace the caller-supplied `ReceiptVerifierBinding` with one internal entry point keyed by
+the ingress ID. The server-held key store resolves the reference; the database never holds
+key material. Before the K1a signature check only authority rows are read (route, active
+config, connection binding); no inbox, ledger or business rows. Attestations reference the
+exact config (composite key, same connection) under FOR SHARE, so revocation serializes with
+in-flight receipts and applies from the next transaction. 0046 refuses to upgrade a database
+that already holds K1c attestations rather than invent authority for them; the refusal is an
+explicit check under a temporary owner policy, because key validation by the owner does not
+see rows hidden by forced row security.
+
+A config is verification authority, not operational admission: connections stay
+`not_admitted` and test-mode only, H4 stays a declaration, and no HTTP route, provider
+account/key, worker, financial effect or readiness change is added. Criteria D-01–D-09 are in
+the [K plan](../plan/PACKAGE_K_PLAN_2026-10-15.md).
 
 ## K1c local implementation decision — 2026-10-16, Proposed
 
@@ -33,7 +64,7 @@ regressions; [validation](../plan/evidence/2026-10-15-k1b-guard-review/VALIDATIO
 Receipt archive remains unauthenticated for financial authority. No status/readiness,
 operational admission, HTTP, worker or financial effects are added by this slice.
 
-- Status: **Proposed, 2026-10-15; integration not accepted. K1a verification, K1b storage and K1c isolated writer attestations are locally implemented.**
+- Status: **Proposed, 2026-10-15; integration not accepted. K1a verification, K1b storage, K1c isolated writer attestations and K1d verification authority and routing are locally implemented.**
 - Scope: [Package K / FIN-02](../plan/PACKAGE_K_PLAN_2026-10-15.md) in the agreed stage 2.
 - Planning baseline: `df88c20687333668d39fe76a26eabca691e62cb0`; K1a source `7d25aa2d72874271a62e363817e0624fb502497c`, no schema/route changes.
 - Decision owner: the product owner. This ADR grants no provider or publication permission.
