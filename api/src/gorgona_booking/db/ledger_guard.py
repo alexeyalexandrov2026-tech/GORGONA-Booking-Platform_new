@@ -20,6 +20,8 @@ _SOURCES = dict(
         re.DOTALL,
     )
 )
+# Shared immutable-history approval, also used by receipt storage.
+LEDGER_IMMUTABLE_SOURCE = _SOURCES["reject_ledger_mutation"]
 _TABLES = (
     "ledger_books",
     "ledger_book_versions",
