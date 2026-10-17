@@ -36,15 +36,24 @@ def _bootstrap(_: argparse.Namespace) -> None:
         owner_password=_require("GBA_OWNER_PASSWORD"),
         app_role=os.environ.get("GBA_APP_ROLE", "gba_app"),
         app_password=_require("GBA_APP_PASSWORD"),
+        # Optional receipt writer login; both or neither (validated by the spec).
+        receipt_writer_role=os.environ.get("GBA_RECEIPT_WRITER_ROLE") or None,
+        receipt_writer_password=os.environ.get("GBA_RECEIPT_WRITER_PASSWORD") or None,
     )
+    spec.validate()
     bootstrap(_require("GBA_ADMIN_DATABASE_URL"), spec)
+    writer = f", receipt writer {spec.receipt_writer_role}" if spec.receipt_writer_role else ""
     print(
-        f"bootstrapped database {spec.database} (owner {spec.owner_role}, runtime {spec.app_role})"
+        f"bootstrapped database {spec.database} "
+        f"(owner {spec.owner_role}, runtime {spec.app_role}{writer})"
     )
 
 
 def _migrate(_: argparse.Namespace) -> None:
-    applied = apply_migrations(_require("GBA_MIGRATION_DATABASE_URL"))
+    try:
+        applied = apply_migrations(_require("GBA_MIGRATION_DATABASE_URL"))
+    except MigrationError as exc:
+        raise SystemExit(f"migrate refused: {exc}") from None
     names = ", ".join(f"{m.version:04d}_{m.name}" for m in applied) or "nothing to apply"
     print(f"migrations applied: {names}")
 

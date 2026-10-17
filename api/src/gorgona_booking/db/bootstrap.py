@@ -45,6 +45,12 @@ class BootstrapSpec:
             raise BootstrapError("role passwords must be at least 12 characters")
         if self.receipt_writer_password is not None and len(self.receipt_writer_password) < 12:
             raise BootstrapError("receipt writer password must be at least 12 characters")
+        # A shared password would let one credential holder log in as another role.
+        passwords = [self.owner_password, self.app_password]
+        if self.receipt_writer_password is not None:
+            passwords.append(self.receipt_writer_password)
+        if len(set(passwords)) != len(passwords):
+            raise BootstrapError("owner, runtime and receipt writer passwords must all differ")
 
 
 def bootstrap(admin_conninfo: str, spec: BootstrapSpec) -> None:

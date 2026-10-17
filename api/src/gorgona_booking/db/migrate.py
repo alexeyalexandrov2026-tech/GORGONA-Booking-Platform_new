@@ -16,6 +16,8 @@ from pathlib import Path
 
 import psycopg
 
+from gorgona_booking.db.bootstrap import RECEIPT_WRITER_GROUP, RUNTIME_GROUP
+
 _FILENAME = re.compile(r"^(?P<version>\d{4})_(?P<name>[a-z0-9_]+)\.sql$")
 # pg_advisory_lock key so concurrent deploys cannot interleave migrations.
 MIGRATION_LOCK_KEY = 0x6762615F6D6967
@@ -68,6 +70,15 @@ def apply_migrations(
         if row is None or row[0]:
             # Tables must be owned by the dedicated owner role, not a superuser.
             raise MigrationError("refusing to migrate as a superuser; use the owner role")
+        # Migrations grant to these bootstrap groups; refuse before applying anything.
+        missing = conn.execute(
+            "select coalesce(array_agg(g order by g), '{}') from unnest(%s::text[]) g "
+            "where not exists (select 1 from pg_catalog.pg_roles where rolname = g)",
+            ([RUNTIME_GROUP, RECEIPT_WRITER_GROUP],),
+        ).fetchone()
+        if missing is None or missing[0]:
+            names = ", ".join(missing[0]) if missing else "unknown"
+            raise MigrationError(f"run gba-db bootstrap before migrate; missing roles: {names}")
 
         conn.execute("select pg_catalog.pg_advisory_lock(%s)", (MIGRATION_LOCK_KEY,))
         try:
