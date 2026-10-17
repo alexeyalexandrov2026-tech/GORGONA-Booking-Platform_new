@@ -1,6 +1,18 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-17: K1k TRUNCATE guard and random route IDs locally verified
+## Current checkpoint — 2026-10-17: K2a receipt decisions without money locally verified
+
+Source `6e9bbfc74a09a5d472aaff25328356d6f71e8706`, local branch `codex/package-k2a-receipt-decisions`, parent `b6c8040`.
+First K2 slice, by the owner's decisions of 2026-10-17: a separate `gba_receipt_worker` group turns
+each attested receipt into one permanent decision (`observed` or `needs_review`) linked to one
+provider operation; leases with fencing stop duplicate and expired workers; every conflict goes
+to manual review; nothing touches the ledger, settlements or obligations. Migration 0050, 59 new
+cases. Focused **571 passed in 478.99s (0:07:58)**; full **2154 passed, 4 skipped in 1765.52s
+(0:29:25)**; a first focused gate failed (kept in the record). Not published.
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0051.
+[Validation](docs/plan/evidence/2026-10-17-k2a-receipt-decisions/VALIDATION.md), [handoff](docs/plan/NEXT_AGENT_PACKAGE_K2A_2026-10-17.md), [prompt](docs/plan/NEXT_AGENT_PACKAGE_K2A_PROMPT_2026-10-17.md).
+
+## Previous checkpoint — 2026-10-17: K1k TRUNCATE guard and random route IDs locally verified
 
 Source `a5f21e41f550d5d07e428c644e9f718082b3f619`, local branch `codex/package-k1k-truncate-guard`, parent `ae9e1e2`.
 Closes independent-review findings IR-09 and the default part of IR-08: migration 0049 refuses

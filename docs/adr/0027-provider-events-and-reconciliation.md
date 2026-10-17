@@ -1,5 +1,7 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K2a source `6e9bbfc74a09a5d472aaff25328356d6f71e8706` implements the K2a decision below;
+[validation](../plan/evidence/2026-10-17-k2a-receipt-decisions/VALIDATION.md).
 Local K1k source `a5f21e41f550d5d07e428c644e9f718082b3f619` implements the K1k decision below;
 [validation](../plan/evidence/2026-10-17-k1k-truncate-guard/VALIDATION.md).
 Local K1j source `201847856aa768bbeb25751d5b219e154383c293` implements the K1j decision below;
@@ -16,11 +18,15 @@ Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the propo
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
 
-## K2a proposal — 2026-10-17, not started
+## K2a local design decision — 2026-10-17, Proposed; locally implemented in `6e9bbfc`
 
-Receipt decisions without money (operation identity, leased claims with fencing, append-only
-decisions) are proposed in [the K2a design](../plan/PACKAGE_K2A_DESIGN_2026-10-17.md). It awaits
-the owner's answers on the worker role, ambiguity policy, scope and unattested rows.
+A separate NOLOGIN `gba_receipt_worker` group (owner decision) turns each attested receipt into
+one append-only decision (`observed` or `needs_review`) linked to one canonical provider operation
+(PaymentIntent for payments, refund ID for refunds). Leases with a fencing generation stop two
+workers and expired workers; the operation row lock serialises events of one operation so a
+conflict is always seen. Every conflict or unkeyed fact goes to manual review; nothing touches
+the ledger, settlements or obligations; unattested events are never processed (owner decisions).
+Details and criteria W-01–W-11: [the K2a design](../plan/PACKAGE_K2A_DESIGN_2026-10-17.md).
 
 ## K1k local design decision — 2026-10-17, Proposed; locally implemented in `a5f21e4`
 

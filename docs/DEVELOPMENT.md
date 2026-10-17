@@ -620,11 +620,12 @@ A spec that invites the first owner needs `--invitation-token-file PATH`. The to
 | Owner (`GBA_MIGRATION_DATABASE_URL`) | migrations, provisioning | the API |
 | Runtime (`GBA_DATABASE_URL`) | the API | DDL. It is refused at startup if it is a superuser, `BYPASSRLS`, or a member of the table owner |
 | Receipt writer (optional login from `GBA_RECEIPT_WRITER_ROLE` + `GBA_RECEIPT_WRITER_PASSWORD` at bootstrap) | the separate provider-receipt writer process only | the API, migrations, any business or financial table |
+| Receipt worker (optional login from `GBA_RECEIPT_WORKER_ROLE` + `GBA_RECEIPT_WORKER_PASSWORD` at bootstrap) | the receipt decision worker only (K2a; no process entry point yet) | the API, the writer, migrations, any business or financial table |
 
 `gba-db bootstrap` runs before `gba-db migrate`: migrations refuse to start, applying nothing,
-until bootstrap has created the `gba_runtime` and `gba_receipt_writer` groups. Bootstrap refuses
-equal owner, runtime and writer passwords. Set both writer variables or neither; without them no
-writer login is created.
+until bootstrap has created the `gba_runtime`, `gba_receipt_writer` and `gba_receipt_worker`
+groups. Bootstrap refuses equal owner, runtime, writer and worker passwords. Set both writer
+variables or neither, and both worker variables or neither; without them no such login is created.
 
 ## Windows
 

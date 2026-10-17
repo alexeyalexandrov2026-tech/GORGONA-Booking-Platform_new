@@ -1,13 +1,26 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## K2a proposal — receipt decisions without money (2026-10-17, docs only)
+## Current checkpoint — 2026-10-17: K2a receipt decisions without money locally verified
 
-After K1k the next plan slice is K2. Its local part K2a (operation identity, leases with fencing,
-append-only decisions; no provider call, no money) is proposed in
-[PACKAGE_K2A_DESIGN_2026-10-17.md](PACKAGE_K2A_DESIGN_2026-10-17.md). Not started: four owner
-questions (worker role, ambiguity policy, scope, unattested rows) come first.
+Source `6e9bbfc74a09a5d472aaff25328356d6f71e8706` on local branch `codex/package-k2a-receipt-decisions`, parent `b6c8040`.
+Criteria W-01–W-11 PASS; migration 0050; 59 new cases. Final focused **571 passed in 478.99s
+(0:07:58)**; full **2154 passed, 4 skipped in 1765.52s (0:29:25)**. Kept failures: product RED,
+a test-helper defect, and a first focused gate (8 failed) where two older tests did not know
+the 0050 objects. No money moves. Not published.
+[Validation](evidence/2026-10-17-k2a-receipt-decisions/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-17-k2a-receipt-decisions/CHECKS.json),
+[handoff](NEXT_AGENT_PACKAGE_K2A_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K2A_PROMPT_2026-10-17.md).
 
-## Current checkpoint — 2026-10-17: K1k TRUNCATE guard and random route IDs locally verified
+### K2a design, recorded before code
+
+Local branch `codex/package-k2a-receipt-decisions` from `b6c8040`. The owner answered the four
+questions: a separate `gba_receipt_worker` group, every conflict to manual review, direct payments
+and refunds only, unattested events never processed. Model (migration 0050, bootstrap, worker,
+guard) and criteria W-01–W-11 are in
+[PACKAGE_K2A_DESIGN_2026-10-17.md](PACKAGE_K2A_DESIGN_2026-10-17.md). Implemented in `6e9bbfc`.
+Not published.
+
+## Previous checkpoint — 2026-10-17: K1k TRUNCATE guard and random route IDs locally verified
 
 Source `a5f21e41f550d5d07e428c644e9f718082b3f619` on local branch `codex/package-k1k-truncate-guard`, parent `ae9e1e2`.
 Criteria T-01–T-04 PASS; migration 0049; 18 new cases. Final focused **512 passed in 443.01s
