@@ -17,9 +17,10 @@ rewrite rules), table/column/function ACLs and the RLS context functions.
 
 ## Open
 
-1. `test_stock_scale` (package J) is near its timing limit in full runs (one failure in K1g
-   full-1; passed alone and in full-2). Needs its own small slice: a steadier measurement or a
-   justified threshold. Do not loosen it silently.
+1. `test_stock_scale` (package J) fails now and then in full runs. Diagnosed on 2026-10-17
+   (K1h, [finding](evidence/2026-10-17-k1h-stock-statistics/FINDING.md)): a real planner hazard
+   under misleading statistics, not load. Three fixes were tried and reverted; the robust fix
+   (document checks by full primary keys) is a larger slice that needs review. Do not loosen the test.
 2. Remaining review follow-ups: IR-03 (runtime INSERT on the inbox, 0047), IR-07 (revocation
    author/time). Publishing K1f/K1g needs the owner's word.
 3. K0 stays BLOCKED until separately authorized.

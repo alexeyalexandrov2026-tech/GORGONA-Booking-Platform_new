@@ -1,5 +1,14 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## Finding — 2026-10-17: K1h stock posting plans under misleading statistics (deferred)
+
+Diagnosed on `codex/package-k1h-stock-scale-timing` (docs only; all code attempts reverted at the
+owner's choice). `test_stock_scale` fails in full runs because of a real planner hazard, not
+load: when statistics do not describe the company, PostgreSQL may reach one document's rows
+through another company-leading index and read the whole history. Three fixes were tried and
+recorded; none held in the full order. The robust fix — document checks by full primary keys
+only — is a larger, separately reviewed slice. [Finding](evidence/2026-10-17-k1h-stock-statistics/FINDING.md).
+
 ## Current checkpoint — 2026-10-17: K1g receipt guard additions locally verified
 
 Source `4401a2e7bcdc716eaa5664285c0ca383ddf77163` on local branch `codex/package-k1g-guard-additions`, parent `af26f1d`. Criteria

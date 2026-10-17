@@ -1,5 +1,7 @@
 # ADR-0026 — Basic materials: owner-linked stock documents, moving-average cost and ledger postings
 
+**2026-10-17 note (K1h, finding, not fixed):** with statistics that do not describe a company, stock document checks can read a material's or company's whole history (found by `test_stock_scale`); three local fixes did not hold in the full suite and were reverted. Status unchanged. See the [finding](../plan/evidence/2026-10-17-k1h-stock-statistics/FINDING.md).
+
 - Status: **Proposed (2026-10-13)**. Slices J1–J6, both screens and the review fixes are implemented (see the
   implementation notes below); readiness remains locked pending the owner decision. The
   owner chose the twelve options
