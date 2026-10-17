@@ -576,8 +576,8 @@ Set `GBA_TEST_KEEP_DB=1` to keep the test database for inspection.
 
 ```bash
 cd api
-uv run --env-file ../.env gba-db bootstrap            # superuser: roles + database
-uv run --env-file ../.env gba-db migrate              # owner: apply migrations
+uv run --env-file ../.env gba-db bootstrap            # superuser: roles + database (first)
+uv run --env-file ../.env gba-db migrate              # owner: apply migrations (after bootstrap)
 uv run --env-file ../.env gba-db check-runtime-role   # runtime role cannot bypass RLS
 uv run --env-file ../.env python -m gorgona_booking   # API on 127.0.0.1:8000
 ```
@@ -619,6 +619,12 @@ A spec that invites the first owner needs `--invitation-token-file PATH`. The to
 | Superuser (`GBA_ADMIN_DATABASE_URL`, `GBA_TEST_ADMIN_DSN`) | bootstrap, test fixture | migrations, the API |
 | Owner (`GBA_MIGRATION_DATABASE_URL`) | migrations, provisioning | the API |
 | Runtime (`GBA_DATABASE_URL`) | the API | DDL. It is refused at startup if it is a superuser, `BYPASSRLS`, or a member of the table owner |
+| Receipt writer (optional login from `GBA_RECEIPT_WRITER_ROLE` + `GBA_RECEIPT_WRITER_PASSWORD` at bootstrap) | the separate provider-receipt writer process only | the API, migrations, any business or financial table |
+
+`gba-db bootstrap` runs before `gba-db migrate`: migrations refuse to start, applying nothing,
+until bootstrap has created the `gba_runtime` and `gba_receipt_writer` groups. Bootstrap refuses
+equal owner, runtime and writer passwords. Set both writer variables or neither; without them no
+writer login is created.
 
 ## Windows
 

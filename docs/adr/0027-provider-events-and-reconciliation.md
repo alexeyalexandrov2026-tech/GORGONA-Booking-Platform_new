@@ -1,5 +1,7 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K1f source `3e18c938a505bbb4583778cdf40df0e7bed2aceb` implements the K1f decision below;
+[validation](../plan/evidence/2026-10-17-k1f-bootstrap-hardening/VALIDATION.md).
 Local K1e source `eb46748fa7446754e96e9290ce5261607ae45ce0` implements the K1e decision below;
 [validation](../plan/evidence/2026-10-16-k1e-http-ingress/VALIDATION.md).
 Local K1d source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` implements the K1d decision below;
@@ -7,6 +9,15 @@ Local K1d source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` implements the K1d d
 Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the proposed isolated verifier foundation;
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
+
+## K1f local design decision — 2026-10-17, Proposed; locally implemented in `3e18c93`
+
+Close review finding IR-06 around the K1c writer login without changing receipt code or schema.
+Bootstrap refuses equal owner, runtime and writer passwords. `gba-db bootstrap` may create the
+writer login from `GBA_RECEIPT_WRITER_ROLE`/`GBA_RECEIPT_WRITER_PASSWORD` (both or neither).
+Migrations refuse to start, applying nothing, until bootstrap has created `gba_runtime` and
+`gba_receipt_writer`. The Azure bootstrap job is unchanged (owner decision). Criteria F-01–F-04
+are in the [K plan](../plan/PACKAGE_K_PLAN_2026-10-15.md).
 
 ## K1e local design decision — 2026-10-16, Proposed; locally implemented in `eb46748`
 

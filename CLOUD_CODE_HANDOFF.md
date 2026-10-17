@@ -1,6 +1,20 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-16: K1e raw HTTP ingress locally verified
+## Current checkpoint — 2026-10-17: K1f bootstrap hardening locally verified
+
+Source `3e18c938a505bbb4583778cdf40df0e7bed2aceb`, local branch `codex/package-k1f-bootstrap-hardening`, parent `be97fbd`.
+Closes independent-review finding IR-06: bootstrap refuses equal owner/runtime/writer passwords,
+`gba-db bootstrap` can create the writer login (`GBA_RECEIPT_WRITER_ROLE`/`_PASSWORD`), and
+migrations refuse, applying nothing, before bootstrap created `gba_runtime`/`gba_receipt_writer`.
+No migration. 8 new cases. Focused **458 passed in 408.78s (0:06:48)**; full **2042 passed,
+4 skipped in 3100.84s (0:51:40)**; static/mypy 315/web/build PASS; runtime audit 0; existing
+development audit 5 high FAIL. K1f not published. Published K1e branch CI run 38991120703 FAILED
+at the production image build (cause not established; log needs GitHub sign-in).
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0047.
+[Validation](docs/plan/evidence/2026-10-17-k1f-bootstrap-hardening/VALIDATION.md),
+[handoff](docs/plan/NEXT_AGENT_PACKAGE_K1F_2026-10-17.md), [prompt](docs/plan/NEXT_AGENT_PACKAGE_K1F_PROMPT_2026-10-17.md).
+
+## Previous checkpoint — 2026-10-16: K1e raw HTTP ingress locally verified
 
 Source `eb46748fa7446754e96e9290ce5261607ae45ce0`, local branch `codex/package-k1e-http-ingress`, parent `2d434bff8081e03d38765caa0b61f5df006dde27`.
 A separate writer-process ASGI application serves one route, `POST /v1/provider-events/stripe/{ingress_id}`:

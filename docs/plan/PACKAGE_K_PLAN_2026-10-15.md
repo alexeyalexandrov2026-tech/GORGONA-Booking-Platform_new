@@ -1,6 +1,56 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## Current checkpoint — 2026-10-16: K1e raw HTTP ingress locally verified
+## Current checkpoint — 2026-10-17: K1f bootstrap hardening locally verified
+
+Source `3e18c938a505bbb4583778cdf40df0e7bed2aceb` on local branch `codex/package-k1f-bootstrap-hardening`, parent `be97fbd`. Criteria
+F-01–F-04 PASS; 8 new cases; no migration. Focused **458 passed in 408.78s (0:06:48)**; full
+**2042 passed, 4 skipped in 3100.84s (0:51:40)**; static, mypy (315 files), web and build PASS;
+runtime audit 0; existing development audit 5 high FAIL. Kept failure: product RED (7 failed).
+Not published. The published K1e branch's CI run 38991120703 FAILED at the production image
+build after 17 s; its log needs a GitHub sign-in; the cause is not established.
+[Validation](evidence/2026-10-17-k1f-bootstrap-hardening/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-17-k1f-bootstrap-hardening/CHECKS.json),
+[handoff](NEXT_AGENT_PACKAGE_K1F_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K1F_PROMPT_2026-10-17.md).
+
+### K1f design, recorded before code
+
+Local branch `codex/package-k1f-bootstrap-hardening` from `be97fbd` (K1e plus the disk-cleanup
+note). After the K1e handoff asked which follow-up to take, the owner answered «continue»; the
+recommended first follow-up was review finding IR-06. Not published (the push authorization
+covered the K1e branch only).
+
+**K1f: writer bootstrap and migration order — local only.** IR-06: `BootstrapSpec.validate()`
+accepts equal owner, runtime and writer passwords, so a runtime credential holder could log in as
+the writer; `gba-db bootstrap` cannot create the writer login; a database bootstrapped before
+K1c lacks `gba_receipt_writer`, and `migrate` then fails inside 0045 after 0044 was applied.
+
+Decisions:
+
+1. **Distinct passwords.** `validate()` refuses any two equal passwords among owner, runtime and
+   writer, before any connection; the message names no value.
+2. **Writer login from the CLI.** `gba-db bootstrap` reads optional `GBA_RECEIPT_WRITER_ROLE` and
+   `GBA_RECEIPT_WRITER_PASSWORD` from the environment, both or neither; neither keeps today's
+   behavior. The existing `bootstrap()` creates the login and its group membership. Output names
+   roles only.
+3. **Bootstrap before migrate.** `apply_migrations` checks, before taking the migration lock or
+   creating anything, that the groups `gba_runtime` and `gba_receipt_writer` exist; otherwise it
+   refuses with "run gba-db bootstrap before migrate" and applies nothing. `gba-db migrate`
+   prints `MigrationError` as an operator message instead of a traceback.
+4. **Docs.** `docs/DEVELOPMENT.md` documents the order, the writer variables and a credentials row
+   for the writer login. The Azure bootstrap job (`infra/azure/modules/containerapps.bicep`) is
+   not changed: infrastructure and secrets need the owner's separate word; recorded as a limit.
+5. No migration (0047 stays free), no dependency, no change to receipt code or schema.
+
+Acceptance criteria (failing tests first):
+
+| id | Requirement |
+|---|---|
+| F-01 | Equal owner/runtime, owner/writer or runtime/writer passwords are refused by `validate()` and by `bootstrap()` before any connection; no password appears in the message |
+| F-02 | `gba-db bootstrap` with both writer variables creates a login that is a member of `gba_receipt_writer` and passes the K1c writer-role check shape (not a runtime member, not the owner); with one variable it refuses; with none no writer login is created |
+| F-03 | `migrate` on a cluster where `gba_receipt_writer` is missing refuses before applying anything (no `gba_schema_migrations` table, no `gba` schema) and names the bootstrap step; after the group is back the same database migrates fully |
+| F-04 | Existing bootstrap and migration tests and the full suite stay green |
+
+## Previous checkpoint — 2026-10-16: K1e raw HTTP ingress locally verified
 
 Source `eb46748fa7446754e96e9290ce5261607ae45ce0` on local branch `codex/package-k1e-http-ingress`,
 parent `2d434bf`. A separate writer-process ASGI application and the reordered
