@@ -14,6 +14,7 @@ _SQL = "".join(
         "0045_provider_receipt_attestations.sql",
         "0046_provider_receipt_routing.sql",
         "0048_provider_revocation_record.sql",
+        "0049_provider_receipt_truncate_guard.sql",
     )
 )
 # A later `create or replace` (0048) supersedes the earlier body of the same function.
@@ -75,6 +76,13 @@ _COLUMNS = [
     for table, block in re.findall(r"alter table gba\.(\w+)\n((?:    add column [^\n]*\n)+)", _SQL)
     for name, kind, tail in re.findall(r"^    add column (\w+) " + _KIND, block, re.MULTILINE)
 ]
+# Defaults that a later migration sets (0049).
+for _table, _name, _default in re.findall(
+    r"alter table gba\.(\w+) alter column (\w+) set default ([^;]+);", _SQL
+):
+    for _approved in _COLUMNS:
+        if _approved[:2] == [_table, _name]:
+            _approved[5] = _default
 _TRIGGERS = (
     (
         "provider_receipt_connections",
@@ -135,6 +143,11 @@ _TRIGGERS = (
         False,
     ),
     (_ROUTES, "provider_receipt_routes_immutable", 27, "reject_ledger_mutation", False),
+    # 0049: BEFORE TRUNCATE FOR EACH STATEMENT on every receipt table.
+    *(
+        (table, f"{table}_no_truncate", 34, "reject_provider_receipt_truncate", False)
+        for table in _TABLES
+    ),
 )
 _CHECKS = (
     ("provider_receipt_connections", "(namespace ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$'::text)"),
