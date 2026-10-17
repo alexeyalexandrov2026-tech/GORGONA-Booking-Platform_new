@@ -24,6 +24,7 @@ _SQL = "\n".join(
         "0041_stock_review_fixes.sql",
         "0042_stock_running_totals.sql",
         "0043_stock_review_fixes.sql",
+        "0047_stock_document_plan_stability.sql",
     )
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
@@ -78,11 +79,18 @@ _KEYS = {
     }
     for table, block in _BLOCKS.items()
 }
-# A key that a later migration adds to an earlier table.
-for _table, _key in re.findall(
-    r"alter table gba\.(\w+) add constraint \w+ unique \(([^)]+)\);", _SQL
+# A key that a later migration adds to an earlier table, or drops (0047 turns two into indexes).
+_NAMED: dict[str, tuple[str, tuple[str, ...]]] = {}
+for _table, _name, _key, _dropped in re.findall(
+    r"alter table gba\.(\w+) (?:add constraint (\w+) unique \(([^)]+)\)|drop constraint (\w+));",
+    _SQL,
 ):
-    _KEYS[_table].add(("unique", tuple(x.strip() for x in _key.split(","))))
+    if _dropped:
+        _NAMED.pop(_dropped, None)
+    else:
+        _NAMED[_name] = (_table, tuple(x.strip() for x in _key.split(",")))
+for _table, _key in _NAMED.values():
+    _KEYS[_table].add(("unique", _key))
 _FKS = {
     table: {
         (
@@ -137,6 +145,24 @@ if _UPDATE_COLUMNS != _APPROVED_UPDATES:
 # The journal tables carry three stock triggers; the ledger guards own their other ones.
 _FOREIGN_TABLES = ("journal_entries", "journal_lines")
 # Functions that the triggers call: signature and result type; the source is packaged.
+# Unique indexes that back no constraint (0047): the running-total keys end with the company as
+# an expression, so that no plan can use them for a company predicate. Exact pg_get_indexdef text.
+_UNIQUE_INDEXES = {
+    "stock_movements": {
+        (
+            "stock_movements_sequence_key",
+            "CREATE UNIQUE INDEX stock_movements_sequence_key ON gba.stock_movements USING btree "
+            "(item_id, place_id, legal_entity_id, sequence, ((tenant_id)::text))",
+        )
+    },
+    "stock_valuations": {
+        (
+            "stock_valuations_sequence_key",
+            "CREATE UNIQUE INDEX stock_valuations_sequence_key ON gba.stock_valuations USING btree "
+            "(item_id, legal_entity_id, sequence, ((tenant_id)::text))",
+        )
+    },
+}
 _HELPERS = {"assert_stock_document": ("gba.assert_stock_document(uuid,uuid)", "void")}
 _DEFAULTS = ("now()", "pg_current_xact_id()")
 _TYPES = {"timestamptz": "timestamp with time zone"}
@@ -354,6 +380,23 @@ async def _check(conn: RuntimeConnection) -> None:
     """,
         names,
     )
+    unique_indexes = await _catalog(
+        conn,
+        """
+        select c.relname,i.relname,pg_get_indexdef(x.indexrelid),x.indisvalid and x.indisready
+          from pg_index x join pg_class i on i.oid=x.indexrelid join pg_class c on c.oid=x.indrelid
+         where c.relnamespace='gba'::regnamespace and c.relname=any(%s) and x.indisunique
+           and not exists (select 1 from pg_constraint k where k.conindid=x.indexrelid
+                           and k.conrelid=x.indrelid and k.contype in ('p','u','x'))
+    """,
+        names,
+    )
+    for table in names:
+        _require(
+            set(unique_indexes.get(table, []))
+            == {(name, definition, True) for name, definition in _UNIQUE_INDEXES.get(table, set())},
+            f"{table} unique indexes",
+        )
     triggers = await _catalog(
         conn,
         """

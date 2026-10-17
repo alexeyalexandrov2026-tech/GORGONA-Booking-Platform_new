@@ -21,6 +21,15 @@ from tests.integration.test_timesheets import (
 )
 
 pytestmark = pytest.mark.anyio
+# Package K tables of migrations 0044-0046, which the upgrade to the latest state also creates.
+K_TABLES = {
+    "provider_receipt_connections",
+    "provider_event_inbox",
+    "provider_event_deliveries",
+    "provider_event_attestations",
+    "provider_verification_configs",
+    "provider_receipt_routes",
+}
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
 
@@ -42,13 +51,16 @@ async def test_nonempty_0035_upgrade_preserves_every_fact_and_prior_checksum(
         prior: dict[int, str] = dict(
             conn.execute("select version,checksum from public.gba_schema_migrations")
         )
-    inventory_migrations = load_migrations()[:43]
+    # Every migration: the packaged guards approve only the latest state (K1i added 0047).
+    inventory_migrations = load_migrations()
     applied = apply_migrations(target.owner_dsn, inventory_migrations)
-    assert [migration.version for migration in applied] == [36, 37, 38, 39, 40, 41, 42, 43]
+    assert [migration.version for migration in applied] == list(
+        range(36, len(inventory_migrations) + 1)
+    )
     assert apply_migrations(target.owner_dsn, inventory_migrations) == []
     after = snapshot(target)
     assert {table: after[table] for table in before} == before
-    assert set(after) - set(before) == set(INVENTORY_TABLES)
+    assert set(after) - set(before) == set(INVENTORY_TABLES) | K_TABLES
     assert all(after[table][0] == 0 for table in INVENTORY_TABLES)
     with psycopg.connect(target.owner_dsn) as conn:
         current: dict[int, str] = dict(

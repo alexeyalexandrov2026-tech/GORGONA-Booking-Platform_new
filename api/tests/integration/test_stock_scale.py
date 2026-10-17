@@ -10,14 +10,18 @@ history. The timed documents go through the API with every trigger and check on;
 history is the hundred thousand movements that the review asked to measure.
 """
 
+import json
 import os
 import statistics
 import time
+from collections.abc import Iterator
+from typing import Any
 from uuid import UUID
 
 import psycopg
 import pytest
-from psycopg.conninfo import make_conninfo
+from psycopg import sql
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from tests.integration import test_stock as shared
 from tests.integration.conftest import ProvisionedDatabase
@@ -32,6 +36,16 @@ client = shared.client
 idp = shared.idp
 manager_a = shared.manager_a
 TIMED = 15
+MAX_MOVEMENT_ROWS = 100
+ANALYZED = (
+    "stock_documents",
+    "stock_document_lines",
+    "stock_movements",
+    "stock_document_postings",
+    "stock_valuations",
+    "stock_balances",
+    "stock_costs",
+)
 
 SEED = """
 create temp table seed on commit drop as
@@ -91,15 +105,19 @@ def summary(name: str, seconds: list[float]) -> str:
 
 async def measure(
     stock: Stock, test_database: ProvisionedDatabase, pairs: int
-) -> tuple[list[float], list[float], str]:
+) -> tuple[list[float], list[float], str, tuple[int, str]]:
     """Postings timed on an empty history, then after `pairs` seeded pairs."""
     assert (await stock.set_rules()).status_code == 200
     item = (await stock.inventory.item(quantity_scale=0))["item_id"]
     line: dict[str, object] = {"item_id": item, "quantity": "100", "amount": "250.00"}
     assert (await stock.post(stock.receipt([line]))).status_code == 200
+    admin = make_conninfo(test_database.admin_dsn, dbname=test_database.name)
+    # Statistics of a short history, never refreshed after the seed: the state a database
+    # reaches when autovacuum analyzed the tables before a burst of postings (K1h).
+    with psycopg.connect(admin, autocommit=True) as conn:
+        conn.execute(f"analyze {','.join('gba.' + table for table in ANALYZED)}".encode())
     before = await timed(stock, item)
 
-    admin = make_conninfo(test_database.admin_dsn, dbname=test_database.name)
     values = {
         "pairs": pairs,
         "tenant": stock.tenant,
@@ -145,19 +163,85 @@ async def measure(
     )
     # No statistics are refreshed after the seed, as right after a burst of postings: a
     # check must find its rows by an index whatever the planner believes about the tables.
+    # The statistics analyzed above describe a short history and now underestimate it.
     after = await timed(stock, item)
     # Every later document still meets consistent totals.
     value, booked = stock.reconciled()
     assert value == booked
+    touched = movement_rows_checked(stock, test_database, item)
     report = "\n".join(
         (
             f"M2 history: {history[0][0]} movements and {history[0][1]} valuations of one "
             f"material, place and owner (seeded in {seeded:.1f} s)",
             summary("before", before),
             summary("after", after),
+            f"assert_stock_document: at most {touched[0]} stock rows per plan node ({touched[1]})",
         )
     )
-    return before, after, report
+    return before, after, report, touched
+
+
+def _nodes(plan: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    yield plan
+    for child in plan.get("Plans", []):
+        yield from _nodes(child)
+
+
+def movement_rows_checked(
+    stock: Stock, test_database: ProvisionedDatabase, item: object
+) -> tuple[int, str]:
+    """Re-run the document check of the last posting under auto_explain as the runtime role.
+
+    Returns the most rows of a stock table that one plan node returned or filtered out, which
+    does not depend on machine load.
+    """
+    document = stock.rows(
+        "select m.document_id from gba.stock_movements m where m.item_id=%s and m.place_id=%s "
+        "order by m.sequence desc limit 1",
+        item,
+        stock.place["place_id"],
+    )[0][0]
+    runtime = str(conninfo_to_dict(test_database.app_dsn)["user"])
+    plans: list[tuple[dict[str, Any], str]] = []
+
+    def collect(notice: psycopg.errors.Diagnostic) -> None:
+        message = notice.message_primary or ""
+        if "plan:" in message:
+            explained = json.loads(message[message.index("{") :])
+            plans.append((explained["Plan"], " ".join(explained.get("Query Text", "").split())))
+
+    admin = make_conninfo(test_database.admin_dsn, dbname=test_database.name)
+    with psycopg.connect(admin) as conn:
+        conn.add_notice_handler(collect)
+        conn.execute("load 'auto_explain'")
+        with conn.transaction():
+            for setting in (
+                "set local auto_explain.log_min_duration = 0",
+                "set local auto_explain.log_nested_statements = on",
+                "set local auto_explain.log_analyze = on",
+                "set local auto_explain.log_format = json",
+                "set local client_min_messages = log",
+            ):
+                conn.execute(setting.encode())
+            conn.execute(
+                "select pg_catalog.set_config('gba.tenant_id', %s, true)", (str(stock.tenant),)
+            )
+            conn.execute(sql.SQL("set local role {}").format(sql.Identifier(runtime)))
+            conn.execute("select gba.assert_stock_document(%s, %s)", (stock.tenant, document))
+    rows = [
+        (
+            int(
+                (node.get("Actual Rows", 0) + node.get("Rows Removed by Filter", 0))
+                * node.get("Actual Loops", 1)
+            ),
+            f"{node.get('Node Type')} {node.get('Index Name', '')} in: {query[:120]}",
+        )
+        for plan, query in plans
+        for node in _nodes(plan)
+        if str(node.get("Relation Name", "")).startswith("stock_")
+    ]
+    assert rows, "auto_explain reported no stock table access"
+    return max(rows)
 
 
 async def test_posting_time_does_not_grow_with_a_long_history(
@@ -169,6 +253,8 @@ async def test_posting_time_does_not_grow_with_a_long_history(
     journal entry read every stock document of the company.
     """
     pairs = int(os.environ.get("GBA_MEASURE_STOCK_PAIRS", "50000"))
-    before, after, report = await measure(stock, test_database, pairs)
+    before, after, report, touched = await measure(stock, test_database, pairs)
     print(report)  # noqa: T201 - the timings are the evidence of this test
+    # Load-independent: the check of one document reads that document, not the history (K1h).
+    assert touched[0] <= MAX_MOVEMENT_ROWS, report
     assert statistics.median(after) < 3 * statistics.median(before) + 0.05, report

@@ -20,6 +20,15 @@ from tests.integration.test_stock_transfers import hand_transfer, transfer
 from tests.integration.test_stock_write_offs import hand_write_off, received, write_off
 
 pytestmark = pytest.mark.anyio
+# Package K tables of migrations 0044-0046, which the upgrade to the latest state also creates.
+K_TABLES = {
+    "provider_receipt_connections",
+    "provider_event_inbox",
+    "provider_event_deliveries",
+    "provider_event_attestations",
+    "provider_verification_configs",
+    "provider_receipt_routes",
+}
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
 inventory = shared.inventory
@@ -27,7 +36,8 @@ accepted = shared.accepted
 client = shared.client
 idp = shared.idp
 manager_a = shared.manager_a
-LATEST = 43
+# Every migration: the packaged guards approve only the latest state (K1i added 0047).
+LATEST = len(load_migrations())
 # The columns that every schema since 0037 has in the tables later slices only add to.
 GAINED = {
     # Migration 0042 gives every movement its place in the history of its balance.
@@ -96,7 +106,7 @@ async def test_nonempty_0036_upgrade_keeps_materials_places_and_prior_checksums(
     assert apply_migrations(target.owner_dsn, latest) == []
     after = snapshot(target)
     assert {table: after[table] for table in before} == before
-    assert set(after) - set(before) == set(INVENTORY_TABLES) - set(J1_TABLES)
+    assert set(after) - set(before) == set(INVENTORY_TABLES) - set(J1_TABLES) | K_TABLES
     assert all(after[table][0] == 0 for table in set(after) - set(before))
     current = checksums(target)
     assert {number: current[number] for number in prior} == prior
@@ -148,10 +158,11 @@ async def test_nonempty_documents_upgrade_and_earlier_stock_returns_leaves_and_m
     applied = apply_migrations(target.owner_dsn, latest)
     assert [migration.version for migration in applied] == list(range(start + 1, LATEST + 1))
     assert apply_migrations(target.owner_dsn, latest) == []
-    # No table is added and no row is rewritten: documents, lines and valuations only gain
-    # empty columns.
+    # No stock table is added and no row is rewritten: documents, lines and valuations only
+    # gain empty columns. The empty package K tables come from 0044-0046.
     after = snapshot(target)
-    assert set(after) == set(before)
+    assert set(after) == set(before) | K_TABLES
+    assert all(after[table][0] == 0 for table in K_TABLES)
     assert all(after[table] == before[table] for table in before if table not in GAINED)
     with psycopg.connect(target.admin_dsn) as conn:
         for table, query in GAINED.items():
