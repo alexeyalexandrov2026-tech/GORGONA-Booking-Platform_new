@@ -1,4 +1,7 @@
-# K1h finding — stock posting plans under misleading statistics (deferred)
+# K1h finding — stock posting plans under misleading statistics (fixed in K1i)
+
+**2026-10-17: fixed in K1i** (`42ead59`, local). See the [K1i validation](../2026-10-17-k1i-stock-plan-stability/VALIDATION.md).
+The text below is the original finding, unchanged.
 
 **Diagnosed, not fixed; no code changed.** Branch `codex/package-k1h-stock-scale-timing` from
 `8b30a3b`, docs only. Run folder `C:\Users\alexa\AppData\Local\GorgonaBookingTests\package-k1h-20261017-8b30a3b`

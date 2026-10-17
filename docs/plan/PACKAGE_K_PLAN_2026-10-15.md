@@ -1,6 +1,69 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## Finding — 2026-10-17: K1h stock posting plans under misleading statistics (deferred)
+## Current checkpoint — 2026-10-17: K1i stock posting plans independent of statistics locally verified
+
+Source `42ead59a3ff975d0daa6ee294af6b34b2b8ce5ff` on local branch `codex/package-k1i-stock-plan-stability`, parent `0760553`.
+Criteria I-01–I-04 PASS; migration 0047; 5 new cases. Final focused **473 passed in 329.46s (0:05:29)**;
+full **2056 passed, 4 skipped in 1556.26s (0:25:56)**; one document's check reads at most 1 row per
+stock-table node with a 100,016-row history (red: 100,031). Kept failures: product RED, and a first
+full run that still read the history through the line check's equalities (fixed by decision 2a).
+Not published. [Validation](evidence/2026-10-17-k1i-stock-plan-stability/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-17-k1i-stock-plan-stability/CHECKS.json),
+[handoff](NEXT_AGENT_PACKAGE_K1I_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K1I_PROMPT_2026-10-17.md).
+
+### K1i design, recorded before code
+
+Local branch `codex/package-k1i-stock-plan-stability` from `0760553` (the K1h finding). The owner
+asked to fix the stock error first and then continue the K plan. This touches STOCK-01 code
+(ADR-0026). Implemented in `42ead59` (decision 2a added after gates-1).
+
+Root cause (K1h): when statistics do not describe a company, every index that starts with
+`tenant_id` is estimated at one row; a check of one document can then use an index that does not
+contain the document and read the history. Two such competitors exist on the history tables:
+`stock_movements_sequence_key` and `stock_valuations_sequence_key` (PostgreSQL 18 can also use
+them by skip scan when the company is not their first column). `stock_document_lines_returned`
+is partial (`source_document_id is not null`) and not a competitor. Separately, three triggers
+join a return's source document without parameterizing the lookup by its id.
+
+Decisions:
+
+1. **History keys that cannot serve a company predicate.** Migration 0047 replaces both unique
+   constraints by unique indexes of the same names: material, place/owner and sequence first,
+   then the company as the expression `(tenant_id::text)`. The uniqueness is identical (the text
+   of a uuid is one-to-one); the running-total lookups by material, place, owner and latest
+   sequence keep their index; no plan can use these indexes for `tenant_id = …`, so a lookup by
+   company and document can only use the document key. Item ids are chosen by clients and unique
+   only per company, so the company must stay in the key (dropping it was rejected in K1h).
+2. **Source lookups by key.** `guard_stock_document_line`, `apply_stock_movement` and
+   `apply_stock_valuation` read a return's source document through
+   `LEFT JOIN LATERAL (… where x.tenant_id=d.tenant_id and x.id=d.source_document_id limit 1)`;
+   the bodies are otherwise the 0040/0042 texts.
+2a. **Line check without history-key equalities (added after gates-1, diag-1).** In the full
+   order the line check of `assert_stock_document` still read the history: its join compared the
+   movement's material, place and owner with equalities, which the new key (material first) can
+   serve, and a material absent from the statistics again looked like one row. 0047 also replaces
+   `assert_stock_document` with these comparisons written as `IS NOT DISTINCT FROM` (all columns
+   NOT NULL, same meaning), leaving the document key as the only usable index.
+3. **Guard.** `inventory_guard.py` approves a constraint that a later migration drops, and the
+   two unique indexes by their exact `pg_get_indexdef` text (valid, ready, unique); a missing or
+   altered index refuses inventory work.
+4. **Deterministic test.** `test_stock_scale` analyzes the stock tables on a short history before
+   timing, keeps its 3× + 50 ms threshold and adds a load-independent check: `auto_explain` of
+   `gba.assert_stock_document` for the last posting, as the runtime role, may touch at most 100
+   rows of any stock table per plan node with a 100,016-row history. Upgrade tests reach the
+   latest migration and name the package K tables of 0044–0046.
+5. No rule, row, grant or threshold change; 0001–0046 unchanged.
+
+Acceptance criteria (failing test first):
+
+| id | Requirement |
+|---|---|
+| I-01 | The plan check reads at most 100 rows per stock-table node with stale statistics (red on the current code) |
+| I-02 | The timing check passes with the unchanged threshold — alone, in the stock group **and in the full suite order** |
+| I-03 | Dropping or altering either history index, or restoring the old constraint, refuses inventory work |
+| I-04 | Existing stock, guard and upgrade tests and the full suite stay green |
+
+## Finding — 2026-10-17: K1h stock posting plans under misleading statistics (fixed in K1i)
 
 Diagnosed on `codex/package-k1h-stock-scale-timing` (docs only; all code attempts reverted at the
 owner's choice). `test_stock_scale` fails in full runs because of a real planner hazard, not
@@ -8,8 +71,10 @@ load: when statistics do not describe the company, PostgreSQL may reach one docu
 through another company-leading index and read the whole history. Three fixes were tried and
 recorded; none held in the full order. The robust fix — document checks by full primary keys
 only — is a larger, separately reviewed slice. [Finding](evidence/2026-10-17-k1h-stock-statistics/FINDING.md).
+Fixed in K1i (`42ead59`, above) without full-key rewrites: the history keys no longer serve a
+company predicate and the line check no longer uses their equalities.
 
-## Current checkpoint — 2026-10-17: K1g receipt guard additions locally verified
+## Previous checkpoint — 2026-10-17: K1g receipt guard additions locally verified
 
 Source `4401a2e7bcdc716eaa5664285c0ca383ddf77163` on local branch `codex/package-k1g-guard-additions`, parent `af26f1d`. Criteria
 G-01–G-05 PASS; 10 new cases; no migration. Final focused **468 passed in 294.65s (0:04:54)**;

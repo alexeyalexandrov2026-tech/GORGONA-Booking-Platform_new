@@ -1,6 +1,18 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-17: K1g receipt guard additions locally verified
+## Current checkpoint — 2026-10-17: K1i stock posting plans independent of statistics locally verified
+
+Source `42ead59a3ff975d0daa6ee294af6b34b2b8ce5ff`, local branch `codex/package-k1i-stock-plan-stability`, parent `0760553`.
+Fixes the K1h finding: with statistics that did not describe a company, one stock document's
+checks could read the whole history. Migration 0047 makes the history keys unusable for a company
+predicate, reads source documents by key and drops history-key equalities from the line check; the
+inventory guard approves the new indexes. 5 new cases; at most 1 row per stock-table node with a
+100,016-row history (red: 100,031). Focused **473 passed in 329.46s (0:05:29)**; full **2056 passed,
+4 skipped in 1556.26s (0:25:56)**; a first full run failed (kept in the record). Not published.
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0048.
+[Validation](evidence/2026-10-17-k1i-stock-plan-stability/VALIDATION.md), [handoff](NEXT_AGENT_PACKAGE_K1I_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K1I_PROMPT_2026-10-17.md).
+
+## Previous checkpoint — 2026-10-17: K1g receipt guard additions locally verified
 
 Source `4401a2e7bcdc716eaa5664285c0ca383ddf77163`, local branch `codex/package-k1g-guard-additions`, parent `af26f1d`.
 Closes independent-review finding IR-05: the receipt schema guard now checks group membership

@@ -1,6 +1,8 @@
 # ADR-0026 — Basic materials: owner-linked stock documents, moving-average cost and ledger postings
 
-**2026-10-17 note (K1h, finding, not fixed):** with statistics that do not describe a company, stock document checks can read a material's or company's whole history (found by `test_stock_scale`); three local fixes did not hold in the full suite and were reverted. Status unchanged. See the [finding](../plan/evidence/2026-10-17-k1h-stock-statistics/FINDING.md).
+**2026-10-17 note (K1h, finding, fixed in K1i):** with statistics that do not describe a company, stock document checks can read a material's or company's whole history (found by `test_stock_scale`); three local fixes did not hold in the full suite and were reverted. Status unchanged. See the [finding](../plan/evidence/2026-10-17-k1h-stock-statistics/FINDING.md).
+
+**2026-10-17 note (K1i, local, implemented in `42ead59`, not published):** migration 0047 makes the history keys unique indexes ending with `(tenant_id::text)`, reads source documents by lateral key lookups and compares a document's lines with its movements and valuations by `IS NOT DISTINCT FROM`, so one document's checks cannot read the history whatever the statistics (at most 1 row per node with a 100,016-row history). Status unchanged. See the [validation](../plan/evidence/2026-10-17-k1i-stock-plan-stability/VALIDATION.md).
 
 - Status: **Proposed (2026-10-13)**. Slices J1–J6, both screens and the review fixes are implemented (see the
   implementation notes below); readiness remains locked pending the owner decision. The
@@ -455,6 +457,16 @@ uses two different sources and identifies the INSERT wait on the leader in pg_lo
 No schema change. [Record](../plan/evidence/2026-10-14-j5-j6-review-fixes-part2/VALIDATION.md).
 
 L1: intermediate balance_after/quantity_after/value_after values backfilled by 0042 are approximate: transaction ids order transaction starts, not commit order; final totals remain the authoritative reconciliation. L4: cancellation tombstones expire after 24 hours with idempotency keys; a late command after expiry can be executed. These are recorded limits, not fixes. Earlier review L6: migrations 0037 and 0042 require a maintenance window and coordinated application/schema deployment; no deployment is authorized. The platform-wide current-user/current-tenant function body guard remains outside Package J. Review-2 gaps 3–5 remain unmeasured or untested as described in REVIEW.md; no new claim closes them. Additional pre-existing UI follow-up, confirmed by code inspection only: DocumentForm filters archived materials and places out of outbound selectors too, although the API permits supported outbound operations. This slice preserves that UI behavior; browser validation of that gap is NOT TESTED (web/components/stock-documents.tsx, open/usable selectors).
+
+## Implementation notes — K1i, plans independent of statistics (2026-10-17)
+
+Commit `42ead59` (package K branch, local): migration 0047 replaces `stock_movements_sequence_key` and
+`stock_valuations_sequence_key` by unique indexes of the same names and the same uniqueness, with the
+company last as `(tenant_id::text)`; source-document lookups in three triggers use `LEFT JOIN LATERAL
+… LIMIT 1` on the full key; `assert_stock_document` compares by `IS NOT DISTINCT FROM`. The inventory
+guard approves both indexes by exact definition. `test_stock_scale` checks the plan with
+`auto_explain` (at most 100 rows per stock-table node; observed 1). Full suite 2056 passed, 4 skipped.
+[Record](../plan/evidence/2026-10-17-k1i-stock-plan-stability/VALIDATION.md).
 
 ## Acceptance and status
 

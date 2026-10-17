@@ -1,5 +1,7 @@
 # Ready-to-paste prompt — after K1g
 
+Superseded on 2026-10-17 by [the K1i prompt](NEXT_AGENT_PACKAGE_K1I_PROMPT_2026-10-17.md). Kept below as history.
+
 Continue GORGONA Booking stage 2, Package K / FIN-02, locally and inline. Checkout
 `C:/Users/alexa/.codex/worktrees/package-j-review2-fixes/Gorgona Booking`, local branch
 `codex/package-k1g-guard-additions`, source `4401a2e7bcdc716eaa5664285c0ca383ddf77163` plus a docs commit
