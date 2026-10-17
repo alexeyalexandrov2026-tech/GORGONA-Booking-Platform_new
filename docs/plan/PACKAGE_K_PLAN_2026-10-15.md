@@ -1,6 +1,57 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## Current checkpoint — 2026-10-17: K1f bootstrap hardening locally verified
+## Current checkpoint — 2026-10-17: K1g receipt guard additions locally verified
+
+Source `4401a2e7bcdc716eaa5664285c0ca383ddf77163` on local branch `codex/package-k1g-guard-additions`, parent `af26f1d`. Criteria
+G-01–G-05 PASS; 10 new cases; no migration. Final focused **468 passed in 294.65s (0:04:54)**;
+full **2052 passed, 4 skipped in 2011.34s (0:33:31)**. Kept failures: product RED (10 failed),
+a design defect in dev-1 (`relhasrules` stays true after `DROP RULE`), and a first full run that
+failed once on the pre-existing, near-limit stock timing test. Not published.
+[Validation](evidence/2026-10-17-k1g-guard-additions/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-17-k1g-guard-additions/CHECKS.json),
+[handoff](NEXT_AGENT_PACKAGE_K1G_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K1G_PROMPT_2026-10-17.md).
+
+### K1g design, recorded before code
+
+Local branch `codex/package-k1g-guard-additions` from `af26f1d` (K1f docs). The owner asked for the
+next small slice, review finding IR-05, in the same order (design, failing test, gates, records).
+Not published.
+
+**K1g: receipt schema guard additions — local only.** IR-05: the guard checks the two groups'
+privileges but not who belongs to them; it does not look at rewrite rules, table persistence,
+grants to third roles, grant options or function ACLs beyond PUBLIC; and the writer path never
+checks `gba.current_tenant_id()`/`gba.current_location_id()`, on which every K policy depends.
+
+Decisions (all in `assert_provider_receipt_ready`, so both the writer and the runtime archive
+path refuse on drift with the existing `DatabaseUnavailableError`):
+
+1. **Role topology.** `gba_runtime` and `gba_receipt_writer` are NOLOGIN without SUPERUSER,
+   BYPASSRLS, CREATEROLE, CREATEDB or REPLICATION and belong to no other role; no role is a
+   member (directly or through other roles) of both groups; no member of either group is a
+   superuser or has BYPASSRLS. Membership is read from `pg_auth_members`, not `pg_has_role`, so
+   superusers do not appear as members. This also closes IR-05 (a): a runtime login that holds
+   writer membership is refused by the guard itself.
+2. **Tables.** The six K tables are ordinary (`relkind r`), logged (`relpersistence p`) and have
+   no rewrite rules (read from `pg_rewrite`; `relhasrules` stays true after `DROP RULE`). Table and column ACL grantees are only the table owner, `gba_runtime` and
+   `gba_receipt_writer`; only the owner holds grant options.
+3. **Functions.** The K functions' ACL grantees are only the owner and the two groups, without
+   grant options for anyone but the owner.
+4. **Context functions.** `gba.current_tenant_id()` and `gba.current_location_id()` are checked
+   by exact packaged source and shape (SQL, stable, parallel safe, no SECURITY DEFINER, no
+   settings, no arguments, `uuid`) and the same ACL rule.
+5. No migration (0047 stays free), no dependency, no receipt-flow change.
+
+Acceptance criteria (failing tests first):
+
+| id | Requirement |
+|---|---|
+| G-01 | Each drift refuses the routed writer receipt and the runtime archive with `DatabaseUnavailableError`, stores nothing, and the repaired schema passes again: runtime login granted the writer group; a parent role granted to the writer group; a BYPASSRLS login in the writer group |
+| G-02 | Same, for a rewrite rule on a K table and an unlogged K table |
+| G-03 | Same, for a table grant to a third role, a grant option to `gba_runtime`, and a function grant to a third role |
+| G-04 | Same, for a replaced `current_location_id()` body and for `current_tenant_id()` made SECURITY DEFINER |
+| G-05 | Existing guard, K1a–K1f tests and the full suite stay green |
+
+## Previous checkpoint — 2026-10-17: K1f bootstrap hardening locally verified
 
 Source `3e18c938a505bbb4583778cdf40df0e7bed2aceb` on local branch `codex/package-k1f-bootstrap-hardening`, parent `be97fbd`. Criteria
 F-01–F-04 PASS; 8 new cases; no migration. Focused **458 passed in 408.78s (0:06:48)**; full

@@ -1,6 +1,17 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-17: K1f bootstrap hardening locally verified
+## Current checkpoint — 2026-10-17: K1g receipt guard additions locally verified
+
+Source `4401a2e7bcdc716eaa5664285c0ca383ddf77163`, local branch `codex/package-k1g-guard-additions`, parent `af26f1d`.
+Closes independent-review finding IR-05: the receipt schema guard now checks group membership
+topology, K table shape and ACLs, function ACLs and the RLS context functions. No migration.
+10 new cases. Focused **468 passed in 294.65s (0:04:54)**; full **2052 passed, 4 skipped in
+2011.34s (0:33:31)**; a first full run failed once on the pre-existing, near-limit
+`test_stock_scale` timing check (kept in the record). Not published.
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0047.
+[Validation](docs/plan/evidence/2026-10-17-k1g-guard-additions/VALIDATION.md), [handoff](docs/plan/NEXT_AGENT_PACKAGE_K1G_2026-10-17.md), [prompt](docs/plan/NEXT_AGENT_PACKAGE_K1G_PROMPT_2026-10-17.md).
+
+## Previous checkpoint — 2026-10-17: K1f bootstrap hardening locally verified
 
 Source `3e18c938a505bbb4583778cdf40df0e7bed2aceb`, local branch `codex/package-k1f-bootstrap-hardening`, parent `be97fbd`.
 Closes independent-review finding IR-06: bootstrap refuses equal owner/runtime/writer passwords,

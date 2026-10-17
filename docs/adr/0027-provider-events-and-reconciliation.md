@@ -1,5 +1,7 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K1g source `4401a2e7bcdc716eaa5664285c0ca383ddf77163` implements the K1g decision below;
+[validation](../plan/evidence/2026-10-17-k1g-guard-additions/VALIDATION.md).
 Local K1f source `3e18c938a505bbb4583778cdf40df0e7bed2aceb` implements the K1f decision below;
 [validation](../plan/evidence/2026-10-17-k1f-bootstrap-hardening/VALIDATION.md).
 Local K1e source `eb46748fa7446754e96e9290ce5261607ae45ce0` implements the K1e decision below;
@@ -9,6 +11,15 @@ Local K1d source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` implements the K1d d
 Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the proposed isolated verifier foundation;
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
+
+## K1g local design decision — 2026-10-17, Proposed; locally implemented in `4401a2e`
+
+Close review finding IR-05 inside the existing receipt schema guard: role topology of the two
+groups (no mixed or privileged members, no parent roles), K tables ordinary, logged and without
+rewrite rules, table/column/function ACLs limited to the owner and the two groups with grant
+options only for the owner, and exact source and shape of `current_tenant_id()` and
+`current_location_id()`. Drift refuses writer receipts and runtime archives alike. No migration.
+Criteria G-01–G-05 are in the [K plan](../plan/PACKAGE_K_PLAN_2026-10-15.md).
 
 ## K1f local design decision — 2026-10-17, Proposed; locally implemented in `3e18c93`
 
