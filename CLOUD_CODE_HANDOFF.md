@@ -1,6 +1,16 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-17: K1j revocation record locally verified
+## Current checkpoint — 2026-10-17: K1k TRUNCATE guard and random route IDs locally verified
+
+Source `a5f21e41f550d5d07e428c644e9f718082b3f619`, local branch `codex/package-k1k-truncate-guard`, parent `ae9e1e2`.
+Closes independent-review findings IR-09 and the default part of IR-08: migration 0049 refuses
+TRUNCATE (also a cascade) of all six receipt tables for the owner and superusers, and route IDs
+default to a random UUID. 18 new cases. Focused **512 passed in 443.01s (0:07:23)**; full
+**2095 passed, 4 skipped in 1656.78s (0:27:36)**. Not published.
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0050.
+[Validation](docs/plan/evidence/2026-10-17-k1k-truncate-guard/VALIDATION.md), [handoff](docs/plan/NEXT_AGENT_PACKAGE_K1K_2026-10-17.md), [prompt](docs/plan/NEXT_AGENT_PACKAGE_K1K_PROMPT_2026-10-17.md).
+
+## Previous checkpoint — 2026-10-17: K1j revocation record locally verified
 
 Source `201847856aa768bbeb25751d5b219e154383c293`, local branch `codex/package-k1j-revocation-record`, parent `84bc4d7`.
 Closes independent-review finding IR-07: migration 0048 makes a revocation of a receipt

@@ -1,5 +1,7 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K1k source `a5f21e41f550d5d07e428c644e9f718082b3f619` implements the K1k decision below;
+[validation](../plan/evidence/2026-10-17-k1k-truncate-guard/VALIDATION.md).
 Local K1j source `201847856aa768bbeb25751d5b219e154383c293` implements the K1j decision below;
 [validation](../plan/evidence/2026-10-17-k1j-revocation-record/VALIDATION.md).
 Local K1g source `4401a2e7bcdc716eaa5664285c0ca383ddf77163` implements the K1g decision below;
@@ -13,6 +15,14 @@ Local K1d source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` implements the K1d d
 Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the proposed isolated verifier foundation;
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
+
+## K1k local design decision — 2026-10-17, Proposed; locally implemented in `a5f21e4`
+
+Close review findings IR-09 and IR-08 with migration 0049: a statement-level `BEFORE TRUNCATE`
+trigger refuses TRUNCATE (including cascades) on all six K tables for the owner and superusers,
+and `provider_receipt_routes.ingress_id` defaults to `gen_random_uuid()`. The receipt schema guard
+checks both. A superuser can still switch off triggers; other tables are unchanged. Criteria
+T-01–T-04 are in the [K plan](../plan/PACKAGE_K_PLAN_2026-10-15.md).
 
 ## K1j local design decision — 2026-10-17, Proposed; locally implemented in `2018478`
 

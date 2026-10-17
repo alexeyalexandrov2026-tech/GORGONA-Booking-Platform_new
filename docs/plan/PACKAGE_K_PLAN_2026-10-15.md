@@ -1,6 +1,52 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## Current checkpoint — 2026-10-17: K1j revocation record locally verified
+## Current checkpoint — 2026-10-17: K1k TRUNCATE guard and random route IDs locally verified
+
+Source `a5f21e41f550d5d07e428c644e9f718082b3f619` on local branch `codex/package-k1k-truncate-guard`, parent `ae9e1e2`.
+Criteria T-01–T-04 PASS; migration 0049; 18 new cases. Final focused **512 passed in 443.01s
+(0:07:23)**; full **2095 passed, 4 skipped in 1656.78s (0:27:36)**. Kept failures: a test defect
+(plain TRUNCATE of a referenced table stops at its foreign keys first) and product RED. Closes
+IR-09 and the default part of IR-08. Not published.
+[Validation](evidence/2026-10-17-k1k-truncate-guard/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-17-k1k-truncate-guard/CHECKS.json),
+[handoff](NEXT_AGENT_PACKAGE_K1K_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K1K_PROMPT_2026-10-17.md).
+
+### K1k design, recorded before code
+
+Local branch `codex/package-k1k-truncate-guard` from `ae9e1e2` (K1j docs). The owner, away, asked
+to keep working and decide alone; the remaining small review findings are IR-08 and IR-09.
+Implemented in `a5f21e4` (T-01 uses TRUNCATE … CASCADE, see the validation). Not published.
+
+IR-09: the K tables are permanent for UPDATE and DELETE even for the owner and a superuser, but
+`TRUNCATE` (also `TRUNCATE … CASCADE` from a referenced table) empties them; the runtime and the
+writer hold no TRUNCATE privilege, the owner and a superuser do. IR-08: `ingress_id` has no
+default, so every provisioning must choose one.
+
+Decisions (migration 0049):
+
+1. **No TRUNCATE.** A new `gba.reject_provider_receipt_truncate()` (plpgsql,
+   `search_path=pg_catalog`, no PUBLIC execute) raises `check_violation`; a `BEFORE TRUNCATE
+   FOR EACH STATEMENT` trigger `<table>_no_truncate` calls it on all six K tables. A cascade
+   from `ledger_books` is refused the same way.
+2. **Random route IDs by default.** `provider_receipt_routes.ingress_id` defaults to
+   `gen_random_uuid()`; an explicit ID is still accepted. The ID stays non-secret (the signature
+   authenticates).
+3. **Guard.** The receipt schema guard expects the six triggers, the function and the default;
+   a missing or disabled trigger or a changed default refuses receipts and archives.
+4. Out of scope: TRUNCATE guards on other tables (ledger, stock), a superuser who switches
+   `session_replication_role` or drops triggers, per-route disable, listing routes.
+   Migrations 0001–0048 unchanged.
+
+Acceptance criteria (failing tests first):
+
+| id | Requirement |
+|---|---|
+| T-01 | TRUNCATE of each K table by the owner and by a superuser is refused (`check_violation`), also `TRUNCATE gba.ledger_books CASCADE`; every row stays |
+| T-02 | A route provisioned without `ingress_id` gets a random version-4 UUID; two such routes differ; it routes a receipt |
+| T-03 | Drift (a dropped or disabled truncate trigger, the default removed) refuses receipts and archives; repaired schema passes |
+| T-04 | Existing K and guard tests and the full suite stay green |
+
+## Previous checkpoint — 2026-10-17: K1j revocation record locally verified
 
 Source `201847856aa768bbeb25751d5b219e154383c293` on local branch `codex/package-k1j-revocation-record`, parent `84bc4d7`.
 Criteria J-01–J-07 PASS; migration 0048; 21 new cases. Final focused **494 passed in 358.27s
