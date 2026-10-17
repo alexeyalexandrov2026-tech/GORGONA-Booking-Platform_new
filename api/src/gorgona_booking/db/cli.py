@@ -39,13 +39,17 @@ def _bootstrap(_: argparse.Namespace) -> None:
         # Optional receipt writer login; both or neither (validated by the spec).
         receipt_writer_role=os.environ.get("GBA_RECEIPT_WRITER_ROLE") or None,
         receipt_writer_password=os.environ.get("GBA_RECEIPT_WRITER_PASSWORD") or None,
+        # Optional receipt worker login (K2a); both or neither.
+        receipt_worker_role=os.environ.get("GBA_RECEIPT_WORKER_ROLE") or None,
+        receipt_worker_password=os.environ.get("GBA_RECEIPT_WORKER_PASSWORD") or None,
     )
     spec.validate()
     bootstrap(_require("GBA_ADMIN_DATABASE_URL"), spec)
     writer = f", receipt writer {spec.receipt_writer_role}" if spec.receipt_writer_role else ""
+    worker = f", receipt worker {spec.receipt_worker_role}" if spec.receipt_worker_role else ""
     print(
         f"bootstrapped database {spec.database} "
-        f"(owner {spec.owner_role}, runtime {spec.app_role}{writer})"
+        f"(owner {spec.owner_role}, runtime {spec.app_role}{writer}{worker})"
     )
 
 

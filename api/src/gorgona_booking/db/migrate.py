@@ -16,7 +16,11 @@ from pathlib import Path
 
 import psycopg
 
-from gorgona_booking.db.bootstrap import RECEIPT_WRITER_GROUP, RUNTIME_GROUP
+from gorgona_booking.db.bootstrap import (
+    RECEIPT_WORKER_GROUP,
+    RECEIPT_WRITER_GROUP,
+    RUNTIME_GROUP,
+)
 
 _FILENAME = re.compile(r"^(?P<version>\d{4})_(?P<name>[a-z0-9_]+)\.sql$")
 # pg_advisory_lock key so concurrent deploys cannot interleave migrations.
@@ -74,7 +78,7 @@ def apply_migrations(
         missing = conn.execute(
             "select coalesce(array_agg(g order by g), '{}') from unnest(%s::text[]) g "
             "where not exists (select 1 from pg_catalog.pg_roles where rolname = g)",
-            ([RUNTIME_GROUP, RECEIPT_WRITER_GROUP],),
+            ([RUNTIME_GROUP, RECEIPT_WRITER_GROUP, RECEIPT_WORKER_GROUP],),
         ).fetchone()
         if missing is None or missing[0]:
             names = ", ".join(missing[0]) if missing else "unknown"

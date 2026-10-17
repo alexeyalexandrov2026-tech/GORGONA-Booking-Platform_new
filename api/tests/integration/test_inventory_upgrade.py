@@ -21,7 +21,8 @@ from tests.integration.test_timesheets import (
 )
 
 pytestmark = pytest.mark.anyio
-# Package K tables of migrations 0044-0046, which the upgrade to the latest state also creates.
+# Package K tables of migrations 0044-0046 and 0050, which the upgrade to the latest state also
+# creates.
 K_TABLES = {
     "provider_receipt_connections",
     "provider_event_inbox",
@@ -29,6 +30,9 @@ K_TABLES = {
     "provider_event_attestations",
     "provider_verification_configs",
     "provider_receipt_routes",
+    "provider_operations",
+    "provider_event_leases",
+    "provider_event_decisions",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

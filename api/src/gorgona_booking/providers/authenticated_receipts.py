@@ -57,6 +57,7 @@ select bool_and(not (r.rolsuper or r.rolbypassrls or r.rolcreaterole
     or r.rolcreatedb or r.rolreplication)
     and pg_catalog.pg_has_role(r.oid,'gba_receipt_writer','USAGE')
     and not pg_catalog.pg_has_role(r.oid,'gba_runtime','MEMBER')
+    and not pg_catalog.pg_has_role(r.oid,'gba_receipt_worker','MEMBER')
     and not pg_catalog.has_schema_privilege(r.oid,'gba','CREATE')
     and not exists (
         select 1 from pg_catalog.pg_namespace n where n.nspname='gba'

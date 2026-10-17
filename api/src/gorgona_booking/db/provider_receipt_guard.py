@@ -1,4 +1,4 @@
-"""Packaged K1b-K1j integrity approvals, checked before each internal receipt write."""
+"""Packaged K1b-K2a integrity approvals, checked before each internal receipt write."""
 
 import re
 from importlib import resources
@@ -15,6 +15,7 @@ _SQL = "".join(
         "0046_provider_receipt_routing.sql",
         "0048_provider_revocation_record.sql",
         "0049_provider_receipt_truncate_guard.sql",
+        "0050_provider_receipt_decisions.sql",
     )
 )
 # A later `create or replace` (0048) supersedes the earlier body of the same function.
@@ -27,15 +28,31 @@ _FUNCTIONS = list(
 )
 _FUNCTIONS.append(("reject_ledger_mutation", LEDGER_IMMUTABLE_SOURCE))
 _ROUTES = "provider_receipt_routes"
-# Company-scoped tables: tenant and company policies, readable by the runtime and the writer.
-_SCOPED = (
+# Receipt tables of K1b-K1d, readable by the runtime and the writer.
+_RECEIPTS = (
     "provider_receipt_connections",
     "provider_event_inbox",
     "provider_event_deliveries",
     "provider_event_attestations",
     "provider_verification_configs",
 )
+# K2a: the worker's tables, readable by the worker only.
+_DECISIONS = ("provider_operations", "provider_event_leases", "provider_event_decisions")
+# Company-scoped tables: tenant and company policies.
+_SCOPED = (*_RECEIPTS, *_DECISIONS)
 _TABLES = (*_SCOPED, _ROUTES)
+_GROUPS = ("gba_runtime", "gba_receipt_writer", "gba_receipt_worker")
+# Tables each group may read; a role running the guard is checked against its own group.
+_READS = {
+    "gba_runtime": set(_RECEIPTS),
+    "gba_receipt_writer": {*_RECEIPTS, _ROUTES},
+    "gba_receipt_worker": {
+        "provider_event_inbox",
+        "provider_event_deliveries",
+        "provider_event_attestations",
+        *_DECISIONS,
+    },
+}
 # Every K policy depends on these context functions (migrations 0001 and 0009).
 _TENANT_SOURCE = "select nullif(pg_catalog.current_setting('gba.tenant_id', true), '')::uuid"
 _LOCATION_SOURCE = "select nullif(pg_catalog.current_setting('gba.location_id', true), '')::uuid"
@@ -56,6 +73,12 @@ def _column(table: str, name: str, kind: str, tail: str) -> list[object]:
         if re.search(r"default '[^']+'", tail)
         else "CURRENT_USER"
         if "default current_user" in tail
+        else "SESSION_USER"
+        if "default session_user" in tail
+        else "gen_random_uuid()"
+        if "default gen_random_uuid()" in tail
+        else re.findall(r"default ([0-9]+)", tail)[0]
+        if re.search(r"default [0-9]+", tail)
         else "false"
         if "default false" in tail
         else "now()"
@@ -65,7 +88,7 @@ def _column(table: str, name: str, kind: str, tail: str) -> list[object]:
     ]
 
 
-_KIND = r"(uuid|text|boolean|jsonb|timestamptz|integer)\b([^\n]*)"
+_KIND = r"(uuid|text|boolean|jsonb|timestamptz|integer|bigint)\b([^\n]*)"
 _COLUMNS = [
     _column(table, name, kind, tail)
     for table, block in re.findall(r"create table gba\.(\w+) \((.*?)\n\);", _SQL, re.DOTALL)
@@ -143,6 +166,30 @@ _TRIGGERS = (
         False,
     ),
     (_ROUTES, "provider_receipt_routes_immutable", 27, "reject_ledger_mutation", False),
+    # 0050: the worker's operations, leases and decisions.
+    ("provider_operations", "provider_operations_check", 7, "guard_provider_operation", False),
+    ("provider_operations", "provider_operations_immutable", 27, "reject_ledger_mutation", False),
+    (
+        "provider_event_leases",
+        "provider_event_leases_guard",
+        31,
+        "guard_provider_event_lease",
+        False,
+    ),
+    (
+        "provider_event_decisions",
+        "provider_event_decisions_decide",
+        7,
+        "decide_provider_event",
+        False,
+    ),
+    (
+        "provider_event_decisions",
+        "provider_event_decisions_immutable",
+        27,
+        "reject_ledger_mutation",
+        False,
+    ),
     # 0049: BEFORE TRUNCATE FOR EACH STATEMENT on every receipt table.
     *(
         (table, f"{table}_no_truncate", 34, "reject_provider_receipt_truncate", False)
@@ -184,6 +231,40 @@ _CHECKS = (
                 "'rotation'::text, 'compromise'::text, 'retired'::text",
             ),
         )
+    ),
+    ("provider_operations", "(kind = ANY (ARRAY['payment'::text, 'refund'::text]))"),
+    (
+        "provider_operations",
+        "(provider_object_id ~ '^(pi|re)_[A-Za-z0-9]{1,100}$'::text)",
+    ),
+    ("provider_operations", "(parent_object_id ~ '^pi_[A-Za-z0-9]{1,100}$'::text)"),
+    ("provider_operations", "(currency ~ '^[a-z]{3}$'::text)"),
+    (
+        "provider_operations",
+        "(((kind = 'payment'::text) AND (provider_object_id ~ '^pi_'::text) "
+        "AND (parent_object_id IS NULL)) OR ((kind = 'refund'::text) "
+        "AND (provider_object_id ~ '^re_'::text) AND (parent_object_id IS NOT NULL)))",
+    ),
+    ("provider_event_leases", "(generation > 0)"),
+    ("provider_event_decisions", "(rules_version = 1)"),
+    (
+        "provider_event_decisions",
+        "(outcome = ANY (ARRAY['observed'::text, 'needs_review'::text]))",
+    ),
+    (
+        "provider_event_decisions",
+        "(reason = ANY (ARRAY['success'::text, 'not_final'::text, 'conflicting_facts'::text, "
+        "'unkeyed_operation'::text, 'refund_without_payment'::text]))",
+    ),
+    (
+        "provider_event_decisions",
+        "((outcome = 'observed'::text) = (reason = ANY (ARRAY['success'::text, "
+        "'not_final'::text])))",
+    ),
+    (
+        "provider_event_decisions",
+        "((operation_id IS NULL) = (reason = ANY (ARRAY['unkeyed_operation'::text, "
+        "'refund_without_payment'::text])))",
     ),
 )
 _KEYS = (
@@ -261,6 +342,51 @@ _KEYS = (
         "provider_receipt_connections",
         ["tenant_id", "id"],
     ),
+    ("provider_operations", "p", ["tenant_id", "id"], None, None),
+    (
+        "provider_operations",
+        "u",
+        ["tenant_id", "connection_id", "kind", "provider_object_id"],
+        None,
+        None,
+    ),
+    (
+        "provider_operations",
+        "f",
+        ["tenant_id", "connection_id"],
+        "provider_receipt_connections",
+        ["tenant_id", "id"],
+    ),
+    (
+        "provider_operations",
+        "f",
+        ["tenant_id", "first_event_id"],
+        "provider_event_inbox",
+        ["tenant_id", "id"],
+    ),
+    ("provider_event_leases", "p", ["tenant_id", "event_id"], None, None),
+    (
+        "provider_event_leases",
+        "f",
+        ["tenant_id", "event_id"],
+        "provider_event_inbox",
+        ["tenant_id", "id"],
+    ),
+    ("provider_event_decisions", "p", ["tenant_id", "event_id"], None, None),
+    (
+        "provider_event_decisions",
+        "f",
+        ["tenant_id", "event_id"],
+        "provider_event_leases",
+        ["tenant_id", "event_id"],
+    ),
+    (
+        "provider_event_decisions",
+        "f",
+        ["tenant_id", "operation_id"],
+        "provider_operations",
+        ["tenant_id", "id"],
+    ),
 )
 _INDEXES = (
     (
@@ -285,6 +411,11 @@ _POLICIES: list[tuple[str, str, bool, str, list[str], str, str]] = [
     (_ROUTES, _ROUTES + "_resolve", True, "r", ["gba_receipt_writer"], "true", ""),
     (_ROUTES, _ROUTES + "_provision", True, "a", ["public"], "", _TENANT),
     (_ROUTES, _ROUTES + "_company", False, "a", ["public"], "", _COMPANY),
+    # 0050: discovery without a company context, for the worker group only.
+    *(
+        (table, table + "_discover", True, "r", ["gba_receipt_worker"], "true", "")
+        for table in ("provider_event_attestations", "provider_event_decisions")
+    ),
 ]
 # Column privileges per group; any role running the guard is checked against its own group.
 _RUNTIME_INSERTS = {
@@ -297,11 +428,55 @@ _WRITER_INSERTS = _RUNTIME_INSERTS | {
     ("provider_event_attestations", column)
     for column in ("tenant_id", "event_id", "delivery_sha256", "verification_config_id")
 }
-_UPDATES = {
+_WORKER_INSERTS = (
+    {
+        ("provider_operations", column)
+        for column in (
+            "tenant_id",
+            "connection_id",
+            "kind",
+            "provider_object_id",
+            "parent_object_id",
+            "currency",
+            "first_event_id",
+        )
+    }
+    | {
+        ("provider_event_leases", column)
+        for column in ("tenant_id", "event_id", "generation", "holder", "expires_at")
+    }
+    | {
+        ("provider_event_decisions", column)
+        for column in ("tenant_id", "event_id", "generation", "holder")
+    }
+)
+_INSERTS = {
+    "gba_runtime": _RUNTIME_INSERTS,
+    "gba_receipt_writer": _WRITER_INSERTS,
+    "gba_receipt_worker": _WORKER_INSERTS,
+}
+_REVOCATIONS = {
     (table, column)
     for table in ("provider_receipt_connections", "provider_verification_configs")
     for column in ("revoked", "revoked_reason")
 }
+_UPDATES = {
+    "gba_runtime": _REVOCATIONS,
+    "gba_receipt_writer": _REVOCATIONS,
+    # UPDATE on one operation column only permits SELECT FOR UPDATE (the trigger refuses it).
+    "gba_receipt_worker": {
+        ("provider_operations", "currency"),
+        *(("provider_event_leases", column) for column in ("generation", "holder", "expires_at")),
+    },
+}
+
+
+# Pure helpers over facts; every other K function is a volatile trigger or check.
+_IMMUTABLE = (
+    "provider_receipt_integer",
+    "provider_receipt_facts_valid",
+    "provider_receipt_operation",
+)
 
 
 def _compact(source: str) -> str:
@@ -322,7 +497,9 @@ select
      has_table_privilege('gba_runtime',c.oid,'SELECT'),
      has_table_privilege('gba_runtime',c.oid,'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'),
      has_table_privilege('gba_receipt_writer',c.oid,'SELECT'),
-     has_table_privilege('gba_receipt_writer',c.oid,'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')))
+     has_table_privilege('gba_receipt_writer',c.oid,'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'),
+     has_table_privilege('gba_receipt_worker',c.oid,'SELECT'),
+     has_table_privilege('gba_receipt_worker',c.oid,'UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')))
   from pg_class c join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='gba' and c.relname=any(%s)),
  (select jsonb_agg(jsonb_build_array(c.relname,p.polname,p.polpermissive,p.polcmd,
@@ -344,7 +521,8 @@ select
      p.proparallel,exists(select 1 from aclexplode(p.proacl) a where a.grantee=0),
      l.lanname,p.oid=to_regprocedure('gba.'||p.proname||case p.proname
        when 'provider_receipt_integer' then '(jsonb,numeric)'
-       when 'provider_receipt_facts_valid' then '(jsonb)' else '()' end)))
+       when 'provider_receipt_facts_valid' then '(jsonb)'
+       when 'provider_receipt_operation' then '(jsonb)' else '()' end)))
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   join pg_language l on l.oid=p.prolang
   where n.nspname='gba' and p.proname=any(%s)),
@@ -369,7 +547,9 @@ select
      has_column_privilege('gba_runtime',c.oid,a.attnum,'INSERT'),
      has_column_privilege('gba_runtime',c.oid,a.attnum,'UPDATE'),
      has_column_privilege('gba_receipt_writer',c.oid,a.attnum,'INSERT'),
-     has_column_privilege('gba_receipt_writer',c.oid,a.attnum,'UPDATE')))
+     has_column_privilege('gba_receipt_writer',c.oid,a.attnum,'UPDATE'),
+     has_column_privilege('gba_receipt_worker',c.oid,a.attnum,'INSERT'),
+     has_column_privilege('gba_receipt_worker',c.oid,a.attnum,'UPDATE')))
   from pg_attribute a join pg_class c on c.oid=a.attrelid
   join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='gba' and c.relname=any(%s) and a.attnum>0 and not a.attisdropped),
@@ -387,33 +567,38 @@ select
   where n.nspname='gba' and c.relname=any(%s) and not exists (
      select 1 from pg_constraint k where k.conindid=x.indexrelid and k.conrelid=x.indrelid
        and k.contype in ('p','u','x'))),
- pg_catalog.pg_has_role(current_user,'gba_receipt_writer','USAGE'),
+ case when pg_catalog.pg_has_role(current_user,'gba_receipt_writer','USAGE')
+   then 'gba_receipt_writer'
+   when pg_catalog.pg_has_role(current_user,'gba_receipt_worker','USAGE')
+   then 'gba_receipt_worker' else 'gba_runtime' end,
  (with recursive members(grp,member) as (
      select g.rolname,m.member from pg_auth_members m join pg_roles g on g.oid=m.roleid
-     where g.rolname in ('gba_runtime','gba_receipt_writer')
+     where g.rolname in ('gba_runtime','gba_receipt_writer','gba_receipt_worker')
      union select s.grp,m.member from members s join pg_auth_members m on m.roleid=s.member)
-  select (select count(*)=2 and bool_and(not (rolcanlogin or rolsuper or rolbypassrls
+  select (select count(*)=3 and bool_and(not (rolcanlogin or rolsuper or rolbypassrls
           or rolcreaterole or rolcreatedb or rolreplication))
-        from pg_roles where rolname in ('gba_runtime','gba_receipt_writer'))
+        from pg_roles where rolname in ('gba_runtime','gba_receipt_writer','gba_receipt_worker'))
     and not exists (select 1 from pg_auth_members m join pg_roles g on g.oid=m.member
-        where g.rolname in ('gba_runtime','gba_receipt_writer'))
-    and not exists (select member from members where grp='gba_runtime'
-        intersect select member from members where grp='gba_receipt_writer')
+        where g.rolname in ('gba_runtime','gba_receipt_writer','gba_receipt_worker'))
+    and not exists (select member from members group by member having count(distinct grp)>1)
     and not exists (select 1 from members s join pg_roles r on r.oid=s.member
         where r.rolsuper or r.rolbypassrls)),
  (select count(*)=cardinality(%s::text[]) and bool_and(c.relkind='r' and c.relpersistence='p'
      and not exists (select 1 from pg_rewrite w where w.ev_class=c.oid)
      and not exists (select 1 from aclexplode(c.relacl) a where a.grantee<>c.relowner
        and (a.is_grantable or a.grantee not in
-         (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid)))
+         (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid,
+           to_regrole('gba_receipt_worker')::oid)))
      and not exists (select 1 from pg_attribute t cross join lateral aclexplode(t.attacl) a
        where t.attrelid=c.oid and t.attnum>0 and (a.is_grantable or a.grantee not in
-         (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid))))
+         (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid,
+           to_regrole('gba_receipt_worker')::oid))))
   from pg_class c join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='gba' and c.relname=any(%s)),
  (select bool_and(not exists (select 1 from aclexplode(p.proacl) a where a.grantee<>p.proowner
      and (a.is_grantable or a.grantee not in
-       (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid))))
+       (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid,
+           to_regrole('gba_receipt_worker')::oid))))
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   where n.nspname='gba' and p.proname=any(%s)),
  (select count(*)=2 and bool_and(l.lanname='sql' and p.provolatile='s' and p.proparallel='s'
@@ -422,7 +607,8 @@ select
      and btrim(p.prosrc,E' \\t\\r\\n')=case p.proname when 'current_tenant_id' then %s else %s end
      and not exists (select 1 from aclexplode(p.proacl) a where a.grantee<>p.proowner
        and (a.is_grantable or a.grantee not in
-         (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid))))
+         (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid,
+           to_regrole('gba_receipt_worker')::oid))))
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   join pg_language l on l.oid=p.prolang
   where n.nspname='gba' and p.proname in ('current_tenant_id','current_location_id'))
@@ -457,7 +643,7 @@ select
             privileges,
             columns,
             indexes,
-            is_writer,
+            group,
             roles_safe,
             tables_safe,
             function_acls_safe,
@@ -467,18 +653,17 @@ select
         valid = all(
             check is True for check in (roles_safe, tables_safe, function_acls_safe, context_safe)
         )
+        valid &= group in _GROUPS
+        reads = _READS.get(group, set())
         valid &= sorted(boundary or []) == sorted(
             [
                 t,
                 True,
                 True,
-                is_writer or t != _ROUTES,
+                t in reads,
                 False,
                 False,
-                t != _ROUTES,
-                False,
-                True,
-                False,
+                *(value for other in _GROUPS for value in (t in _READS[other], False)),
             ]
             for t in tables
         )
@@ -495,12 +680,8 @@ select
                 _compact(body),
                 False,
                 None if name == "reject_ledger_mutation" else ["search_path=pg_catalog"],
-                "i"
-                if name in ("provider_receipt_integer", "provider_receipt_facts_valid")
-                else "v",
-                "s"
-                if name in ("provider_receipt_integer", "provider_receipt_facts_valid")
-                else "u",
+                "i" if name in _IMMUTABLE else "v",
+                "s" if name in _IMMUTABLE else "u",
                 False,
                 "sql" if name == "provider_receipt_integer" else "plpgsql",
                 True,
@@ -523,27 +704,22 @@ select
             ]
             for k in _KEYS
         )
-        inserts = _WRITER_INSERTS if is_writer else _RUNTIME_INSERTS
+        own = group if group in _GROUPS else "gba_runtime"
         valid &= all(
-            [own_insert, own_update, runtime_insert, runtime_update, writer_insert, writer_update]
+            list(granted)
             == [
-                (table, column) in inserts,
-                (table, column) in _UPDATES,
-                (table, column) in _RUNTIME_INSERTS,
-                (table, column) in _UPDATES,
-                (table, column) in _WRITER_INSERTS,
-                (table, column) in _UPDATES,
+                (table, column) in _INSERTS[own],
+                (table, column) in _UPDATES[own],
+                *(
+                    value
+                    for other in _GROUPS
+                    for value in (
+                        (table, column) in _INSERTS[other],
+                        (table, column) in _UPDATES[other],
+                    )
+                ),
             ]
-            for (
-                table,
-                column,
-                own_insert,
-                own_update,
-                runtime_insert,
-                runtime_update,
-                writer_insert,
-                writer_update,
-            ) in privileges or []
+            for table, column, *granted in privileges or []
         )
         valid &= sorted(columns or []) == sorted(_COLUMNS)
         valid &= sorted([i[0], i[1], _compact(i[2]), i[3]] for i in indexes or []) == sorted(

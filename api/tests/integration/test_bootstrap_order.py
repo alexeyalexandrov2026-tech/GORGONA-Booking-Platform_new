@@ -103,8 +103,9 @@ def test_cli_bootstrap_without_writer_variables_creates_no_writer(
     assert row == (0,)
 
 
+@pytest.mark.parametrize("group", ["gba_receipt_writer", "gba_receipt_worker"])
 def test_migrate_refuses_before_bootstrap_created_the_writer_group(
-    test_database: ProvisionedDatabase, scratch: dict[str, str]
+    test_database: ProvisionedDatabase, scratch: dict[str, str], group: str
 ) -> None:
     owner = str(conninfo_to_dict(test_database.owner_dsn)["user"])
     target = make_conninfo(test_database.owner_dsn, dbname=scratch["database"])
@@ -115,14 +116,18 @@ def test_migrate_refuses_before_bootstrap_created_the_writer_group(
             )
         )
         admin.execute(
-            sql.SQL("alter role gba_receipt_writer rename to {}").format(sql.Identifier(HIDDEN))
+            sql.SQL("alter role {} rename to {}").format(
+                sql.Identifier(group), sql.Identifier(HIDDEN)
+            )
         )
         try:
             with pytest.raises(MigrationError, match="gba-db bootstrap"):
                 apply_migrations(target)
         finally:
             admin.execute(
-                sql.SQL("alter role {} rename to gba_receipt_writer").format(sql.Identifier(HIDDEN))
+                sql.SQL("alter role {} rename to {}").format(
+                    sql.Identifier(HIDDEN), sql.Identifier(group)
+                )
             )
     with psycopg.connect(target, autocommit=True) as conn:
         row = conn.execute(

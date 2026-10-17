@@ -73,6 +73,10 @@ select r.rolsuper,
        case when exists (select 1 from pg_catalog.pg_roles where rolname='gba_receipt_writer')
             then pg_catalog.pg_has_role(current_user,'gba_receipt_writer','MEMBER')
               or pg_catalog.pg_has_role(session_user,'gba_receipt_writer','MEMBER')
+            else false end,
+       case when exists (select 1 from pg_catalog.pg_roles where rolname='gba_receipt_worker')
+            then pg_catalog.pg_has_role(current_user,'gba_receipt_worker','MEMBER')
+              or pg_catalog.pg_has_role(session_user,'gba_receipt_worker','MEMBER')
             else false end
 from pg_catalog.pg_roles r
 where r.rolname = current_user
@@ -83,7 +87,15 @@ async def assert_safe_runtime_role(conn: RuntimeConnection) -> None:
     row = await (await conn.execute(_ROLE_CHECK)).fetchone()
     if row is None:
         raise UnsafeDatabaseRoleError("current role not found")
-    is_super, bypasses_rls, is_runtime, owns_schema_objects, schema_ready, is_receipt_writer = row
+    (
+        is_super,
+        bypasses_rls,
+        is_runtime,
+        owns_schema_objects,
+        schema_ready,
+        is_receipt_writer,
+        is_receipt_worker,
+    ) = row
     problems = [
         message
         for failed, message in (
@@ -93,6 +105,7 @@ async def assert_safe_runtime_role(conn: RuntimeConnection) -> None:
             (owns_schema_objects, "owns (or is a member of the owner of) gba objects"),
             (not schema_ready, "cannot see the migrated gba schema"),
             (is_receipt_writer, "has receipt writer authority"),
+            (is_receipt_worker, "has receipt worker authority"),
         )
         if failed
     ]
