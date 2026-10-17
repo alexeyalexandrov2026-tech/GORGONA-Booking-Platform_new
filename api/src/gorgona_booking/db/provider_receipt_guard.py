@@ -27,6 +27,9 @@ _SCOPED = (
     "provider_verification_configs",
 )
 _TABLES = (*_SCOPED, _ROUTES)
+# Every K policy depends on these context functions (migrations 0001 and 0009).
+_TENANT_SOURCE = "select nullif(pg_catalog.current_setting('gba.tenant_id', true), '')::uuid"
+_LOCATION_SOURCE = "select nullif(pg_catalog.current_setting('gba.location_id', true), '')::uuid"
 _COLUMNS = [
     [
         table,
@@ -336,7 +339,45 @@ select
   where n.nspname='gba' and c.relname=any(%s) and not exists (
      select 1 from pg_constraint k where k.conindid=x.indexrelid and k.conrelid=x.indrelid
        and k.contype in ('p','u','x'))),
- pg_catalog.pg_has_role(current_user,'gba_receipt_writer','USAGE')
+ pg_catalog.pg_has_role(current_user,'gba_receipt_writer','USAGE'),
+ (with recursive members(grp,member) as (
+     select g.rolname,m.member from pg_auth_members m join pg_roles g on g.oid=m.roleid
+     where g.rolname in ('gba_runtime','gba_receipt_writer')
+     union select s.grp,m.member from members s join pg_auth_members m on m.roleid=s.member)
+  select (select count(*)=2 and bool_and(not (rolcanlogin or rolsuper or rolbypassrls
+          or rolcreaterole or rolcreatedb or rolreplication))
+        from pg_roles where rolname in ('gba_runtime','gba_receipt_writer'))
+    and not exists (select 1 from pg_auth_members m join pg_roles g on g.oid=m.member
+        where g.rolname in ('gba_runtime','gba_receipt_writer'))
+    and not exists (select member from members where grp='gba_runtime'
+        intersect select member from members where grp='gba_receipt_writer')
+    and not exists (select 1 from members s join pg_roles r on r.oid=s.member
+        where r.rolsuper or r.rolbypassrls)),
+ (select count(*)=cardinality(%s::text[]) and bool_and(c.relkind='r' and c.relpersistence='p'
+     and not exists (select 1 from pg_rewrite w where w.ev_class=c.oid)
+     and not exists (select 1 from aclexplode(c.relacl) a where a.grantee<>c.relowner
+       and (a.is_grantable or a.grantee not in
+         (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid)))
+     and not exists (select 1 from pg_attribute t cross join lateral aclexplode(t.attacl) a
+       where t.attrelid=c.oid and t.attnum>0 and (a.is_grantable or a.grantee not in
+         (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid))))
+  from pg_class c join pg_namespace n on n.oid=c.relnamespace
+  where n.nspname='gba' and c.relname=any(%s)),
+ (select bool_and(not exists (select 1 from aclexplode(p.proacl) a where a.grantee<>p.proowner
+     and (a.is_grantable or a.grantee not in
+       (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid))))
+  from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+  where n.nspname='gba' and p.proname=any(%s)),
+ (select count(*)=2 and bool_and(l.lanname='sql' and p.provolatile='s' and p.proparallel='s'
+     and not p.prosecdef and p.proconfig is null and p.pronargs=0 and p.prokind='f'
+     and p.prorettype='uuid'::regtype and p.proacl is not null
+     and btrim(p.prosrc,E' \\t\\r\\n')=case p.proname when 'current_tenant_id' then %s else %s end
+     and not exists (select 1 from aclexplode(p.proacl) a where a.grantee<>p.proowner
+       and (a.is_grantable or a.grantee not in
+         (to_regrole('gba_runtime')::oid,to_regrole('gba_receipt_writer')::oid))))
+  from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+  join pg_language l on l.oid=p.prolang
+  where n.nspname='gba' and p.proname in ('current_tenant_id','current_location_id'))
 """,
             (
                 tables,
@@ -348,6 +389,11 @@ select
                 tables,
                 tables,
                 tables,
+                tables,
+                tables,
+                [name for name, _ in _FUNCTIONS],
+                _TENANT_SOURCE,
+                _LOCATION_SOURCE,
             ),
         )
     ).fetchone()
@@ -364,8 +410,16 @@ select
             columns,
             indexes,
             is_writer,
+            roles_safe,
+            tables_safe,
+            function_acls_safe,
+            context_safe,
         ) = row
-        valid = sorted(boundary or []) == sorted(
+        # K1g (IR-05): group membership, table shape and ACLs, and the RLS context functions.
+        valid = all(
+            check is True for check in (roles_safe, tables_safe, function_acls_safe, context_safe)
+        )
+        valid &= sorted(boundary or []) == sorted(
             [
                 t,
                 True,
