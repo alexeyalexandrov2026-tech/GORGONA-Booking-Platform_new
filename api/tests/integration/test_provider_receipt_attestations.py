@@ -422,7 +422,8 @@ async def test_revocation_refuses_next_receipt_but_keeps_authenticated_history(
     await receive(writer_pool, scope, delivery())
     async with tenant_transaction(app_pool, scope.tenant_id) as conn:
         await conn.execute(
-            "update gba.provider_receipt_connections set revoked=true where id=%s",
+            "update gba.provider_receipt_connections set revoked=true, "
+            "revoked_reason='retired' where id=%s",
             (scope.connection_id,),
         )
     with pytest.raises(ReceiptBindingRejectedError):

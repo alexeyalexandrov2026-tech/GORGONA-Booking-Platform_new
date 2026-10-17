@@ -1,4 +1,4 @@
-"""Packaged K1b-K1d integrity approvals, checked before each internal receipt write."""
+"""Packaged K1b-K1j integrity approvals, checked before each internal receipt write."""
 
 import re
 from importlib import resources
@@ -13,9 +13,17 @@ _SQL = "".join(
         "0044_provider_receipt_inbox.sql",
         "0045_provider_receipt_attestations.sql",
         "0046_provider_receipt_routing.sql",
+        "0048_provider_revocation_record.sql",
     )
 )
-_FUNCTIONS = re.findall(r"create function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;", _SQL, re.DOTALL)
+# A later `create or replace` (0048) supersedes the earlier body of the same function.
+_FUNCTIONS = list(
+    dict(
+        re.findall(
+            r"create (?:or replace )?function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;", _SQL, re.DOTALL
+        )
+    ).items()
+)
 _FUNCTIONS.append(("reject_ledger_mutation", LEDGER_IMMUTABLE_SOURCE))
 _ROUTES = "provider_receipt_routes"
 # Company-scoped tables: tenant and company policies, readable by the runtime and the writer.
@@ -30,8 +38,10 @@ _TABLES = (*_SCOPED, _ROUTES)
 # Every K policy depends on these context functions (migrations 0001 and 0009).
 _TENANT_SOURCE = "select nullif(pg_catalog.current_setting('gba.tenant_id', true), '')::uuid"
 _LOCATION_SOURCE = "select nullif(pg_catalog.current_setting('gba.location_id', true), '')::uuid"
-_COLUMNS = [
-    [
+
+
+def _column(table: str, name: str, kind: str, tail: str) -> list[object]:
+    return [
         table,
         name,
         "timestamp with time zone" if kind == "timestamptz" else kind,
@@ -52,10 +62,18 @@ _COLUMNS = [
         else None,
         False,  # No PUBLIC column grants, even when the table ACL stays unchanged.
     ]
+
+
+_KIND = r"(uuid|text|boolean|jsonb|timestamptz|integer)\b([^\n]*)"
+_COLUMNS = [
+    _column(table, name, kind, tail)
     for table, block in re.findall(r"create table gba\.(\w+) \((.*?)\n\);", _SQL, re.DOTALL)
-    for name, kind, tail in re.findall(
-        r"^    (\w+) (uuid|text|boolean|jsonb|timestamptz|integer)\b([^\n]*)", block, re.MULTILINE
-    )
+    for name, kind, tail in re.findall(r"^    (\w+) " + _KIND, block, re.MULTILINE)
+] + [
+    # Columns that a later migration adds (0048).
+    _column(table, name, kind, tail)
+    for table, block in re.findall(r"alter table gba\.(\w+)\n((?:    add column [^\n]*\n)+)", _SQL)
+    for name, kind, tail in re.findall(r"^    add column (\w+) " + _KIND, block, re.MULTILINE)
 ]
 _TRIGGERS = (
     (
@@ -137,6 +155,22 @@ _CHECKS = (
         "provider_verification_configs",
         "((secret_ref ~ '^[a-z][a-z0-9-]{0,30}:[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$'::text) "
         "AND (secret_ref !~* '(^|[^A-Za-z0-9])(whsec|sk|rk|pk)_'::text))",
+    ),
+    *(
+        (
+            table,
+            "(((revoked_reason IS NULL) = (revoked_at IS NULL)) "
+            "AND ((revoked_at IS NULL) = (revoked_by IS NULL)) "
+            "AND (revoked OR (revoked_at IS NULL)) "
+            f"AND ((revoked_reason IS NULL) OR (revoked_reason = ANY (ARRAY[{reasons}]))))",
+        )
+        for table, reasons in (
+            ("provider_receipt_connections", "'compromise'::text, 'retired'::text"),
+            (
+                "provider_verification_configs",
+                "'rotation'::text, 'compromise'::text, 'retired'::text",
+            ),
+        )
     ),
 )
 _KEYS = (
@@ -251,8 +285,9 @@ _WRITER_INSERTS = _RUNTIME_INSERTS | {
     for column in ("tenant_id", "event_id", "delivery_sha256", "verification_config_id")
 }
 _UPDATES = {
-    ("provider_receipt_connections", "revoked"),
-    ("provider_verification_configs", "revoked"),
+    (table, column)
+    for table in ("provider_receipt_connections", "provider_verification_configs")
+    for column in ("revoked", "revoked_reason")
 }
 
 

@@ -130,10 +130,12 @@ async def stored(pool: RuntimePool, tenant: UUID) -> tuple[int, int, int]:
 
 _REVOKE = {
     "provider_verification_configs": (
-        "update gba.provider_verification_configs set revoked=true where id=%s"
+        "update gba.provider_verification_configs set revoked=true, "
+        "revoked_reason='rotation' where id=%s"
     ),
     "provider_receipt_connections": (
-        "update gba.provider_receipt_connections set revoked=true where id=%s"
+        "update gba.provider_receipt_connections set revoked=true, "
+        "revoked_reason='retired' where id=%s"
     ),
 }
 
@@ -438,7 +440,8 @@ async def test_owner_config_needs_company_scope_live_connection_and_opaque_refer
     elif case == "revoked_connection":
         async with tenant_transaction(app_pool, tenant) as conn:
             await conn.execute(
-                "update gba.provider_receipt_connections set revoked=true where id=%s",
+                "update gba.provider_receipt_connections set revoked=true, "
+                "revoked_reason='retired' where id=%s",
                 (inbox.connection,),
             )
     elif case == "pre_revoked":

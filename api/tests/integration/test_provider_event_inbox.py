@@ -196,7 +196,8 @@ async def test_revocation_waits_for_inflight_receipt_then_blocks_next_delivery(
     async def revoke() -> None:
         async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
             await conn.execute(
-                "update gba.provider_receipt_connections set revoked=true where id=%s",
+                "update gba.provider_receipt_connections set revoked=true, "
+                "revoked_reason='retired' where id=%s",
                 (inbox.connection,),
             )
 
@@ -267,7 +268,8 @@ async def test_revocation_is_permanent_and_history_is_preserved(
     await receive(app_pool, inbox, inbox.event())
     async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
         await conn.execute(
-            "update gba.provider_receipt_connections set revoked=true where id=%s",
+            "update gba.provider_receipt_connections set revoked=true, "
+            "revoked_reason='retired' where id=%s",
             (inbox.connection,),
         )
     with pytest.raises(ReceiptBindingRejectedError):
