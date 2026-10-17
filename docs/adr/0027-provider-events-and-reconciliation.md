@@ -16,6 +16,12 @@ Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the propo
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
 
+## K2a proposal — 2026-10-17, not started
+
+Receipt decisions without money (operation identity, leased claims with fencing, append-only
+decisions) are proposed in [the K2a design](../plan/PACKAGE_K2A_DESIGN_2026-10-17.md). It awaits
+the owner's answers on the worker role, ambiguity policy, scope and unattested rows.
+
 ## K1k local design decision — 2026-10-17, Proposed; locally implemented in `a5f21e4`
 
 Close review findings IR-09 and IR-08 with migration 0049: a statement-level `BEFORE TRUNCATE`

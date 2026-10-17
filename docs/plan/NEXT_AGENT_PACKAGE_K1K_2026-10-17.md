@@ -26,6 +26,7 @@ empty a receipt table; the shared test database keeps all rows.
 2. K2 (bounded worker, fencing, operation identity, reconciliation) is the next plan slice; it
    needs its own design first, and the plan's decision 3 (ambiguity) is for the owner to confirm.
    K0 stays BLOCKED until separately authorized.
+   Proposed in [the K2a design](PACKAGE_K2A_DESIGN_2026-10-17.md) (docs only, four owner questions).
 3. Publishing K1f–K1k needs the owner's word.
 
 ## Rules

@@ -1,5 +1,12 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## K2a proposal — receipt decisions without money (2026-10-17, docs only)
+
+After K1k the next plan slice is K2. Its local part K2a (operation identity, leases with fencing,
+append-only decisions; no provider call, no money) is proposed in
+[PACKAGE_K2A_DESIGN_2026-10-17.md](PACKAGE_K2A_DESIGN_2026-10-17.md). Not started: four owner
+questions (worker role, ambiguity policy, scope, unattested rows) come first.
+
 ## Current checkpoint — 2026-10-17: K1k TRUNCATE guard and random route IDs locally verified
 
 Source `a5f21e41f550d5d07e428c644e9f718082b3f619` on local branch `codex/package-k1k-truncate-guard`, parent `ae9e1e2`.
