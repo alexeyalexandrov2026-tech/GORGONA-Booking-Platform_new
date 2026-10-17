@@ -8,8 +8,8 @@ Closes independent-review finding IR-06: bootstrap refuses equal owner/runtime/w
 migrations refuse, applying nothing, before bootstrap created `gba_runtime`/`gba_receipt_writer`.
 No migration. 8 new cases. Focused **458 passed in 408.78s (0:06:48)**; full **2042 passed,
 4 skipped in 3100.84s (0:51:40)**; static/mypy 315/web/build PASS; runtime audit 0; existing
-development audit 5 high FAIL. K1f not published. Published K1e branch CI run 38991120703 FAILED
-at the production image build (cause not established; log needs GitHub sign-in).
+development audit 5 high FAIL. K1f not published. K1e branch CI: one transient image-build
+failure (run 38991120703), re-run 38996263458 SUCCESS on `e5279cb` (same tree as `be97fbd`).
 FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0047.
 [Validation](evidence/2026-10-17-k1f-bootstrap-hardening/VALIDATION.md),
 [handoff](NEXT_AGENT_PACKAGE_K1F_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K1F_PROMPT_2026-10-17.md).

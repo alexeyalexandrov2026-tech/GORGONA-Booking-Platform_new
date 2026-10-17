@@ -18,10 +18,7 @@ applying nothing, until bootstrap created `gba_runtime` and `gba_receipt_writer`
 
 ## Open
 
-1. **K CI FAIL, cause unknown.** Run 38991120703 on the K1e branch failed at "Build the production
-   image" after 17 s. Its log needs a GitHub sign-in. Local `uv lock --check` and
-   `uv sync --locked --no-dev --no-install-project` pass; Docker is not installed on this PC.
-   Next: the owner's step-9 log or an owner-approved re-run. Do not claim K CI.
+1. **K CI for K1a–K1e PASS on re-run.** K1e branch CI: run 38991120703 FAILED at the production image build after 17 s (log needs a GitHub sign-in; pinned base images were pullable afterwards); an empty re-run commit `e5279cb` (same tree as `be97fbd`) passed: [CI run 38996263458](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38996263458) SUCCESS. The first failure is treated as transient; its cause is not established. The remote branch head is `e5279cb`; the local K1f branch is based on `be97fbd`. K1f itself has no CI (not published).
 2. Remaining review follow-ups as small slices: IR-05 (guard additions), IR-03 (runtime INSERT on
    the inbox, 0047), IR-07 (revocation author/time). The Azure bootstrap job does not pass the
    writer variables (owner decision).

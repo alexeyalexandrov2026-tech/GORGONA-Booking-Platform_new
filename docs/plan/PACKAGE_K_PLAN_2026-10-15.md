@@ -6,8 +6,7 @@ Source `3e18c938a505bbb4583778cdf40df0e7bed2aceb` on local branch `codex/package
 F-01–F-04 PASS; 8 new cases; no migration. Focused **458 passed in 408.78s (0:06:48)**; full
 **2042 passed, 4 skipped in 3100.84s (0:51:40)**; static, mypy (315 files), web and build PASS;
 runtime audit 0; existing development audit 5 high FAIL. Kept failure: product RED (7 failed).
-Not published. The published K1e branch's CI run 38991120703 FAILED at the production image
-build after 17 s; its log needs a GitHub sign-in; the cause is not established.
+Not published. K1e branch CI: run 38991120703 FAILED at the production image build after 17 s (log needs a GitHub sign-in; pinned base images were pullable afterwards); an empty re-run commit `e5279cb` (same tree as `be97fbd`) passed: [CI run 38996263458](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38996263458) SUCCESS. The first failure is treated as transient; its cause is not established.
 [Validation](evidence/2026-10-17-k1f-bootstrap-hardening/VALIDATION.md),
 [CHECKS.json](evidence/2026-10-17-k1f-bootstrap-hardening/CHECKS.json),
 [handoff](NEXT_AGENT_PACKAGE_K1F_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K1F_PROMPT_2026-10-17.md).

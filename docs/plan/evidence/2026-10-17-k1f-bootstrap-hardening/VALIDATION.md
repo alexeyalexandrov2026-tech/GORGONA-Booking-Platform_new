@@ -35,7 +35,7 @@ No migration (next 0047), dependency, receipt code, schema or Azure infrastructu
 | Web typecheck, lint, format, unit, build | PASS (web unchanged) |
 | Runtime / development npm audit | PASS 0 / FAIL 5 high (existing, not required) |
 | Run harness | each phase's stopped cluster deleted after stop (`data_removed: true`) |
-| K CI | NOT TESTED for K1f (not published). K1e branch run 38991120703 FAILED at "Build the production image" after 17 s; the log needs a GitHub sign-in; local `uv lock --check` and `uv sync --locked --no-dev --no-install-project` PASS; cause not established |
+| K CI | NOT TESTED for K1f (not published). K1e branch CI: run 38991120703 FAILED at the production image build after 17 s (log needs a GitHub sign-in; pinned base images were pullable afterwards); an empty re-run commit `e5279cb` (same tree as `be97fbd`) passed: [CI run 38996263458](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/38996263458) SUCCESS. The first failure is treated as transient; its cause is not established. Local `uv lock --check` and `uv sync --locked --no-dev --no-install-project` PASS |
 
 ## Failures kept in the record
 
