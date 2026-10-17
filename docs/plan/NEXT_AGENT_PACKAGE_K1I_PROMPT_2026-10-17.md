@@ -1,5 +1,7 @@
 # Ready-to-paste prompt — after K1i
 
+Superseded on 2026-10-17 by [the K1j prompt](NEXT_AGENT_PACKAGE_K1J_PROMPT_2026-10-17.md). Kept below as history.
+
 Continue GORGONA Booking stage 2, Package K / FIN-02, locally and inline. Checkout
 `C:/Users/alexa/.codex/worktrees/package-j-review2-fixes/Gorgona Booking`, local branch
 `codex/package-k1i-stock-plan-stability`, source `42ead59a3ff975d0daa6ee294af6b34b2b8ce5ff` plus a docs

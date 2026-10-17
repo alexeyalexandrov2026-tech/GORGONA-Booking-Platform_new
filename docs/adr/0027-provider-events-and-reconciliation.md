@@ -1,5 +1,7 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K1j source `201847856aa768bbeb25751d5b219e154383c293` implements the K1j decision below;
+[validation](../plan/evidence/2026-10-17-k1j-revocation-record/VALIDATION.md).
 Local K1g source `4401a2e7bcdc716eaa5664285c0ca383ddf77163` implements the K1g decision below;
 [validation](../plan/evidence/2026-10-17-k1g-guard-additions/VALIDATION.md).
 Local K1f source `3e18c938a505bbb4583778cdf40df0e7bed2aceb` implements the K1f decision below;
@@ -11,6 +13,17 @@ Local K1d source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` implements the K1d d
 Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the proposed isolated verifier foundation;
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
+
+## K1j local design decision — 2026-10-17, Proposed; locally implemented in `2018478`
+
+Close review finding IR-07 with migration 0048: a revocation of a receipt connection or a
+verification config must name its reason (configs `rotation`/`compromise`/`retired`, connections
+`compromise`/`retired`); the trigger records when and by which login (`session_user`). The three
+fields are permanent and all-or-nothing; rows revoked before 0048 keep them empty (record unknown)
+rather than receive invented values. Attestations and configs record the session login.
+The receipt schema guard checks the new columns, grants and bodies. No effect of `compromise` on
+earlier attestations yet (K2), no API, no re-provisioning. Criteria J-01–J-07 are in the
+[K plan](../plan/PACKAGE_K_PLAN_2026-10-15.md).
 
 ## K1g local design decision — 2026-10-17, Proposed; locally implemented in `4401a2e`
 

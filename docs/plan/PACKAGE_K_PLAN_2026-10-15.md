@@ -1,6 +1,61 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## Current checkpoint — 2026-10-17: K1i stock posting plans independent of statistics locally verified
+## Current checkpoint — 2026-10-17: K1j revocation record locally verified
+
+Source `201847856aa768bbeb25751d5b219e154383c293` on local branch `codex/package-k1j-revocation-record`, parent `84bc4d7`.
+Criteria J-01–J-07 PASS; migration 0048; 21 new cases. Final focused **494 passed in 358.27s
+(0:05:58)**; full **2077 passed, 4 skipped in 1598.78s (0:26:38)**. Kept failure: product RED
+(21 failed; an attestation after `SET ROLE` recorded the group). Closes IR-07 except the
+namespace limit. Not published.
+[Validation](evidence/2026-10-17-k1j-revocation-record/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-17-k1j-revocation-record/CHECKS.json),
+[handoff](NEXT_AGENT_PACKAGE_K1J_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K1J_PROMPT_2026-10-17.md).
+
+### K1j design, recorded before code
+
+Local branch `codex/package-k1j-revocation-record` from `84bc4d7` (K1i docs). The owner, away,
+asked to keep working on the plan and decide alone; the next item by the plan is review finding
+IR-07. Implemented in `2018478`. Not published.
+
+IR-07: revocation of a receipt connection or a verification config is a bare boolean (no who,
+when or why), so rotation cannot be told from compromise; `verified_by` and `created_by` record
+`current_user`, which after `SET ROLE` is the group, not the login.
+
+Decisions (migration 0048):
+
+1. **Who, when and why.** Both tables get `revoked_reason`, `revoked_at` and `revoked_by`.
+   Reasons: configs `rotation`, `compromise`, `retired`; connections `compromise`, `retired`. A
+   revocation must name its reason (`UPDATE … SET revoked=true, revoked_reason=…`); the trigger
+   writes `revoked_at := now()` and `revoked_by := session_user` (the login). Grants become
+   `UPDATE (revoked, revoked_reason)` for the runtime and the writer; `revoked_at`/`revoked_by`
+   are never granted.
+2. **Permanent.** After revocation no revocation field changes; before it none may be set; the
+   identity rule is unchanged. A check constraint keeps the three fields all set or all empty and
+   empty while not revoked.
+3. **Earlier revocations stay honest.** A row revoked before 0048 keeps its three fields empty
+   (meaning: revoked, record unknown). The trigger refuses a new revocation without a reason, so
+   no new row reaches that state. No backfill, no invented values; the upgrade keeps every row.
+4. **Attribution by login.** The attestation and config triggers record `session_user` in
+   `verified_by` and `created_by` (equal to `current_user` without `SET ROLE`).
+5. **Guard.** The receipt schema guard reads 0048: the new columns, checks, column grants and
+   the replaced function bodies; drift refuses receipts and archives as before.
+6. Out of scope: re-provisioning a revoked connection in the same namespace (unique
+   `namespace, account_id`, a K2 constraint), any effect of `compromise` on earlier
+   attestations (K2 reconciliation), an API or CLI for revocation. Migrations 0001–0047 unchanged.
+
+Acceptance criteria (failing tests first):
+
+| id | Requirement |
+|---|---|
+| J-01 | A revocation without a reason, or with a reason outside its table's set, is refused for the runtime and the writer; nothing changes |
+| J-02 | A revocation with a reason records the reason, a time within the transaction and the session login — also after `SET ROLE gba_receipt_writer` |
+| J-03 | After revocation the reason, time and author cannot change and revocation cannot be undone; before it they cannot be set; `revoked_at`/`revoked_by` cannot be written directly |
+| J-04 | Attestations and configs record the session login after `SET ROLE` |
+| J-05 | Upgrade 0047 → 0048 with revoked rows keeps all rows and prior checksums; earlier revocations keep empty fields |
+| J-06 | Guard drift (a grant on `revoked_by`, a dropped revocation check, the 0046 config trigger body) refuses receipts and archives; repaired schema passes |
+| J-07 | Existing K and guard tests and the full suite stay green |
+
+## Previous checkpoint — 2026-10-17: K1i stock posting plans independent of statistics locally verified
 
 Source `42ead59a3ff975d0daa6ee294af6b34b2b8ce5ff` on local branch `codex/package-k1i-stock-plan-stability`, parent `0760553`.
 Criteria I-01–I-04 PASS; migration 0047; 5 new cases. Final focused **473 passed in 329.46s (0:05:29)**;

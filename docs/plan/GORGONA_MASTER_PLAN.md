@@ -1,6 +1,17 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
-## Current checkpoint — 2026-10-17: K1i stock posting plans independent of statistics locally verified
+## Current checkpoint — 2026-10-17: K1j revocation record locally verified
+
+Source `201847856aa768bbeb25751d5b219e154383c293`, local branch `codex/package-k1j-revocation-record`, parent `84bc4d7`.
+Closes independent-review finding IR-07: migration 0048 makes a revocation of a receipt
+connection or verification config name its reason (rotation, compromise, retired) and records
+when and by which login; the record is permanent, earlier revocations keep an empty record, and
+attestations and configs record the login behind `SET ROLE`. 21 new cases. Focused **494 passed
+in 358.27s (0:05:58)**; full **2077 passed, 4 skipped in 1598.78s (0:26:38)**. Not published.
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0049.
+[Validation](evidence/2026-10-17-k1j-revocation-record/VALIDATION.md), [handoff](NEXT_AGENT_PACKAGE_K1J_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K1J_PROMPT_2026-10-17.md).
+
+## Previous checkpoint — 2026-10-17: K1i stock posting plans independent of statistics locally verified
 
 Source `42ead59a3ff975d0daa6ee294af6b34b2b8ce5ff`, local branch `codex/package-k1i-stock-plan-stability`, parent `0760553`.
 Fixes the K1h finding: with statistics that did not describe a company, one stock document's
