@@ -12,7 +12,9 @@ No migration. 46 new cases. Focused **450 passed in 273.91s (0:04:33)**; full
 **2034 passed, 4 skipped in 1700.22s (0:28:20)**; static/mypy 314/web 114/build PASS; runtime
 audit 0 PASS; existing development audit 5 high FAIL; 4 container/tenant-site skips NOT TESTED.
 No process entry point, admission, worker or money. Human review, K CI and real provider
-NOT TESTED/BLOCKED. FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. K local only;
+NOT TESTED/BLOCKED. FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. Update 2026-10-16: the
+owner authorized pushing branch `codex/package-k1e-http-ingress` only (no PR, no merge); old
+clean worktrees and stopped test clusters were removed to free disk space.
 main=fedd0f1, published J=df88c20. Next 0047.
 [Validation](docs/plan/evidence/2026-10-16-k1e-http-ingress/VALIDATION.md),
 [review](docs/plan/evidence/2026-10-16-k1e-http-ingress/INDEPENDENT_REVIEW_K1A_K1D.md),

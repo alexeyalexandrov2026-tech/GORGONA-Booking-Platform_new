@@ -5,9 +5,22 @@
 - Checkout `C:/Users/alexa/.codex/worktrees/package-j-review2-fixes/Gorgona Booking`,
   local branch `codex/package-k1e-http-ingress`, parent `2d434bff8081e03d38765caa0b61f5df006dde27`.
   K1e source commit `eb46748fa7446754e96e9290ce5261607ae45ce0`, then one docs commit. Inspect the actual HEAD and status first.
-- **Not published.** No K branch exists on the remote. `main` is `fedd0f1`; published J is `df88c20`.
+- **Branch pushed, nothing merged** (see the update below): no PR. `main` is `fedd0f1`; published J is `df88c20`.
 - Migrations 0001–0046 are local history and must not change. The next migration is **0047**.
 - FIN-02 and STOCK-01 stay `planned`; ADR-0026 and ADR-0027 stay Proposed.
+
+## Update — 2026-10-16, disk space and publication
+
+- The disk was full. With the owner's answers: 174 stopped phase `data` directories under
+  `GorgonaBookingTests` were deleted (logs, `results.json` and evidence kept), and the clean,
+  fully pushed old worktrees of packages H/I/J were removed with `git worktree remove` (branches
+  kept). Worktrees with uncommitted files and `Documents/ChatGPT/Gorgona Booking` were not touched.
+- The owner authorized pushing **this branch only**: `codex/package-k1e-http-ingress` is on
+  GitHub (no PR, no merge, `main` unchanged). Its first CI run started on `07645aa`; read its
+  result before relying on it. Every other K action (PR, merge, readiness) still needs the
+  owner's separate word.
+- `runner.py` in the K1e run folder now deletes each phase's stopped cluster after `pg_ctl stop`
+  (`data_removed: true` in `results.json`). Copy this version for the next slice.
 
 ## What K now has (all local, synthetic)
 
