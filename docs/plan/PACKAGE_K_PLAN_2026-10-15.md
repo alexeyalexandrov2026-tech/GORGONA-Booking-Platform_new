@@ -1,5 +1,14 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## K3a proposal — observed provider money into H (2026-10-17, docs only)
+
+After K2a the next plan slice is K3. Its first local part K3a (a finance user applies one observed
+payment or refund to a reserved H settlement; amount, currency and date come from the attested
+facts; one atomic payment, allocation and journal with provider provenance) is proposed in
+[PACKAGE_K3A_DESIGN_2026-10-17.md](PACKAGE_K3A_DESIGN_2026-10-17.md). Not started: four owner
+questions (who triggers money, clearing account, currencies, corrections and old manual records)
+come first.
+
 ## Current checkpoint — 2026-10-17: K2a receipt decisions without money locally verified
 
 Source `6e9bbfc74a09a5d472aaff25328356d6f71e8706` on local branch `codex/package-k2a-receipt-decisions`, parent `b6c8040`.

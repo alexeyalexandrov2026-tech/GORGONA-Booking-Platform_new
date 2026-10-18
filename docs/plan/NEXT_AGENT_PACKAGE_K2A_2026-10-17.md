@@ -33,7 +33,8 @@ policies and the worker's grant (see `test_location_access.py`).
 
 1. K3 (money): apply observed successes to G/H with provider provenance, after rechecking
    deliveries (a conflicting variant may arrive after a decision). Needs its own design and the
-   owner's review before code.
+   owner's review before code. Proposed on 2026-10-17 as
+   [K3a](PACKAGE_K3A_DESIGN_2026-10-17.md); waits for four owner answers.
 2. K2b (provider retrieval for ambiguous facts) and K0 stay BLOCKED until separately authorized.
 3. A process entry point for the worker, and the Azure bootstrap job passing the worker variables,
    need the owner's word (infrastructure).

@@ -18,6 +18,14 @@ Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the propo
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
 
+## K3a proposal — 2026-10-17, not started
+
+Applying an observed provider payment or refund to a reserved H settlement (a finance user
+applies; the database takes amount, currency and date from the attested facts and rechecks every
+delivery; one atomic payment, allocation and journal with provider provenance) is proposed in
+[the K3a design](../plan/PACKAGE_K3A_DESIGN_2026-10-17.md). It awaits the owner's answers on who
+triggers money, the clearing account, currencies, and corrections and old manual records.
+
 ## K2a local design decision — 2026-10-17, Proposed; locally implemented in `6e9bbfc`
 
 A separate NOLOGIN `gba_receipt_worker` group (owner decision) turns each attested receipt into
