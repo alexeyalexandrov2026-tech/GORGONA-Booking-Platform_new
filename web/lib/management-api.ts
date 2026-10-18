@@ -643,6 +643,8 @@ export class ManagementApiError extends Error {
     public readonly code: string,
     message: string,
     public readonly status?: number,
+    /** Server-provided refusal facts (for example a `reason`); never shown raw. */
+    public readonly details?: Readonly<Record<string, unknown>>,
   ) {
     super(message);
     this.name = "ManagementApiError";
@@ -719,8 +721,23 @@ export async function authorizedResponse(
     data = null;
   }
   if (typeof data === "object" && data !== null && "error" in data) {
-    const err = (data as { error: { code: string; message: string } }).error;
-    throw new ManagementApiError(err.code, err.message, response.status);
+    const err = (
+      data as {
+        error: { code: string; message: string; details?: unknown };
+      }
+    ).error;
+    const details =
+      typeof err.details === "object" &&
+      err.details !== null &&
+      !Array.isArray(err.details)
+        ? (err.details as Record<string, unknown>)
+        : undefined;
+    throw new ManagementApiError(
+      err.code,
+      err.message,
+      response.status,
+      details,
+    );
   }
   if (response.status === 401) {
     throw new ManagementApiError(

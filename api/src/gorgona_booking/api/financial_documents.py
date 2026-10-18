@@ -43,7 +43,9 @@ from gorgona_booking.business.settlement_contracts import (
     PaymentVoidInput,
     ProviderClearingAccountInput,
     ProviderClearingAccountView,
+    ProviderConnectionList,
     ProviderOperationList,
+    ProviderOperationState,
     ProviderPaymentConfirmInput,
     SettlementAction,
     SettlementActionInput,
@@ -560,10 +562,27 @@ async def provider_operations(
     principal: CurrentPrincipal,
     after: UUID | None = None,
     limit: Limit = 50,
+    state: ProviderOperationState | None = None,
 ) -> ProviderOperationList:
-    """Observed provider operations of the book and whether they can move money (K3a)."""
+    """Observed provider operations of the book and whether they can move money (K3a, K4a)."""
     async with _access(request, principal, business_id) as access:
         return await provider_payments.list_operations(
+            access.conn, business_id, book_id, after=after, limit=limit, state=state
+        )
+
+
+@router.get("/books/{book_id}/provider-connections")
+async def provider_connections(
+    business_id: UUID,
+    book_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    after: UUID | None = None,
+    limit: Limit = 50,
+) -> ProviderConnectionList:
+    """The book's provider connections and their clearing accounts (K4a)."""
+    async with _access(request, principal, business_id) as access:
+        return await provider_payments.list_connections(
             access.conn, business_id, book_id, after=after, limit=limit
         )
 

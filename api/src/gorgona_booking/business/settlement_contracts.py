@@ -46,8 +46,15 @@ PaymentState = Literal["confirmed", "corrected", "voided"]
 PaymentAttestation = Literal["manual_attestation", "provider_observed"]
 ProviderOperationKind = Literal["payment", "refund"]
 # Not ready: an attested event undecided, a decision for review, or no success yet.
+# `revoked`: not applied, and its connection or a verification config is revoked (K4a).
 ProviderOperationState = Literal[
-    "pending", "needs_review", "not_final", "observed", "applied", "applied_with_conflict"
+    "pending",
+    "needs_review",
+    "not_final",
+    "revoked",
+    "observed",
+    "applied",
+    "applied_with_conflict",
 ]
 ObligationSource = Literal["invoice", "manual", "credit_refund"]
 _MAX_SEQUENCE = 2_147_483_646
@@ -159,6 +166,28 @@ class ProviderClearingAccountView(Versioned):
     account_id: UUID
     registered_by: UUID
     registered_at: AwareDatetime
+
+
+class ProviderClearingAccountSummary(Strict):
+    account_id: UUID
+    registered_by: UUID
+    registered_at: AwareDatetime
+
+
+class ProviderConnectionSummary(Strict):
+    """A provider connection of the book as the finance screen sees it; never a key or secret."""
+
+    connection_id: UUID
+    account_id: str
+    revoked: bool
+    clearing_account: ProviderClearingAccountSummary | None
+
+
+class ProviderConnectionList(Versioned):
+    business_id: UUID
+    book_id: UUID
+    items: tuple[ProviderConnectionSummary, ...]
+    next_cursor: UUID | None
 
 
 class ProviderOperationSummary(Strict):

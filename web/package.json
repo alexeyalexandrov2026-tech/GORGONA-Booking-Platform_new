@@ -24,6 +24,7 @@
     "test:management:agreements": "playwright test tests/agreements.spec.ts",
     "test:management:reservations": "playwright test tests/reservations.spec.ts",
     "test:management:ledger": "playwright test tests/ledger.spec.ts",
+    "test:management:provider": "playwright test tests/provider-operations.spec.ts",
     "test:management:finance": "playwright test tests/finance.spec.ts --max-failures=1",
     "test:management:admission": "playwright test tests/admission.spec.ts --max-failures=1",
     "test:management:workforce": "playwright test tests/workforce.spec.ts --max-failures=1",

@@ -390,6 +390,77 @@ export const paymentCorrectSchema = paymentVoidSchema.extend({
   cash_account_id: id,
   allocations,
 });
+/** K4a: the provider's facts set amount, date and account; only the split is typed. */
+export const providerConfirmSchema = settlementActionSchema.extend({
+  operation_id: id,
+  entry_date: day,
+  allocations,
+});
+const providerApplied = (state: string) =>
+  state === "applied" || state === "applied_with_conflict";
+const providerOperation = z
+  .strictObject({
+    operation_id: id,
+    connection_id: id,
+    kind: z.enum(["payment", "refund"]),
+    provider_object_id: z.string().regex(/^(pi|re)_[A-Za-z0-9]{1,100}$/),
+    parent_object_id: z
+      .string()
+      .regex(/^pi_[A-Za-z0-9]{1,100}$/)
+      .nullable(),
+    currency,
+    amount: amount.nullable(),
+    state: z.enum([
+      "pending",
+      "needs_review",
+      "not_final",
+      "revoked",
+      "observed",
+      "applied",
+      "applied_with_conflict",
+    ]),
+    payment_id: id.nullable(),
+    created_at: instant,
+  })
+  .refine((v) =>
+    v.kind === "payment"
+      ? v.provider_object_id.startsWith("pi_") && v.parent_object_id === null
+      : v.provider_object_id.startsWith("re_") && v.parent_object_id !== null,
+  )
+  .refine((v) => providerApplied(v.state) === (v.payment_id !== null))
+  .refine(
+    (v) => !(v.state === "observed" || providerApplied(v.state)) || v.amount,
+  );
+export const providerOperationListSchema = z
+  .strictObject({
+    ...envelope,
+    items: z.array(providerOperation).max(100),
+    next_cursor: id.nullable(),
+  })
+  .refine((v) => unique(v.items, (x) => x.operation_id));
+const clearingAccount = {
+  account_id: id,
+  registered_by: id,
+  registered_at: instant,
+};
+export const providerClearingAccountSchema = z.strictObject({
+  ...envelope,
+  connection_id: id,
+  ...clearingAccount,
+});
+const providerConnection = z.strictObject({
+  connection_id: id,
+  account_id: z.string().regex(/^acct_[A-Za-z0-9]{1,100}$/),
+  revoked: z.boolean(),
+  clearing_account: z.strictObject(clearingAccount).nullable(),
+});
+export const providerConnectionListSchema = z
+  .strictObject({
+    ...envelope,
+    items: z.array(providerConnection).max(100),
+    next_cursor: id.nullable(),
+  })
+  .refine((v) => unique(v.items, (x) => x.connection_id));
 const settlementStatus = z.enum([
   "prepared",
   "approved",
@@ -752,6 +823,13 @@ export const financialCommandSchema = z.discriminatedUnion("operation", [
     payment: id,
     body: paymentConfirmSchema,
   }),
+  // Recovered as `settlement_confirm`: the server records that receipt operation (K3a).
+  z.strictObject({
+    ...commandBase,
+    operation: z.literal("settlement_provider_confirm"),
+    payment: id,
+    body: providerConfirmSchema,
+  }),
   z.strictObject({
     ...commandBase,
     operation: z.literal("settlement_payment_void"),
@@ -775,6 +853,12 @@ export type Obligation = z.infer<typeof obligationRecord>;
 export type InvoiceDraft = z.infer<typeof invoiceDraftSchema>;
 export type CreditDraft = z.infer<typeof creditDraftSchema>;
 export type FinancialOverview = z.infer<typeof financialOverviewSchema>;
+export type ProviderOperationList = z.infer<typeof providerOperationListSchema>;
+export type ProviderOperation = ProviderOperationList["items"][number];
+export type ProviderConnectionList = z.infer<
+  typeof providerConnectionListSchema
+>;
+export type ProviderConnection = ProviderConnectionList["items"][number];
 
 /** Closed route/method contract for the existing management transport. */
 export function financialResponseSchema(
@@ -790,6 +874,20 @@ export function financialResponseSchema(
     method === "POST"
   )
     return financialStatusSchema;
+  const provider =
+    /^\/financial-documents\/books\/[0-9a-f-]{36}\/(provider-operations|provider-connections)(\/[0-9a-f-]{36}\/clearing-account)?$/i.exec(
+      path,
+    );
+  if (provider) {
+    const [, family, clearing] = provider;
+    if (!clearing && method === "GET")
+      return family === "provider-operations"
+        ? providerOperationListSchema
+        : providerConnectionListSchema;
+    return clearing && family === "provider-connections" && method === "PUT"
+      ? providerClearingAccountSchema
+      : undefined;
+  }
   const match =
     /^\/financial-documents\/books\/[0-9a-f-]{36}\/(invoices|accruals|credits|obligations|settlements|payments)(.*)$/i.exec(
       path,
@@ -835,7 +933,7 @@ export function financialResponseSchema(
       return creditSchema;
     if (
       family === "settlements" &&
-      /^\/[0-9a-f-]{36}\/(approve|reserve|sent|release|cancel|confirmations\/[0-9a-f-]{36}(\/(void|correct))?)$/i.test(
+      /^\/[0-9a-f-]{36}\/(approve|reserve|sent|release|cancel|provider-confirmations\/[0-9a-f-]{36}|confirmations\/[0-9a-f-]{36}(\/(void|correct))?)$/i.test(
         suffix ?? "",
       )
     )

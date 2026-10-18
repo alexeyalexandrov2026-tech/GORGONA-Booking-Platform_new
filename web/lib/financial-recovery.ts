@@ -21,7 +21,10 @@ export function financialReference(
 ): FinancialReference {
   return financialReferenceSchema.parse({
     schema_version: 1,
-    operation: command.operation,
+    operation:
+      command.operation === "settlement_provider_confirm"
+        ? "settlement_confirm"
+        : command.operation,
     book_id: command.book,
     subject_id: command.subject,
     revision:

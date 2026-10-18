@@ -11,6 +11,10 @@ import {
   invoiceListSchema,
   obligationListSchema,
   newCreditDraftLine,
+  financialResponseSchema,
+  providerOperationListSchema,
+  providerConnectionListSchema,
+  providerClearingAccountSchema,
 } from "../lib/financial-contracts";
 import {
   financialRecoverySchema,
@@ -766,4 +770,174 @@ test("void is at least the third credit version and a payment correction has pos
       revisions: [{ ...correction, allocations: [] }],
     }).success,
   ).toBe(false);
+});
+
+// K4a: provider operations, connections and the provider confirmation command.
+const operation = "00000000-0000-4000-8000-000000000012",
+  connection = "00000000-0000-4000-8000-000000000013";
+const observedOperation = {
+  operation_id: operation,
+  connection_id: connection,
+  kind: "payment",
+  provider_object_id: "pi_FAKEpayment1",
+  parent_object_id: null,
+  currency: "USD",
+  amount: "10.00",
+  state: "observed",
+  payment_id: null,
+  created_at: instant,
+};
+const operationPage = (...items: object[]) => ({
+  ...envelope,
+  items,
+  next_cursor: null,
+});
+test("provider operation list is strict and its state matches its money", () => {
+  expect(
+    providerOperationListSchema.safeParse(operationPage(observedOperation))
+      .success,
+  ).toBe(true);
+  for (const state of ["pending", "needs_review", "not_final", "revoked"])
+    expect(
+      providerOperationListSchema.safeParse(
+        operationPage({ ...observedOperation, state, amount: null }),
+      ).success,
+    ).toBe(true);
+  for (const patch of [
+    { state: "applied" },
+    { state: "applied_with_conflict" },
+    { payment_id: payment },
+    { amount: null },
+    { state: "paid" },
+    { kind: "payout" },
+    { currency: "usd" },
+    { verified: true },
+    { kind: "payment", parent_object_id: "pi_FAKEparent" },
+    { kind: "refund", provider_object_id: "re_FAKErefund1" },
+  ])
+    expect(
+      providerOperationListSchema.safeParse(
+        operationPage({ ...observedOperation, ...patch }),
+      ).success,
+    ).toBe(false);
+  for (const state of ["applied", "applied_with_conflict"])
+    expect(
+      providerOperationListSchema.safeParse(
+        operationPage({ ...observedOperation, state, payment_id: payment }),
+      ).success,
+    ).toBe(true);
+  expect(
+    providerOperationListSchema.safeParse(
+      operationPage({
+        ...observedOperation,
+        kind: "refund",
+        provider_object_id: "re_FAKErefund1",
+        parent_object_id: "pi_FAKEpayment1",
+      }),
+    ).success,
+  ).toBe(true);
+  expect(
+    providerOperationListSchema.safeParse(
+      operationPage(observedOperation, observedOperation),
+    ).success,
+  ).toBe(false);
+});
+test("provider connections show the clearing account and nothing secret", () => {
+  const clearing = {
+    account_id: account,
+    registered_by: actor,
+    registered_at: instant,
+  };
+  const item = {
+    connection_id: connection,
+    account_id: "acct_FAKEreceipt",
+    revoked: false,
+    clearing_account: null,
+  };
+  for (const value of [item, { ...item, clearing_account: clearing }])
+    expect(
+      providerConnectionListSchema.safeParse(operationPage(value)).success,
+    ).toBe(true);
+  for (const patch of [
+    { secret_ref: "FAKE" },
+    { verification_config_id: entry },
+    { account_id: "FAKE" },
+    { clearing_account: { ...clearing, secret: "FAKE" } },
+  ])
+    expect(
+      providerConnectionListSchema.safeParse(
+        operationPage({ ...item, ...patch }),
+      ).success,
+    ).toBe(false);
+  expect(
+    providerClearingAccountSchema.safeParse({
+      ...envelope,
+      connection_id: connection,
+      ...clearing,
+    }).success,
+  ).toBe(true);
+});
+test("provider confirmation has no typed money and recovers as a settlement confirmation", () => {
+  const body = {
+    schema_version: 1,
+    expected_sequence: 3,
+    operation_id: operation,
+    entry_date: day,
+    allocations: [{ obligation_id: obligation, amount: "10.00" }],
+  };
+  const command = financialCommandSchema.parse({
+    book,
+    subject: settlement,
+    key: "FAKE-command-provider",
+    operation: "settlement_provider_confirm",
+    payment,
+    body,
+  });
+  expect(financialReference(command)).toEqual({
+    schema_version: 1,
+    operation: "settlement_confirm",
+    book_id: book,
+    subject_id: settlement,
+    revision: 4,
+  });
+  for (const extra of [
+    { amount: "10.00" },
+    { actual_external_date: day },
+    { cash_account_id: account },
+    { attestation: "manual_attestation" },
+    { allocations: [] },
+  ])
+    expect(
+      financialCommandSchema.safeParse({
+        ...command,
+        body: { ...body, ...extra },
+      }).success,
+    ).toBe(false);
+});
+test("provider routes have closed response contracts", () => {
+  const books = `/financial-documents/books/${book}`;
+  expect(financialResponseSchema(`${books}/provider-operations`, "GET")).toBe(
+    providerOperationListSchema,
+  );
+  expect(financialResponseSchema(`${books}/provider-connections`, "GET")).toBe(
+    providerConnectionListSchema,
+  );
+  expect(
+    financialResponseSchema(
+      `${books}/provider-connections/${connection}/clearing-account`,
+      "PUT",
+    ),
+  ).toBe(providerClearingAccountSchema);
+  expect(
+    financialResponseSchema(
+      `${books}/settlements/${settlement}/provider-confirmations/${payment}`,
+      "POST",
+    ),
+  ).toBe(settlementSchema);
+  for (const [path, method] of [
+    [`${books}/provider-operations`, "POST"],
+    [`${books}/provider-connections/${connection}/clearing-account`, "GET"],
+    [`${books}/provider-connections/${connection}`, "GET"],
+  ])
+    expect(financialResponseSchema(path!, method!)).toBeUndefined();
 });

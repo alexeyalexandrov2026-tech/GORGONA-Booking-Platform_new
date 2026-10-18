@@ -36,6 +36,12 @@ import {
   SettlementActions,
   PaymentEditor,
 } from "./financial-editors";
+import {
+  ProviderApplyEditor,
+  ProviderOperations,
+  providerRefusal,
+  type ProviderDraft,
+} from "./provider-operations";
 
 type BookData = {
   book: string;
@@ -50,7 +56,7 @@ type BookData = {
 };
 const failure = (e: unknown) =>
   e instanceof ManagementApiError
-    ? `${e.message} (${e.code})`
+    ? (providerRefusal(e) ?? `${e.message} (${e.code})`)
     : "Unable to verify the financial response. Refresh or resolve the pending command.";
 const uncertain = (e: unknown) =>
   !(e instanceof ManagementApiError) ||
@@ -104,9 +110,9 @@ export function FinancialWorkspace({
     [pending, setPending] = useState<FinancialCommand | null>(null),
     [error, setError] = useState<string | null>(null),
     [message, setMessage] = useState<string | null>(null);
-  const [pane, setPane] = useState<"documents" | "settlements" | "credits">(
-      "documents",
-    ),
+  const [pane, setPane] = useState<
+      "documents" | "settlements" | "credits" | "provider"
+    >("documents"),
     [kind, setKind] = useState<"invoice" | "manual_accrual">("invoice"),
     [invoice, setInvoice] = useState<Invoice | null>(null),
     [invoiceEditor, setInvoiceEditor] = useState(false),
@@ -121,9 +127,13 @@ export function FinancialWorkspace({
     [prepare, setPrepare] = useState<Obligation | null>(null),
     [payment, setPayment] = useState<Payment | null>(null),
     [paymentMode, setPaymentMode] = useState<
-      "confirm" | "correct" | "void" | null
+      "confirm" | "correct" | "void" | "provider" | null
     >(null),
-    [historyRevision, setHistoryRevision] = useState("");
+    [historyRevision, setHistoryRevision] = useState(""),
+    [providerDraft, setProviderDraft] = useState<{
+      key: string;
+      draft: ProviderDraft;
+    } | null>(null);
   const inFlight = useRef(false);
   const [invoiceLatestRevision, setInvoiceLatestRevision] = useState(0),
     [creditLatestRevision, setCreditLatestRevision] = useState(0);
@@ -703,6 +713,7 @@ export function FinancialWorkspace({
                 ["documents", "Invoices and accruals"],
                 ["settlements", "Obligations and settlements"],
                 ["credits", "Credit notes"],
+                ["provider", "Provider operations"],
               ] as const
             ).map(([value, label]) => (
               <button
@@ -838,7 +849,12 @@ export function FinancialWorkspace({
                 active reserves. Available = A − P − C − R. A refund is a
                 separate opposite-direction claim.
               </p>
-              <div className="financial-table-scroll">
+              <div
+                className="financial-table-scroll"
+                role="region"
+                aria-label="Obligation balances table"
+                tabIndex={0}
+              >
                 <table>
                   <caption>Obligation balances</caption>
                   <thead>
@@ -1009,6 +1025,19 @@ export function FinancialWorkspace({
                       Record external payment
                     </button>
                   )}
+                  {["reserved", "sent", "partially_confirmed"].includes(
+                    settlement.status,
+                  ) && (
+                    <button
+                      disabled={writeDisabled}
+                      onClick={() => {
+                        setPayment(null);
+                        setPaymentMode("provider");
+                      }}
+                    >
+                      Apply provider operation
+                    </button>
+                  )}
                   <h3>Settlement history</h3>
                   <ol>
                     {settlement.events.map((x) => (
@@ -1110,7 +1139,29 @@ export function FinancialWorkspace({
                       )}
                     </section>
                   )}
-                  {paymentMode && (
+                  {paymentMode === "provider" && (
+                    <ProviderApplyEditor
+                      key={`${settlement.settlement_id}:${settlement.sequence}:provider`}
+                      businessId={businessId}
+                      settlement={settlement}
+                      book={bookId}
+                      disabled={writeDisabled}
+                      send={common.send}
+                      draft={
+                        providerDraft?.key ===
+                        `${settlement.settlement_id}:${settlement.sequence}`
+                          ? providerDraft.draft
+                          : null
+                      }
+                      onDraft={(draft) =>
+                        setProviderDraft({
+                          key: `${settlement.settlement_id}:${settlement.sequence}`,
+                          draft,
+                        })
+                      }
+                    />
+                  )}
+                  {paymentMode && paymentMode !== "provider" && (
                     <PaymentEditor
                       key={`${settlement.settlement_id}:${settlement.sequence}:${payment?.payment_id ?? "new"}:${paymentMode}`}
                       settlement={settlement}
@@ -1122,6 +1173,15 @@ export function FinancialWorkspace({
                 </section>
               )}
             </section>
+          )}
+          {pane === "provider" && (
+            <ProviderOperations
+              businessId={businessId}
+              bookId={bookId}
+              accounts={accounts}
+              disabled={writeDisabled}
+              refresh={tick}
+            />
           )}
           {pane === "credits" && (
             <section aria-label="Credit notes">

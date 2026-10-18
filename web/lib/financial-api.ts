@@ -13,8 +13,12 @@ import {
   financialOverviewSchema,
   financialStatusSchema,
   financialCommandSchema,
+  providerOperationListSchema,
+  providerConnectionListSchema,
+  providerClearingAccountSchema,
   type FinancialCommand,
   type FinancialReference,
+  type ProviderOperation,
 } from "./financial-contracts";
 
 const base = (business: string) =>
@@ -146,6 +150,56 @@ export const fetchSettlements = (
     `${bookBase(business, book)}/settlements${query(after)}`,
     book,
   );
+export const fetchProviderOperations = (
+  business: string,
+  book: string,
+  state?: ProviderOperation["state"],
+  after?: string,
+) => {
+  // Short pages keep the phone view usable; the cursor reaches every row.
+  const params = new URLSearchParams({ limit: "20" });
+  if (state) params.set("state", state);
+  if (after) params.set("after", after);
+  const search = params.toString();
+  return read(
+    business,
+    providerOperationListSchema,
+    `${bookBase(business, book)}/provider-operations${search ? `?${search}` : ""}`,
+    book,
+  );
+};
+export const fetchProviderConnections = (
+  business: string,
+  book: string,
+  after?: string,
+) =>
+  read(
+    business,
+    providerConnectionListSchema,
+    `${bookBase(business, book)}/provider-connections${query(after)}`,
+    book,
+  );
+/** Registered once; repeating the same account is safe and returns the registration. */
+export async function registerClearingAccount(
+  business: string,
+  book: string,
+  connection: string,
+  account: string,
+) {
+  const result = await read(
+    business,
+    providerClearingAccountSchema,
+    `${bookBase(business, book)}/provider-connections/${connection}/clearing-account`,
+    book,
+    {
+      method: "PUT",
+      body: JSON.stringify({ schema_version: 1, account_id: account }),
+    },
+  );
+  exact(result.connection_id, connection);
+  exact(result.account_id, account);
+  return result;
+}
 export async function fetchSettlement(
   business: string,
   book: string,
@@ -226,7 +280,9 @@ export async function executeFinancialCommand(
   let suffix = prepare
     ? ""
     : `/${command.operation.slice("settlement_".length)}`;
-  if ("payment" in command)
+  if (command.operation === "settlement_provider_confirm")
+    suffix = `/provider-confirmations/${command.payment}`;
+  else if ("payment" in command)
     suffix = `/confirmations/${command.payment}${command.operation === "settlement_confirm" ? "" : command.operation === "settlement_payment_void" ? "/void" : "/correct"}`;
   const result = await read(
     business,

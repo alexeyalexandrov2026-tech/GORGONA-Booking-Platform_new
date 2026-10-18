@@ -19,7 +19,10 @@ from gorgona_booking.business.financial_documents import (
 from gorgona_booking.business.ledger_contracts import from_minor
 from gorgona_booking.business.settlement_contracts import (
     ProviderClearingAccountInput,
+    ProviderClearingAccountSummary,
     ProviderClearingAccountView,
+    ProviderConnectionList,
+    ProviderConnectionSummary,
     ProviderOperationKind,
     ProviderOperationList,
     ProviderOperationState,
@@ -112,15 +115,19 @@ _FACTS = (
 )
 
 
-def _state(row: tuple[Any, ...]) -> ProviderOperationState:
-    pending, review, delivery, amount, payment = row[7], row[8], row[9], row[11], row[14]
-    if payment is not None:
-        return "applied_with_conflict" if review or delivery else "applied"
-    if pending:
-        return "pending"
-    if review or delivery:
-        return "needs_review"
-    return "not_final" if amount is None else "observed"
+# The columns of `_FACTS`, named for the state below.
+_NAMED = (
+    ") f(id,connection_id,kind,provider_object_id,parent_object_id,currency,created_at,"
+    "pending,review,delivery,revoked,amount,happened,minor_units,payment_id) "
+)
+# One state per operation, in SQL so that a state filter is complete across cursor pages. The
+# order matches the refusal reasons of `observed`.
+_STATE = (
+    "case when f.payment_id is not null then case when f.review or f.delivery "
+    "then 'applied_with_conflict' else 'applied' end when f.revoked then 'revoked' "
+    "when f.pending then 'pending' when f.review or f.delivery then 'needs_review' "
+    "when f.amount is null then 'not_final' else 'observed' end"
+)
 
 
 def _summary(row: tuple[Any, ...]) -> ProviderOperationSummary:
@@ -133,7 +140,7 @@ def _summary(row: tuple[Any, ...]) -> ProviderOperationSummary:
         parent_object_id=row[4],
         currency=row[5],
         amount=None if amount is None or scale is None else from_minor(int(amount), scale),
-        state=_state(row),
+        state=row[15],
         payment_id=row[14],
         created_at=row[6],
     )
@@ -146,13 +153,17 @@ async def list_operations(
     *,
     after: UUID | None,
     limit: int,
+    state: ProviderOperationState | None = None,
 ) -> ProviderOperationList:
     await ledger.require_book(conn, business_id, book_id)
     await assert_provider_receipt_ready(conn)
     rows = await (
         await conn.execute(
-            "select " + _FACTS + "and (%s::uuid is null or o.id>%s) order by o.id limit %s",
-            (business_id, book_id, after, after, limit + 1),
+            # Fixed fragments only; every value is a parameter.
+            "select f.*," + _STATE + " from (select " + _FACTS + _NAMED + "where "  # noqa: S608
+            "(%s::text is null or " + _STATE + "=%s) and (%s::uuid is null or f.id>%s) "
+            "order by f.id limit %s",
+            (business_id, book_id, state, state, after, after, limit + 1),
         )
     ).fetchall()
     items = tuple(_summary(tuple(row)) for row in rows[:limit])
@@ -161,6 +172,48 @@ async def list_operations(
         book_id=book_id,
         items=items,
         next_cursor=items[-1].operation_id if len(rows) > limit else None,
+    )
+
+
+async def list_connections(
+    conn: RuntimeConnection,
+    business_id: UUID,
+    book_id: UUID,
+    *,
+    after: UUID | None,
+    limit: int,
+) -> ProviderConnectionList:
+    """The book's connections and their clearing accounts: identifiers only, no key material."""
+    await ledger.require_book(conn, business_id, book_id)
+    await assert_provider_receipt_ready(conn)
+    rows = await (
+        await conn.execute(
+            "select c.id,c.account_id,c.revoked,a.account_id,a.created_by,a.created_at "
+            "from gba.provider_receipt_connections c left join gba.provider_clearing_accounts a "
+            "on a.tenant_id=c.tenant_id and a.connection_id=c.id and a.book_id=c.book_id "
+            "where c.tenant_id=%s and c.book_id=%s and (%s::uuid is null or c.id>%s) "
+            "order by c.id limit %s",
+            (business_id, book_id, after, after, limit + 1),
+        )
+    ).fetchall()
+    items = tuple(
+        ProviderConnectionSummary(
+            connection_id=row[0],
+            account_id=row[1],
+            revoked=row[2],
+            clearing_account=None
+            if row[3] is None
+            else ProviderClearingAccountSummary(
+                account_id=row[3], registered_by=row[4], registered_at=row[5]
+            ),
+        )
+        for row in rows[:limit]
+    )
+    return ProviderConnectionList(
+        business_id=business_id,
+        book_id=book_id,
+        items=items,
+        next_cursor=items[-1].connection_id if len(rows) > limit else None,
     )
 
 
