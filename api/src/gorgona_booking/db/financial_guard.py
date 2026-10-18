@@ -21,6 +21,8 @@ _MIGRATIONS = (
     "0028_payment_corrections.sql",
     "0029_credit_voids.sql",
     "0030_h3_forward_corrections.sql",
+    # K3a: provider provenance of observed payments and the clearing account (ADR-0027).
+    "0052_provider_payment_provenance.sql",
 )
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
@@ -92,6 +94,20 @@ _TRIGGERS = (
         "external_payment_revision_allocations_check",
         7,
         "enforce_external_payment_revision_allocation",
+        False,
+    ),
+    (
+        "external_payment_provenance",
+        "external_payment_provenance_check",
+        7,
+        "enforce_external_payment_provenance",
+        False,
+    ),
+    (
+        "provider_clearing_accounts",
+        "provider_clearing_accounts_check",
+        7,
+        "enforce_provider_clearing_account",
         False,
     ),
     *(
@@ -185,6 +201,7 @@ _HELPERS = (
     ),
     ("gba.cash_account_used(uuid,uuid,uuid)", "boolean", "cash_account_used"),
     ("gba.credit_voided(uuid,uuid,uuid)", "boolean", "credit_voided"),
+    ("gba.assert_provider_payment(uuid,uuid,uuid)", "void", "assert_provider_payment"),
     (
         "gba.financial_mirror_original(uuid,uuid,uuid,text)",
         "uuid",

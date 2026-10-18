@@ -11,7 +11,12 @@ from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
-from gorgona_booking.business import credit_notes, financial_commands, settlements
+from gorgona_booking.business import (
+    credit_notes,
+    financial_commands,
+    provider_payments,
+    settlements,
+)
 from gorgona_booking.business import financial_documents as service
 from gorgona_booking.business.financial_contracts import (
     CreditDraftInput,
@@ -36,6 +41,10 @@ from gorgona_booking.business.settlement_contracts import (
     PaymentCorrectInput,
     PaymentView,
     PaymentVoidInput,
+    ProviderClearingAccountInput,
+    ProviderClearingAccountView,
+    ProviderOperationList,
+    ProviderPaymentConfirmInput,
     SettlementAction,
     SettlementActionInput,
     SettlementCancelInput,
@@ -541,6 +550,69 @@ async def payment(
         if result is None:
             raise NotFoundError("Payment not found")
         return result
+
+
+@router.get("/books/{book_id}/provider-operations")
+async def provider_operations(
+    business_id: UUID,
+    book_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    after: UUID | None = None,
+    limit: Limit = 50,
+) -> ProviderOperationList:
+    """Observed provider operations of the book and whether they can move money (K3a)."""
+    async with _access(request, principal, business_id) as access:
+        return await provider_payments.list_operations(
+            access.conn, business_id, book_id, after=after, limit=limit
+        )
+
+
+@router.put("/books/{book_id}/provider-connections/{connection_id}/clearing-account")
+async def provider_clearing_account(
+    business_id: UUID,
+    book_id: UUID,
+    connection_id: UUID,
+    body: ProviderClearingAccountInput,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ProviderClearingAccountView:
+    """Register, once, the asset account a connection's observed money goes to."""
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await provider_payments.register_clearing_account(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            connection_id=connection_id,
+            user_id=principal.user_id,
+            body=body,
+        )
+
+
+@router.post(f"{_SETTLEMENT}/provider-confirmations/{{payment_id}}")
+async def settlement_provider_confirm(
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    payment_id: UUID,
+    body: ProviderPaymentConfirmInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> SettlementView:
+    """A finance user applies one observed provider operation; its facts set the money."""
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await settlements.confirm_provider(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            settlement_id=settlement_id,
+            payment_id=payment_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
 
 
 @router.post("/commands/{key}/resolve")

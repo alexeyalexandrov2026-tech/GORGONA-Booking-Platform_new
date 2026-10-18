@@ -117,6 +117,15 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                 )
             ]
         incompatible = sql.SQL("{}::uuid[]").format(sql.Literal(omitted))
+        provider_companies: list[UUID] = []
+        if target_version[0] < 52 and any(row[0] == "external_payments" for row in source_tables):
+            provider_companies = [
+                row[0]
+                for row in before.execute(
+                    "select distinct tenant_id from gba.external_payments "
+                    "where attestation='provider_observed'"
+                )
+            ]
         after.execute("set local session_replication_role=replica")
         after.execute(
             sql.SQL("truncate {} cascade").format(
@@ -182,11 +191,16 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                         "where e.tenant_id=t.tenant_id and e.id=t.entry_id "
                         "and e.source_kind='stock' and e.tenant_id=any({}))"
                     ).format(incompatible)
-            cursor = before.execute(
-                sql.SQL("select {} from {} t{}").format(
-                    names, sql.Identifier("gba", table), predicate
-                )
+            query = sql.SQL("select {} from {} t{}").format(
+                names, sql.Identifier("gba", table), predicate
             )
+            # K3a provider payments cannot be represented before migration 0052: a company
+            # that has one keeps none of its rows there, so every payment history stays whole.
+            if provider_companies and "tenant_id" in columns:
+                query = sql.SQL("select {} from ({}) t where t.tenant_id <> all ({})").format(
+                    names, query, sql.SQL("{}::uuid[]").format(sql.Literal(provider_companies))
+                )
+            cursor = before.execute(query)
             assert cursor.description is not None
             json_columns = {
                 index for index, column in enumerate(cursor.description) if column.type_code == 3802

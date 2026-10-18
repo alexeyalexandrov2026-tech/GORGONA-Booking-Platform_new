@@ -569,7 +569,9 @@ const paymentRecord = z.strictObject({
   cash_account_id: id,
   source_account_alias: text(100),
   external_reference: text(200),
-  attestation: z.literal("manual_attestation"),
+  // K3a: an observed provider payment names its provider operation; a manual one never does.
+  attestation: z.enum(["manual_attestation", "provider_observed"]),
+  provider_operation_id: id.nullable(),
   entry_id: id,
   recorded_by: id,
   recorded_at: instant,
@@ -592,6 +594,8 @@ export const paymentSchema = paymentRecord.refine((v) => {
       v.minor_units,
     ) === minorUnits(total, v.minor_units);
   if (
+    (v.attestation === "provider_observed") !==
+      (v.provider_operation_id !== null) ||
     !valid(v.allocations, v.amount) ||
     !valid(v.effective_allocations, v.effective_amount) ||
     v.revisions.length !== v.revision - 1

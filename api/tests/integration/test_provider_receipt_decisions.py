@@ -598,7 +598,10 @@ async def test_decisions_and_operations_are_permanent_even_for_owner_and_superus
 async def test_runtime_and_writer_cannot_read_worker_tables(
     routed: Routed, app_pool: RuntimePool, writer_pool: RuntimePool, table: str
 ) -> None:
-    for pool in (app_pool, writer_pool):
+    # K3a (0051): the runtime reads its company's operations and decisions to apply them;
+    # leases stay the worker's, and the writer reads none of them.
+    readers = (writer_pool,) if table != "provider_event_leases" else (app_pool, writer_pool)
+    for pool in readers:
         with pytest.raises(psycopg.errors.InsufficientPrivilege):
             async with tenant_transaction(pool, routed.tenant_id) as conn:
                 await conn.execute(f"select * from gba.{table}".encode())
@@ -638,10 +641,16 @@ _DRIFT = [
         [f"grant gba_receipt_writer to {WORKER_ROLE}"],
         [f"revoke gba_receipt_writer from {WORKER_ROLE}"],
     ),
+    # K3a (0051) gives the runtime decisions and operations; leases stay the worker's.
     (
-        "runtime-reads-decisions",
-        ["grant select on gba.provider_event_decisions to gba_runtime"],
+        "runtime-reads-leases",
+        ["grant select on gba.provider_event_leases to gba_runtime"],
+        ["revoke select on gba.provider_event_leases from gba_runtime"],
+    ),
+    (
+        "runtime-loses-decisions",
         ["revoke select on gba.provider_event_decisions from gba_runtime"],
+        ["grant select on gba.provider_event_decisions to gba_runtime"],
     ),
     (
         "decision-trigger-dropped",

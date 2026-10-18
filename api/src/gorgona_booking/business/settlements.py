@@ -29,7 +29,7 @@ from psycopg.errors import (
 )
 from pydantic import ValidationError
 
-from gorgona_booking.business import commands, financial_commands, ledger
+from gorgona_booking.business import commands, financial_commands, ledger, provider_payments
 from gorgona_booking.business.financial_commands import Reference
 from gorgona_booking.business.financial_contracts import FinancialCommandKind
 from gorgona_booking.business.financial_documents import (
@@ -53,19 +53,27 @@ from gorgona_booking.business.ledger_contracts import (
     to_minor,
 )
 from gorgona_booking.business.module_gate import FINANCE_MODULE, module_writes
+from gorgona_booking.business.provider_payments import (
+    ProviderClearingAccountRequiredError,
+    ProviderPaymentLinkRequiredError,
+    ProviderPaymentMismatchError,
+)
 from gorgona_booking.business.settlement_contracts import (
     ObligationList,
     ObligationSummary,
     ObligationView,
     PaymentAllocationView,
+    PaymentAttestation,
     PaymentConfirmInput,
     PaymentCorrectInput,
     PaymentRevisionView,
     PaymentState,
     PaymentView,
     PaymentVoidInput,
+    ProviderPaymentConfirmInput,
     SettlementAction,
     SettlementActionInput,
+    SettlementAllocationInput,
     SettlementAllocationView,
     SettlementCancelInput,
     SettlementEventKind,
@@ -100,6 +108,7 @@ _CONSTRAINTS = ", ".join(
         "external_payment_revision_allocations_consistent",
         "external_payment_revisions_reversal_fk",
         "external_payment_revisions_entry_fk",
+        "external_payment_provenance_consistent",
         "journal_entries_payment_consistent",
         "journal_lines_payment_consistent",
         "journal_entries_invoice_consistent",
@@ -693,7 +702,9 @@ async def load_payment(
             "select p.settlement_id,p.sequence,p.direction,p.currency,c.minor_units,"
             "p.amount_minor,p.actual_external_date,p.entry_date,p.cash_account_id,"
             "p.source_account_alias,p.external_reference,p.attestation,p.entry_id,"
-            "p.created_by,p.created_at from gba.external_payments p "
+            "p.created_by,p.created_at,(select v.operation_id "
+            "from gba.external_payment_provenance v where v.tenant_id=p.tenant_id "
+            "and v.book_id=p.book_id and v.payment_id=p.id) from gba.external_payments p "
             "join gba.currencies c on c.code=p.currency "
             "where p.tenant_id=%s and p.book_id=%s and p.id=%s",
             (business_id, book_id, payment_id),
@@ -775,6 +786,7 @@ async def load_payment(
         source_account_alias=row[9],
         external_reference=row[10],
         attestation=row[11],
+        provider_operation_id=row[15],
         entry_id=row[12],
         recorded_by=row[13],
         recorded_at=row[14],
@@ -883,6 +895,55 @@ async def confirm(
         raise FinancialDocumentStateError(f"A {current.status} settlement cannot be confirmed")
     await require_workflow(conn, business_id)
     await _require_attested_date(conn, business_id, body.actual_external_date)
+    try:
+        amount = to_minor(body.amount, current.minor_units)
+    except ValueError as exc:
+        raise FinancialAmountError(str(exc), currency=current.currency) from exc
+    return await _post_confirmation(
+        conn,
+        current=current,
+        payment_id=payment_id,
+        user_id=user_id,
+        actor=actor,
+        key=key,
+        digest=digest,
+        amount=amount,
+        actual_external_date=body.actual_external_date,
+        entry_date=body.entry_date,
+        cash_account_id=body.cash_account_id,
+        source_account_alias=body.source_account_alias,
+        external_reference=body.external_reference,
+        attestation=body.attestation,
+        allocations=body.allocations,
+        provider_operation=None,
+    )
+
+
+async def _post_confirmation(
+    conn: RuntimeConnection,
+    *,
+    current: SettlementView,
+    payment_id: UUID,
+    user_id: UUID,
+    actor: str,
+    key: str,
+    digest: str,
+    amount: int,
+    actual_external_date: date,
+    entry_date: date,
+    cash_account_id: UUID,
+    source_account_alias: str,
+    external_reference: str,
+    attestation: PaymentAttestation,
+    allocations: Sequence[SettlementAllocationInput],
+    provider_operation: UUID | None,
+) -> SettlementView:
+    """Move exactly the allocations from reserve to confirmed money with one journal.
+
+    A provider payment (K3a) also records its provenance in the same transaction.
+    """
+    business_id, book_id = current.business_id, current.book_id
+    settlement_id = current.settlement_id
     # Case, compatibility forms and invisible characters never make a new fact; a
     # manual attestation has no provider contract, so interior whitespace is kept.
     recorded = await (
@@ -896,8 +957,8 @@ async def confirm(
                 business_id,
                 book_id,
                 current.direction,
-                body.source_account_alias,
-                body.external_reference,
+                source_account_alias,
+                external_reference,
             ),
         )
     ).fetchone()
@@ -915,15 +976,11 @@ async def confirm(
     if used is not None:
         raise FinancialDocumentStateError("This payment identifier is already used")
     scale = current.minor_units
-    try:
-        amount = to_minor(body.amount, scale)
-    except ValueError as exc:
-        raise FinancialAmountError(str(exc), currency=current.currency) from exc
-    await _require_cash_not_control(conn, business_id, book_id, body.cash_account_id)
+    await _require_cash_not_control(conn, business_id, book_id, cash_account_id)
     held = await _settlement_lines(conn, business_id, book_id, settlement_id)
     amounts: list[int] = []
     controls: list[UUID] = []
-    for number, line in enumerate(body.allocations, 1):
+    for number, line in enumerate(allocations, 1):
         if line.obligation_id not in held:
             raise FinancialDocumentStateError(
                 "A confirmation allocates only to lines of its settlement"
@@ -935,7 +992,7 @@ async def confirm(
         control, planned, confirmed, accrued = held[line.obligation_id]
         if value > planned - confirmed:
             raise FinancialCapError("Confirmation exceeds the reserved settlement line")
-        if body.entry_date < accrued:
+        if entry_date < accrued:
             raise ledger.LedgerDateError(
                 "A payment cannot be posted before the accrual it settles", line=number
             )
@@ -976,12 +1033,12 @@ async def confirm(
                 current.direction,
                 current.currency,
                 amount,
-                body.actual_external_date,
-                body.entry_date,
-                body.cash_account_id,
-                body.source_account_alias,
-                body.external_reference,
-                body.attestation,
+                actual_external_date,
+                entry_date,
+                cash_account_id,
+                source_account_alias,
+                external_reference,
+                attestation,
                 entry,
                 user_id,
             ),
@@ -995,7 +1052,7 @@ async def confirm(
                 business_id,
                 book_id,
                 payment_id,
-                [line.obligation_id for line in body.allocations],
+                [line.obligation_id for line in allocations],
                 amounts,
             ),
         )
@@ -1006,12 +1063,12 @@ async def confirm(
             entry_id=entry,
             user_id=user_id,
             body=PaymentPosting(
-                entry_date=body.entry_date,
+                entry_date=entry_date,
                 currency=current.currency,
                 source_id=str(payment_id),
                 lines=(
                     LineInput(
-                        account_id=body.cash_account_id,
+                        account_id=cash_account_id,
                         side=cash_side,
                         amount=from_minor(amount, scale),
                     ),
@@ -1024,6 +1081,13 @@ async def confirm(
                 ),
             ),
         )
+        if provider_operation is not None:
+            # The database derives the success event and checks every fact at the flush.
+            await conn.execute(
+                "insert into gba.external_payment_provenance "
+                "(tenant_id,book_id,payment_id,operation_id,created_by) values (%s,%s,%s,%s,%s)",
+                (business_id, book_id, payment_id, provider_operation, user_id),
+            )
         await financial_commands.complete(
             conn,
             business=business_id,
@@ -1037,6 +1101,156 @@ async def confirm(
             flush=_flush,
         )
     return await _view(conn, business_id, reference)
+
+
+async def confirm_provider(
+    conn: RuntimeConnection,
+    *,
+    business_id: UUID,
+    book_id: UUID,
+    settlement_id: UUID,
+    payment_id: UUID,
+    user_id: UUID,
+    actor: str,
+    key: str,
+    body: ProviderPaymentConfirmInput,
+) -> SettlementView:
+    """Confirm a reserved settlement with one observed provider operation (K3a).
+
+    The amount, currency, date and reference are the attested facts, the cash account is the
+    connection's clearing account; nothing the request could choose. One operation moves
+    money at most once; SQL checks every fact again in this transaction.
+    """
+    digest = commands.fingerprint(
+        {
+            "book_id": str(book_id),
+            "settlement_id": str(settlement_id),
+            "payment_id": str(payment_id),
+            **body.model_dump(mode="json"),
+        }
+    )
+    prior = await _claim(conn, business_id, actor, "settlement_confirm", key, digest)
+    if prior is not None:
+        return await _view(conn, business_id, prior)
+    current = await load_settlement(conn, business_id, book_id, settlement_id)
+    if current is None:
+        raise NotFoundError("Settlement not found")
+    if current.sequence != body.expected_sequence:
+        raise ConflictError(
+            "This settlement changed; reload before continuing", sequence=current.sequence
+        )
+    if current.status not in ("reserved", "sent", "partially_confirmed"):
+        raise FinancialDocumentStateError(f"A {current.status} settlement cannot be confirmed")
+    await require_workflow(conn, business_id)
+    observed = await provider_payments.observed(conn, business_id, book_id, body.operation_id)
+    if observed.currency != provider_payments.CURRENCY or current.currency != observed.currency:
+        raise ProviderPaymentMismatchError(
+            "Only USD provider money is applied", reason="currency", currency=observed.currency
+        )
+    expected = "receivable" if observed.kind == "payment" else "payable"
+    if current.direction != expected:
+        raise ProviderPaymentMismatchError(
+            f"A provider {observed.kind} confirms a {expected} settlement", reason="direction"
+        )
+    sources = await (
+        await conn.execute(
+            "select source_kind from gba.financial_obligations where tenant_id=%s "
+            "and book_id=%s and id=any(%s::uuid[])",
+            (business_id, book_id, [line.obligation_id for line in body.allocations]),
+        )
+    ).fetchall()
+    if any((row[0] == "credit_refund") != (observed.kind == "refund") for row in sources):
+        raise ProviderPaymentMismatchError(
+            "A provider refund settles only refund obligations, a payment never",
+            reason="obligation_kind",
+        )
+    if observed.kind == "refund":
+        await _require_refund_parent(conn, current, observed)
+    clearing = await provider_payments.clearing_account(
+        conn, business_id, book_id, observed.connection_id
+    )
+    if clearing is None:
+        raise ProviderClearingAccountRequiredError(
+            "Register the clearing account of this connection first",
+            connection_id=str(observed.connection_id),
+        )
+    manual = await (
+        await conn.execute(
+            "select id from gba.external_payments where tenant_id=%s and book_id=%s "
+            "and attestation='manual_attestation' "
+            "and external_reference ~ ('(^|[^A-Za-z0-9_])' || %s || '($|[^A-Za-z0-9_])') "
+            "order by id limit 1",
+            (business_id, book_id, observed.provider_object_id),
+        )
+    ).fetchone()
+    if manual is not None:
+        raise ProviderPaymentLinkRequiredError(
+            "A manual payment already names this provider operation", payment_id=str(manual[0])
+        )
+    await _require_attested_date(conn, business_id, observed.actual_date)
+    return await _post_confirmation(
+        conn,
+        current=current,
+        payment_id=payment_id,
+        user_id=user_id,
+        actor=actor,
+        key=key,
+        digest=digest,
+        amount=observed.amount_minor,
+        actual_external_date=observed.actual_date,
+        entry_date=body.entry_date,
+        cash_account_id=clearing.account_id,
+        source_account_alias=provider_payments.SOURCE_ALIAS,
+        external_reference=observed.provider_object_id,
+        attestation="provider_observed",
+        allocations=body.allocations,
+        provider_operation=observed.operation_id,
+    )
+
+
+async def _require_refund_parent(
+    conn: RuntimeConnection, current: SettlementView, refund: provider_payments.ObservedOperation
+) -> None:
+    """The refunded payment was applied in this book, is not voided, to the same party, and
+    every applied refund of it stays within what it received."""
+    parent = await (
+        await conn.execute(
+            "select x.amount_minor,d.counterparty_id,exists(select 1 from "
+            "gba.external_payment_revisions r where r.tenant_id=x.tenant_id "
+            "and r.book_id=x.book_id and r.payment_id=x.id and r.kind='voided') "
+            "from gba.external_payments x join gba.external_payment_provenance y "
+            "on y.tenant_id=x.tenant_id and y.book_id=x.book_id and y.payment_id=x.id "
+            "join gba.provider_operations o on o.tenant_id=y.tenant_id and o.id=y.operation_id "
+            "join gba.settlement_documents d on d.tenant_id=x.tenant_id "
+            "and d.book_id=x.book_id and d.id=x.settlement_id "
+            "where x.tenant_id=%s and x.book_id=%s and o.connection_id=%s "
+            "and o.kind='payment' and o.provider_object_id=%s",
+            (current.business_id, current.book_id, refund.connection_id, refund.parent_object_id),
+        )
+    ).fetchone()
+    if parent is None or parent[2]:
+        raise ProviderPaymentMismatchError(
+            "Apply the refunded provider payment in this book first", reason="refund_parent"
+        )
+    if parent[1] != current.counterparty_id:
+        raise ProviderPaymentMismatchError(
+            "A refund goes to the party that paid", reason="counterparty"
+        )
+    applied = await (
+        await conn.execute(
+            "select coalesce(sum(r.amount_minor),0) from gba.external_payments r "
+            "join gba.external_payment_provenance y on y.tenant_id=r.tenant_id "
+            "and y.book_id=r.book_id and y.payment_id=r.id "
+            "join gba.provider_operations o on o.tenant_id=y.tenant_id and o.id=y.operation_id "
+            "where r.tenant_id=%s and r.book_id=%s and o.connection_id=%s "
+            "and o.kind='refund' and o.parent_object_id=%s",
+            (current.business_id, current.book_id, refund.connection_id, refund.parent_object_id),
+        )
+    ).fetchone()
+    if applied is None or int(applied[0]) + refund.amount_minor > int(parent[0]):
+        raise ProviderPaymentMismatchError(
+            "Refunds would exceed what the payment received", reason="refund_cap"
+        )
 
 
 def _mirror(side: str) -> Literal["debit", "credit"]:

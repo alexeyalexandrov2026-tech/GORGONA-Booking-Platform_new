@@ -188,6 +188,7 @@ const external = {
   source_account_alias: "FAKE bank",
   external_reference: "FAKE receipt",
   attestation: "manual_attestation",
+  provider_operation_id: null,
   entry_id: entry,
   recorded_by: actor,
   recorded_at: instant,
@@ -360,10 +361,20 @@ test("payment receipt is manual and exact effective allocations equal its money"
     { state: "corrected" },
     { revision: 2 },
     { allocations: [{ obligation_id: obligation, amount: "69.00" }] },
+    // K3a: provenance and its operation always come together.
+    { attestation: "provider_observed" },
+    { provider_operation_id: entry },
   ])
     expect(paymentSchema.safeParse({ ...external, ...patch }).success).toBe(
       false,
     );
+  expect(
+    paymentSchema.safeParse({
+      ...external,
+      attestation: "provider_observed",
+      provider_operation_id: entry,
+    }).success,
+  ).toBe(true);
 });
 test("payment correction sequences strictly advance and void removes effective cash", () => {
   const correction = {

@@ -42,6 +42,13 @@ Resolution = Literal["attested_no_payment"]
 # A void or correction states that the earlier attestation was wrong; never a refund.
 CorrectionAttestation = Literal["attested_erroneous_confirmation"]
 PaymentState = Literal["confirmed", "corrected", "voided"]
+# K3a: a human attests manual money; a provider payment comes from attested, decided facts.
+PaymentAttestation = Literal["manual_attestation", "provider_observed"]
+ProviderOperationKind = Literal["payment", "refund"]
+# Not ready: an attested event undecided, a decision for review, or no success yet.
+ProviderOperationState = Literal[
+    "pending", "needs_review", "not_final", "observed", "applied", "applied_with_conflict"
+]
 ObligationSource = Literal["invoice", "manual", "credit_refund"]
 _MAX_SEQUENCE = 2_147_483_646
 _AMOUNT_PATTERN = r"^(0|[1-9][0-9]{0,17})(\.[0-9]{1,3})?$"
@@ -117,6 +124,64 @@ class PaymentConfirmInput(SettlementActionInput):
         if len({line.obligation_id for line in self.allocations}) != len(self.allocations):
             raise ValueError("A confirmation names each obligation once")
         return self
+
+
+class ProviderPaymentConfirmInput(SettlementActionInput):
+    """A finance user applies one observed provider operation (K3a, owner decision 1).
+
+    There is no amount, date, account or reference here: the database takes them from the
+    attested and decided facts and the registered clearing account. The allocations split
+    exactly the provider's amount over lines of this settlement.
+    """
+
+    operation_id: UUID
+    # The posting date; it must fall in an open period of the book.
+    entry_date: date
+    allocations: tuple[SettlementAllocationInput, ...] = Field(min_length=1, max_length=50)
+
+    @model_validator(mode="after")
+    def one_line_per_obligation(self) -> Self:
+        if len({line.obligation_id for line in self.allocations}) != len(self.allocations):
+            raise ValueError("A confirmation names each obligation once")
+        return self
+
+
+class ProviderClearingAccountInput(Versioned):
+    account_id: UUID
+
+
+class ProviderClearingAccountView(Versioned):
+    """The asset account a connection's observed gross money goes to; registered once."""
+
+    business_id: UUID
+    book_id: UUID
+    connection_id: UUID
+    account_id: UUID
+    registered_by: UUID
+    registered_at: AwareDatetime
+
+
+class ProviderOperationSummary(Strict):
+    """One provider operation of the book and whether it can be, or was, applied."""
+
+    operation_id: UUID
+    connection_id: UUID
+    kind: ProviderOperationKind
+    provider_object_id: str
+    parent_object_id: str | None
+    currency: str
+    # The observed success amount; absent until a success is decided.
+    amount: str | None
+    state: ProviderOperationState
+    payment_id: UUID | None
+    created_at: AwareDatetime
+
+
+class ProviderOperationList(Versioned):
+    business_id: UUID
+    book_id: UUID
+    items: tuple[ProviderOperationSummary, ...]
+    next_cursor: UUID | None
 
 
 class PaymentVoidInput(SettlementActionInput):
@@ -258,10 +323,11 @@ class PaymentRevisionView(Strict):
 
 
 class PaymentView(Versioned):
-    """A manually attested external fact; never a provider-verified payment.
+    """A manually attested external fact, or an observed provider payment (K3a).
 
     The amount, dates, account, journal and allocations describe the original
-    confirmation; `effective_*` and `state` follow the latest revision.
+    confirmation; `effective_*` and `state` follow the latest revision. A provider payment
+    names its operation; its voids and corrections are human attestations like any other.
     """
 
     business_id: UUID
@@ -278,7 +344,8 @@ class PaymentView(Versioned):
     cash_account_id: UUID
     source_account_alias: str
     external_reference: str
-    attestation: Literal["manual_attestation"]
+    attestation: PaymentAttestation
+    provider_operation_id: UUID | None = None
     entry_id: UUID
     recorded_by: UUID
     recorded_at: AwareDatetime

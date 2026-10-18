@@ -1,4 +1,4 @@
-"""Packaged K1b-K2a integrity approvals, checked before each internal receipt write."""
+"""Packaged K1b-K3a integrity approvals, checked before each internal receipt write."""
 
 import re
 from importlib import resources
@@ -16,6 +16,7 @@ _SQL = "".join(
         "0048_provider_revocation_record.sql",
         "0049_provider_receipt_truncate_guard.sql",
         "0050_provider_receipt_decisions.sql",
+        "0051_provider_money_access.sql",
     )
 )
 # A later `create or replace` (0048) supersedes the earlier body of the same function.
@@ -36,7 +37,7 @@ _RECEIPTS = (
     "provider_event_attestations",
     "provider_verification_configs",
 )
-# K2a: the worker's tables, readable by the worker only.
+# K2a: the worker's tables. K3a (0051): the runtime also reads operations and decisions.
 _DECISIONS = ("provider_operations", "provider_event_leases", "provider_event_decisions")
 # Company-scoped tables: tenant and company policies.
 _SCOPED = (*_RECEIPTS, *_DECISIONS)
@@ -44,7 +45,7 @@ _TABLES = (*_SCOPED, _ROUTES)
 _GROUPS = ("gba_runtime", "gba_receipt_writer", "gba_receipt_worker")
 # Tables each group may read; a role running the guard is checked against its own group.
 _READS = {
-    "gba_runtime": set(_RECEIPTS),
+    "gba_runtime": {*_RECEIPTS, "provider_operations", "provider_event_decisions"},
     "gba_receipt_writer": {*_RECEIPTS, _ROUTES},
     "gba_receipt_worker": {
         "provider_event_inbox",
@@ -461,7 +462,8 @@ _REVOCATIONS = {
     for column in ("revoked", "revoked_reason")
 }
 _UPDATES = {
-    "gba_runtime": _REVOCATIONS,
+    # 0051: the runtime locks the operation it applies (the trigger refuses the update itself).
+    "gba_runtime": _REVOCATIONS | {("provider_operations", "currency")},
     "gba_receipt_writer": _REVOCATIONS,
     # UPDATE on one operation column only permits SELECT FOR UPDATE (the trigger refuses it).
     "gba_receipt_worker": {

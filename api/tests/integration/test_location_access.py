@@ -395,6 +395,8 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (23, "-- Settlement branch scope:"),
                 (24, "-- Payment branch scope:"),
                 (28, "-- Correction branch scope:"),
+                # K3a: the clearing account and the provider provenance.
+                (52, "-- Company scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker

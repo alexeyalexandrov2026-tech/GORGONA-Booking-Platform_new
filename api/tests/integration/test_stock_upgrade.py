@@ -20,7 +20,7 @@ from tests.integration.test_stock_transfers import hand_transfer, transfer
 from tests.integration.test_stock_write_offs import hand_write_off, received, write_off
 
 pytestmark = pytest.mark.anyio
-# Package K tables of migrations 0044-0046 and 0050, which the upgrade to the latest state also
+# Package K tables of migrations 0044-0046, 0050 and 0052, which the upgrade to the latest state
 # creates.
 K_TABLES = {
     "provider_receipt_connections",
@@ -32,6 +32,9 @@ K_TABLES = {
     "provider_operations",
     "provider_event_leases",
     "provider_event_decisions",
+    # K3a (0052): the clearing account and the provenance of provider payments.
+    "provider_clearing_accounts",
+    "external_payment_provenance",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

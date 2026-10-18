@@ -1065,8 +1065,10 @@ export function FinancialWorkspace({
                         {payment.revision}
                       </h3>
                       <p>
-                        Manually attested, not provider-verified. Permanent
-                        identity: {payment.source_account_alias} ·{" "}
+                        {payment.attestation === "provider_observed"
+                          ? "Observed provider payment, applied by a finance user; not a bank payout."
+                          : "Manually attested, not provider-verified."}{" "}
+                        Permanent identity: {payment.source_account_alias} ·{" "}
                         {payment.external_reference}
                       </p>
                       <p>
