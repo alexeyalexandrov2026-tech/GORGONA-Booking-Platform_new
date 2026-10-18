@@ -33,7 +33,9 @@ company policies. Never revoke the runtime's decision read in a drift repair.
 ## Open
 
 1. K3b: link an earlier manual payment to a provider operation (now refused as "needs linking").
-2. K4: finance UI for operations and "applied with conflict", recovery and runbook.
+2. K4: finance UI for operations and "applied with conflict", recovery and runbook. Its first
+   part is proposed on 2026-10-18 as [K4a](PACKAGE_K4A_DESIGN_2026-10-18.md); waits for three
+   owner answers.
 3. Fees, payouts and bank reconciliation; other currencies (each needs the owner's word).
 4. K2b and K0 stay BLOCKED; a worker entry point, IR-03 and publishing K1f–K3a need the owner.
 5. Performance: readiness scans the connection's inbox per operation; an expression index is a

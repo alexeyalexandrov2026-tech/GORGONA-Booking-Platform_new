@@ -1,5 +1,14 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## K4a proposal — finance screen for provider operations (2026-10-18, docs only)
+
+After K3a the owner was advised to take K4 before K3b. Its first part K4a (a finance region for
+the book's provider operations and their state, clearing account registration, applying an
+observed operation from a reserved settlement with the amount read-only from the facts, plain
+refusals, unknown-outcome recovery, desktop/mobile/axe) is proposed in
+[PACKAGE_K4A_DESIGN_2026-10-18.md](PACKAGE_K4A_DESIGN_2026-10-18.md). Not started: three owner
+questions (where applying starts, clearing account in the screen, conflict detail) come first.
+
 ## Current checkpoint — 2026-10-17: K3a observed provider money into H locally verified
 
 Source `2f91368271458d6f20030e43ab9409751c3fa62d` on local branch `codex/package-k3a-provider-money`, parent `1476108`.
