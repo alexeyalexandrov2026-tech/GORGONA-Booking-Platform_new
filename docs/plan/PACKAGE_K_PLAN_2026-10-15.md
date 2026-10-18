@@ -6,8 +6,9 @@ After K3a the owner was advised to take K4 before K3b. Its first part K4a (a fin
 the book's provider operations and their state, clearing account registration, applying an
 observed operation from a reserved settlement with the amount read-only from the facts, plain
 refusals, unknown-outcome recovery, desktop/mobile/axe) is proposed in
-[PACKAGE_K4A_DESIGN_2026-10-18.md](PACKAGE_K4A_DESIGN_2026-10-18.md). Not started: three owner
-questions (where applying starts, clearing account in the screen, conflict detail) come first.
+[PACKAGE_K4A_DESIGN_2026-10-18.md](PACKAGE_K4A_DESIGN_2026-10-18.md). The owner answered on
+2026-10-18: applying starts from the settlement, the clearing account is registered in the screen
+after confirmation, a later conflict shows a marker (detail in K4b). Not started.
 
 ## Current checkpoint — 2026-10-17: K3a observed provider money into H locally verified
 

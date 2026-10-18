@@ -1,9 +1,18 @@
 # Package K4a — finance screen for provider operations (design, 2026-10-18)
 
-**Status: proposed, not started.** Docs only. Waits for the owner's answers to the three questions
-below. Planned local branch `codex/package-k4a-provider-screen` from this proposal. No migration is
+**Status: owner decisions received 2026-10-18; not started.** Planned local branch `codex/package-k4a-provider-screen` from this proposal. No migration is
 expected (next free number stays **0053**). Nothing here is published or deployed; no provider
 call, account, credential or real money.
+
+## Owner decisions (2026-10-18)
+
+The owner took the three defaults below:
+
+1. Applying starts from the reserved settlement ("Apply provider operation").
+2. A finance user registers the clearing account once per connection in the screen, after a
+   confirmation step.
+3. A later conflict shows a marker and a manual review instruction; the detail and recovery
+   views are K4b.
 
 ## Goal
 
