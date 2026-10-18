@@ -1,16 +1,26 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## K4a proposal — finance screen for provider operations (2026-10-18, docs only)
+## Current checkpoint — 2026-10-18: K4a finance screen for provider operations locally verified
 
-After K3a the owner was advised to take K4 before K3b. Its first part K4a (a finance region for
-the book's provider operations and their state, clearing account registration, applying an
-observed operation from a reserved settlement with the amount read-only from the facts, plain
-refusals, unknown-outcome recovery, desktop/mobile/axe) is proposed in
-[PACKAGE_K4A_DESIGN_2026-10-18.md](PACKAGE_K4A_DESIGN_2026-10-18.md). The owner answered on
-2026-10-18: applying starts from the settlement, the clearing account is registered in the screen
-after confirmation, a later conflict shows a marker (detail in K4b). Not started.
+Source `374f60c2adb04060bd69c526dbf14b687c52698c` on local branch `codex/package-k4a-provider-screen`, parent `c1ff170`.
+Criteria U-01–U-11 PASS; no migration; 10 new cases and 4 web contract cases. Final focused
+**352 passed in 419.21s (0:06:59)**; full **2192 passed, 4 skipped in 1782.61s (0:29:42)**. Kept
+failures: product RED, a test defect, an axe defect of the existing obligations table on a phone,
+and the apply form losing its input after a refusal. Not published.
+[Validation](evidence/2026-10-18-k4a-provider-screen/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-18-k4a-provider-screen/CHECKS.json),
+[handoff](NEXT_AGENT_PACKAGE_K4A_2026-10-18.md), [prompt](NEXT_AGENT_PACKAGE_K4A_PROMPT_2026-10-18.md).
 
-## Current checkpoint — 2026-10-17: K3a observed provider money into H locally verified
+### K4a design, recorded before code
+
+After K3a the owner chose K4 before K3b. Proposed in `f7f3e4e`; the owner answered on 2026-10-18:
+applying starts from the settlement, the clearing account is registered in the screen after a
+confirmation step, a later conflict shows a marker (detail in K4b) (recorded in `c1ff170` before
+the failing tests). Model and criteria U-01–U-11 are in
+[PACKAGE_K4A_DESIGN_2026-10-18.md](PACKAGE_K4A_DESIGN_2026-10-18.md). Implemented in `374f60c`.
+Not published.
+
+## Previous checkpoint — 2026-10-17: K3a observed provider money into H locally verified
 
 Source `2f91368271458d6f20030e43ab9409751c3fa62d` on local branch `codex/package-k3a-provider-money`, parent `1476108`.
 Criteria M-01–M-11 PASS; migrations 0051–0052; 28 new cases. Final focused **777 passed in

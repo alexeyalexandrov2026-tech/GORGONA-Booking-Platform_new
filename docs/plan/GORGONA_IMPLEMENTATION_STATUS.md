@@ -1,6 +1,19 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-17: K3a observed provider money into H locally verified
+## Current checkpoint — 2026-10-18: K4a finance screen for provider operations locally verified
+
+Source `374f60c2adb04060bd69c526dbf14b687c52698c`, local branch `codex/package-k4a-provider-screen`, parent `c1ff170`.
+First K4 slice, by the owner's decisions of 2026-10-18: in Financial documents a finance user
+sees the book's provider operations and connections, registers a connection's clearing account
+once after a confirmation step, and applies an observed operation from its reserved settlement
+with the amount, currency and date from the provider; a later conflict shows a manual review
+marker; refusals are plain, the input is kept and a lost response is retried safely. Real desktop
+and mobile browser with axe. No migration, 10 new cases. Focused **352 passed in 419.21s
+(0:06:59)**; full **2192 passed, 4 skipped in 1782.61s (0:29:42)**. Not published.
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0053.
+[Validation](evidence/2026-10-18-k4a-provider-screen/VALIDATION.md), [handoff](NEXT_AGENT_PACKAGE_K4A_2026-10-18.md), [prompt](NEXT_AGENT_PACKAGE_K4A_PROMPT_2026-10-18.md).
+
+## Previous checkpoint — 2026-10-17: K3a observed provider money into H locally verified
 
 Source `2f91368271458d6f20030e43ab9409751c3fa62d`, local branch `codex/package-k3a-provider-money`, parent `1476108`.
 First K3 slice, by the owner's decisions of 2026-10-17: a finance user applies one observed

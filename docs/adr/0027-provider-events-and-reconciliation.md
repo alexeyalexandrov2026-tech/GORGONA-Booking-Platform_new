@@ -20,14 +20,17 @@ Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the propo
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
 
-## K4a proposal — 2026-10-18, owner decisions received, not started
+## K4a local design decision — 2026-10-18, Proposed; locally implemented in `374f60c`
 
 A finance screen for K3a (operations and their state, clearing account, applying an observed
 operation with the amount read-only from the facts, plain refusals and unknown-outcome recovery;
 no new money rule and no migration) is proposed in
 [the K4a design](../plan/PACKAGE_K4A_DESIGN_2026-10-18.md). The owner chose (2026-10-18): applying
 from the settlement, clearing account registration in the screen after confirmation, conflict
-marker only (detail in K4b).
+marker only (detail in K4b). Implemented with a server-side state filter, the state `revoked` and
+a connection read without key material;
+[validation](../plan/evidence/2026-10-18-k4a-provider-screen/VALIDATION.md). Status remains
+Proposed; readiness unchanged.
 
 ## K3a local design decision — 2026-10-17, Proposed; locally implemented in `2f91368`
 

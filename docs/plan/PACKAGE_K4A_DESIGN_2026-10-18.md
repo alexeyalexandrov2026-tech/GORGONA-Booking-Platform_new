@@ -1,7 +1,8 @@
 # Package K4a — finance screen for provider operations (design, 2026-10-18)
 
-**Status: owner decisions received 2026-10-18; not started.** Planned local branch `codex/package-k4a-provider-screen` from this proposal. No migration is
-expected (next free number stays **0053**). Nothing here is published or deployed; no provider
+**Status: owner decisions received 2026-10-18; locally implemented in `374f60c`**
+([validation](evidence/2026-10-18-k4a-provider-screen/VALIDATION.md)). Local branch `codex/package-k4a-provider-screen` from `c1ff170` (the decisions). No migration was
+needed (next free number stays **0053**). Nothing here is published or deployed; no provider
 call, account, credential or real money.
 
 ## Owner decisions (2026-10-18)
@@ -13,6 +14,18 @@ The owner took the three defaults below:
    confirmation step.
 3. A later conflict shows a marker and a manual review instruction; the detail and recovery
    views are K4b.
+
+## Refinements found during implementation
+
+- A new state `revoked` (not applied; connection or verification config revoked): without it an
+  operation that cannot move money was listed as `observed`.
+- The state is computed in SQL so that the state filter is complete across cursor pages.
+- The web command `settlement_provider_confirm` is recovered as `settlement_confirm`, the receipt
+  operation the server records (K3a).
+- The finance workspace unmounts its panes while it reloads the book after a refusal, so the
+  provider form draft lives in the workspace.
+- The existing obligations table scroll area failed axe on a phone once it overflowed; it is now a
+  named keyboard-focusable region.
 
 ## Goal
 
