@@ -1,9 +1,41 @@
 # Package K3a — observed provider money into H (design, 2026-10-17)
 
-**Status: proposal, not started.** Docs only, on local branch
-`codex/package-k2a-receipt-decisions` after `657a9cf`. Four owner questions (section "Questions")
-come before any code or branch. Nothing here is published or deployed; no provider call, account,
+**Status: owner decisions received 2026-10-17; implementation on local branch
+`codex/package-k3a-provider-money` from `6ba065c` (the proposal).** Migrations 0051 (K access)
+and 0052 (H provenance). Nothing here is published or deployed; no provider call, account,
 credential or real money.
+
+## Owner decisions (2026-10-17)
+
+The owner answered the four questions below: a finance user applies each operation; one
+registered clearing account; **USD** only; manual voids and corrections are allowed as for manual
+payments.
+
+1. A finance user applies each observed operation; the worker never posts.
+2. One registered provider clearing asset account per connection (a connection belongs to one
+   book); gross amounts go there; fees and payouts stay manual.
+3. USD only. Stripe states amounts in the smallest unit and USD is not a zero-decimal currency
+   (docs.stripe.com/currencies, checked 2026-10-17), matching `gba.currencies` (USD, 2).
+4. A provider payment is voided or corrected through the existing H paths, like a manual one; the
+   revision is a human attestation and the provider provenance stays in the history. Because the
+   H identity of a payment is permanent, an operation is applied at most once, also after a void.
+   An earlier manual payment that names the same provider ID still refuses the application
+   ("needs linking"); linking is K3b.
+
+## Refinements found during implementation design
+
+- Two migrations, because each guard reads its own package: **0051** grants the runtime
+  company-scoped select on `provider_operations` and `provider_event_decisions`, the lock column
+  (`update (currency)`, refused by the immutability trigger) and execute on
+  `gba.provider_receipt_operation`; **0052** (H) widens `external_payments.attestation` and the
+  command checks, and adds `provider_clearing_accounts` and `external_payment_provenance` with the
+  H trigger set (immutable, ledger lock, workflow, deferred consistency, check).
+- `provider_receipt_connections` already has one `book_id`: the payment, every attestation and the
+  clearing account must name that book.
+- A refund applies only to `credit_refund` obligations (from a credit note), and its parent
+  payment must be applied in the book and not voided.
+- The actual external date is the earliest `created` of the operation's success events in the
+  business time zone; that event is stored as `success_event_id`.
 
 ## Goal
 
@@ -41,9 +73,10 @@ reuse, not to imitate.
    the runtime, with an idempotency key. The worker gets no money authority. (Question 1.)
 2. **Read access.** The runtime gets company-scoped select on `provider_operations` and
    `provider_event_decisions` (RLS as today); no insert or update except the lock column below.
-3. **Application row** `gba.provider_payment_applications`, append-only: `(tenant_id, book_id,
-   operation_id)` unique, `payment_id` unique, `settlement_id`, `sequence`, `applied_by` (user),
-   `applied_at`, `rules_version` 1. The runtime inserts only IDs; a trigger derives the rest.
+3. **Provenance row** `gba.external_payment_provenance`, append-only: primary key
+   `(tenant_id, book_id, payment_id)`, `operation_id` unique per company, `success_event_id`
+   (derived by the trigger), `created_by` (user), `created_at`, `created_transaction`. The runtime
+   inserts only IDs; the trigger derives and checks the rest.
 4. **Provenance on the payment.** `external_payments.attestation` also allows
    `provider_observed`, only together with its application row in the same transaction (deferred
    check, like the existing `created_transaction` pattern). For such a payment
@@ -74,8 +107,8 @@ reuse, not to imitate.
    receipt `settlement_provider_confirm`.
 7. **After application.** Facts that arrive later never change money. A late conflicting event or
    delivery of an applied operation is listed by a read function as "applied, later conflict" for
-   manual review (K4 shows it). Manual void and correction refuse `provider_observed` payments
-   (Question 4).
+   manual review (K4 shows it). Manual void and correction work for `provider_observed` payments
+   as for manual ones (owner decision 4); the provenance row stays.
 8. **Guards.** The receipt schema guard and the financial schema guard cover the new table,
    columns, checks, triggers and grants; drift refuses the application path.
 9. **API.** Finance routes: list observed operations with their decision state (cursor), and
@@ -93,7 +126,7 @@ reuse, not to imitate.
 | M-06 | A refund applies only to a payable settlement after its parent payment was applied in the book, within the parent's amount; partial and repeated refunds keep the cap |
 | M-07 | A closed period or a period closing concurrently (observed wait on the ledger lock) gives one legal outcome and no partial journal |
 | M-08 | Direct SQL: runtime cannot insert a `provider_observed` payment without its application, alter or delete applications, or read another company's operations; the worker and writer cannot reach H tables |
-| M-09 | A manual payment that names the same provider ID refuses the application ("needs linking"); existing manual confirmations, voids and corrections behave as before |
+| M-09 | A manual payment that names the same provider ID refuses the application ("needs linking"); a provider payment can be voided and corrected like a manual one and is never applied again; existing manual paths behave as before |
 | M-10 | Facts arriving after application change no money and appear as "applied, later conflict" |
 | M-11 | Guard drift refuses the application; repaired schema passes; existing H, K and full suite stay green |
 
