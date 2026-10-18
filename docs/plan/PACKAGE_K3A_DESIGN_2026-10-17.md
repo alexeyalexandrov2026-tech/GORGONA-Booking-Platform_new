@@ -1,7 +1,8 @@
 # Package K3a — observed provider money into H (design, 2026-10-17)
 
-**Status: owner decisions received 2026-10-17; implementation on local branch
-`codex/package-k3a-provider-money` from `6ba065c` (the proposal).** Migrations 0051 (K access)
+**Status: owner decisions received 2026-10-17; locally implemented in `2f91368`**
+([validation](evidence/2026-10-17-k3a-provider-money/VALIDATION.md)). Local branch
+`codex/package-k3a-provider-money` from `6ba065c` (the proposal). Migrations 0051 (K access)
 and 0052 (H provenance). Nothing here is published or deployed; no provider call, account,
 credential or real money.
 
@@ -27,9 +28,13 @@ payments.
 - Two migrations, because each guard reads its own package: **0051** grants the runtime
   company-scoped select on `provider_operations` and `provider_event_decisions`, the lock column
   (`update (currency)`, refused by the immutability trigger) and execute on
-  `gba.provider_receipt_operation`; **0052** (H) widens `external_payments.attestation` and the
-  command checks, and adds `provider_clearing_accounts` and `external_payment_provenance` with the
-  H trigger set (immutable, ledger lock, workflow, deferred consistency, check).
+  `gba.provider_receipt_operation`; **0052** (H) widens `external_payments.attestation`, adds
+  `provider_clearing_accounts` and `external_payment_provenance` with the H trigger set
+  (immutable, ledger lock, workflow, deferred consistency, check) and `gba.assert_provider_payment`,
+  called from `gba.assert_payment_consistent` in the transaction that applies the payment.
+- The command receipt stays `settlement_confirm`: the H rule pairs a `confirmed` event with that
+  receipt operation, and the attestation and provenance already tell the paths apart (found in
+  dev-3; a separate command kind was dropped).
 - `provider_receipt_connections` already has one `book_id`: the payment, every attestation and the
   clearing account must name that book.
 - A refund applies only to `credit_refund` obligations (from a credit note), and its parent
@@ -104,7 +109,7 @@ reuse, not to imitate.
      (normalised by `gba.external_identity_key`); then the answer is "needs linking", not a post.
 6. **Posting.** Python reuses the confirm path (`settlements.confirm` split into a shared posting
    primitive), with the provider amount and date; no forged manual attestation. One command
-   receipt `settlement_provider_confirm`.
+   receipt `settlement_confirm` (see refinements).
 7. **After application.** Facts that arrive later never change money. A late conflicting event or
    delivery of an applied operation is listed by a read function as "applied, later conflict" for
    manual review (K4 shows it). Manual void and correction work for `provider_observed` payments

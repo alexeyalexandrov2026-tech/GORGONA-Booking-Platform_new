@@ -1,5 +1,7 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K3a source `2f91368271458d6f20030e43ab9409751c3fa62d` implements the K3a decision below;
+[validation](../plan/evidence/2026-10-17-k3a-provider-money/VALIDATION.md).
 Local K2a source `6e9bbfc74a09a5d472aaff25328356d6f71e8706` implements the K2a decision below;
 [validation](../plan/evidence/2026-10-17-k2a-receipt-decisions/VALIDATION.md).
 Local K1k source `a5f21e41f550d5d07e428c644e9f718082b3f619` implements the K1k decision below;
@@ -18,13 +20,16 @@ Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the propo
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
 
-## K3a proposal — 2026-10-17, not started
+## K3a local design decision — 2026-10-17, Proposed; locally implemented in `2f91368`
 
-Applying an observed provider payment or refund to a reserved H settlement (a finance user
-applies; the database takes amount, currency and date from the attested facts and rechecks every
-delivery; one atomic payment, allocation and journal with provider provenance) is proposed in
-[the K3a design](../plan/PACKAGE_K3A_DESIGN_2026-10-17.md). It awaits the owner's answers on who
-triggers money, the clearing account, currencies, and corrections and old manual records.
+A finance user applies one observed provider payment or refund to a reserved H settlement (owner
+decisions). Migration 0051 lets the runtime read and lock its company's operations and decisions;
+0052 adds the `provider_observed` attestation, one `external_payment_provenance` row per
+operation and one registered clearing account per connection. The database takes amount,
+currency (USD only), date and reference from the attested and decided facts and rechecks every
+delivery, decision and revocation in the applying transaction; later facts change no money.
+Voids and corrections stay the human H paths. Details and criteria M-01–M-11:
+[the K3a design](../plan/PACKAGE_K3A_DESIGN_2026-10-17.md).
 
 ## K2a local design decision — 2026-10-17, Proposed; locally implemented in `6e9bbfc`
 

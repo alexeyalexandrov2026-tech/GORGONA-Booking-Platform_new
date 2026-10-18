@@ -1,15 +1,26 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## K3a proposal — observed provider money into H (2026-10-17, docs only)
+## Current checkpoint — 2026-10-17: K3a observed provider money into H locally verified
 
-After K2a the next plan slice is K3. Its first local part K3a (a finance user applies one observed
-payment or refund to a reserved H settlement; amount, currency and date come from the attested
-facts; one atomic payment, allocation and journal with provider provenance) is proposed in
-[PACKAGE_K3A_DESIGN_2026-10-17.md](PACKAGE_K3A_DESIGN_2026-10-17.md). Not started: four owner
-questions (who triggers money, clearing account, currencies, corrections and old manual records)
-come first.
+Source `2f91368271458d6f20030e43ab9409751c3fa62d` on local branch `codex/package-k3a-provider-money`, parent `1476108`.
+Criteria M-01–M-11 PASS; migrations 0051–0052; 28 new cases. Final focused **777 passed in
+626.41s (0:10:26)**; full **2182 passed, 4 skipped in 1723.33s (0:28:43)**. Kept failures:
+product RED, three product defects found in development (plpgsql syntax, an ambiguous variable,
+the receipt operation), two test defects, and a first full gate (1 failed: the strict web payment
+contract). Not published.
+[Validation](evidence/2026-10-17-k3a-provider-money/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-17-k3a-provider-money/CHECKS.json),
+[handoff](NEXT_AGENT_PACKAGE_K3A_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K3A_PROMPT_2026-10-17.md).
 
-## Current checkpoint — 2026-10-17: K2a receipt decisions without money locally verified
+### K3a design, recorded before code
+
+Proposed in `6ba065c`; the owner answered on 2026-10-17: a finance user applies each observed
+operation, one registered clearing account per connection, USD only, manual voids and
+corrections allowed (recorded in `1476108` before the failing tests). Model and criteria
+M-01–M-11 are in [PACKAGE_K3A_DESIGN_2026-10-17.md](PACKAGE_K3A_DESIGN_2026-10-17.md).
+Implemented in `2f91368`. Not published.
+
+## Previous checkpoint — 2026-10-17: K2a receipt decisions without money locally verified
 
 Source `6e9bbfc74a09a5d472aaff25328356d6f71e8706` on local branch `codex/package-k2a-receipt-decisions`, parent `b6c8040`.
 Criteria W-01–W-11 PASS; migration 0050; 59 new cases. Final focused **571 passed in 478.99s

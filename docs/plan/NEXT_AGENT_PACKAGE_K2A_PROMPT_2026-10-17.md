@@ -1,5 +1,7 @@
 # Ready-to-paste prompt — after K2a
 
+Superseded on 2026-10-17 by [the K3a prompt](NEXT_AGENT_PACKAGE_K3A_PROMPT_2026-10-17.md). Kept below as history.
+
 Continue GORGONA Booking stage 2, Package K / FIN-02, locally and inline. Checkout
 `C:/Users/alexa/.codex/worktrees/package-j-review2-fixes/Gorgona Booking`, local branch
 `codex/package-k2a-receipt-decisions`, source `6e9bbfc74a09a5d472aaff25328356d6f71e8706` plus a

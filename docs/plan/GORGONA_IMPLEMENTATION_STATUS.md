@@ -1,6 +1,20 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-17: K2a receipt decisions without money locally verified
+## Current checkpoint — 2026-10-17: K3a observed provider money into H locally verified
+
+Source `2f91368271458d6f20030e43ab9409751c3fa62d`, local branch `codex/package-k3a-provider-money`, parent `1476108`.
+First K3 slice, by the owner's decisions of 2026-10-17: a finance user applies one observed
+provider payment or refund to a reserved H settlement; the database takes amount, currency (USD
+only), date and reference from the attested and decided facts, posts to the connection's
+registered clearing account and records the provenance in the same transaction; one operation
+moves money at most once; voids and corrections stay the human H paths. Migrations 0051–0052,
+28 new cases. Focused **777 passed in 626.41s (0:10:26)**; full **2182 passed, 4 skipped in
+1723.33s (0:28:43)**; a first full gate failed on the strict web payment contract (kept in the
+record). Not published.
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0053.
+[Validation](evidence/2026-10-17-k3a-provider-money/VALIDATION.md), [handoff](NEXT_AGENT_PACKAGE_K3A_2026-10-17.md), [prompt](NEXT_AGENT_PACKAGE_K3A_PROMPT_2026-10-17.md).
+
+## Previous checkpoint — 2026-10-17: K2a receipt decisions without money locally verified
 
 Source `6e9bbfc74a09a5d472aaff25328356d6f71e8706`, local branch `codex/package-k2a-receipt-decisions`, parent `b6c8040`.
 First K2 slice, by the owner's decisions of 2026-10-17: a separate `gba_receipt_worker` group turns
