@@ -1,9 +1,21 @@
 # Package K3b — linking earlier manual payments to provider operations (design, 2026-10-19)
 
-**Status: proposed, not started.** Docs only. Waits for the owner's answers to the four questions
-below. Planned local branch `codex/package-k3b-provider-links` from this proposal. Expected
+**Status: owner decisions received 2026-10-19; not started.** Planned local branch
+`codex/package-k3b-provider-links` from the decisions commit. Expected
 migration **0054** (H). Nothing here is published or deployed; no provider call, account,
 credential or real money.
+
+## Owner decisions (2026-10-19)
+
+The owner took the four defaults below:
+
+1. **Link only**: the link records that the manual payment is this provider operation; money stays
+   as recorded, no new journal; a linked operation is never applied.
+2. Amount, currency and direction must be **exactly equal**; the manual date may differ from the
+   provider's date by **up to 3 days**, both shown.
+3. **One to one**: one manual payment links to one operation.
+4. A linked manual payment can still be **voided or corrected** through H; the link stays in the
+   history, and a voided link puts the operation under manual review again.
 
 ## Goal
 
