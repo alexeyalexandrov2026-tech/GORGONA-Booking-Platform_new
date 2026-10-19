@@ -1,7 +1,8 @@
 # Package K3b — linking earlier manual payments to provider operations (design, 2026-10-19)
 
-**Status: owner decisions received 2026-10-19; not started.** Planned local branch
-`codex/package-k3b-provider-links` from the decisions commit. Expected
+**Status: owner decisions received 2026-10-19; locally implemented in `8bb2eb4`**
+([validation](evidence/2026-10-19-k3b-provider-links/VALIDATION.md)). Local branch
+`codex/package-k3b-provider-links` from `199eada` (the decisions). Expected
 migration **0054** (H). Nothing here is published or deployed; no provider call, account,
 credential or real money.
 
@@ -16,6 +17,13 @@ The owner took the four defaults below:
 3. **One to one**: one manual payment links to one operation.
 4. A linked manual payment can still be **voided or corrected** through H; the link stays in the
    history, and a voided link puts the operation under manual review again.
+
+## Refinements found during implementation
+
+- The table is named `provider_payment_links` (not `external_payment_…`): it moves no money, so it
+  takes the H immutable, lock and check triggers without the payment consistency trigger.
+- No separate truncate trigger: the runtime has no TRUNCATE privilege, as for every H table.
+- The state of a link whose payment is voided or no longer states the amount is `needs_review`.
 
 ## Goal
 

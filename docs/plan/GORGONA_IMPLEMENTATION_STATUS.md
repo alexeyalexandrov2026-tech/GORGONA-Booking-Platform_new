@@ -1,6 +1,19 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-18: K4b provider review, attention and runbook locally verified
+## Current checkpoint — 2026-10-19: K3b links of earlier manual payments locally verified
+
+Source `8bb2eb43e16a05092065a09bee8082733737fe1f`, local branch `codex/package-k3b-provider-links`, parent `199eada`.
+By the owner's decisions of 2026-10-19: an operation whose ID an earlier manual payment names is
+`needs_link`; a finance user links it to that payment (amount, currency, direction exactly equal,
+dates at most 3 days apart, one to one); no journal is written, the link is append-only (migration
+0054, H) and a linked operation is never applied; a void of the linked payment returns it to
+review. Real desktop and mobile browser with axe. 20 new cases. Focused **424 passed in 622.38s
+(0:10:22)**; full **2232 passed, 4 skipped in 2272.05s (0:37:52)**. K3b not published; K4a and
+K4b branches published for CI only (both SUCCESS).
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0055.
+[Validation](evidence/2026-10-19-k3b-provider-links/VALIDATION.md), [handoff](NEXT_AGENT_PACKAGE_K3B_2026-10-19.md), [prompt](NEXT_AGENT_PACKAGE_K3B_PROMPT_2026-10-19.md).
+
+## Previous checkpoint — 2026-10-18: K4b provider review, attention and runbook locally verified
 
 Source `60a12e14d461ef3d9a9b6dbca8e35c25f402055d`, local branch `codex/package-k4b-provider-review`, parent `45f15df`.
 Second K4 slice, by the owner's decisions of 2026-10-18: each provider operation opens a detail

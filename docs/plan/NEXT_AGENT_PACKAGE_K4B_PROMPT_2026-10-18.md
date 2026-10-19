@@ -1,5 +1,7 @@
 # Ready-to-paste prompt — after K4b
 
+Superseded on 2026-10-19 by [the K3b prompt](NEXT_AGENT_PACKAGE_K3B_PROMPT_2026-10-19.md). Kept below as history.
+
 Continue GORGONA Booking stage 2, Package K / FIN-02, locally and inline. Checkout
 `C:/Users/alexa/.codex/worktrees/package-j-review2-fixes/Gorgona Booking`, local branch
 `codex/package-k4b-provider-review`, source `60a12e14d461ef3d9a9b6dbca8e35c25f402055d` plus a docs

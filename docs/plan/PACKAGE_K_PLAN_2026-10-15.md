@@ -1,15 +1,24 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## K3b proposal — linking earlier manual payments (2026-10-19, docs only)
+## Current checkpoint — 2026-10-19: K3b links of earlier manual payments locally verified
 
-An operation blocked by an earlier manual payment (`PROVIDER_PAYMENT_LINK_REQUIRED`) becomes
-`needs_link`; a finance user links it to that payment after the facts are compared; no journal,
-and a linked operation is never applied. Proposed in
-[PACKAGE_K3B_DESIGN_2026-10-19.md](PACKAGE_K3B_DESIGN_2026-10-19.md). The owner answered on
-2026-10-19: link only; exact amount, date within 3 days; one to one; a linked payment can still be
-voided or corrected, the link stays. Not started.
+Source `8bb2eb43e16a05092065a09bee8082733737fe1f` on local branch `codex/package-k3b-provider-links`, parent `199eada`.
+Criteria L-01–L-10 PASS (direction and currency mismatch without a dedicated test: NOT TESTED);
+migration 0054; 20 new cases. Final focused **424 passed in 622.38s (0:10:22)**; full **2232
+passed, 4 skipped in 2272.05s (0:37:52)**. Kept failures: product RED and a test defect. Not
+published.
+[Validation](evidence/2026-10-19-k3b-provider-links/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-19-k3b-provider-links/CHECKS.json),
+[handoff](NEXT_AGENT_PACKAGE_K3B_2026-10-19.md), [prompt](NEXT_AGENT_PACKAGE_K3B_PROMPT_2026-10-19.md).
 
-## Current checkpoint — 2026-10-18: K4b provider review, attention and runbook locally verified
+### K3b design, recorded before code
+
+Proposed in `22bfbd0`; the owner answered on 2026-10-19 (all defaults: link only; exact amount,
+date within 3 days; one to one; void and correction stay allowed), recorded in `199eada` before
+the failing tests. Model and criteria L-01–L-10 are in
+[PACKAGE_K3B_DESIGN_2026-10-19.md](PACKAGE_K3B_DESIGN_2026-10-19.md). Implemented in `8bb2eb4`.
+
+## Previous checkpoint — 2026-10-18: K4b provider review, attention and runbook locally verified
 
 Source `60a12e14d461ef3d9a9b6dbca8e35c25f402055d` on local branch `codex/package-k4b-provider-review`, parent `45f15df`.
 Criteria R-01–R-10 PASS; migration 0053; 20 new cases. Final focused **345 passed in 502.38s
