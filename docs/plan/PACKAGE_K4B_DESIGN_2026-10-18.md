@@ -1,9 +1,19 @@
 # Package K4b — provider conflict detail, recovery views, metrics and runbook (design, 2026-10-18)
 
-**Status: proposed, not started.** Docs only. Waits for the owner's answers to the four questions
-below. Planned local branch `codex/package-k4b-provider-review` from this proposal. No migration
-is expected unless Question 2 chooses acknowledgements (then **0053**). Nothing here is deployed;
+**Status: owner decisions received 2026-10-18; not started.** Planned local branch
+`codex/package-k4b-provider-review` from the decisions commit. Migration **0053** (acknowledgements,
+decision 2). Nothing here is deployed;
 no provider call, account, credential or real money.
+
+## Owner decisions (2026-10-18)
+
+1. Conflict detail names the differing fields **and shows both values**.
+2. The "Needs attention" view gets an **acknowledgement with a required note** (the owner answered
+   "make sure is done"; recorded as: an item can be marked as handled, with a note, in an
+   append-only record; migration 0053). An acknowledgement never changes money or a decision.
+3. Counters carry the **company identifier** as well as outcome, reason and code (no other
+   company data, no payload values).
+4. The runbook is in **English**.
 
 ## Goal
 

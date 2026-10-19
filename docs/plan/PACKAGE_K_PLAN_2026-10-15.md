@@ -4,8 +4,9 @@
 
 The second K4 part (operation detail with the facts that disagree, a "Needs attention" view for
 undecided events and decisions without an operation, redacted counters, an operational runbook)
-is proposed in [PACKAGE_K4B_DESIGN_2026-10-18.md](PACKAGE_K4B_DESIGN_2026-10-18.md). Not started:
-four owner questions (conflict detail, acknowledgements, metric attributes, runbook language).
+is proposed in [PACKAGE_K4B_DESIGN_2026-10-18.md](PACKAGE_K4B_DESIGN_2026-10-18.md). The owner
+answered on 2026-10-18: fields and both values; acknowledgement with a note (migration 0053);
+counters with the company identifier; runbook in English. Not started.
 
 ## Current checkpoint — 2026-10-18: K4a finance screen for provider operations locally verified
 
