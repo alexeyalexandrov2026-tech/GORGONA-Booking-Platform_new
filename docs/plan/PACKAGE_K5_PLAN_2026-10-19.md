@@ -1,8 +1,23 @@
 # Package K5 — FIN-02 evidence plan: K0, independent review, CI (2026-10-19)
 
-**Status: proposed, not started.** Docs only. Waits for the owner's answers to the four questions
-below. Nothing here is executed: no provider account, credential, Azure action, publication or
+**Status: owner decisions received 2026-10-19; not started.** Docs only. Nothing here is executed: no provider account, credential, Azure action, publication or
 readiness change happens without the owner's separate word for that action.
+
+## Owner decisions (2026-10-19)
+
+The owner took the four defaults below:
+
+1. The real test runs **on this computer**, with the Stripe CLI forwarding test events to the local
+   ingress; no Azure action and no public URL.
+2. The owner's own Stripe test sandbox acts as a **Connect platform with one connected test
+   account**.
+3. **One read-only independent review** (K5a) runs before any real event. Running it still needs
+   the agent itself, which this answer authorizes for K5a only.
+4. The signing secret goes into a **local environment variable** set by the owner; the process
+   reads it by name and nobody prints it.
+
+Each provider step (Stripe login, `stripe listen`, triggers) is still done by the owner; agents
+never enter credentials.
 
 ## Goal
 
