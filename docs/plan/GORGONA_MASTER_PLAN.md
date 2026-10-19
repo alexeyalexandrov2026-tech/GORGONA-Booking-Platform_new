@@ -1,6 +1,20 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
-## Current checkpoint — 2026-10-18: K4a finance screen for provider operations locally verified
+## Current checkpoint — 2026-10-18: K4b provider review, attention and runbook locally verified
+
+Source `60a12e14d461ef3d9a9b6dbca8e35c25f402055d`, local branch `codex/package-k4b-provider-review`, parent `45f15df`.
+Second K4 slice, by the owner's decisions of 2026-10-18: each provider operation opens a detail
+of its events, decisions and deliveries with the differing fields and both values; a Needs
+attention view lists undecided events and decisions without an operation, and a finance user
+acknowledges the latter with a required note (migration 0053, append-only); counters per company;
+an English runbook. Real desktop and mobile browser with axe. 20 new cases. Focused **345 passed
+in 502.38s (0:08:22)**; full **2212 passed, 4 skipped in 2388.14s (0:39:48)**. K4b not published;
+K4a branch `codex/package-k4a-provider-screen` (`09d8187`) published for CI only, run
+39185366331 SUCCESS.
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0054.
+[Validation](evidence/2026-10-18-k4b-provider-review/VALIDATION.md), [handoff](NEXT_AGENT_PACKAGE_K4B_2026-10-18.md), [prompt](NEXT_AGENT_PACKAGE_K4B_PROMPT_2026-10-18.md).
+
+## Previous checkpoint — 2026-10-18: K4a finance screen for provider operations locally verified
 
 Source `374f60c2adb04060bd69c526dbf14b687c52698c`, local branch `codex/package-k4a-provider-screen`, parent `c1ff170`.
 First K4 slice, by the owner's decisions of 2026-10-18: in Financial documents a finance user

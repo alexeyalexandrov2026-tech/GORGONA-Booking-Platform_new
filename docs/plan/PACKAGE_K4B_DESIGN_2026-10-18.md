@@ -1,7 +1,8 @@
 # Package K4b — provider conflict detail, recovery views, metrics and runbook (design, 2026-10-18)
 
-**Status: owner decisions received 2026-10-18; not started.** Planned local branch
-`codex/package-k4b-provider-review` from the decisions commit. Migration **0053** (acknowledgements,
+**Status: owner decisions received 2026-10-18; locally implemented in `60a12e1`**
+([validation](evidence/2026-10-18-k4b-provider-review/VALIDATION.md)). Local branch
+`codex/package-k4b-provider-review` from `45f15df` (the decisions). Migration **0053** (acknowledgements,
 decision 2). Nothing here is deployed;
 no provider call, account, credential or real money.
 
@@ -14,6 +15,16 @@ no provider call, account, credential or real money.
 3. Counters carry the **company identifier** as well as outcome, reason and code (no other
    company data, no payload values).
 4. The runbook is in **English**.
+
+## Refinements found during implementation
+
+- Only a decision **without** an operation is acknowledged; an undecided event waits for its
+  decision (the worker decides it), and the database refuses an acknowledgement of an event of an
+  operation.
+- Attention items carry the provider's object ID (`pi_`, `ch_`, `re_`) so two items of the same
+  type can be told apart and found at the provider.
+- The "oldest undecided age" gauge was dropped: undecided events and their dates are listed in the
+  attention view; the two counters cover decisions and applications.
 
 ## Goal
 

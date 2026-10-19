@@ -1,14 +1,26 @@
 # Package K — provider events and reconciliation (FIN-02)
 
-## K4b proposal — conflict detail, recovery views, metrics and runbook (2026-10-18, docs only)
+## Current checkpoint — 2026-10-18: K4b provider review, attention and runbook locally verified
 
-The second K4 part (operation detail with the facts that disagree, a "Needs attention" view for
-undecided events and decisions without an operation, redacted counters, an operational runbook)
-is proposed in [PACKAGE_K4B_DESIGN_2026-10-18.md](PACKAGE_K4B_DESIGN_2026-10-18.md). The owner
-answered on 2026-10-18: fields and both values; acknowledgement with a note (migration 0053);
-counters with the company identifier; runbook in English. Not started.
+Source `60a12e14d461ef3d9a9b6dbca8e35c25f402055d` on local branch `codex/package-k4b-provider-review`, parent `45f15df`.
+Criteria R-01–R-10 PASS; migration 0053; 20 new cases. Final focused **345 passed in 502.38s
+(0:08:22)**; full **2212 passed, 4 skipped in 2388.14s (0:39:48)**. Kept failures: product RED,
+a falsely passing web route case before code, two test defects. K4b not published; K4a was
+published for CI only (run 39185366331 SUCCESS).
+[Validation](evidence/2026-10-18-k4b-provider-review/VALIDATION.md),
+[CHECKS.json](evidence/2026-10-18-k4b-provider-review/CHECKS.json),
+[handoff](NEXT_AGENT_PACKAGE_K4B_2026-10-18.md), [prompt](NEXT_AGENT_PACKAGE_K4B_PROMPT_2026-10-18.md),
+[runbook](../runbooks/PROVIDER_OPERATIONS.md).
 
-## Current checkpoint — 2026-10-18: K4a finance screen for provider operations locally verified
+### K4b design, recorded before code
+
+Proposed in `c2407c3`; the owner answered on 2026-10-18: fields and both values; an
+acknowledgement with a note ("make sure is done", migration 0053); counters with the company
+identifier; runbook in English (recorded in `45f15df` before the failing tests). Model and
+criteria R-01–R-10 are in [PACKAGE_K4B_DESIGN_2026-10-18.md](PACKAGE_K4B_DESIGN_2026-10-18.md).
+Implemented in `60a12e1`.
+
+## Previous checkpoint — 2026-10-18: K4a finance screen for provider operations locally verified
 
 Source `374f60c2adb04060bd69c526dbf14b687c52698c` on local branch `codex/package-k4a-provider-screen`, parent `c1ff170`.
 Criteria U-01–U-11 PASS; no migration; 10 new cases and 4 web contract cases. Final focused
