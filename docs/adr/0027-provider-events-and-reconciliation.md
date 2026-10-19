@@ -20,6 +20,13 @@ Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the propo
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
 
+## K4b proposal — 2026-10-18, not started
+
+Conflict detail, a view of undecided events and of decisions without an operation, counters
+without company identifiers and an operational runbook are proposed in
+[the K4b design](../plan/PACKAGE_K4B_DESIGN_2026-10-18.md). No new money rule; a migration only
+if the owner chooses acknowledgements. It awaits the owner's four answers.
+
 ## K4a local design decision — 2026-10-18, Proposed; locally implemented in `374f60c`
 
 A finance screen for K3a (operations and their state, clearing account, applying an observed

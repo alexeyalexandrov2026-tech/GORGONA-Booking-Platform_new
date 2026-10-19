@@ -31,7 +31,8 @@ input after a refusal keeps its draft in the workspace (as the provider form doe
 ## Open
 
 1. K4b: conflict detail (which delivery disagrees), recovery views, redacted metrics and the
-   operational runbook. Needs its own design and the owner's review before code.
+   operational runbook. Proposed on 2026-10-18 as [K4b](PACKAGE_K4B_DESIGN_2026-10-18.md);
+   waits for four owner answers.
 2. K3b: link an earlier manual payment to a provider operation (now refused as "needs linking").
 3. The manual H payment form still loses its input after a refusal (existing behaviour).
 4. Fees, payouts and bank reconciliation; other currencies (each needs the owner's word).

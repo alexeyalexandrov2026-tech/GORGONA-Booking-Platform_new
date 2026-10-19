@@ -1,5 +1,12 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## K4b proposal — conflict detail, recovery views, metrics and runbook (2026-10-18, docs only)
+
+The second K4 part (operation detail with the facts that disagree, a "Needs attention" view for
+undecided events and decisions without an operation, redacted counters, an operational runbook)
+is proposed in [PACKAGE_K4B_DESIGN_2026-10-18.md](PACKAGE_K4B_DESIGN_2026-10-18.md). Not started:
+four owner questions (conflict detail, acknowledgements, metric attributes, runbook language).
+
 ## Current checkpoint — 2026-10-18: K4a finance screen for provider operations locally verified
 
 Source `374f60c2adb04060bd69c526dbf14b687c52698c` on local branch `codex/package-k4a-provider-screen`, parent `c1ff170`.
