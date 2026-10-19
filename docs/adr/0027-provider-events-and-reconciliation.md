@@ -20,6 +20,13 @@ Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the propo
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
 
+## K3b proposal — 2026-10-19, not started
+
+Linking an earlier manual payment that names a provider ID to that provider operation (no new
+journal; the operation becomes linked and is never applied; an append-only link in H, migration
+0054) is proposed in [the K3b design](../plan/PACKAGE_K3B_DESIGN_2026-10-19.md). It awaits the
+owner's four answers.
+
 ## K4b local design decision — 2026-10-18, Proposed; locally implemented in `60a12e1`
 
 Conflict detail, a view of undecided events and of decisions without an operation, counters

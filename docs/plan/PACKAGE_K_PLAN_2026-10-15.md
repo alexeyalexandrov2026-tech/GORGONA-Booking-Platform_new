@@ -1,5 +1,14 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## K3b proposal — linking earlier manual payments (2026-10-19, docs only)
+
+An operation blocked by an earlier manual payment (`PROVIDER_PAYMENT_LINK_REQUIRED`) becomes
+`needs_link`; a finance user links it to that payment after the facts are compared; no journal,
+and a linked operation is never applied. Proposed in
+[PACKAGE_K3B_DESIGN_2026-10-19.md](PACKAGE_K3B_DESIGN_2026-10-19.md). Not started: four owner
+questions (link or replace, comparison strictness, several manual payments, changing a linked
+payment).
+
 ## Current checkpoint — 2026-10-18: K4b provider review, attention and runbook locally verified
 
 Source `60a12e14d461ef3d9a9b6dbca8e35c25f402055d` on local branch `codex/package-k4b-provider-review`, parent `45f15df`.

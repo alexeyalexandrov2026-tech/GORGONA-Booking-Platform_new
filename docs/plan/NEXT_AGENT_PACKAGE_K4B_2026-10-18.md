@@ -30,6 +30,7 @@ The second K4 slice ([design](PACKAGE_K4B_DESIGN_2026-10-18.md),
 ## Open
 
 1. K3b: link an earlier manual payment to a provider operation (now `PROVIDER_PAYMENT_LINK_REQUIRED`).
+   Proposed on 2026-10-19 as [K3b](PACKAGE_K3B_DESIGN_2026-10-19.md); waits for four owner answers.
 2. The manual H payment form still loses its input after a refusal (existing behaviour).
 3. A worker entry point and schedule, alerts and dashboards (infrastructure, owner's word).
 4. Fees, payouts and bank reconciliation; other currencies (each needs the owner's word).
