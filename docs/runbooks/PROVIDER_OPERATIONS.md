@@ -28,8 +28,10 @@ worker has no scheduled entry point yet; until it does, events wait as "not deci
 | `pending` | Provider events still being decided | Wait for the receipt worker. Nothing to apply yet. |
 | `not_final` | No final provider success yet | Wait. A processing or failed payment moves no money. |
 | `needs_review` | Provider events disagree; manual review needed | Open **Details**, read **What disagrees**, compare with the provider's dashboard. It cannot be applied; contact the platform owner if the provider confirms a different amount. |
+| `needs_link` | Already recorded by hand; link it to the manual payment | A manual payment of the book names this provider ID, so applying it would count the money twice. Open **Details**, compare the manual payment and **Link** it (no money moves). |
 | `revoked` | Connection or verification revoked; cannot move money | The connection or its key was retired or compromised. New money is refused; history stays. Ask the platform owner for a new connection. |
 | `applied` | Applied to a settlement | Done. The payment shows "Observed provider payment". |
+| `linked` | Linked to the manual payment that recorded it | Done; the money is the manual payment's. If that payment is voided or corrected to another amount, the operation returns to `needs_review`; the link stays in the history and the operation is never applied. |
 | `applied_with_conflict` | Applied; later provider data disagrees — manual review needed | Money already moved and later data never changes it. Open **Details**, compare with the provider. If the payment is wrong, **Correct** or **Void** it from its settlement. The provider record stays in the history; the operation is never applied again. |
 
 ## Refusals
@@ -41,9 +43,20 @@ worker has no scheduled entry point yet; until it does, events wait as "not deci
 | `PROVIDER_PAYMENT_MISMATCH` | Currency, direction, refund obligation, the refund's original payment, counterparty or the refund cap does not match | Choose the right settlement. A refund applies only to the refund obligation of a credit note, after its original payment was applied. |
 | `PROVIDER_CLEARING_ACCOUNT_REQUIRED` | The connection has no clearing account | Register it under **Provider operations → Connections**. |
 | `PROVIDER_CLEARING_ACCOUNT_REGISTERED` | The connection already has another clearing account | It cannot be changed. Contact the platform owner if it is wrong. |
-| `PROVIDER_PAYMENT_LINK_REQUIRED` | A manual payment in this book already names this provider ID | Nothing was applied. Linking manual payments to provider operations is not available yet (K3b); keep the manual payment. |
+| `PROVIDER_PAYMENT_LINK_REQUIRED` | A manual payment in this book already names this provider ID | Nothing was applied. Link the operation to that manual payment instead (state `needs_link`). |
+| `PROVIDER_OPERATION_LINKED` | The operation is linked to a manual payment | It never moves money itself. A second link or another note is refused; read the existing link. |
+| `PROVIDER_LINK_MISMATCH` | The manual payment does not match: amount, currency, direction, a date more than 3 days apart, voided, already linked, not a manual payment, or its reference does not name the ID (the message names which) | Choose the manual payment that recorded this provider operation, or correct it first through its settlement. |
 | `PROVIDER_ATTENTION_ACKNOWLEDGED` | The item was already acknowledged with another note | Read the existing note; an acknowledgement is permanent. |
 | `PROVIDER_ATTENTION_NOT_NEEDED` | The event belongs to an operation or is not decided yet | Use the operation's state instead; undecided events need no acknowledgement. |
+
+## Linking a manual payment (K3b)
+
+When money from the provider was recorded by hand before (for example from the bank payout), the
+operation shows `needs_link`. **Details** lists the manual payments whose reference names the
+provider ID, with their amount, date and state. Link one only when the amount, currency and
+direction are equal and the dates are at most 3 days apart; write a note of what you compared.
+Linking writes no journal and changes no payment. A linked payment can still be voided or
+corrected through its settlement; the link stays.
 
 ## Clearing account
 

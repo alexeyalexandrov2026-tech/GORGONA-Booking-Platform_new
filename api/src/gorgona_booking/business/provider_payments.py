@@ -59,6 +59,16 @@ class ProviderClearingAccountRegisteredError(ConflictError):
     code = "PROVIDER_CLEARING_ACCOUNT_REGISTERED"
 
 
+class ProviderOperationLinkedError(ConflictError):
+    """K3b: the operation is linked to a manual payment and never moves money itself."""
+
+    code = "PROVIDER_OPERATION_LINKED"
+
+
+class ProviderLinkMismatchError(ConflictError):
+    code = "PROVIDER_LINK_MISMATCH"
+
+
 class ProviderPaymentLinkRequiredError(ConflictError):
     """An earlier manual payment names this provider object; linking it is a later slice."""
 
@@ -100,7 +110,22 @@ _FACTS = (
     "and (v.revoked or a.book_id<>c.book_id)),"
     "s.amount,s.happened,k.minor_units,"
     "(select v.payment_id from gba.external_payment_provenance v "
-    "where v.tenant_id=o.tenant_id and v.operation_id=o.id) "
+    "where v.tenant_id=o.tenant_id and v.operation_id=o.id),"
+    # K3b: the linked manual payment, whether it still states the provider's amount, and
+    # whether any manual payment of the book names the operation's provider ID.
+    "(select l.payment_id from gba.provider_payment_links l "
+    "where l.tenant_id=o.tenant_id and l.operation_id=o.id),"
+    "exists(select 1 from gba.provider_payment_links l join gba.external_payments p "
+    "on p.tenant_id=l.tenant_id and p.book_id=l.book_id and p.id=l.payment_id "
+    "left join lateral (select r.kind,r.amount_minor from gba.external_payment_revisions r "
+    "where r.tenant_id=p.tenant_id and r.book_id=p.book_id and r.payment_id=p.id "
+    "order by r.revision desc limit 1) r on true "
+    "where l.tenant_id=o.tenant_id and l.operation_id=o.id "
+    "and r.kind is distinct from 'voided' and coalesce(r.amount_minor,p.amount_minor)=s.amount),"
+    "exists(select 1 from gba.external_payments m where m.tenant_id=o.tenant_id "
+    "and m.book_id=c.book_id and m.attestation='manual_attestation' "
+    "and m.external_reference ~ ('(^|[^A-Za-z0-9_])' || o.provider_object_id "
+    "|| '($|[^A-Za-z0-9_])')) "
     "from gba.provider_operations o join gba.provider_receipt_connections c "
     "on c.tenant_id=o.tenant_id and c.id=o.connection_id "
     "left join lateral (select (gba.provider_receipt_operation(e.facts)).amount_minor as amount,"
@@ -118,15 +143,21 @@ _FACTS = (
 # The columns of `_FACTS`, named for the state below.
 _NAMED = (
     ") f(id,connection_id,kind,provider_object_id,parent_object_id,currency,created_at,"
-    "pending,review,delivery,revoked,amount,happened,minor_units,payment_id) "
+    "pending,review,delivery,revoked,amount,happened,minor_units,payment_id,"
+    "link_payment,link_holds,manual_named) "
 )
 # One state per operation, in SQL so that a state filter is complete across cursor pages. The
 # order matches the refusal reasons of `observed`.
 _STATE = (
     "case when f.payment_id is not null then case when f.review or f.delivery "
-    "then 'applied_with_conflict' else 'applied' end when f.revoked then 'revoked' "
+    "then 'applied_with_conflict' else 'applied' end "
+    # K3b: a link whose payment was voided or no longer states the amount needs review.
+    "when f.link_payment is not null then case when f.link_holds "
+    "and not (f.review or f.delivery) then 'linked' else 'needs_review' end "
+    "when f.revoked then 'revoked' "
     "when f.pending then 'pending' when f.review or f.delivery then 'needs_review' "
-    "when f.amount is null then 'not_final' else 'observed' end"
+    "when f.amount is null then 'not_final' when f.manual_named then 'needs_link' "
+    "else 'observed' end"
 )
 
 
@@ -140,7 +171,7 @@ def _summary(row: tuple[Any, ...]) -> ProviderOperationSummary:
         parent_object_id=row[4],
         currency=row[5],
         amount=None if amount is None or scale is None else from_minor(int(amount), scale),
-        state=row[15],
+        state=row[18],
         payment_id=row[14],
         created_at=row[6],
     )
@@ -259,6 +290,10 @@ async def observed(
     if values[14] is not None:
         raise ProviderOperationAppliedError(
             "This provider operation already moved money", payment_id=str(values[14])
+        )
+    if values[15] is not None:
+        raise ProviderOperationLinkedError(
+            "This provider operation is linked to a manual payment", payment_id=str(values[15])
         )
     reason: NotReady | None = (
         "revoked"

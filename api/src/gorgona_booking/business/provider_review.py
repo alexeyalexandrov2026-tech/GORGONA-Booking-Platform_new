@@ -13,9 +13,15 @@ from uuid import UUID
 
 import psycopg
 
-from gorgona_booking.business import ledger
+from gorgona_booking.business import ledger, settlements
 from gorgona_booking.business.financial_documents import require_workflow
-from gorgona_booking.business.provider_payments import load_operation
+from gorgona_booking.business.ledger_contracts import to_minor
+from gorgona_booking.business.provider_payments import (
+    ProviderLinkMismatchError,
+    ProviderOperationLinkedError,
+    load_operation,
+    observed,
+)
 from gorgona_booking.business.settlement_contracts import (
     ProviderAcknowledgeInput,
     ProviderAcknowledgementResult,
@@ -26,7 +32,12 @@ from gorgona_booking.business.settlement_contracts import (
     ProviderDeliveryDifference,
     ProviderDeliveryView,
     ProviderEventView,
+    ProviderLinkCandidate,
+    ProviderLinkInput,
+    ProviderLinkResult,
+    ProviderLinkView,
     ProviderOperationDetail,
+    ProviderOperationSummary,
 )
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.db.provider_receipt_guard import assert_provider_receipt_ready
@@ -144,7 +155,153 @@ async def operation_detail(
         for row in rows
     )
     return ProviderOperationDetail(
-        business_id=business_id, book_id=book_id, operation=operation, events=events
+        business_id=business_id,
+        book_id=book_id,
+        operation=operation,
+        events=events,
+        link=await _link(conn, business_id, operation_id),
+        manual_payments=await _candidates(conn, business_id, book_id, operation),
+    )
+
+
+async def _link(
+    conn: RuntimeConnection, business_id: UUID, operation_id: UUID
+) -> ProviderLinkView | None:
+    row = await (
+        await conn.execute(
+            "select payment_id,note,created_by,created_at from gba.provider_payment_links "
+            "where tenant_id=%s and operation_id=%s",
+            (business_id, operation_id),
+        )
+    ).fetchone()
+    return (
+        None
+        if row is None
+        else ProviderLinkView(payment_id=row[0], note=row[1], linked_by=row[2], linked_at=row[3])
+    )
+
+
+async def _candidates(
+    conn: RuntimeConnection, business_id: UUID, book_id: UUID, operation: ProviderOperationSummary
+) -> tuple[ProviderLinkCandidate, ...]:
+    """Manual payments of the book that name the provider ID, as K3a's refusal finds them."""
+    rows = await (
+        await conn.execute(
+            "select id from gba.external_payments where tenant_id=%s and book_id=%s "
+            "and attestation='manual_attestation' "
+            "and external_reference ~ ('(^|[^A-Za-z0-9_])' || %s || '($|[^A-Za-z0-9_])') "
+            "order by id limit 20",
+            (business_id, book_id, operation.provider_object_id),
+        )
+    ).fetchall()
+    found = []
+    for (payment_id,) in rows:
+        payment = await settlements.load_payment(conn, business_id, book_id, payment_id)
+        if payment is None:
+            raise DatabaseUnavailableError("A manual payment is unavailable")
+        last = payment.revisions[-1] if payment.revisions else None
+        found.append(
+            ProviderLinkCandidate(
+                payment_id=payment.payment_id,
+                state=payment.state,
+                amount=payment.effective_amount,
+                currency=payment.currency,
+                actual_external_date=(
+                    last.actual_external_date
+                    if last is not None and last.actual_external_date is not None
+                    else payment.actual_external_date
+                ),
+                external_reference=payment.external_reference,
+            )
+        )
+    return tuple(found)
+
+
+async def link(
+    conn: RuntimeConnection,
+    *,
+    business_id: UUID,
+    book_id: UUID,
+    operation_id: UUID,
+    user_id: UUID,
+    body: ProviderLinkInput,
+) -> ProviderLinkResult:
+    """K3b: record that a manual payment is this observed operation; no journal is written.
+
+    The same payment and note again return the link; anything else for a linked operation is
+    refused. SQL checks every fact again under the ledger and operation locks.
+    """
+    await require_workflow(conn, business_id)
+    await ledger.require_book(conn, business_id, book_id)
+    await assert_provider_receipt_ready(conn)
+    operation = await load_operation(conn, business_id, book_id, operation_id)
+    if operation is None:
+        raise NotFoundError("Provider operation not found")
+    current = await _link(conn, business_id, operation_id)
+    if current is not None:
+        if (current.payment_id, current.note) == (body.payment_id, body.note):
+            return ProviderLinkResult(
+                business_id=business_id, book_id=book_id, operation=operation, link=current
+            )
+        raise ProviderOperationLinkedError(
+            "This provider operation is linked to a manual payment",
+            payment_id=str(current.payment_id),
+        )
+    # Locks the operation and refuses one that is applied, linked or not observed.
+    facts = await observed(conn, business_id, book_id, operation_id)
+    payment = await settlements.load_payment(conn, business_id, book_id, body.payment_id)
+    if payment is None:
+        raise NotFoundError("Payment not found")
+    candidate = next(
+        (
+            x
+            for x in await _candidates(conn, business_id, book_id, operation)
+            if x.payment_id == body.payment_id
+        ),
+        None,
+    )
+    taken = await (
+        await conn.execute(
+            "select operation_id from gba.provider_payment_links "
+            "where tenant_id=%s and book_id=%s and payment_id=%s",
+            (business_id, book_id, body.payment_id),
+        )
+    ).fetchone()
+    direction = "receivable" if facts.kind == "payment" else "payable"
+    reason = (
+        "not_manual"
+        if payment.attestation != "manual_attestation"
+        else "voided"
+        if payment.state == "voided"
+        else "payment_linked"
+        if taken is not None
+        else "direction"
+        if payment.direction != direction
+        else "currency"
+        if payment.currency != facts.currency
+        else "amount"
+        if to_minor(payment.effective_amount, payment.minor_units) != facts.amount_minor
+        else "reference"
+        if candidate is None
+        else "date"
+        if abs((candidate.actual_external_date - facts.actual_date).days) > 3
+        else None
+    )
+    if reason is not None:
+        raise ProviderLinkMismatchError(
+            "This manual payment does not match the provider operation", reason=reason
+        )
+    await conn.execute(
+        "insert into gba.provider_payment_links "
+        "(tenant_id,book_id,payment_id,operation_id,note,created_by) values (%s,%s,%s,%s,%s,%s)",
+        (business_id, book_id, body.payment_id, operation_id, body.note, user_id),
+    )
+    summary = await load_operation(conn, business_id, book_id, operation_id)
+    recorded = await _link(conn, business_id, operation_id)
+    if summary is None or recorded is None:
+        raise DatabaseUnavailableError("The provider link is unavailable")
+    return ProviderLinkResult(
+        business_id=business_id, book_id=book_id, operation=summary, link=recorded
     )
 
 

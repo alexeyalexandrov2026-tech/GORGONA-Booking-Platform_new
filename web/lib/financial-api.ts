@@ -19,6 +19,7 @@ import {
   providerOperationDetailSchema,
   providerAttentionListSchema,
   providerAcknowledgementSchema,
+  providerLinkResultSchema,
   type FinancialCommand,
   type FinancialReference,
   type ProviderOperation,
@@ -243,6 +244,28 @@ export async function acknowledgeProviderEvent(
     { method: "PUT", body: JSON.stringify({ schema_version: 1, note }) },
   );
   exact(result.item.event_id, event);
+  return result;
+}
+/** K3b: link an observed operation to its manual payment; the same request again is safe. */
+export async function linkProviderOperation(
+  business: string,
+  book: string,
+  operation: string,
+  payment: string,
+  note: string,
+) {
+  const result = await read(
+    business,
+    providerLinkResultSchema,
+    `${bookBase(business, book)}/provider-operations/${operation}/link`,
+    book,
+    {
+      method: "PUT",
+      body: JSON.stringify({ schema_version: 1, payment_id: payment, note }),
+    },
+  );
+  exact(result.operation.operation_id, operation);
+  exact(result.link.payment_id, payment);
   return result;
 }
 export async function fetchSettlement(

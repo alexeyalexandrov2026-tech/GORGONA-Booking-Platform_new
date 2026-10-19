@@ -48,6 +48,8 @@ from gorgona_booking.business.settlement_contracts import (
     ProviderClearingAccountInput,
     ProviderClearingAccountView,
     ProviderConnectionList,
+    ProviderLinkInput,
+    ProviderLinkResult,
     ProviderOperationDetail,
     ProviderOperationList,
     ProviderOperationState,
@@ -589,6 +591,27 @@ async def provider_operation(
     async with _access(request, principal, business_id) as access:
         return await provider_review.operation_detail(
             access.conn, business_id, book_id, operation_id
+        )
+
+
+@router.put("/books/{book_id}/provider-operations/{operation_id}/link")
+async def provider_link(
+    business_id: UUID,
+    book_id: UUID,
+    operation_id: UUID,
+    body: ProviderLinkInput,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ProviderLinkResult:
+    """K3b: link an observed operation to the manual payment that already recorded it."""
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await provider_review.link(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            operation_id=operation_id,
+            user_id=principal.user_id,
+            body=body,
         )
 
 

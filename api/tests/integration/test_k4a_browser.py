@@ -1,4 +1,4 @@
-"""K4a/K4b: the finance screen for provider operations in a real browser, desktop and mobile.
+"""K4a/K4b/K3b: the finance screen for provider operations in a real browser, desktop and mobile.
 
 Actual OIDC/PKCE, the static web export, the live API and PostgreSQL. Provider events are
 synthetic, signed in memory and decided by the receipt worker before the browser starts; no
@@ -58,6 +58,12 @@ async def project(money: Money, name: str, n: int) -> dict[str, str]:
     obligation, partial = await money.reserved(f"2{n + 2}.00")
     recorded = await money.credits.payments.confirm(
         partial, 3, [(obligation, "10.00")], "10.00", f"FAKE Stripe {linked}", payment=uuid7()
+    )
+    assert recorded.status_code == 200, recorded.text
+    # K3b: a second manual payment names it with another amount; linking it is refused.
+    short, held = await money.reserved("9.00")
+    recorded = await money.credits.payments.confirm(
+        held, 3, [(short, "9.00")], "9.00", f"FAKE short Stripe {linked}", payment=uuid7()
     )
     assert recorded.status_code == 200, recorded.text
     await money.observe(event("payment_intent.succeeded", object_id=linked, amount=1000))
@@ -219,8 +225,18 @@ async def test_k4a_real_browser_provider_operations(
             "select count(*) from gba.external_payments where tenant_id=%s and book_id=%s",
             (routed.tenant_id, routed.book_id),
         ).fetchone()
-        # Two manual, two applied before the browser, two applied in it: never a duplicate.
-        assert row == (6,)
+        # Four manual, two applied before the browser, two applied in it: never a duplicate.
+        assert row == (8,)
+        for item in fixture.values():
+            row = owner_conn.execute(
+                "select p.amount_minor,p.attestation from gba.provider_payment_links l "
+                "join gba.external_payments p on p.tenant_id=l.tenant_id "
+                "and p.book_id=l.book_id and p.id=l.payment_id "
+                "join gba.provider_operations o on o.tenant_id=l.tenant_id "
+                "and o.id=l.operation_id where l.tenant_id=%s and o.provider_object_id=%s",
+                (routed.tenant_id, item["linked"]),
+            ).fetchone()
+            assert row == (1000, "manual_attestation"), row
         rows = owner_conn.execute(
             "select e.facts->'resource'->>'id',k.note from gba.provider_event_acknowledgements k "
             "join gba.provider_event_inbox e on e.tenant_id=k.tenant_id and e.id=k.event_id "

@@ -415,9 +415,11 @@ const providerOperation = z
       "needs_review",
       "not_final",
       "revoked",
+      "needs_link",
       "observed",
       "applied",
       "applied_with_conflict",
+      "linked",
     ]),
     payment_id: id.nullable(),
     created_at: instant,
@@ -429,7 +431,13 @@ const providerOperation = z
   )
   .refine((v) => providerApplied(v.state) === (v.payment_id !== null))
   .refine(
-    (v) => !(v.state === "observed" || providerApplied(v.state)) || v.amount,
+    (v) =>
+      !(
+        v.state === "observed" ||
+        v.state === "needs_link" ||
+        v.state === "linked" ||
+        providerApplied(v.state)
+      ) || v.amount,
   );
 export const providerOperationListSchema = z
   .strictObject({
@@ -503,13 +511,44 @@ const providerEventView = z.strictObject({
     .nullable(),
   deliveries: z.array(providerDelivery).min(1).max(100),
 });
+/** K3b: the manual payment an operation is linked to, and the candidates naming its ID. */
+const providerLink = z.strictObject({
+  payment_id: id,
+  note: text(500),
+  linked_by: id,
+  linked_at: instant,
+});
+const providerLinkCandidate = z.strictObject({
+  payment_id: id,
+  state: z.enum(["confirmed", "voided", "corrected"]),
+  amount,
+  currency,
+  actual_external_date: day,
+  external_reference: text(200),
+});
 export const providerOperationDetailSchema = z
   .strictObject({
     ...envelope,
     operation: providerOperation,
     events: z.array(providerEventView).max(500),
+    link: providerLink.nullable(),
+    manual_payments: z.array(providerLinkCandidate).max(20),
   })
-  .refine((v) => unique(v.events, (x) => x.event_id));
+  .refine((v) => unique(v.events, (x) => x.event_id))
+  .refine((v) => unique(v.manual_payments, (x) => x.payment_id))
+  .refine((v) => v.operation.state !== "linked" || v.link !== null)
+  .refine(
+    (v) =>
+      v.link === null ||
+      v.manual_payments.some((x) => x.payment_id === v.link?.payment_id),
+  );
+export const providerLinkResultSchema = z
+  .strictObject({
+    ...envelope,
+    operation: providerOperation,
+    link: providerLink,
+  })
+  .refine((v) => v.operation.state === "linked");
 const providerAttentionItem = z
   .strictObject({
     event_id: id,
@@ -944,6 +983,7 @@ export type ProviderOperationDetail = z.infer<
 >;
 export type ProviderAttentionList = z.infer<typeof providerAttentionListSchema>;
 export type ProviderAttentionItem = ProviderAttentionList["items"][number];
+export type ProviderLinkResult = z.infer<typeof providerLinkResultSchema>;
 
 /** Closed route/method contract for the existing management transport. */
 export function financialResponseSchema(
@@ -960,7 +1000,7 @@ export function financialResponseSchema(
   )
     return financialStatusSchema;
   const provider =
-    /^\/financial-documents\/books\/[0-9a-f-]{36}\/(provider-operations|provider-connections|provider-attention)(\/[0-9a-f-]{36})?(\/(?:clearing-account|acknowledgement))?$/i.exec(
+    /^\/financial-documents\/books\/[0-9a-f-]{36}\/(provider-operations|provider-connections|provider-attention)(\/[0-9a-f-]{36})?(\/(?:clearing-account|acknowledgement|link))?$/i.exec(
       path,
     );
   if (provider) {
@@ -980,7 +1020,9 @@ export function financialResponseSchema(
         ? providerClearingAccountSchema
         : family === "provider-attention" && action === "/acknowledgement"
           ? providerAcknowledgementSchema
-          : undefined;
+          : family === "provider-operations" && action === "/link"
+            ? providerLinkResultSchema
+            : undefined;
     return undefined;
   }
   const match =

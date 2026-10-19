@@ -23,6 +23,8 @@ _MIGRATIONS = (
     "0030_h3_forward_corrections.sql",
     # K3a: provider provenance of observed payments and the clearing account (ADR-0027).
     "0052_provider_payment_provenance.sql",
+    # K3b: an earlier manual payment linked to the provider operation it names.
+    "0054_provider_payment_links.sql",
 )
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
@@ -108,6 +110,13 @@ _TRIGGERS = (
         "provider_clearing_accounts_check",
         7,
         "enforce_provider_clearing_account",
+        False,
+    ),
+    (
+        "provider_payment_links",
+        "provider_payment_links_check",
+        7,
+        "enforce_provider_payment_link",
         False,
     ),
     *(

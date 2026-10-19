@@ -52,9 +52,11 @@ ProviderOperationState = Literal[
     "needs_review",
     "not_final",
     "revoked",
+    "needs_link",
     "observed",
     "applied",
     "applied_with_conflict",
+    "linked",
 ]
 ObligationSource = Literal["invoice", "manual", "credit_refund"]
 _MAX_SEQUENCE = 2_147_483_646
@@ -458,11 +460,55 @@ class ProviderEventView(Strict):
     deliveries: tuple[ProviderDeliveryView, ...]
 
 
+class ProviderLinkView(Strict):
+    """K3b: the manual payment an operation is linked to; permanent history."""
+
+    payment_id: UUID
+    note: str
+    linked_by: UUID
+    linked_at: AwareDatetime
+
+
+class ProviderLinkCandidate(Strict):
+    """A manual payment of the book whose reference names the operation's provider ID."""
+
+    payment_id: UUID
+    state: PaymentState
+    amount: str
+    currency: str
+    actual_external_date: date
+    external_reference: str
+
+
 class ProviderOperationDetail(Versioned):
     business_id: UUID
     book_id: UUID
     operation: ProviderOperationSummary
     events: tuple[ProviderEventView, ...]
+    link: ProviderLinkView | None
+    manual_payments: tuple[ProviderLinkCandidate, ...]
+
+
+class ProviderLinkInput(Versioned):
+    """Link an observed operation to the manual payment that recorded it (owner decision 1)."""
+
+    payment_id: UUID
+    note: str = Field(min_length=1, max_length=500, strict=True)
+
+    @field_validator("note")
+    @classmethod
+    def single_line(cls, value: str) -> str:
+        text = single_line_text(value)
+        if text is None:
+            raise ValueError("A note is required")
+        return text
+
+
+class ProviderLinkResult(Versioned):
+    business_id: UUID
+    book_id: UUID
+    operation: ProviderOperationSummary
+    link: ProviderLinkView
 
 
 class ProviderAcknowledgementView(Strict):

@@ -31,7 +31,7 @@ def test_the_runbook_names_every_operation_state() -> None:
 def test_the_runbook_explains_every_provider_refusal_code() -> None:
     text = RUNBOOK.read_text(encoding="utf-8")
     codes = _codes()
-    assert len(codes) == 8
+    assert len(codes) == 10
     for code in codes:
         assert f"| `{code}` |" in text, code
 

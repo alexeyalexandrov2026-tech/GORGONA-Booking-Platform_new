@@ -161,8 +161,35 @@ test("provider operations: truthful states, clearing account, apply, recovery an
   );
   await accessible(page);
 
-  // The response is lost after the server committed: retry the same request safely.
+  // A server refusal is plain and keeps the input. The refusal paths are the API's tests;
+  // here the browser shows one exactly as the server states it, and nothing reaches it.
   await allocation.fill(f.apply_total);
+  await page.route("**/provider-confirmations/**", (route) =>
+    route.fulfill({
+      status: 409,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "PROVIDER_OPERATION_NOT_READY",
+          message: "This provider operation cannot move money yet",
+          request_id: "FAKE-request",
+          details: { reason: "pending" },
+        },
+      }),
+    }),
+  );
+  await apply
+    .getByRole("button", { name: "Apply provider operation", exact: true })
+    .click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "PROVIDER_OPERATION_NOT_READY" }),
+  ).toContainText("still being decided");
+  await expect(allocation).toHaveValue(f.apply_total);
+  await accessible(page);
+  await page.unrouteAll();
+
+  // The response is lost after the server committed: retry the same request safely.
+  await apply.getByRole("checkbox").check();
   await page.route("**/provider-confirmations/**", async (route) => {
     await route.fetch();
     await route.abort();
@@ -186,7 +213,7 @@ test("provider operations: truthful states, clearing account, apply, recovery an
     "Settlement · confirmed",
   );
 
-  // A server refusal is plain, keeps the input and claims nothing.
+  // K3b: an operation a manual payment already recorded is never offered for applying.
   await page
     .getByRole("button", {
       name: new RegExp(
@@ -197,25 +224,16 @@ test("provider operations: truthful states, clearing account, apply, recovery an
   await detail
     .getByRole("button", { name: "Apply provider operation", exact: true })
     .click();
-  await choose(
-    apply.getByRole("combobox", { name: "Observed provider operation" }),
-    f.linked,
-  );
-  await apply.getByLabel(/^Provider allocation /).fill("10.00");
-  await apply.getByRole("checkbox").check();
-  await apply
-    .getByRole("button", { name: "Apply provider operation", exact: true })
-    .click();
   await expect(
-    page
-      .getByRole("alert")
-      .filter({ hasText: "PROVIDER_PAYMENT_LINK_REQUIRED" }),
-  ).toContainText("Linking it is not available yet, so nothing was applied.");
-  await expect(apply.getByLabel(/^Provider allocation /)).toHaveValue("10.00");
+    apply
+      .getByRole("combobox", { name: "Observed provider operation" })
+      .locator("option")
+      .filter({ hasText: f.linked }),
+  ).toHaveCount(0);
   await accessible(page);
   await noSideScroll(page);
 
-  // The applied operation now names its payment; the linked one is still observed.
+  // The applied operation now names its payment; the recorded one needs linking.
   await page
     .getByRole("button", { name: "Provider operations", exact: true })
     .click();
@@ -224,13 +242,15 @@ test("provider operations: truthful states, clearing account, apply, recovery an
   await expect(
     list.getByRole("listitem").filter({ hasText: f.apply }),
   ).toContainText(/Applied to a settlement · payment [0-9a-f-]{36}/);
-  await choose(state, "Observed by the provider, not applied yet");
+  await choose(state, "Already recorded by hand");
   await expect(
     list.getByRole("listitem").filter({ hasText: f.linked }),
   ).toHaveCount(1);
-  await expect(
-    list.getByRole("listitem").filter({ hasText: f.apply }),
-  ).toHaveCount(0);
+  await choose(state, "Observed by the provider, not applied yet");
+  for (const object of [f.apply, f.linked])
+    await expect(
+      list.getByRole("listitem").filter({ hasText: object }),
+    ).toHaveCount(0);
 });
 
 test("provider review: what disagrees, needs attention and acknowledgement", async ({
@@ -311,4 +331,86 @@ test("provider review: what disagrees, needs attention and acknowledgement", asy
   await noSideScroll(page);
   await detail.getByRole("button", { name: "Close details" }).click();
   await expect(detail).toHaveCount(0);
+});
+
+test("provider link: an earlier manual payment is linked, never applied", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(300000);
+  const name = testInfo.project.name;
+  const f = fixtures[name];
+  if (!f) throw new Error("No K4a fixture for this browser project.");
+  await page.goto("/overview/");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: /Today’s Overview/ }),
+  ).toBeVisible();
+  await page
+    .getByRole("link", { name: "Financial documents", exact: true })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Invoices and accruals", exact: true }),
+  ).toBeVisible();
+  await choose(
+    page.getByRole("combobox", { name: "Financial book", exact: true }),
+    "FAKE Ledger LLC",
+  );
+  await page
+    .getByRole("button", { name: "Provider operations", exact: true })
+    .click();
+  const region = page.getByRole("region", {
+    name: "Provider operations",
+    exact: true,
+  });
+  await choose(
+    region.getByRole("combobox", { name: "Operation state" }),
+    "Already recorded by hand",
+  );
+  await region
+    .getByRole("button", { name: `Details of ${f.linked}`, exact: true })
+    .click();
+  const detail = region.getByRole("region", {
+    name: "Provider operation detail",
+  });
+  await expect(
+    detail
+      .getByRole("region", { name: "Manual payments naming this ID" })
+      .getByRole("listitem"),
+  ).toHaveCount(2);
+  const form = detail.getByRole("form", { name: "Link to a manual payment" });
+  await accessible(page);
+
+  // Owner decision 2: the amounts must be equal; the refusal keeps the note.
+  const note = `FAKE ${name} compared with the bank statement`;
+  await choose(
+    form.getByRole("combobox", { name: "Manual payment" }),
+    /^9\.00 /,
+  );
+  await form.getByLabel("Link note").fill(note);
+  await form.getByRole("checkbox").check();
+  await form
+    .getByRole("button", { name: "Link to manual payment", exact: true })
+    .click();
+  await expect(form.getByRole("alert")).toContainText(
+    "Its amount differs from the provider's amount. (PROVIDER_LINK_MISMATCH)",
+  );
+  await expect(form.getByLabel("Link note")).toHaveValue(note);
+  await accessible(page);
+
+  // Owner decision 1: link only; no money moves and the operation is linked.
+  await choose(
+    form.getByRole("combobox", { name: "Manual payment" }),
+    /^10\.00 /,
+  );
+  await form
+    .getByRole("button", { name: "Link to manual payment", exact: true })
+    .click();
+  await expect(detail).toContainText(`Linked to manual payment`);
+  await expect(detail).toContainText(note);
+  await expect(detail.getByRole("heading", { level: 3 })).toContainText(
+    "Linked to the manual payment that recorded it",
+  );
+  await expect(form).toHaveCount(0);
+  await accessible(page);
+  await noSideScroll(page);
 });

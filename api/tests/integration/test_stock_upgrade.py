@@ -37,6 +37,8 @@ K_TABLES = {
     "external_payment_provenance",
     # K4b (0053): acknowledgements of decisions without an operation.
     "provider_event_acknowledgements",
+    # K3b (0054): links of manual payments to provider operations.
+    "provider_payment_links",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

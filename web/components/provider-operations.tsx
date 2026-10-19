@@ -26,12 +26,25 @@ const STATES: readonly (readonly [State, string])[] = [
   ["not_final", "No final provider success yet"],
   ["needs_review", "Provider events disagree; manual review needed"],
   ["revoked", "Connection or verification revoked; cannot move money"],
+  ["needs_link", "Already recorded by hand; link it to the manual payment"],
   ["applied", "Applied to a settlement"],
   [
     "applied_with_conflict",
     "Applied; later provider data disagrees — manual review needed",
   ],
+  ["linked", "Linked to the manual payment that recorded it"],
 ];
+const LINK_MISMATCH: Record<string, string> = {
+  amount: "Its amount differs from the provider's amount.",
+  currency: "Its currency differs from the provider's currency.",
+  direction:
+    "A provider payment links to a received payment, a refund to a paid one.",
+  date: "Its date is more than 3 days from the provider's date.",
+  voided: "It was voided.",
+  payment_linked: "It is already linked to another provider operation.",
+  not_manual: "It is not a manually recorded payment.",
+  reference: "Its reference does not name this provider ID.",
+};
 const stateText = (state: State) =>
   STATES.find(([value]) => value === state)?.[1] ?? state;
 const kindText = (x: ProviderOperation) =>
@@ -79,12 +92,16 @@ export function providerRefusal(e: ManagementApiError): string | null {
             : e.code === "PROVIDER_CLEARING_ACCOUNT_REGISTERED"
               ? "This connection already has its clearing account. It cannot be changed."
               : e.code === "PROVIDER_PAYMENT_LINK_REQUIRED"
-                ? "A manual payment in this book already names this provider ID. Linking it is not available yet, so nothing was applied."
+                ? "A manual payment in this book already names this provider ID. Nothing was applied; link the operation to that payment from its Details."
                 : e.code === "PROVIDER_ATTENTION_ACKNOWLEDGED"
                   ? "This event was already acknowledged with another note."
                   : e.code === "PROVIDER_ATTENTION_NOT_NEEDED"
                     ? "This event needs no acknowledgement: it belongs to an operation or is not decided yet."
-                    : null;
+                    : e.code === "PROVIDER_OPERATION_LINKED"
+                      ? "This provider operation is linked to a manual payment and never moves money itself."
+                      : e.code === "PROVIDER_LINK_MISMATCH"
+                        ? `This manual payment does not match the provider operation. ${LINK_MISMATCH[reason ?? ""] ?? ""}`.trim()
+                        : null;
   return text && `${text} (${e.code})`;
 }
 const failure = (e: unknown) =>
@@ -331,17 +348,35 @@ export function ProviderOperations({
         </button>
       )}
       {detail && (
-        <OperationDetail detail={detail} close={() => setDetail(null)} />
+        <OperationDetail
+          businessId={businessId}
+          bookId={bookId}
+          detail={detail}
+          disabled={disabled || busy}
+          linked={(operation) => {
+            setLocal((n) => n + 1);
+            void open(operation);
+          }}
+          close={() => setDetail(null)}
+        />
       )}
     </section>
   );
 }
 
 function OperationDetail({
+  businessId,
+  bookId,
   detail,
+  disabled,
+  linked,
   close,
 }: {
+  businessId: string;
+  bookId: string;
   detail: ProviderOperationDetail;
+  disabled: boolean;
+  linked: (operation: string) => void;
   close: () => void;
 }) {
   const operation = detail.operation;
@@ -409,10 +444,130 @@ function OperationDetail({
           </li>
         ))}
       </ol>
+      {detail.manual_payments.length > 0 && (
+        <section aria-label="Manual payments naming this ID">
+          <h4>Manual payments naming this ID</h4>
+          <ul>
+            {detail.manual_payments.map((x) => (
+              <li key={x.payment_id}>
+                {x.amount} {x.currency} · {x.actual_external_date} · {x.state} ·{" "}
+                {x.external_reference} · payment {x.payment_id}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {detail.link && (
+        <p>
+          Linked to manual payment {detail.link.payment_id}: {detail.link.note}{" "}
+          · by {detail.link.linked_by} ·{" "}
+          {new Date(detail.link.linked_at).toLocaleString()}. No money moved for
+          this operation.
+        </p>
+      )}
+      {operation.state === "needs_link" && !detail.link && (
+        <LinkForm
+          businessId={businessId}
+          bookId={bookId}
+          detail={detail}
+          disabled={disabled}
+          done={() => linked(operation.operation_id)}
+        />
+      )}
       <button className="secondary" onClick={close}>
         Close details
       </button>
     </section>
+  );
+}
+
+/** K3b: link only (owner decision 1); the comparison is the server's, the note the user's. */
+function LinkForm({
+  businessId,
+  bookId,
+  detail,
+  disabled,
+  done,
+}: {
+  businessId: string;
+  bookId: string;
+  detail: ProviderOperationDetail;
+  disabled: boolean;
+  done: () => void;
+}) {
+  const operation = detail.operation;
+  const [payment, setPayment] = useState(""),
+    [note, setNote] = useState(""),
+    [confirmed, setConfirmed] = useState(false),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null);
+  return (
+    <form
+      aria-label="Link to a manual payment"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!confirmed) return;
+        setBusy(true);
+        setError(null);
+        void api
+          .linkProviderOperation(
+            businessId,
+            bookId,
+            operation.operation_id,
+            payment,
+            note.trim(),
+          )
+          .then(done, (e) => setError(failure(e)))
+          .finally(() => setBusy(false));
+      }}
+    >
+      <fieldset disabled={disabled || busy}>
+        <legend>Link to a manual payment</legend>
+        <p>
+          The provider reported {operation.amount} {operation.currency}. Link
+          the manual payment that recorded it: amounts must be equal and the
+          dates at most 3 days apart. No money moves; the operation is never
+          applied.
+        </p>
+        <Field label="Manual payment">
+          <select
+            required
+            value={payment}
+            onChange={(e) => setPayment(e.target.value)}
+          >
+            <option value="">Choose payment</option>
+            {detail.manual_payments
+              .filter((x) => x.state !== "voided")
+              .map((x) => (
+                <option key={x.payment_id} value={x.payment_id}>
+                  {x.amount} {x.currency} · {x.actual_external_date} ·{" "}
+                  {x.external_reference}
+                </option>
+              ))}
+          </select>
+        </Field>
+        <Field label="Link note">
+          <input
+            required
+            maxLength={500}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </Field>
+        <label className="financial-check">
+          <input
+            type="checkbox"
+            required
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+          />
+          I compared this manual payment with the provider operation; the link
+          is permanent.
+        </label>
+        <button type="submit">Link to manual payment</button>
+      </fieldset>
+      {error && <p role="alert">{error}</p>}
+    </form>
   );
 }
 

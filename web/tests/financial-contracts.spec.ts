@@ -18,6 +18,7 @@ import {
   providerOperationDetailSchema,
   providerAttentionListSchema,
   providerAcknowledgementSchema,
+  providerLinkResultSchema,
 } from "../lib/financial-contracts";
 import {
   financialRecoverySchema,
@@ -965,6 +966,8 @@ test("provider operation detail is strict and a difference names its field and v
     ...envelope,
     operation: observedOperation,
     events: [providerEvent],
+    link: null,
+    manual_payments: [],
   };
   expect(providerOperationDetailSchema.safeParse(value).success).toBe(true);
   const differing = {
@@ -1099,4 +1102,71 @@ test("provider review routes have closed response contracts", () => {
     [`${books}/provider-attention/${entry}/acknowledgement`, "GET"],
   ])
     expect(financialResponseSchema(path!, method!)).toBeUndefined();
+});
+
+// K3b: links of manual payments to provider operations.
+test("a linked operation names its manual payment and the link result is strict", () => {
+  const link = {
+    payment_id: payment,
+    note: "FAKE compared with the bank",
+    linked_by: actor,
+    linked_at: instant,
+  };
+  const candidate = {
+    payment_id: payment,
+    state: "confirmed",
+    amount: "10.00",
+    currency: "USD",
+    actual_external_date: day,
+    external_reference: "FAKE Stripe pi_FAKEpayment1",
+  };
+  const linked = { ...observedOperation, state: "linked" };
+  const detail = {
+    ...envelope,
+    operation: linked,
+    events: [providerEvent],
+    link,
+    manual_payments: [candidate],
+  };
+  expect(providerOperationDetailSchema.safeParse(detail).success).toBe(true);
+  for (const patch of [
+    { link: null },
+    { manual_payments: [] },
+    { link: { ...link, note: "" } },
+    { manual_payments: [{ ...candidate, state: "deleted" }] },
+    { manual_payments: [candidate, candidate] },
+  ])
+    expect(
+      providerOperationDetailSchema.safeParse({ ...detail, ...patch }).success,
+    ).toBe(false);
+  for (const state of ["needs_link", "linked"])
+    expect(
+      providerOperationListSchema.safeParse(
+        operationPage({ ...observedOperation, state, amount: null }),
+      ).success,
+    ).toBe(false);
+  expect(
+    providerLinkResultSchema.safeParse({ ...envelope, operation: linked, link })
+      .success,
+  ).toBe(true);
+  expect(
+    providerLinkResultSchema.safeParse({
+      ...envelope,
+      operation: observedOperation,
+      link,
+    }).success,
+  ).toBe(false);
+  const books = `/financial-documents/books/${book}`;
+  expect(
+    financialResponseSchema(
+      `${books}/provider-operations/${operation}/link`,
+      "PUT",
+    ),
+  ).toBe(providerLinkResultSchema);
+  expect(
+    financialResponseSchema(
+      `${books}/provider-operations/${operation}/link`,
+      "GET",
+    ),
+  ).toBeUndefined();
 });
