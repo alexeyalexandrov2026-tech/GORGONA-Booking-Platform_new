@@ -27,7 +27,8 @@
 ## Open
 
 1. K5 evidence plan: FIN-02 needs actual admitted Stripe test execution (K0, BLOCKED), an
-   independent review and exact-head CI. Propose it for the owner's choice before code.
+   independent review and exact-head CI. Planned on 2026-10-19 in [K5](PACKAGE_K5_PLAN_2026-10-19.md);
+   waits for four owner answers.
 2. A worker entry point and schedule, alerts and dashboards (infrastructure, owner's word).
 3. Fees, payouts and bank reconciliation; other currencies (each needs the owner's word).
 4. The manual H payment form still loses its input after a refusal (existing behaviour).

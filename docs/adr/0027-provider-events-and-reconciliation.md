@@ -20,6 +20,13 @@ Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the propo
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
 
+## K5 plan — 2026-10-19, not started
+
+The remaining FIN-02 evidence (process entry points for the ingress and worker, an owner-recorded
+admission, actual Stripe test events through the local ingress, an independent review, exact-head
+CI and a separate readiness decision) is planned in [the K5 plan](../plan/PACKAGE_K5_PLAN_2026-10-19.md).
+It awaits the owner's four answers; K0 stays BLOCKED until then.
+
 ## K3b local design decision — 2026-10-19, Proposed; locally implemented in `8bb2eb4`
 
 Linking an earlier manual payment that names a provider ID to that provider operation (no new

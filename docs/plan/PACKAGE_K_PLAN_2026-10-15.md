@@ -1,5 +1,13 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## K5 plan — FIN-02 evidence: K0, independent review, CI (2026-10-19, docs only)
+
+What FIN-02 still lacks after K3b (a running ingress and worker, an admitted connection state,
+real Stripe test events, an independent review, exact-head CI and the owner's readiness decision)
+and the proposed order are in [PACKAGE_K5_PLAN_2026-10-19.md](PACKAGE_K5_PLAN_2026-10-19.md).
+Not started: four owner questions (where the real test runs, which Stripe test account, the
+review, the signing secret).
+
 ## Current checkpoint — 2026-10-19: K3b links of earlier manual payments locally verified
 
 Source `8bb2eb43e16a05092065a09bee8082733737fe1f` on local branch `codex/package-k3b-provider-links`, parent `199eada`.
