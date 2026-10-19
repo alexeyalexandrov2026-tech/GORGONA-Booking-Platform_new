@@ -418,3 +418,95 @@ class ObligationList(Versioned):
     book_id: UUID
     items: tuple[ObligationSummary, ...]
     next_cursor: UUID | None
+
+
+# K4b: why an operation needs review, what waits for attention, and acknowledgements.
+ProviderDecisionOutcome = Literal["observed", "needs_review"]
+ProviderDecisionReason = Literal[
+    "success", "not_final", "conflicting_facts", "unkeyed_operation", "refund_without_payment"
+]
+ProviderOrphanReason = Literal["unkeyed_operation", "refund_without_payment"]
+
+
+class ProviderDeliveryDifference(Strict):
+    """One stored fact that a later delivery states differently; never a raw body."""
+
+    field: str
+    original: str
+    delivered: str
+
+
+class ProviderDeliveryView(Strict):
+    received_at: AwareDatetime
+    # The first 12 hex digits of the delivery digest: enough to tell deliveries apart.
+    digest: str
+    matches_original: bool
+    differences: tuple[ProviderDeliveryDifference, ...]
+
+
+class ProviderDecisionView(Strict):
+    outcome: ProviderDecisionOutcome
+    reason: ProviderDecisionReason
+    decided_at: AwareDatetime
+
+
+class ProviderEventView(Strict):
+    event_id: UUID
+    event_type: str
+    created: AwareDatetime
+    decision: ProviderDecisionView | None
+    deliveries: tuple[ProviderDeliveryView, ...]
+
+
+class ProviderOperationDetail(Versioned):
+    business_id: UUID
+    book_id: UUID
+    operation: ProviderOperationSummary
+    events: tuple[ProviderEventView, ...]
+
+
+class ProviderAcknowledgementView(Strict):
+    note: str
+    acknowledged_by: UUID
+    acknowledged_at: AwareDatetime
+
+
+class ProviderAttentionItem(Strict):
+    """An attested event without a decision, or a decision without a provider operation."""
+
+    event_id: UUID
+    connection_id: UUID
+    kind: Literal["undecided", "no_operation"]
+    event_type: str
+    # The provider's own ID of the object (pi_, ch_ or re_), to find it at the provider.
+    object_id: str
+    created: AwareDatetime
+    reason: ProviderOrphanReason | None
+    acknowledgement: ProviderAcknowledgementView | None
+
+
+class ProviderAttentionList(Versioned):
+    business_id: UUID
+    book_id: UUID
+    items: tuple[ProviderAttentionItem, ...]
+    next_cursor: UUID | None
+
+
+class ProviderAcknowledgeInput(Versioned):
+    """A finance user's note that a decision without an operation was handled (owner decision 2)."""
+
+    note: str = Field(min_length=1, max_length=500, strict=True)
+
+    @field_validator("note")
+    @classmethod
+    def single_line(cls, value: str) -> str:
+        text = single_line_text(value)
+        if text is None:
+            raise ValueError("A note is required")
+        return text
+
+
+class ProviderAcknowledgementResult(Versioned):
+    business_id: UUID
+    book_id: UUID
+    item: ProviderAttentionItem

@@ -15,6 +15,7 @@ from gorgona_booking.business import (
     credit_notes,
     financial_commands,
     provider_payments,
+    provider_review,
     settlements,
 )
 from gorgona_booking.business import financial_documents as service
@@ -41,9 +42,13 @@ from gorgona_booking.business.settlement_contracts import (
     PaymentCorrectInput,
     PaymentView,
     PaymentVoidInput,
+    ProviderAcknowledgeInput,
+    ProviderAcknowledgementResult,
+    ProviderAttentionList,
     ProviderClearingAccountInput,
     ProviderClearingAccountView,
     ProviderConnectionList,
+    ProviderOperationDetail,
     ProviderOperationList,
     ProviderOperationState,
     ProviderPaymentConfirmInput,
@@ -56,7 +61,8 @@ from gorgona_booking.business.settlement_contracts import (
     SettlementView,
 )
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
-from gorgona_booking.errors import NotFoundError
+from gorgona_booking.errors import DomainError, NotFoundError
+from gorgona_booking.observability import record_provider_application
 from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenant
 
 router = APIRouter(
@@ -571,6 +577,58 @@ async def provider_operations(
         )
 
 
+@router.get("/books/{book_id}/provider-operations/{operation_id}")
+async def provider_operation(
+    business_id: UUID,
+    book_id: UUID,
+    operation_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ProviderOperationDetail:
+    """Every event, decision and delivery of one operation, with the facts that differ (K4b)."""
+    async with _access(request, principal, business_id) as access:
+        return await provider_review.operation_detail(
+            access.conn, business_id, book_id, operation_id
+        )
+
+
+@router.get("/books/{book_id}/provider-attention")
+async def provider_attention(
+    business_id: UUID,
+    book_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    after: UUID | None = None,
+    limit: Limit = 50,
+) -> ProviderAttentionList:
+    """Events still waiting for a decision and decisions without an operation (K4b)."""
+    async with _access(request, principal, business_id) as access:
+        return await provider_review.list_attention(
+            access.conn, business_id, book_id, after=after, limit=limit
+        )
+
+
+@router.put("/books/{book_id}/provider-attention/{event_id}/acknowledgement")
+async def provider_acknowledgement(
+    business_id: UUID,
+    book_id: UUID,
+    event_id: UUID,
+    body: ProviderAcknowledgeInput,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ProviderAcknowledgementResult:
+    """A finance user marks a decision without an operation as handled, with a note."""
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await provider_review.acknowledge(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            event_id=event_id,
+            user_id=principal.user_id,
+            body=body,
+        )
+
+
 @router.get("/books/{book_id}/provider-connections")
 async def provider_connections(
     business_id: UUID,
@@ -620,18 +678,24 @@ async def settlement_provider_confirm(
     idempotency_key: MutationKey,
 ) -> SettlementView:
     """A finance user applies one observed provider operation; its facts set the money."""
-    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
-        return await settlements.confirm_provider(
-            access.conn,
-            business_id=business_id,
-            book_id=book_id,
-            settlement_id=settlement_id,
-            payment_id=payment_id,
-            user_id=principal.user_id,
-            actor=principal.actor,
-            key=idempotency_key,
-            body=body,
-        )
+    try:
+        async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+            result = await settlements.confirm_provider(
+                access.conn,
+                business_id=business_id,
+                book_id=book_id,
+                settlement_id=settlement_id,
+                payment_id=payment_id,
+                user_id=principal.user_id,
+                actor=principal.actor,
+                key=idempotency_key,
+                body=body,
+            )
+    except DomainError as error:
+        record_provider_application(error.code, business_id)
+        raise
+    record_provider_application("applied", business_id)
+    return result
 
 
 @router.post("/commands/{key}/resolve")

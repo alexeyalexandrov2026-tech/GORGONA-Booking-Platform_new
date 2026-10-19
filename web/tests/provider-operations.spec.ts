@@ -9,7 +9,13 @@ type Fixture = {
   linked_total: string;
   conflict: string;
   unregistered: string;
+  conflict_original: string;
+  conflict_delivered: string;
+  orphan: string;
+  waiting: string;
 };
+// Row actions other than "Details" (K4b): an operation row offers none.
+const action = { name: /^(?!Details of )/ };
 const fixtures = JSON.parse(process.env.GBA_K4A_FIXTURE ?? "{}") as Record<
   string,
   Fixture
@@ -89,7 +95,7 @@ test("provider operations: truthful states, clearing account, apply, recovery an
   await expect(list.getByRole("listitem")).toHaveCount(total);
   for (const text of await list.getByRole("listitem").allInnerTexts())
     expect(text).not.toMatch(/\b(paid|verified|payout)\b/i);
-  await expect(list.getByRole("button")).toHaveCount(0);
+  await expect(list.getByRole("button", action)).toHaveCount(0);
 
   // Owner decision 2: registered once in the screen, after an explicit confirmation.
   const form = region.getByRole("form", {
@@ -119,7 +125,7 @@ test("provider operations: truthful states, clearing account, apply, recovery an
   await choose(state, "Applied; later provider data disagrees");
   const conflict = list.getByRole("listitem").filter({ hasText: f.conflict });
   await expect(conflict).toContainText("Manual review needed.");
-  await expect(conflict.getByRole("button")).toHaveCount(0);
+  await expect(conflict.getByRole("button", action)).toHaveCount(0);
   await accessible(page);
 
   // Owner decision 1: applied from the reserved settlement; the amount is the provider's.
@@ -225,4 +231,84 @@ test("provider operations: truthful states, clearing account, apply, recovery an
   await expect(
     list.getByRole("listitem").filter({ hasText: f.apply }),
   ).toHaveCount(0);
+});
+
+test("provider review: what disagrees, needs attention and acknowledgement", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(300000);
+  const name = testInfo.project.name;
+  const f = fixtures[name];
+  if (!f) throw new Error("No K4a fixture for this browser project.");
+  await page.goto("/overview/");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: /Today’s Overview/ }),
+  ).toBeVisible();
+  await page
+    .getByRole("link", { name: "Financial documents", exact: true })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Invoices and accruals", exact: true }),
+  ).toBeVisible();
+  await choose(
+    page.getByRole("combobox", { name: "Financial book", exact: true }),
+    "FAKE Ledger LLC",
+  );
+  await page
+    .getByRole("button", { name: "Provider operations", exact: true })
+    .click();
+  const region = page.getByRole("region", {
+    name: "Provider operations",
+    exact: true,
+  });
+
+  // Owner decision 2: a decision without an operation is acknowledged with a note.
+  const attention = region.getByRole("region", { name: "Needs attention" });
+  const items = attention.getByRole("list", { name: "Attention list" });
+  await expect(
+    items.getByRole("listitem").filter({ hasText: f.waiting }),
+  ).toContainText("Waiting for the receipt worker");
+  await expect(
+    items
+      .getByRole("listitem")
+      .filter({ hasText: f.waiting })
+      .getByRole("button"),
+  ).toHaveCount(0);
+  const form = attention.getByRole("form", { name: `Acknowledge ${f.orphan}` });
+  await expect(form).toContainText("no payment to attach it to");
+  await accessible(page);
+  const note = `FAKE ${name} checked with the provider`;
+  await form.getByLabel("Acknowledgement note").fill(note);
+  await form.getByRole("button", { name: "Acknowledge", exact: true }).click();
+  await expect(
+    items.getByRole("listitem").filter({ hasText: f.orphan }),
+  ).toContainText(`Handled: ${note}`);
+  await expect(form).toHaveCount(0);
+
+  // Owner decision 1: the fields that disagree, with both values.
+  await choose(
+    region.getByRole("combobox", { name: "Operation state" }),
+    "Applied; later provider data disagrees",
+  );
+  await region
+    .getByRole("button", { name: `Details of ${f.conflict}`, exact: true })
+    .click();
+  const detail = region.getByRole("region", {
+    name: "Provider operation detail",
+  });
+  const disagrees = detail.getByRole("region", { name: "What disagrees" });
+  await expect(disagrees).toContainText(
+    `Amount received (minor units) ${f.conflict_original} → ${f.conflict_delivered}`,
+  );
+  await expect(disagrees).toContainText(
+    "its facts disagree with earlier events of this operation",
+  );
+  await expect(detail).toContainText("same facts as the first delivery");
+  for (const text of await detail.allInnerTexts())
+    expect(text).not.toMatch(/whsec_|signature|secret/i);
+  await accessible(page);
+  await noSideScroll(page);
+  await detail.getByRole("button", { name: "Close details" }).click();
+  await expect(detail).toHaveCount(0);
 });

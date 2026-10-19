@@ -15,6 +15,9 @@ import {
   providerOperationListSchema,
   providerConnectionListSchema,
   providerClearingAccountSchema,
+  providerOperationDetailSchema,
+  providerAttentionListSchema,
+  providerAcknowledgementSchema,
 } from "../lib/financial-contracts";
 import {
   financialRecoverySchema,
@@ -938,6 +941,162 @@ test("provider routes have closed response contracts", () => {
     [`${books}/provider-operations`, "POST"],
     [`${books}/provider-connections/${connection}/clearing-account`, "GET"],
     [`${books}/provider-connections/${connection}`, "GET"],
+  ])
+    expect(financialResponseSchema(path!, method!)).toBeUndefined();
+});
+
+// K4b: operation detail, attention items and acknowledgements.
+const providerEvent = {
+  event_id: entry,
+  event_type: "payment_intent.succeeded",
+  created: instant,
+  decision: { outcome: "observed", reason: "success", decided_at: instant },
+  deliveries: [
+    {
+      received_at: instant,
+      digest: "0123456789ab",
+      matches_original: true,
+      differences: [],
+    },
+  ],
+};
+test("provider operation detail is strict and a difference names its field and values", () => {
+  const value = {
+    ...envelope,
+    operation: observedOperation,
+    events: [providerEvent],
+  };
+  expect(providerOperationDetailSchema.safeParse(value).success).toBe(true);
+  const differing = {
+    received_at: instant,
+    digest: "ba9876543210",
+    matches_original: false,
+    differences: [
+      {
+        field: "resource.amount_received_minor",
+        original: "1000",
+        delivered: "900",
+      },
+    ],
+  };
+  expect(
+    providerOperationDetailSchema.safeParse({
+      ...value,
+      events: [
+        {
+          ...providerEvent,
+          deliveries: [...providerEvent.deliveries, differing],
+        },
+      ],
+    }).success,
+  ).toBe(true);
+  for (const delivery of [
+    { ...differing, differences: [] },
+    { ...providerEvent.deliveries[0], differences: differing.differences },
+    { ...differing, digest: "FAKE" },
+    { ...differing, body: "{}" },
+  ])
+    expect(
+      providerOperationDetailSchema.safeParse({
+        ...value,
+        events: [{ ...providerEvent, deliveries: [delivery] }],
+      }).success,
+    ).toBe(false);
+  for (const patch of [
+    {
+      decision: {
+        outcome: "observed",
+        reason: "conflicting_facts",
+        decided_at: instant,
+      },
+    },
+    {
+      decision: {
+        outcome: "needs_review",
+        reason: "success",
+        decided_at: instant,
+      },
+    },
+    { signature: "FAKE" },
+    { deliveries: [] },
+  ])
+    expect(
+      providerOperationDetailSchema.safeParse({
+        ...value,
+        events: [{ ...providerEvent, ...patch }],
+      }).success,
+    ).toBe(false);
+});
+test("attention items are undecided or without an operation, and acknowledged once", () => {
+  const undecided = {
+    event_id: entry,
+    connection_id: connection,
+    kind: "undecided",
+    event_type: "payment_intent.succeeded",
+    object_id: "pi_FAKEwaiting1",
+    created: instant,
+    reason: null,
+    acknowledgement: null,
+  };
+  const orphan = {
+    ...undecided,
+    event_id: document,
+    kind: "no_operation",
+    event_type: "refund.updated",
+    object_id: "re_FAKEorphan1",
+    reason: "refund_without_payment",
+    acknowledgement: {
+      note: "FAKE checked",
+      acknowledged_by: actor,
+      acknowledged_at: instant,
+    },
+  };
+  expect(
+    providerAttentionListSchema.safeParse(operationPage(undecided, orphan))
+      .success,
+  ).toBe(true);
+  for (const item of [
+    { ...undecided, reason: "unkeyed_operation" },
+    { ...orphan, reason: null },
+    { ...orphan, reason: "success" },
+    { ...undecided, kind: "applied" },
+    { ...orphan, acknowledgement: { ...orphan.acknowledgement, note: "" } },
+    { ...undecided, facts: {} },
+  ])
+    expect(
+      providerAttentionListSchema.safeParse(operationPage(item)).success,
+    ).toBe(false);
+  expect(
+    providerAttentionListSchema.safeParse(operationPage(undecided, undecided))
+      .success,
+  ).toBe(false);
+  expect(
+    providerAcknowledgementSchema.safeParse({ ...envelope, item: orphan })
+      .success,
+  ).toBe(true);
+  expect(
+    providerAcknowledgementSchema.safeParse({ ...envelope, item: undecided })
+      .success,
+  ).toBe(false);
+});
+test("provider review routes have closed response contracts", () => {
+  const books = `/financial-documents/books/${book}`;
+  expect(
+    financialResponseSchema(`${books}/provider-operations/${operation}`, "GET"),
+  ).toBe(providerOperationDetailSchema);
+  expect(financialResponseSchema(`${books}/provider-attention`, "GET")).toBe(
+    providerAttentionListSchema,
+  );
+  expect(
+    financialResponseSchema(
+      `${books}/provider-attention/${entry}/acknowledgement`,
+      "PUT",
+    ),
+  ).toBe(providerAcknowledgementSchema);
+  for (const [path, method] of [
+    [`${books}/provider-operations/${operation}`, "PUT"],
+    [`${books}/provider-attention/${entry}`, "GET"],
+    [`${books}/provider-attention/${entry}/acknowledgement`, "GET"],
   ])
     expect(financialResponseSchema(path!, method!)).toBeUndefined();
 });

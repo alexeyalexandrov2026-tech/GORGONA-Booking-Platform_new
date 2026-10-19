@@ -1,4 +1,4 @@
-"""K4a: the finance screen for provider operations in a real browser, desktop and mobile.
+"""K4a/K4b: the finance screen for provider operations in a real browser, desktop and mobile.
 
 Actual OIDC/PKCE, the static web export, the live API and PostgreSQL. Provider events are
 synthetic, signed in memory and decided by the receipt worker before the browser starts; no
@@ -19,6 +19,8 @@ from fastapi import FastAPI
 
 from gorgona_booking.db.provisioning import add_membership, owner_tenant_transaction
 from tests.integration import test_provider_payments as shared
+from tests.integration import test_provider_receipt_attestations as attested
+from tests.integration import test_provider_receipt_decisions as decided
 from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.live_server import free_port, live_server
 from tests.integration.seed import seed_user
@@ -62,9 +64,8 @@ async def project(money: Money, name: str, n: int) -> dict[str, str]:
     # Applied before the browser, then a later charge disagrees: applied with conflict.
     conflict = f"pi_FAKE{name}Conflict"
     obligation, settled = await money.reserved(f"3{n}.00")
-    await money.observe(
-        event("payment_intent.succeeded", object_id=conflict, amount=3000 + 100 * n)
-    )
+    conflict_raw = event("payment_intent.succeeded", object_id=conflict, amount=3000 + 100 * n)
+    await money.observe(conflict_raw)
     applied = await money.apply(
         settled, await money.operation(conflict), [(obligation, f"3{n}.00")]
     )
@@ -77,6 +78,15 @@ async def project(money: Money, name: str, n: int) -> dict[str, str]:
             amount=100,
         )
     )
+    # K4b: a later delivery of the same event states another amount.
+    variant = conflict_raw.replace(
+        f'"amount_received":3{n}00'.encode(), f'"amount_received":3{n}99'.encode()
+    )
+    assert variant != conflict_raw
+    assert (await attested.receive(money.writer, money.routed, variant)).disposition == "conflict"
+    # K4b: a decision without an operation, acknowledged in the browser.
+    orphan = f"ch_FAKE{name}Orphan"
+    await money.observe(event("charge.succeeded", object_id=orphan, payment_intent=None))
     return {
         "apply": apply,
         "apply_total": f"1{n}.00",
@@ -85,6 +95,10 @@ async def project(money: Money, name: str, n: int) -> dict[str, str]:
         "conflict": conflict,
         # A second connection of the book with no clearing account: registered in the browser.
         "unregistered": f"acct_FAKE{name}New",
+        "conflict_original": f"3{n}00",
+        "conflict_delivered": f"3{n}99",
+        "orphan": orphan,
+        "waiting": f"pi_FAKE{name}Waiting",
     }
 
 
@@ -153,6 +167,15 @@ async def test_k4a_real_browser_provider_operations(
         )
     )
     total = len(await money.listed())
+    # K4b: attested last and never decided, so they wait for the worker in the browser.
+    await decided.receive_all(
+        money.writer,
+        money.routed,
+        *(
+            event("payment_intent.succeeded", object_id=item["waiting"])
+            for item in fixture.values()
+        ),
+    )
     assert total == SLOW + 3 * len(PROJECTS)
     app_port, idp_port = free_port(), free_port()
     origin, issuer = f"http://127.0.0.1:{app_port}", f"http://127.0.0.1:{idp_port}"
@@ -198,3 +221,13 @@ async def test_k4a_real_browser_provider_operations(
         ).fetchone()
         # Two manual, two applied before the browser, two applied in it: never a duplicate.
         assert row == (6,)
+        rows = owner_conn.execute(
+            "select e.facts->'resource'->>'id',k.note from gba.provider_event_acknowledgements k "
+            "join gba.provider_event_inbox e on e.tenant_id=k.tenant_id and e.id=k.event_id "
+            "where k.tenant_id=%s order by 1",
+            (routed.tenant_id,),
+        ).fetchall()
+        assert rows == sorted(
+            (item["orphan"], f"FAKE {name} checked with the provider")
+            for name, item in fixture.items()
+        )

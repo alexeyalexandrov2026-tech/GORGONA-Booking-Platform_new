@@ -18,6 +18,7 @@ from gorgona_booking.db.pool import (
     unscoped_transaction,
 )
 from gorgona_booking.db.provider_receipt_guard import assert_provider_receipt_ready
+from gorgona_booking.observability import record_provider_decision
 
 MAX_LEASE_SECONDS = 600
 MAX_BATCH = 500
@@ -190,5 +191,7 @@ async def process_batch(
         if generation is None:
             continue
         async with tenant_transaction(pool, tenant) as conn:
-            decided.append(await decide(conn, tenant, event, holder=holder, generation=generation))
+            decision = await decide(conn, tenant, event, holder=holder, generation=generation)
+        decided.append(decision)
+        record_provider_decision(decision.outcome, decision.reason, tenant)
     return decided

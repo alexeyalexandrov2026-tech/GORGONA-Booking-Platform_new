@@ -16,6 +16,9 @@ import {
   providerOperationListSchema,
   providerConnectionListSchema,
   providerClearingAccountSchema,
+  providerOperationDetailSchema,
+  providerAttentionListSchema,
+  providerAcknowledgementSchema,
   type FinancialCommand,
   type FinancialReference,
   type ProviderOperation,
@@ -198,6 +201,48 @@ export async function registerClearingAccount(
   );
   exact(result.connection_id, connection);
   exact(result.account_id, account);
+  return result;
+}
+export async function fetchProviderOperation(
+  business: string,
+  book: string,
+  operation: string,
+) {
+  const result = await read(
+    business,
+    providerOperationDetailSchema,
+    `${bookBase(business, book)}/provider-operations/${operation}`,
+    book,
+  );
+  exact(result.operation.operation_id, operation);
+  return result;
+}
+export const fetchProviderAttention = (
+  business: string,
+  book: string,
+  after?: string,
+) =>
+  read(
+    business,
+    providerAttentionListSchema,
+    `${bookBase(business, book)}/provider-attention${query(after)}`,
+    book,
+  );
+/** Recorded once; the same note again is safe and returns the record (K4b). */
+export async function acknowledgeProviderEvent(
+  business: string,
+  book: string,
+  event: string,
+  note: string,
+) {
+  const result = await read(
+    business,
+    providerAcknowledgementSchema,
+    `${bookBase(business, book)}/provider-attention/${event}/acknowledgement`,
+    book,
+    { method: "PUT", body: JSON.stringify({ schema_version: 1, note }) },
+  );
+  exact(result.item.event_id, event);
   return result;
 }
 export async function fetchSettlement(

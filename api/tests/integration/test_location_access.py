@@ -440,6 +440,12 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
             decision_policies = re.findall(r"create policy \w+_company\b.*?;", decisions, re.DOTALL)
             assert len(decision_policies) == 3
             receipt_policies += decision_policies
+            acknowledgements = next(m.sql for m in load_migrations() if m.version == 53)
+            acknowledgement_policies = re.findall(
+                r"create policy \w+_company\b.*?;", acknowledgements, re.DOTALL
+            )
+            assert len(acknowledgement_policies) == 1
+            receipt_policies += acknowledgement_policies
             for group in ("gba_receipt_writer", "gba_receipt_worker"):
                 owner_conn.execute(
                     sql.SQL("grant execute on function gba.current_location_id() to {}").format(

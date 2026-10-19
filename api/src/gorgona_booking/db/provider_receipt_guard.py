@@ -1,4 +1,4 @@
-"""Packaged K1b-K3a integrity approvals, checked before each internal receipt write."""
+"""Packaged K1b-K4b integrity approvals, checked before each internal receipt write."""
 
 import re
 from importlib import resources
@@ -17,6 +17,7 @@ _SQL = "".join(
         "0049_provider_receipt_truncate_guard.sql",
         "0050_provider_receipt_decisions.sql",
         "0051_provider_money_access.sql",
+        "0053_provider_attention_acknowledgements.sql",
     )
 )
 # A later `create or replace` (0048) supersedes the earlier body of the same function.
@@ -39,13 +40,20 @@ _RECEIPTS = (
 )
 # K2a: the worker's tables. K3a (0051): the runtime also reads operations and decisions.
 _DECISIONS = ("provider_operations", "provider_event_leases", "provider_event_decisions")
+# K4b (0053): a finance user's acknowledgement of a decision without an operation.
+_ACKNOWLEDGEMENTS = "provider_event_acknowledgements"
 # Company-scoped tables: tenant and company policies.
-_SCOPED = (*_RECEIPTS, *_DECISIONS)
+_SCOPED = (*_RECEIPTS, *_DECISIONS, _ACKNOWLEDGEMENTS)
 _TABLES = (*_SCOPED, _ROUTES)
 _GROUPS = ("gba_runtime", "gba_receipt_writer", "gba_receipt_worker")
 # Tables each group may read; a role running the guard is checked against its own group.
 _READS = {
-    "gba_runtime": {*_RECEIPTS, "provider_operations", "provider_event_decisions"},
+    "gba_runtime": {
+        *_RECEIPTS,
+        "provider_operations",
+        "provider_event_decisions",
+        _ACKNOWLEDGEMENTS,
+    },
     "gba_receipt_writer": {*_RECEIPTS, _ROUTES},
     "gba_receipt_worker": {
         "provider_event_inbox",
@@ -191,6 +199,21 @@ _TRIGGERS = (
         "reject_ledger_mutation",
         False,
     ),
+    # 0053: acknowledgements of decisions without an operation.
+    (
+        _ACKNOWLEDGEMENTS,
+        "provider_event_acknowledgements_check",
+        7,
+        "check_provider_acknowledgement",
+        False,
+    ),
+    (
+        _ACKNOWLEDGEMENTS,
+        "provider_event_acknowledgements_immutable",
+        27,
+        "reject_ledger_mutation",
+        False,
+    ),
     # 0049: BEFORE TRUNCATE FOR EACH STATEMENT on every receipt table.
     *(
         (table, f"{table}_no_truncate", 34, "reject_provider_receipt_truncate", False)
@@ -266,6 +289,11 @@ _CHECKS = (
         "provider_event_decisions",
         "((operation_id IS NULL) = (reason = ANY (ARRAY['unkeyed_operation'::text, "
         "'refund_without_payment'::text])))",
+    ),
+    (
+        _ACKNOWLEDGEMENTS,
+        "(((length(btrim(note)) >= 1) AND (length(btrim(note)) <= 500)) "
+        "AND (note !~ '[[:cntrl:]]'::text))",
     ),
 )
 _KEYS = (
@@ -388,6 +416,15 @@ _KEYS = (
         "provider_operations",
         ["tenant_id", "id"],
     ),
+    (_ACKNOWLEDGEMENTS, "p", ["tenant_id", "event_id"], None, None),
+    (
+        _ACKNOWLEDGEMENTS,
+        "f",
+        ["tenant_id", "event_id"],
+        "provider_event_decisions",
+        ["tenant_id", "event_id"],
+    ),
+    (_ACKNOWLEDGEMENTS, "f", ["created_by"], "users", ["id"]),
 )
 _INDEXES = (
     (
@@ -419,13 +456,17 @@ _POLICIES: list[tuple[str, str, bool, str, list[str], str, str]] = [
     ),
 ]
 # Column privileges per group; any role running the guard is checked against its own group.
-_RUNTIME_INSERTS = {
+_INBOX_INSERTS = {
     ("provider_event_inbox", column) for column in ("tenant_id", "id", "connection_id", "facts")
 } | {
     ("provider_event_deliveries", column)
     for column in ("tenant_id", "event_id", "delivery_sha256", "facts")
 }
-_WRITER_INSERTS = _RUNTIME_INSERTS | {
+# 0053: the runtime records an acknowledgement; its time is the database's.
+_RUNTIME_INSERTS = _INBOX_INSERTS | {
+    (_ACKNOWLEDGEMENTS, column) for column in ("tenant_id", "event_id", "note", "created_by")
+}
+_WRITER_INSERTS = _INBOX_INSERTS | {
     ("provider_event_attestations", column)
     for column in ("tenant_id", "event_id", "delivery_sha256", "verification_config_id")
 }

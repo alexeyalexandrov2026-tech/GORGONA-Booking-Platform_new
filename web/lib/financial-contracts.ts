@@ -461,6 +461,86 @@ export const providerConnectionListSchema = z
     next_cursor: id.nullable(),
   })
   .refine((v) => unique(v.items, (x) => x.connection_id));
+/** K4b: stored provider facts only; a delivery differs exactly when it names a difference. */
+const providerDelivery = z
+  .strictObject({
+    received_at: instant,
+    digest: z.string().regex(/^[0-9a-f]{12}$/),
+    matches_original: z.boolean(),
+    differences: z
+      .array(
+        z.strictObject({
+          field: z.string().regex(/^[a-z_]+(\.[a-z_]+)?$/),
+          original: z.string().max(200),
+          delivered: z.string().max(200),
+        }),
+      )
+      .max(50),
+  })
+  .refine((v) => v.matches_original === (v.differences.length === 0));
+const providerEventType = z.string().regex(/^[a-z_]+\.[a-z_]+$/);
+const providerEventView = z.strictObject({
+  event_id: id,
+  event_type: providerEventType,
+  created: instant,
+  decision: z
+    .strictObject({
+      outcome: z.enum(["observed", "needs_review"]),
+      reason: z.enum([
+        "success",
+        "not_final",
+        "conflicting_facts",
+        "unkeyed_operation",
+        "refund_without_payment",
+      ]),
+      decided_at: instant,
+    })
+    .refine(
+      (d) =>
+        (d.outcome === "observed") ===
+        (d.reason === "success" || d.reason === "not_final"),
+    )
+    .nullable(),
+  deliveries: z.array(providerDelivery).min(1).max(100),
+});
+export const providerOperationDetailSchema = z
+  .strictObject({
+    ...envelope,
+    operation: providerOperation,
+    events: z.array(providerEventView).max(500),
+  })
+  .refine((v) => unique(v.events, (x) => x.event_id));
+const providerAttentionItem = z
+  .strictObject({
+    event_id: id,
+    connection_id: id,
+    kind: z.enum(["undecided", "no_operation"]),
+    event_type: providerEventType,
+    object_id: z.string().regex(/^(pi|ch|re)_[A-Za-z0-9]{1,100}$/),
+    created: instant,
+    reason: z.enum(["unkeyed_operation", "refund_without_payment"]).nullable(),
+    acknowledgement: z
+      .strictObject({
+        note: text(500),
+        acknowledged_by: id,
+        acknowledged_at: instant,
+      })
+      .nullable(),
+  })
+  .refine((v) => (v.kind === "undecided") === (v.reason === null))
+  .refine((v) => v.kind === "no_operation" || v.acknowledgement === null);
+export const providerAttentionListSchema = z
+  .strictObject({
+    ...envelope,
+    items: z.array(providerAttentionItem).max(100),
+    next_cursor: id.nullable(),
+  })
+  .refine((v) => unique(v.items, (x) => x.event_id));
+export const providerAcknowledgementSchema = z
+  .strictObject({ ...envelope, item: providerAttentionItem })
+  .refine(
+    (v) => v.item.kind === "no_operation" && v.item.acknowledgement !== null,
+  );
 const settlementStatus = z.enum([
   "prepared",
   "approved",
@@ -859,6 +939,11 @@ export type ProviderConnectionList = z.infer<
   typeof providerConnectionListSchema
 >;
 export type ProviderConnection = ProviderConnectionList["items"][number];
+export type ProviderOperationDetail = z.infer<
+  typeof providerOperationDetailSchema
+>;
+export type ProviderAttentionList = z.infer<typeof providerAttentionListSchema>;
+export type ProviderAttentionItem = ProviderAttentionList["items"][number];
 
 /** Closed route/method contract for the existing management transport. */
 export function financialResponseSchema(
@@ -875,18 +960,28 @@ export function financialResponseSchema(
   )
     return financialStatusSchema;
   const provider =
-    /^\/financial-documents\/books\/[0-9a-f-]{36}\/(provider-operations|provider-connections)(\/[0-9a-f-]{36}\/clearing-account)?$/i.exec(
+    /^\/financial-documents\/books\/[0-9a-f-]{36}\/(provider-operations|provider-connections|provider-attention)(\/[0-9a-f-]{36})?(\/(?:clearing-account|acknowledgement))?$/i.exec(
       path,
     );
   if (provider) {
-    const [, family, clearing] = provider;
-    if (!clearing && method === "GET")
+    const [, family, subject, action] = provider;
+    if (!subject && method === "GET")
       return family === "provider-operations"
         ? providerOperationListSchema
-        : providerConnectionListSchema;
-    return clearing && family === "provider-connections" && method === "PUT"
-      ? providerClearingAccountSchema
-      : undefined;
+        : family === "provider-connections"
+          ? providerConnectionListSchema
+          : providerAttentionListSchema;
+    if (subject && !action)
+      return family === "provider-operations" && method === "GET"
+        ? providerOperationDetailSchema
+        : undefined;
+    if (subject && method === "PUT")
+      return family === "provider-connections" && action === "/clearing-account"
+        ? providerClearingAccountSchema
+        : family === "provider-attention" && action === "/acknowledgement"
+          ? providerAcknowledgementSchema
+          : undefined;
+    return undefined;
   }
   const match =
     /^\/financial-documents\/books\/[0-9a-f-]{36}\/(invoices|accruals|credits|obligations|settlements|payments)(.*)$/i.exec(

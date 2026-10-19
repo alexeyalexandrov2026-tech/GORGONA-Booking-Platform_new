@@ -175,6 +175,20 @@ async def list_operations(
     )
 
 
+async def load_operation(
+    conn: RuntimeConnection, business_id: UUID, book_id: UUID, operation_id: UUID
+) -> ProviderOperationSummary | None:
+    """One operation of the book with its state, as the list shows it (K4b)."""
+    row = await (
+        await conn.execute(
+            # Fixed fragments only; every value is a parameter.
+            "select f.*," + _STATE + " from (select " + _FACTS + _NAMED + "where f.id=%s",  # noqa: S608
+            (business_id, book_id, operation_id),
+        )
+    ).fetchone()
+    return None if row is None else _summary(tuple(row))
+
+
 async def list_connections(
     conn: RuntimeConnection,
     business_id: UUID,

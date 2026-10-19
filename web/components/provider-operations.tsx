@@ -6,8 +6,10 @@ import { minorUnits } from "../lib/ledger-contracts";
 import * as api from "../lib/financial-api";
 import {
   financialCommandSchema,
+  type ProviderAttentionItem,
   type ProviderConnection,
   type ProviderOperation,
+  type ProviderOperationDetail,
   type Settlement,
 } from "../lib/financial-contracts";
 import {
@@ -78,13 +80,35 @@ export function providerRefusal(e: ManagementApiError): string | null {
               ? "This connection already has its clearing account. It cannot be changed."
               : e.code === "PROVIDER_PAYMENT_LINK_REQUIRED"
                 ? "A manual payment in this book already names this provider ID. Linking it is not available yet, so nothing was applied."
-                : null;
+                : e.code === "PROVIDER_ATTENTION_ACKNOWLEDGED"
+                  ? "This event was already acknowledged with another note."
+                  : e.code === "PROVIDER_ATTENTION_NOT_NEEDED"
+                    ? "This event needs no acknowledgement: it belongs to an operation or is not decided yet."
+                    : null;
   return text && `${text} (${e.code})`;
 }
 const failure = (e: unknown) =>
   e instanceof ManagementApiError
     ? (providerRefusal(e) ?? `${e.message} (${e.code})`)
     : "Unable to verify the provider response. Refresh to see the actual state.";
+
+const REASONS: Record<string, string> = {
+  success: "final success",
+  not_final: "not final yet",
+  conflicting_facts: "its facts disagree with earlier events of this operation",
+  unkeyed_operation: "no payment to attach it to",
+  refund_without_payment: "a refund without its payment",
+};
+const FIELDS: Record<string, string> = {
+  "resource.amount_minor": "Amount (minor units)",
+  "resource.amount_received_minor": "Amount received (minor units)",
+  "resource.amount_refunded_minor": "Amount refunded (minor units)",
+  "resource.currency": "Currency",
+  "resource.status": "Status",
+  event_type: "Event type",
+  created: "Created",
+};
+const fieldText = (field: string) => FIELDS[field] ?? field;
 
 /** Follow the cursor to the end: connections are few and all of them are shown. */
 async function allConnections(business: string, book: string) {
@@ -123,7 +147,8 @@ export function ProviderOperations({
     } | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
-    [local, setLocal] = useState(0);
+    [local, setLocal] = useState(0),
+    [detail, setDetail] = useState<ProviderOperationDetail | null>(null);
   const key = `${bookId}:${filter}:${refresh}:${local}`;
   useEffect(() => {
     let active = true;
@@ -165,6 +190,19 @@ export function ProviderOperations({
         items: [...current.items, ...next.items],
         next: next.next_cursor,
       });
+    } catch (e) {
+      setError(failure(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const open = async (operation: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      setDetail(
+        await api.fetchProviderOperation(businessId, bookId, operation),
+      );
     } catch (e) {
       setError(failure(e));
     } finally {
@@ -223,6 +261,12 @@ export function ProviderOperations({
           </li>
         ))}
       </ul>
+      <ProviderAttention
+        businessId={businessId}
+        bookId={bookId}
+        disabled={disabled}
+        refresh={refresh}
+      />
       <h3>Operations</h3>
       <Field label="Operation state">
         <select
@@ -270,6 +314,14 @@ export function ProviderOperations({
                 history.
               </p>
             )}
+            <button
+              className="secondary"
+              disabled={busy}
+              aria-label={`Details of ${x.provider_object_id}`}
+              onClick={() => void open(x.operation_id)}
+            >
+              Details
+            </button>
           </li>
         ))}
       </ul>
@@ -278,7 +330,257 @@ export function ProviderOperations({
           Load more provider operations
         </button>
       )}
+      {detail && (
+        <OperationDetail detail={detail} close={() => setDetail(null)} />
+      )}
     </section>
+  );
+}
+
+function OperationDetail({
+  detail,
+  close,
+}: {
+  detail: ProviderOperationDetail;
+  close: () => void;
+}) {
+  const operation = detail.operation;
+  const review =
+    operation.state === "needs_review" ||
+    operation.state === "applied_with_conflict";
+  const disagreements = detail.events.flatMap((event) => [
+    ...(event.decision?.reason === "conflicting_facts"
+      ? [`${event.event_type}: ${REASONS.conflicting_facts}.`]
+      : []),
+    ...event.deliveries.flatMap((delivery) =>
+      delivery.differences.map(
+        (x) =>
+          `${event.event_type}, delivery ${delivery.digest}: ${fieldText(x.field)} ${x.original} → ${x.delivered}.`,
+      ),
+    ),
+  ]);
+  return (
+    <section
+      className="financial-detail"
+      aria-label="Provider operation detail"
+    >
+      <h3>
+        {kindText(operation)} · {stateText(operation.state)}
+      </h3>
+      {review && (
+        <section className="provider-conflict" aria-label="What disagrees">
+          <p>
+            <strong>What disagrees.</strong> Nothing here changes money or a
+            decision; review it against the provider&apos;s records.
+          </p>
+          <ul>
+            {disagreements.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <ol>
+        {detail.events.map((event) => (
+          <li key={event.event_id}>
+            <p>
+              {event.event_type} · created{" "}
+              {new Date(event.created).toLocaleString()} ·{" "}
+              {event.decision
+                ? `${event.decision.outcome === "observed" ? "observed" : "needs review"}: ${REASONS[event.decision.reason] ?? event.decision.reason}`
+                : "not decided yet"}
+            </p>
+            <ul>
+              {event.deliveries.map((delivery) => (
+                <li key={delivery.digest}>
+                  Delivery {delivery.digest} · received{" "}
+                  {new Date(delivery.received_at).toLocaleString()} ·{" "}
+                  {delivery.matches_original
+                    ? "same facts as the first delivery"
+                    : `differs: ${delivery.differences
+                        .map(
+                          (x) =>
+                            `${fieldText(x.field)} ${x.original} → ${x.delivered}`,
+                        )
+                        .join("; ")}`}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+      <button className="secondary" onClick={close}>
+        Close details
+      </button>
+    </section>
+  );
+}
+
+/** Events waiting for a decision and decisions without an operation (owner decision 2). */
+function ProviderAttention({
+  businessId,
+  bookId,
+  disabled,
+  refresh,
+}: {
+  businessId: string;
+  bookId: string;
+  disabled: boolean;
+  refresh: number;
+}) {
+  const [page, setPage] = useState<{
+      key: string;
+      items: ProviderAttentionItem[];
+      next: string | null;
+    } | null>(null),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null),
+    [local, setLocal] = useState(0);
+  const key = `${bookId}:${refresh}:${local}`;
+  useEffect(() => {
+    let active = true;
+    api
+      .fetchProviderAttention(businessId, bookId)
+      .then((first) => {
+        if (active)
+          setPage({ key, items: first.items, next: first.next_cursor });
+      })
+      .catch((e) => {
+        if (active) setError(failure(e));
+      });
+    return () => {
+      active = false;
+    };
+  }, [businessId, bookId, key]);
+  const current = page?.key === key ? page : null;
+  const more = async () => {
+    if (!current?.next) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await api.fetchProviderAttention(
+        businessId,
+        bookId,
+        current.next,
+      );
+      setPage({
+        key,
+        items: [...current.items, ...next.items],
+        next: next.next_cursor,
+      });
+    } catch (e) {
+      setError(failure(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section aria-label="Needs attention">
+      <h3>Needs attention</h3>
+      <p>
+        Provider events that are not decided yet, and decisions that have no
+        payment or refund to attach to. None of them moves money.
+      </p>
+      {error && <p role="alert">{error}</p>}
+      {current === null && !error && (
+        <p role="status">Loading events that need attention…</p>
+      )}
+      {current?.items.length === 0 && <p>Nothing needs attention.</p>}
+      <ul className="financial-records" aria-label="Attention list">
+        {current?.items.map((x) => (
+          <li key={x.event_id}>
+            <p>
+              <strong>
+                {x.event_type} {x.object_id}
+              </strong>{" "}
+              · created {new Date(x.created).toLocaleDateString()}
+            </p>
+            {x.kind === "undecided" ? (
+              <p>
+                Waiting for the receipt worker. It is decided automatically;
+                there is nothing to acknowledge.
+              </p>
+            ) : x.acknowledgement ? (
+              <p>
+                Decided: {REASONS[x.reason ?? ""] ?? x.reason}. Handled:{" "}
+                {x.acknowledgement.note} · by{" "}
+                {x.acknowledgement.acknowledged_by} ·{" "}
+                {new Date(x.acknowledgement.acknowledged_at).toLocaleString()}
+              </p>
+            ) : (
+              <AcknowledgeForm
+                businessId={businessId}
+                bookId={bookId}
+                item={x}
+                disabled={disabled || busy}
+                done={() => setLocal((n) => n + 1)}
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+      {current?.next && (
+        <button disabled={busy} onClick={() => void more()}>
+          Load more attention items
+        </button>
+      )}
+    </section>
+  );
+}
+
+function AcknowledgeForm({
+  businessId,
+  bookId,
+  item,
+  disabled,
+  done,
+}: {
+  businessId: string;
+  bookId: string;
+  item: ProviderAttentionItem;
+  disabled: boolean;
+  done: () => void;
+}) {
+  const [note, setNote] = useState(""),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null);
+  return (
+    <form
+      aria-label={`Acknowledge ${item.object_id}`}
+      onSubmit={(e) => {
+        e.preventDefault();
+        setBusy(true);
+        setError(null);
+        // Safe to repeat: the same note again returns the existing record.
+        void api
+          .acknowledgeProviderEvent(
+            businessId,
+            bookId,
+            item.event_id,
+            note.trim(),
+          )
+          .then(done, (e) => setError(failure(e)))
+          .finally(() => setBusy(false));
+      }}
+    >
+      <fieldset disabled={disabled || busy}>
+        <legend>Acknowledge as handled</legend>
+        <p>
+          Decided: {REASONS[item.reason ?? ""] ?? item.reason}. Record what you
+          checked; the note is permanent and changes no money.
+        </p>
+        <Field label="Acknowledgement note">
+          <input
+            required
+            maxLength={500}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </Field>
+        <button type="submit">Acknowledge</button>
+      </fieldset>
+      {error && <p role="alert">{error}</p>}
+    </form>
   );
 }
 

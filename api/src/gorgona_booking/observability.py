@@ -25,6 +25,7 @@ import urllib.parse
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from fastapi import FastAPI
 from opentelemetry import metrics, trace
@@ -56,6 +57,15 @@ _meter = metrics.get_meter("gorgona_booking")
 _domain_errors = _meter.create_counter(
     "gorgona.domain_errors",
     description="Domain errors returned to clients, by error code and route template",
+)
+# K4b (owner decision 3): provider counters carry the company identifier, never payload values.
+_provider_decisions = _meter.create_counter(
+    "gorgona.provider_receipt_decisions",
+    description="Provider receipt decisions, by outcome, reason and company",
+)
+_provider_applications = _meter.create_counter(
+    "gorgona.provider_applications",
+    description="Applications of observed provider operations, by result and company",
 )
 
 
@@ -95,6 +105,15 @@ def configure_logging(level: str = "INFO") -> None:
 
 def record_domain_error(code: str, route: str) -> None:
     _domain_errors.add(1, {"code": code, "route": route})
+
+
+def record_provider_decision(outcome: str, reason: str, tenant_id: UUID) -> None:
+    _provider_decisions.add(1, {"outcome": outcome, "reason": reason, "tenant_id": str(tenant_id)})
+
+
+def record_provider_application(result: str, tenant_id: UUID) -> None:
+    """`applied`, or the refusal code; a replayed request counts again."""
+    _provider_applications.add(1, {"result": result, "tenant_id": str(tenant_id)})
 
 
 def route_template(scope: Scope) -> str:

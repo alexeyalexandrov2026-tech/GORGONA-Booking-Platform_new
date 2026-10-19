@@ -36,6 +36,8 @@ K_TABLES = {
     # K3a (0052): the clearing account and the provenance of provider payments.
     "provider_clearing_accounts",
     "external_payment_provenance",
+    # K4b (0053): acknowledgements of decisions without an operation.
+    "provider_event_acknowledgements",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
