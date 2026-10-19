@@ -5,8 +5,9 @@
 What FIN-02 still lacks after K3b (a running ingress and worker, an admitted connection state,
 real Stripe test events, an independent review, exact-head CI and the owner's readiness decision)
 and the proposed order are in [PACKAGE_K5_PLAN_2026-10-19.md](PACKAGE_K5_PLAN_2026-10-19.md).
-Not started: four owner questions (where the real test runs, which Stripe test account, the
-review, the signing secret).
+The owner answered on 2026-10-19: a local run with the Stripe CLI; a Connect test platform
+with one connected test account; a read-only independent review first; the signing secret in a
+local environment variable. Not started.
 
 ## Current checkpoint — 2026-10-19: K3b links of earlier manual payments locally verified
 
