@@ -1,5 +1,13 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## K5b — open K5a review findings and manual editor dates (2026-10-20, local)
+
+Source `58cf561d0f2d065ad44dac850182fdd61d3fae20` on local branch `codex/package-k5b-open-findings`: findings 6, 8, 9, 12 and 15 fixed
+(0059 K, 0060 H, decoder) and the manual editors' dates in the business zone. Focused 775 passed;
+full 2315 passed, 4 skipped. K0c resumed afterwards (Stripe CLI authorized for the owner's sandbox;
+Connect pending). [Validation](evidence/2026-10-20-k5b-open-findings/VALIDATION.md),
+[handoff](NEXT_AGENT_PACKAGE_K5B_2026-10-20.md).
+
 ## K0b — connection admission and receipt processes (2026-10-20, local)
 
 Source `1eacc1d73c4d13a759be95084d994ef1be6cf4fe` on local branch `codex/package-k0b-entry-points`. The owner's admission of a receipt

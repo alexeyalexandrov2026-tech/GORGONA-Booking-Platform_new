@@ -1,5 +1,7 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K5b source `58cf561d0f2d065ad44dac850182fdd61d3fae20` implements the K5b decision below;
+[validation](../plan/evidence/2026-10-20-k5b-open-findings/VALIDATION.md).
 Local K0b source `1eacc1d73c4d13a759be95084d994ef1be6cf4fe` implements the K0b decision below;
 [validation](../plan/evidence/2026-10-20-k0b-entry-points/VALIDATION.md).
 Local K3a source `2f91368271458d6f20030e43ab9409751c3fa62d` implements the K3a decision below;
@@ -21,6 +23,14 @@ Local K1d source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` implements the K1d d
 Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the proposed isolated verifier foundation;
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
+
+## K5b local decision — 2026-10-20, Proposed; locally implemented in `58cf561`
+
+The open K5a review findings that need no provider: only the receipt writer records inbox events
+and deliveries (the runtime reads them; IR-03); the inbox is indexed by connection; a link of a
+manual payment needs the enabled finance workflow in SQL like every H money table; the link date
+window calls `pg_catalog.abs`; a Stripe charge fact is its captured amount, never the authorized
+one. Recorded limits: ISK/UGX scale and currencies missing from `gba.currencies` (USD only).
 
 ## K0b local decision — 2026-10-20, Proposed; locally implemented in `1eacc1d`
 

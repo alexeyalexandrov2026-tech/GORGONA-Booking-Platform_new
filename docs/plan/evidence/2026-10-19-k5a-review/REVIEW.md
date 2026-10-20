@@ -43,6 +43,18 @@ The owner chose to fix 1, 2, 3, 5, 7, 10, 11, 13 and 14 in one slice and decided
 | 11 | Fixed with effective amounts; corrected parent PASS; voided refund NOT TESTED (H refuses voiding a refund payment) |
 | 6, 8, 9, 12, 15 | Open, as proposed below |
 
+## Resolution — K5b, 2026-10-20
+
+Locally implemented in `58cf561d0f2d065ad44dac850182fdd61d3fae20` ([validation](../2026-10-20-k5b-open-findings/VALIDATION.md)):
+
+| # | Resolution |
+|---|---|
+| 6 | Fixed: index by connection; the plan uses it (EXPLAIN); no production-volume timing |
+| 8 | Fixed: the workflow trigger on links (GBM01 with finance off), PASS |
+| 9 | Fixed: only the receipt writer inserts events and deliveries (IR-03), PASS |
+| 12 | Fixed: a charge counts `amount_captured`; a partial capture applies the captured amount, PASS |
+| 15 | Partly: the unqualified `abs` fixed; ISK/UGX scale and missing currencies stay recorded limits (USD only) |
+
 ## Proposed fix slice (after the owner's decision)
 
 - **K5a-fix** (one slice, failing tests first): 1, 2, 3, 5, 10, 11, 13, 14 and the share lock of 7.

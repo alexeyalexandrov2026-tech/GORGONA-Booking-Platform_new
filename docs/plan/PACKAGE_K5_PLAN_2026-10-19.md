@@ -1,5 +1,13 @@
 # Package K5 — FIN-02 evidence plan: K0, independent review, CI (2026-10-19)
 
+**Update 2026-10-20 (later): K5b done locally** (`58cf561d0f2d065ad44dac850182fdd61d3fae20`, findings 6, 8, 9, 12, 15 and manual
+editor dates; [validation](evidence/2026-10-20-k5b-open-findings/VALIDATION.md)). Step 5 below
+(exact-head CI and evidence) is now called **K5-CI**. **K0c resumed** the same day on the owner's
+word («ты сам все делай»): the agent installed the Stripe CLI 1.54.1 (checksum verified), the owner
+approved the CLI login for the sandbox `acct_1UJtGO0mkpVWlKYX` (test mode), and Connect must still be
+enabled in that sandbox by the owner before a connected test account can be created
+([handoff](NEXT_AGENT_PACKAGE_K5B_2026-10-20.md)).
+
 **Owner decision 2026-10-20: K0c is postponed** — no Stripe registration for now («без страйп обойтись»). FIN-02 stays `planned`; manual payments (H) remain the way money is recorded. Meanwhile the open K5a review findings 6, 8, 9, 12, 15 and the UTC default of the manual editors are fixed locally, without a provider.
 
 **Update 2026-10-20: K0a done** ([design and the owner's answers](PACKAGE_K0A_DESIGN_2026-10-20.md),

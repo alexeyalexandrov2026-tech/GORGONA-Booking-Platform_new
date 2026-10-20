@@ -104,6 +104,9 @@ Design: [K0a](../plan/PACKAGE_K0A_DESIGN_2026-10-20.md).
   `--interval 1-300`) with `GBA_RECEIPT_WORKER_DATABASE_URL` (receipt worker login); Ctrl+C stops
   it after the current batch. Events of a suspended or unadmitted connection wait undecided.
 - Logs carry counts and outcomes only: no payload, key, account or ingress ID.
+- Only the receipt writer (the ingress) records events and deliveries; the application's runtime
+  login reads them but cannot insert them (K5b). A Stripe charge counts what was captured: a partial
+  capture is that captured amount, not the authorized one.
 
 ## Metrics (operators)
 

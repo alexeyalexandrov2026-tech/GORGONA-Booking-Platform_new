@@ -1,6 +1,22 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-20: K0b connection admission and receipt processes locally verified
+## Current checkpoint — 2026-10-20: K5b open review findings and manual editor dates locally verified
+
+Source `58cf561d0f2d065ad44dac850182fdd61d3fae20`, local branch `codex/package-k5b-open-findings`, parent `1b89958` (the owner postponed
+K0c; FIN-02 stays planned). 0059 (K): inbox index by connection (finding 6); only the receipt writer
+inserts events and deliveries, the runtime reads (finding 9, IR-03). 0060 (H): a provider link needs
+the enabled finance workflow in SQL (finding 8); the link date window calls `pg_catalog.abs`
+(finding 15). A Stripe charge counts `amount_captured` (finding 12). Manual financial editors default
+their dates to today in the business time zone, not UTC. Red-1 on the old code: 7 failed for the
+expected reasons. Focused **775 passed in 841.46s (0:14:01)**; full **2315 passed, 4 skipped in
+2410.31s (0:40:10)**; static/web/build PASS; runtime audit 0. Not published; next migration 0061.
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. Owner decision the same day: production is **all 39
+directions at once** (master plan, top). K0c resumed: the Stripe CLI is authorized for the owner's
+sandbox; Connect still has to be enabled there by the owner.
+[Validation](docs/plan/evidence/2026-10-20-k5b-open-findings/VALIDATION.md),
+[handoff](docs/plan/NEXT_AGENT_PACKAGE_K5B_2026-10-20.md), [prompt](docs/plan/NEXT_AGENT_PACKAGE_K5B_PROMPT_2026-10-20.md).
+
+## Previous checkpoint — 2026-10-20: K0b connection admission and receipt processes locally verified
 
 Source `1eacc1d73c4d13a759be95084d994ef1be6cf4fe`, local branch `codex/package-k0b-entry-points`, parent `4e0665c` (K0a design and the
 owner's answers: «i trust you», all defaults). 0057 adds the owner-only, append-only admission of a
