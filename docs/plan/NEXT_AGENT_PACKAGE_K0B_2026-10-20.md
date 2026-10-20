@@ -60,6 +60,9 @@ frame) and section 6 (traps) still apply and are not repeated in full. The ready
 
 ## 4. Next step: K0c — the owner's real Stripe test run
 
+**Owner decision 2026-10-20: K0c is postponed** — no Stripe registration for now («без страйп обойтись»). FIN-02 stays `planned`; manual payments (H) remain the way money is recorded. Do not start K0c until the owner says so. Meanwhile the open K5a review findings 6, 8, 9, 12, 15 and the UTC default of the manual editors are fixed locally, without a provider.
+
+
 Only with the owner, step by step; stop at any surprise. Before the owner's steps, the agent:
 
 1. Starts a local, owner-run stack on this computer only: its own PostgreSQL cluster (kept for the
