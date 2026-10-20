@@ -56,6 +56,10 @@ launch. See the block at the top of the [master plan](GORGONA_MASTER_PLAN.md) an
   only in memory; races only with an observed `pg_locks` wait; never hide a failure. Work inline;
   write to the owner in Russian, simply; the owner is they/them.
 
+## 4a. K5-CI — DONE (2026-10-20)
+
+Published for CI only; `e03c678` CI SUCCESS, run 39502582514. Next: the FIN-02 acceptance record (K-01–K-14 with test and run evidence) and one independent review of K5a-fix, K0b and K5b (an agent needs the owner's consent); FIN-02 readiness only after both.
+
 ## 4. K0c — the real Stripe test run: DONE, PASS (2026-10-20)
 
 The owner enabled Connect (platform) and entered the test SSN; the agent created the connected test

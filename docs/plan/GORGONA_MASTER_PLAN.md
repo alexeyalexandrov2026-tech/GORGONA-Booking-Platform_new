@@ -10,7 +10,11 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-20: K0c real Stripe sandbox events PASS
+## Current checkpoint — 2026-10-20: K5-CI SUCCESS after K0c
+
+Branch `codex/package-k5b-open-findings` published for CI only (owner's trust, no PR, no `main`); exact head `e03c678` CI SUCCESS, run 39502582514, including the production image build. FIN-02 stays `planned` until its acceptance record (K-01–K-14) and one independent review of K5a-fix, K0b and K5b. [K5 plan](PACKAGE_K5_PLAN_2026-10-19.md).
+
+## Previous checkpoint — 2026-10-20: K0c real Stripe sandbox events PASS
 
 On `dd013fd` (no source change), owner-delegated («ты сам все делай»): Stripe sandbox
 `acct_1UJtGO0mkpVWlKYX` as the Connect platform, connected test account `acct_1USjOo0mkpWSHVnd`, test
