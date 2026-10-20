@@ -57,6 +57,8 @@ const kindText = (x: ProviderOperation) =>
 const NOT_READY: Record<string, string> = {
   revoked:
     "The provider connection or its verification was revoked; this operation cannot move money.",
+  not_admitted:
+    "The provider connection is not admitted for this operation; the owner records test access first.",
   pending:
     "Some provider events of this operation are still being decided. Try again later.",
   needs_review:

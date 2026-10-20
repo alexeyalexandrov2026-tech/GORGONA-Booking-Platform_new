@@ -39,6 +39,8 @@ K_TABLES = {
     "provider_event_acknowledgements",
     # K3b (0054): links of manual payments to provider operations.
     "provider_payment_links",
+    # K0b (0057): the owner's admissions of receipt connections.
+    "provider_connection_admissions",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

@@ -27,6 +27,8 @@ _MIGRATIONS = (
     "0054_provider_payment_links.sql",
     # K5a-fix: names, effective amounts and the manual-payment identity of provider money.
     "0056_provider_money_review_fixes.sql",
+    # K0b: provider money needs the connection's test-access admission (0057).
+    "0058_provider_money_admission.sql",
 )
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
@@ -127,6 +129,11 @@ _TRIGGERS = (
         7,
         "enforce_manual_provider_identity",
         False,
+    ),
+    # K0b (0058): the operation's connection must be admitted for this operation.
+    *(
+        (t, f"{t}_admission", 7, "require_provider_money_admission", False)
+        for t in ("external_payment_provenance", "provider_payment_links")
     ),
     *(
         (t, f"{t}_payment_consistent", 5, "check_payment_integrity", True)

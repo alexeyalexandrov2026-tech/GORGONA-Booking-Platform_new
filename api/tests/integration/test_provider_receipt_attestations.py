@@ -26,7 +26,7 @@ from gorgona_booking.db.pool import (
     set_tenant_context,
     tenant_transaction,
 )
-from gorgona_booking.db.provisioning import owner_tenant_transaction
+from gorgona_booking.db.provisioning import owner_tenant_transaction, record_receipt_admission
 from gorgona_booking.errors import DatabaseUnavailableError
 from gorgona_booking.providers import authenticated_receipts as service
 from gorgona_booking.providers.authenticated_receipts import (
@@ -149,10 +149,23 @@ def provision(
     book_id: UUID,
     namespace: str,
     account_id: str = "acct_FAKEreceipt",
+    admit: bool = True,
 ) -> Routed:
     reference = "test:k1d-" + uuid7().hex
     config, version = provision_config(owner_conn, tenant_id, connection_id, reference)
     assert version == 1
+    if admit:
+        # K0b: receipts, decisions and money need the owner's test-access admission.
+        record_receipt_admission(
+            owner_conn,
+            tenant_id,
+            connection_id,
+            state="test_access",
+            account_id=account_id,
+            charge=True,
+            refund=True,
+            evidence="FAKE synthetic test fixture",
+        )
     return Routed(
         tenant_id=tenant_id,
         connection_id=connection_id,
@@ -369,6 +382,8 @@ async def test_bad_signature_is_refused_after_reading_only_authority_rows(
         "provider_receipt_routes",
         "provider_verification_configs",
         "provider_receipt_connections",
+        # K0b: the owner's admission of the connection is authority, not business data.
+        "provider_connection_admissions",
     }
     monkeypatch.undo()
     assert await shared.counts(app_pool, inbox) == (0, 0)

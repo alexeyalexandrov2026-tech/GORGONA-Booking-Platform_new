@@ -36,7 +36,9 @@ from gorgona_booking.errors import ConflictError, DatabaseUnavailableError, NotF
 CURRENCY = "USD"
 # The identity of a provider payment in H: this alias and the provider object ID.
 SOURCE_ALIAS = "stripe_connect"
-NotReady = Literal["revoked", "pending", "needs_review", "delivery_conflict", "not_final"]
+NotReady = Literal[
+    "revoked", "not_admitted", "pending", "needs_review", "delivery_conflict", "not_final"
+]
 
 
 class ProviderOperationNotReadyError(ConflictError):
@@ -290,9 +292,20 @@ async def observed(
         raise ProviderOperationLinkedError(
             "This provider operation is linked to a manual payment", payment_id=str(values[15])
         )
+    # K0b: the owner's latest admission of the connection must allow this operation.
+    admitted = await (
+        await conn.execute(
+            "select a.state='test_access' and case %s when 'payment' then a.charge_allowed "
+            "else a.refund_allowed end from gba.provider_connection_admissions a "
+            "where a.tenant_id=%s and a.connection_id=%s order by a.revision desc limit 1",
+            (values[2], business_id, values[1]),
+        )
+    ).fetchone()
     reason: NotReady | None = (
         "revoked"
         if values[10]
+        else "not_admitted"
+        if admitted is None or admitted[0] is not True
         else "pending"
         if values[7]
         else "needs_review"

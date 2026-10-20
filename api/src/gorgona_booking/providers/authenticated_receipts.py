@@ -2,7 +2,7 @@
 
 An owner-provisioned route selects the company and connection; the active verification
 config names which server-held key may check the raw bytes. A compromised writer can lie;
-SQL does not verify the MAC. Operational admission is an independent future gate.
+SQL does not verify the MAC. Only a connection the owner admitted for test access is served (K0b).
 """
 
 from collections.abc import Mapping
@@ -68,7 +68,8 @@ select bool_and(not (r.rolsuper or r.rolbypassrls or r.rolcreaterole
             pg_catalog.pg_has_role(r.oid,c.relowner,'MEMBER') or
             (c.relname<>all(array['provider_receipt_connections','provider_event_inbox',
                 'provider_event_deliveries','provider_event_attestations',
-                'provider_verification_configs','provider_receipt_routes']) and (
+                'provider_verification_configs','provider_receipt_routes',
+                'provider_connection_admissions']) and (
                 pg_catalog.has_table_privilege(r.oid,c.oid,
                     'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
                 or pg_catalog.has_any_column_privilege(r.oid,c.oid,
@@ -86,7 +87,10 @@ _ACTIVE_AUTHORITY = (
     "select v.id,v.secret_ref,c.book_id,c.namespace,c.account_id,c.api_version "
     "from gba.provider_verification_configs v join gba.provider_receipt_connections c "
     "on c.tenant_id=v.tenant_id and c.id=v.connection_id "
-    "where v.tenant_id=%s and v.connection_id=%s and not v.revoked and not c.revoked"
+    "where v.tenant_id=%s and v.connection_id=%s and not v.revoked and not c.revoked "
+    # K0b: the owner's latest admission revision of the connection must be test access.
+    "and (select a.state from gba.provider_connection_admissions a where a.tenant_id=c.tenant_id "
+    "and a.connection_id=c.id order by a.revision desc limit 1)='test_access'"
 )
 
 

@@ -1,4 +1,4 @@
-"""Packaged K1b-K4b integrity approvals, checked before each internal receipt write."""
+"""Packaged K1b-K0b integrity approvals, checked before each internal receipt write."""
 
 import re
 from importlib import resources
@@ -20,6 +20,8 @@ _SQL = "".join(
         "0053_provider_attention_acknowledgements.sql",
         # K5a-fix: refund failures conflict with success; revocations take the ledger lock.
         "0055_provider_review_fixes.sql",
+        # K0b: the owner's admissions and the gates of attestations and decisions.
+        "0057_provider_connection_admissions.sql",
     )
 )
 # A later `create or replace` (0048) supersedes the earlier body of the same function.
@@ -44,8 +46,10 @@ _RECEIPTS = (
 _DECISIONS = ("provider_operations", "provider_event_leases", "provider_event_decisions")
 # K4b (0053): a finance user's acknowledgement of a decision without an operation.
 _ACKNOWLEDGEMENTS = "provider_event_acknowledgements"
+# K0b (0057): the owner's admissions of receipt connections, read by every group.
+_ADMISSIONS = "provider_connection_admissions"
 # Company-scoped tables: tenant and company policies.
-_SCOPED = (*_RECEIPTS, *_DECISIONS, _ACKNOWLEDGEMENTS)
+_SCOPED = (*_RECEIPTS, *_DECISIONS, _ACKNOWLEDGEMENTS, _ADMISSIONS)
 _TABLES = (*_SCOPED, _ROUTES)
 _GROUPS = ("gba_runtime", "gba_receipt_writer", "gba_receipt_worker")
 # Tables each group may read; a role running the guard is checked against its own group.
@@ -55,13 +59,15 @@ _READS = {
         "provider_operations",
         "provider_event_decisions",
         _ACKNOWLEDGEMENTS,
+        _ADMISSIONS,
     },
-    "gba_receipt_writer": {*_RECEIPTS, _ROUTES},
+    "gba_receipt_writer": {*_RECEIPTS, _ROUTES, _ADMISSIONS},
     "gba_receipt_worker": {
         "provider_event_inbox",
         "provider_event_deliveries",
         "provider_event_attestations",
         *_DECISIONS,
+        _ADMISSIONS,
     },
 }
 # Every K policy depends on these context functions (migrations 0001 and 0009).
@@ -216,6 +222,18 @@ _TRIGGERS = (
         "reject_ledger_mutation",
         False,
     ),
+    # 0057: the admission record and the gates of attestations and decisions.
+    (
+        _ADMISSIONS,
+        "provider_connection_admissions_guard",
+        31,
+        "guard_provider_connection_admission",
+        False,
+    ),
+    *(
+        (table, f"{table}_admission", 7, "require_provider_receipt_admission", False)
+        for table in ("provider_event_attestations", "provider_event_decisions")
+    ),
     # 0049: BEFORE TRUNCATE FOR EACH STATEMENT on every receipt table.
     *(
         (table, f"{table}_no_truncate", 34, "reject_provider_receipt_truncate", False)
@@ -297,6 +315,17 @@ _CHECKS = (
         "(((length(btrim(note)) >= 1) AND (length(btrim(note)) <= 500)) "
         "AND (note !~ '[[:cntrl:]]'::text))",
     ),
+    (_ADMISSIONS, "(revision > 0)"),
+    (_ADMISSIONS, "(state = ANY (ARRAY['test_access'::text, 'suspended'::text]))"),
+    (_ADMISSIONS, "(environment = 'test'::text)"),
+    (_ADMISSIONS, "(currency = 'USD'::text)"),
+    (_ADMISSIONS, "(account_id ~ '^acct_[A-Za-z0-9]{1,100}$'::text)"),
+    (
+        _ADMISSIONS,
+        "(((length(btrim(evidence)) >= 1) AND (length(btrim(evidence)) <= 500)) "
+        "AND (evidence !~ '[[:cntrl:]]'::text))",
+    ),
+    (_ADMISSIONS, "((state = 'suspended'::text) OR charge_allowed OR refund_allowed)"),
 )
 _KEYS = (
     ("provider_receipt_connections", "p", ["tenant_id", "id"], None, None),
@@ -427,6 +456,14 @@ _KEYS = (
         ["tenant_id", "event_id"],
     ),
     (_ACKNOWLEDGEMENTS, "f", ["created_by"], "users", ["id"]),
+    (_ADMISSIONS, "p", ["tenant_id", "connection_id", "revision"], None, None),
+    (
+        _ADMISSIONS,
+        "f",
+        ["tenant_id", "connection_id"],
+        "provider_receipt_connections",
+        ["tenant_id", "id"],
+    ),
 )
 _INDEXES = (
     (
@@ -454,7 +491,7 @@ _POLICIES: list[tuple[str, str, bool, str, list[str], str, str]] = [
     # 0050: discovery without a company context, for the worker group only.
     *(
         (table, table + "_discover", True, "r", ["gba_receipt_worker"], "true", "")
-        for table in ("provider_event_attestations", "provider_event_decisions")
+        for table in ("provider_event_attestations", "provider_event_decisions", _ADMISSIONS)
     ),
 ]
 # Column privileges per group; any role running the guard is checked against its own group.

@@ -3,6 +3,7 @@ here runs inside a transaction with explicit tenant context."""
 
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
+from typing import Literal
 from uuid import UUID, uuid7
 
 import psycopg
@@ -32,6 +33,37 @@ def provision_tenant(
                 (host.lower(), tenant_id),
             )
     return tenant_id
+
+
+type AdmissionState = Literal["test_access", "suspended"]
+
+
+def record_receipt_admission(
+    conn: psycopg.Connection,
+    tenant_id: UUID,
+    connection_id: UUID,
+    *,
+    state: AdmissionState,
+    account_id: str,
+    charge: bool,
+    refund: bool,
+    evidence: str,
+) -> int:
+    """K0b: the owner records the next admission revision of a receipt connection.
+
+    Test mode and USD only; the database checks the connection, its account and scope, numbers
+    the revision and records the session login and time. Returns the new revision.
+    """
+    with owner_tenant_transaction(conn, tenant_id):
+        row = conn.execute(
+            "insert into gba.provider_connection_admissions (tenant_id,connection_id,state,"
+            "charge_allowed,refund_allowed,account_id,evidence) values (%s,%s,%s,%s,%s,%s,%s) "
+            "returning revision",
+            (tenant_id, connection_id, state, charge, refund, account_id, evidence),
+        ).fetchone()
+    if row is None:
+        raise RuntimeError("Receipt connection admission was not recorded")
+    return int(row[0])
 
 
 def normalize_email(email: str) -> str:

@@ -8,7 +8,7 @@ import pytest
 
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction, unscoped_transaction
 from gorgona_booking.db.provider_receipt_guard import assert_provider_receipt_ready
-from gorgona_booking.db.provisioning import owner_tenant_transaction
+from gorgona_booking.db.provisioning import owner_tenant_transaction, record_receipt_admission
 from gorgona_booking.errors import DatabaseUnavailableError
 from gorgona_booking.providers.authenticated_receipts import UnsafeReceiptWriterRoleError
 from tests.integration import test_provider_event_inbox as archive
@@ -83,6 +83,17 @@ async def provision_unnamed_route(
     connection = routing.second_connection(owner_conn, scope)
     reference = "test:k1k-" + uuid7().hex
     config, _ = attested.provision_config(owner_conn, scope.tenant_id, connection, reference)
+    # K0b: a receipt connection needs the owner's test-access admission.
+    record_receipt_admission(
+        owner_conn,
+        scope.tenant_id,
+        connection,
+        state="test_access",
+        account_id="acct_FAKEsecond",
+        charge=True,
+        refund=True,
+        evidence="FAKE synthetic test fixture",
+    )
     with owner_tenant_transaction(owner_conn, scope.tenant_id):
         owner_conn.execute(
             "insert into gba.provider_receipt_routes (tenant_id,connection_id) values (%s,%s)",

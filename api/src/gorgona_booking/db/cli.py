@@ -19,7 +19,11 @@ from gorgona_booking.db.bootstrap import BootstrapSpec, bootstrap
 from gorgona_booking.db.h3_upgrade import check_h3_upgrade
 from gorgona_booking.db.migrate import MigrationError, apply_migrations
 from gorgona_booking.db.pool import assert_safe_runtime_role
-from gorgona_booking.db.provisioning import grant_platform_admin, provision_user
+from gorgona_booking.db.provisioning import (
+    grant_platform_admin,
+    provision_user,
+    record_receipt_admission,
+)
 
 
 def _require(name: str) -> str:
@@ -213,6 +217,25 @@ def _link_user(args: argparse.Namespace) -> None:
     print(f"user {user_id} linked to {args.issuer}")
 
 
+def _admit_receipt_connection(args: argparse.Namespace) -> None:
+    """K0b: the owner records a test-access admission or a suspension of a receipt connection."""
+    operations = {item.strip() for item in args.operations.split(",") if item.strip()}
+    if not operations <= {"charge", "refund"}:
+        raise SystemExit("--operations takes charge, refund or both")
+    with _owner_conn() as conn:
+        revision = record_receipt_admission(
+            conn,
+            args.tenant,
+            args.connection,
+            state=args.state,
+            account_id=args.account,
+            charge="charge" in operations,
+            refund="refund" in operations,
+            evidence=args.evidence,
+        )
+    print(f"receipt connection {args.connection}: revision {revision}, {args.state}")
+
+
 def _grant_platform_admin(args: argparse.Namespace) -> None:
     with _owner_conn() as conn:
         with conn.transaction():
@@ -291,6 +314,17 @@ def main(argv: list[str] | None = None) -> None:
         link.add_argument(flag, required=True)
     link.add_argument("--email")
     link.set_defaults(run=_link_user)
+    admit = commands.add_parser(
+        "admit-receipt-connection",
+        help="record a test-access admission or a suspension of a receipt connection (owner DSN)",
+    )
+    admit.add_argument("--tenant", type=UUID, required=True)
+    admit.add_argument("--connection", type=UUID, required=True)
+    admit.add_argument("--account", required=True, help="the connected Stripe account, acct_...")
+    admit.add_argument("--state", choices=["test_access", "suspended"], required=True)
+    admit.add_argument("--operations", default="charge,refund", help="charge, refund or both")
+    admit.add_argument("--evidence", required=True, help="a short note; no secret or customer data")
+    admit.set_defaults(run=_admit_receipt_connection)
     grant = commands.add_parser("grant-platform-admin", help="grant platform_admin (owner DSN)")
     grant.add_argument("--issuer", required=True)
     grant.add_argument("--subject", required=True)

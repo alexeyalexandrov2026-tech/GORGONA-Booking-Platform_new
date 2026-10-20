@@ -4,7 +4,8 @@ The database decides. A worker claims an attested event with a lease, then recor
 that carries only that lease; the trigger classifies the stored facts, links the canonical
 provider operation and refuses a stale or forged lease. Every conflict or unkeyed fact becomes
 `needs_review`. Nothing here reads or writes the ledger, settlements or obligations, and an event
-without an attestation is never claimed. There is no process entry point or schedule yet.
+without an attestation is never claimed, nor one of a connection the owner has not admitted
+(K0b). The process entry point is `receipt_processes.run_worker` (worker_main).
 """
 
 from typing import Literal
@@ -55,7 +56,7 @@ select bool_and(not (r.rolsuper or r.rolbypassrls or r.rolcreaterole
             pg_catalog.pg_has_role(r.oid,c.relowner,'MEMBER') or
             (c.relname<>all(array['provider_event_inbox','provider_event_deliveries',
                 'provider_event_attestations','provider_operations','provider_event_leases',
-                'provider_event_decisions']) and (
+                'provider_event_decisions','provider_connection_admissions']) and (
                 pg_catalog.has_table_privilege(r.oid,c.oid,
                     'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
                 or pg_catalog.has_any_column_privilege(r.oid,c.oid,
@@ -69,6 +70,9 @@ _DISCOVER = (
     "where (%(tenant)s::uuid is null or a.tenant_id=%(tenant)s::uuid) "
     "and not exists (select 1 from gba.provider_event_decisions d "
     "where d.tenant_id=a.tenant_id and d.event_id=a.event_id) "
+    # K0b: only events of a connection whose latest admission is test access; the others wait.
+    "and (select x.state from gba.provider_connection_admissions x where x.tenant_id=a.tenant_id "
+    "and x.connection_id=a.connection_id order by x.revision desc limit 1)='test_access' "
     "group by a.tenant_id,a.event_id order by min(a.verified_at),a.event_id limit %(limit)s"
 )
 
