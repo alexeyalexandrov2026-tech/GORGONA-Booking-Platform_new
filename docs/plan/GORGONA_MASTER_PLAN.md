@@ -1,6 +1,20 @@
 # GORGONA — полный обновленный мастер-план универсальной бизнес-платформы
 
-## Current checkpoint — 2026-10-19: K3b links of earlier manual payments locally verified
+## Current checkpoint — 2026-10-19: K5a-fix of verified review findings locally verified
+
+Source `76f776447b0b4fcb1699047aa2fa496531ee6b34`, local branch `codex/package-k5a-review-fixes`, parent `59c54a0`.
+The K5a review's verified findings, by the owner's decisions of 2026-10-19: a manual payment
+cannot name a provider operation whose money counts; a refund failure and success conflict in
+either order; the counter counts only authorized requests; only a compromised key blocks money; a
+voided manual payment no longer blocks; a revocation waits for applications (ledger lock); SQL
+refusals are typed; the refund cap uses effective amounts; names ignore case and invisible
+characters; the apply form defaults to today in the business zone (migrations 0055 K, 0056 H).
+18 new cases. Focused **527 passed in 577.17s (0:09:37)**; full **2250 passed, 4 skipped in 1868.37s (0:31:08)**. K5a-fix not published; K3b published
+for CI only (`c2a891d`, SUCCESS). Findings 6, 8, 9, 12, 15 open.
+FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed. main=fedd0f1, published J=df88c20. Next 0057.
+[Validation](evidence/2026-10-19-k5a-review-fixes/VALIDATION.md), [handoff](NEXT_AGENT_PACKAGE_K5A_FIX_2026-10-19.md), [prompt](NEXT_AGENT_PACKAGE_K5A_FIX_PROMPT_2026-10-19.md).
+
+## Previous checkpoint — 2026-10-19: K3b links of earlier manual payments locally verified
 
 Source `8bb2eb43e16a05092065a09bee8082733737fe1f`, local branch `codex/package-k3b-provider-links`, parent `199eada`.
 By the owner's decisions of 2026-10-19: an operation whose ID an earlier manual payment names is

@@ -29,6 +29,20 @@ The reviewer also listed what it found sound: provenance and apply rechecks in S
 operation), link rules, RLS and grants on the new tables, no SQL injection (fixed fragments and bound
 parameters), permissions, idempotency, the receipt signature path and the UI's truthful labels.
 
+## Resolution — K5a-fix, 2026-10-19
+
+The owner chose to fix 1, 2, 3, 5, 7, 10, 11, 13 and 14 in one slice and decided 4: only a
+`compromise` revocation of a verification config blocks money. Locally implemented in `76f7764`
+([validation](../2026-10-19-k5a-review-fixes/VALIDATION.md)):
+
+| # | Resolution |
+|---|---|
+| 1, 2, 3, 5, 10, 13, 14 | Fixed, PASS |
+| 4 | Fixed by the owner's decision, PASS |
+| 7 | Fixed: a revocation takes the ledger lock (observed wait), PASS |
+| 11 | Fixed with effective amounts; corrected parent PASS; voided refund NOT TESTED (H refuses voiding a refund payment) |
+| 6, 8, 9, 12, 15 | Open, as proposed below |
+
 ## Proposed fix slice (after the owner's decision)
 
 - **K5a-fix** (one slice, failing tests first): 1, 2, 3, 5, 10, 11, 13, 14 and the share lock of 7.

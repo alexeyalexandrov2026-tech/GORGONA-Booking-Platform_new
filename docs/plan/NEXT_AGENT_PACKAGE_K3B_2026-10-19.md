@@ -1,5 +1,7 @@
 # Next agent — Package K after K3b, 2026-10-19
 
+Superseded on 2026-10-19 by [the K5a-fix handoff](NEXT_AGENT_PACKAGE_K5A_FIX_2026-10-19.md). Kept below as history.
+
 ## State
 
 - Checkout `C:/Users/alexa/.codex/worktrees/package-j-review2-fixes/Gorgona Booking`, local branch

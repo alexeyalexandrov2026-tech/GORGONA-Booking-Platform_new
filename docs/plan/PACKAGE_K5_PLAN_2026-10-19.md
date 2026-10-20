@@ -1,6 +1,9 @@
 # Package K5 — FIN-02 evidence plan: K0, independent review, CI (2026-10-19)
 
-**Status: owner decisions received 2026-10-19; not started.** Docs only. Nothing here is executed: no provider account, credential, Azure action, publication or
+**Status: owner decisions received 2026-10-19; K5a done** (review
+[recorded](evidence/2026-10-19-k5a-review/REVIEW.md); K5a-fix locally implemented in `76f7764`,
+[validation](evidence/2026-10-19-k5a-review-fixes/VALIDATION.md)). **K0a next; migrations from
+0057.** Docs only. Nothing here is executed: no provider account, credential, Azure action, publication or
 readiness change happens without the owner's separate word for that action.
 
 ## Owner decisions (2026-10-19)

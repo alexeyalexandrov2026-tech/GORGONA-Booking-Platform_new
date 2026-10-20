@@ -20,7 +20,18 @@ Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the propo
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
 
-## K5 plan — 2026-10-19, owner decisions received, not started
+## K5a-fix local decision — 2026-10-19, Proposed; locally implemented in `76f7764`
+
+The verified findings of the K5a independent review are fixed in one slice
+([review](../plan/evidence/2026-10-19-k5a-review/REVIEW.md),
+[validation](../plan/evidence/2026-10-19-k5a-review-fixes/VALIDATION.md)). Two rules change: a
+verification config revoked for `rotation` or as `retired` no longer blocks the facts it attested
+before (owner decision 2026-10-19; `compromise` still blocks, as a revoked connection does), and a
+manual payment cannot name a provider operation whose money already counts. A refund that both
+failed and succeeded needs review; revocations take the ledger lock; "names the ID" follows the H
+identity key. Migrations 0055 (K) and 0056 (H). Status remains Proposed; readiness unchanged.
+
+## K5 plan — 2026-10-19, owner decisions received, K5a done
 
 The remaining FIN-02 evidence (process entry points for the ingress and worker, an owner-recorded
 admission, actual Stripe test events through the local ingress, an independent review, exact-head
