@@ -44,11 +44,12 @@ async def test_nonempty_0045_without_attestations_upgrades_with_rows_unchanged(
     enabled: LedgerWorld,
     inbox: archive.Inbox,
     app_pool: RuntimePool,
+    writer_pool: RuntimePool,
     test_database: ProvisionedDatabase,
     previous_routing_database: ProvisionedDatabase,
 ) -> None:
     assert (await enabled.post(enabled.entry())).status_code == 200
-    await archive.receive(app_pool, inbox, inbox.event())
+    await archive.receive(writer_pool, inbox, inbox.event())
     copy_fixture_data(test_database, previous_routing_database)
     # The shared test database may already hold attestations from earlier tests.
     with psycopg.connect(previous_routing_database.admin_dsn) as admin:

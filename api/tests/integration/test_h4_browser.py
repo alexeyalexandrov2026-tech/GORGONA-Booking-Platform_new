@@ -46,6 +46,13 @@ def test_h4_real_browser_closed_until_published_then_enabled(
     provider, verifier = _provider(issuer, origin, idp, owner)
     app = _management_app(test_database, verifier, issuer, web)
     env = _browser_env(origin, issuer)
+    # K5b: the editors' default dates are today in the business time zone, not in UTC.
+    with owner_tenant_transaction(owner_conn, world.a.tenant_id):
+        zone = owner_conn.execute(
+            "select gba.business_timezone(%s)", (world.a.tenant_id,)
+        ).fetchone()
+    assert zone is not None
+    env["GBA_H4_TIMEZONE"] = str(zone[0])
     headers = idp.bearer(owner.subject, email=owner.email, iss=issuer)
     root = f"{origin}/v1/businesses/{world.a.tenant_id}"
     books: list[UUID] = []

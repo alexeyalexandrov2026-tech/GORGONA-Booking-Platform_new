@@ -117,11 +117,12 @@ def _resource(event: _Event) -> StripeResource:
     expected = _OBJECTS[event.type]
     if data.get("object") != expected:
         raise ValueError("Mismatched event resource")
+    # K5a finding 12: a charge moved only what was captured, never the authorized amount.
     fields: dict[str, object] = {
         "id": data["id"],
         "currency": data["currency"],
         "status": data["status"],
-        "amount_minor": data["amount"],
+        "amount_minor": data["amount_captured" if expected == "charge" else "amount"],
     }
     if expected == "payment_intent":
         return StripePaymentIntent.model_validate(

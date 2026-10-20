@@ -99,6 +99,8 @@ def stripe(
         body["amount_received"] = amount if status == "succeeded" else 0
     else:
         body["payment_intent"] = payment_intent
+    if body["object"] == "charge":
+        body["amount_captured"] = amount if status == "succeeded" else 0
     body.update(resource)
     return signed.body(value)
 
@@ -513,7 +515,7 @@ async def test_unattested_archive_rows_are_never_processed_and_no_money_moves(
     worker_pool: RuntimePool,
     test_database: ProvisionedDatabase,
 ) -> None:
-    unattested = (await archive.receive(app_pool, inbox, inbox.event())).event_id
+    unattested = (await archive.receive(writer_pool, inbox, inbox.event())).event_id
     (signed_event,) = await receive_all(
         writer_pool, routed, stripe("payment_intent.succeeded", object_id="pi_FAKEpayment9")
     )

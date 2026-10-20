@@ -19,6 +19,7 @@ manager_b = shared.manager_b
 enabled = shared.enabled
 previous_receipt_database = shared.previous_receipt_database
 inbox = archive.inbox
+writer_pool = archive.writer_pool
 
 
 @pytest.fixture
@@ -32,12 +33,12 @@ def previous_attestation_database(
 async def test_nonempty_0044_upgrade_preserves_rows_and_never_backfills_authentication(
     enabled: LedgerWorld,
     inbox: archive.Inbox,
-    app_pool: RuntimePool,
+    writer_pool: RuntimePool,
     test_database: ProvisionedDatabase,
     previous_attestation_database: ProvisionedDatabase,
 ) -> None:
     assert (await enabled.post(enabled.entry())).status_code == 200
-    await archive.receive(app_pool, inbox, inbox.event())
+    await archive.receive(writer_pool, inbox, inbox.event())
     copy_fixture_data(test_database, previous_attestation_database)
     before = snapshot(previous_attestation_database)
     assert before["provider_event_inbox"][0] > 0

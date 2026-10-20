@@ -13,16 +13,14 @@ from uuid import UUID, uuid7
 import psycopg
 import pytest
 from psycopg import sql
-from psycopg.conninfo import conninfo_to_dict, make_conninfo
+from psycopg.conninfo import conninfo_to_dict
 from pydantic import SecretStr
 
-from gorgona_booking.db.bootstrap import BootstrapSpec, bootstrap
 from gorgona_booking.db.pool import (
     RuntimeConnection,
     RuntimePool,
     UnsafeDatabaseRoleError,
     assert_safe_runtime_role,
-    create_runtime_pool,
     set_tenant_context,
     tenant_transaction,
 )
@@ -50,34 +48,11 @@ manager_a = shared.manager_a
 manager_b = shared.manager_b
 enabled = shared.enabled
 inbox = shared.inbox
-WRITER_ROLE = "gba_test_receipt_writer"
+WRITER_ROLE = shared.WRITER_ROLE
 NOW = datetime.fromtimestamp(signed.NOW, UTC)
 
 
-@pytest.fixture
-async def writer_pool(test_database: ProvisionedDatabase) -> AsyncIterator[RuntimePool]:
-    owner = conninfo_to_dict(test_database.owner_dsn)
-    app = conninfo_to_dict(test_database.app_dsn)
-    password = secrets.token_urlsafe(32)
-    bootstrap(
-        test_database.admin_dsn,
-        BootstrapSpec(
-            database=test_database.name,
-            owner_role=str(owner["user"]),
-            owner_password=str(owner["password"]),
-            app_role=str(app["user"]),
-            app_password=str(app["password"]),
-            receipt_writer_role=WRITER_ROLE,
-            receipt_writer_password=password,
-        ),
-    )
-    dsn = make_conninfo(test_database.app_dsn, user=WRITER_ROLE, password=password)
-    pool = create_runtime_pool(dsn)
-    await pool.open(wait=True)
-    try:
-        yield pool
-    finally:
-        await pool.close()
+writer_pool = shared.writer_pool
 
 
 @dataclass(frozen=True)
@@ -283,9 +258,10 @@ async def test_replays_and_signed_conflicts_keep_separate_attested_delivery(
 async def test_unsigned_archive_cannot_be_promoted_by_ordinary_runtime(
     inbox: shared.Inbox,
     routed: Routed,
+    writer_pool: RuntimePool,
     app_pool: RuntimePool,
 ) -> None:
-    result = await shared.receive(app_pool, inbox, inbox.event())
+    result = await shared.receive(writer_pool, inbox, inbox.event())
     assert not await attestations(app_pool, inbox.ledger.business)
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
@@ -466,7 +442,7 @@ async def test_only_a_new_verified_delivery_can_attest_a_preexisting_untrusted_a
                 "delivery_sha256": "f" * 64,
             }
         )
-    first = await shared.receive(app_pool, inbox, untrusted)
+    first = await shared.receive(writer_pool, inbox, untrusted)
     assert not await attestations(app_pool, scope.tenant_id)
     checked = await receive(writer_pool, scope, raw)
     assert checked.event_id == first.event_id
@@ -494,7 +470,7 @@ async def test_attestation_duplicate_waits_on_observed_insert_then_survives_lead
     scope = routed
     raw = delivery()
     event = signed.decode(raw, signed.signed(raw, scope.key), scope.policy, (scope.key,))
-    archived = await shared.receive(app_pool, inbox, event)
+    archived = await shared.receive(writer_pool, inbox, event)
     follower = None
     monitor = await psycopg.AsyncConnection.connect(
         test_database.admin_dsn,
@@ -611,7 +587,7 @@ async def test_mixed_runtime_login_cannot_hide_behind_set_role_to_attest(
     test_database: ProvisionedDatabase,
 ) -> None:
     scope = routed
-    archived = await shared.receive(app_pool, inbox, inbox.event())
+    archived = await shared.receive(writer_pool, inbox, inbox.event())
     app_role = str(conninfo_to_dict(test_database.app_dsn)["user"])
     async with await psycopg.AsyncConnection.connect(
         test_database.admin_dsn, autocommit=True

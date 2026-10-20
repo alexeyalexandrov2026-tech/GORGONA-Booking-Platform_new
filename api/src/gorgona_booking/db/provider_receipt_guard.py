@@ -1,4 +1,4 @@
-"""Packaged K1b-K0b integrity approvals, checked before each internal receipt write."""
+"""Packaged K1b-K5b integrity approvals, checked before each internal receipt write."""
 
 import re
 from importlib import resources
@@ -22,6 +22,8 @@ _SQL = "".join(
         "0055_provider_review_fixes.sql",
         # K0b: the owner's admissions and the gates of attestations and decisions.
         "0057_provider_connection_admissions.sql",
+        # K5b: the inbox index by connection; only the writer records events (IR-03).
+        "0059_provider_receipt_review_fixes.sql",
     )
 )
 # A later `create or replace` (0048) supersedes the earlier body of the same function.
@@ -473,6 +475,13 @@ _INDEXES = (
         "ON gba.provider_verification_configs USING btree (tenant_id, connection_id) "
         "WHERE (NOT revoked)",
     ),
+    # K5b (0059): the events of one connection, for the operation list and the link check.
+    (
+        "provider_event_inbox",
+        "provider_event_inbox_connection",
+        "CREATE INDEX provider_event_inbox_connection "
+        "ON gba.provider_event_inbox USING btree (tenant_id, connection_id)",
+    ),
 )
 _TENANT = "(tenant_id = gba.current_tenant_id())"
 _COMPANY = "(gba.current_location_id() IS NULL)"
@@ -501,8 +510,9 @@ _INBOX_INSERTS = {
     ("provider_event_deliveries", column)
     for column in ("tenant_id", "event_id", "delivery_sha256", "facts")
 }
-# 0053: the runtime records an acknowledgement; its time is the database's.
-_RUNTIME_INSERTS = _INBOX_INSERTS | {
+# 0053: the runtime records an acknowledgement; its time is the database's. K5b (0059): only
+# the receipt writer records events and deliveries (IR-03).
+_RUNTIME_INSERTS = {
     (_ACKNOWLEDGEMENTS, column) for column in ("tenant_id", "event_id", "note", "created_by")
 }
 _WRITER_INSERTS = _INBOX_INSERTS | {

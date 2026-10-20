@@ -1,6 +1,7 @@
 "use client";
 import { useState, type ReactNode } from "react";
 import { z } from "zod";
+import { businessDateTime } from "../lib/business-time";
 import type { LedgerAccount } from "../lib/ledger-contracts";
 import { minorUnits } from "../lib/ledger-contracts";
 import type { CounterpartyPage } from "../lib/counterparty-contracts";
@@ -21,8 +22,11 @@ type Common = {
   accounts: LedgerAccount[];
   disabled: boolean;
   send: SendFinancialCommand;
+  timezone: string;
 };
-const today = () => new Date().toISOString().slice(0, 10);
+/** Today in the business time zone; empty while the zone is unknown, never the UTC date. */
+const today = (timezone: string) =>
+  timezone ? businessDateTime(new Date(), timezone).date : "";
 const key = () => crypto.randomUUID();
 export const money = (units: bigint, places: number) => {
   const digits = units.toString().padStart(places + 1, "0");
@@ -129,6 +133,7 @@ export function InvoiceEditor({
   currencies,
   kind,
   document,
+  timezone,
 }: {
   kind: "invoice" | "manual_accrual";
   document: Invoice | null;
@@ -145,7 +150,7 @@ export function InvoiceEditor({
       : "",
   );
   const [currency, setCurrency] = useState(document?.currency ?? "");
-  const [date, setDate] = useState(document?.invoice_date ?? today());
+  const [date, setDate] = useState(document?.invoice_date ?? today(timezone));
   const [due, setDue] = useState(document?.due_date ?? "");
   const [control, setControl] = useState(document?.control_account_id ?? "");
   const [title, setTitle] = useState(document?.title ?? "");
@@ -357,8 +362,9 @@ export function DocumentIssue({
   disabled,
   send,
   obligation,
+  timezone,
 }: { document: Invoice | Credit; obligation?: Obligation | null } & Common) {
-  const [date, setDate] = useState(today()),
+  const [date, setDate] = useState(today(timezone)),
     [attest, setAttest] = useState(false),
     [refundControl, setRefundControl] = useState("");
   const isCredit = "credited_obligation_id" in document;
@@ -463,6 +469,7 @@ export function CreditEditor({
   obligation,
   credit,
   partyRevision,
+  timezone,
 }: {
   original: Invoice;
   obligation: Obligation;
@@ -470,7 +477,7 @@ export function CreditEditor({
   partyRevision: number;
 } & Common) {
   const [id] = useState(() => credit?.document_id ?? crypto.randomUUID());
-  const [date, setDate] = useState(credit?.credit_date ?? today()),
+  const [date, setDate] = useState(credit?.credit_date ?? today(timezone)),
     [due, setDue] = useState(credit?.due_date ?? ""),
     [title, setTitle] = useState(credit?.title ?? ""),
     [number, setNumber] = useState(credit?.number ?? "");
@@ -687,13 +694,15 @@ export function CreditVoid({
   disabled,
   send,
   book,
+  timezone,
 }: {
   credit: Credit;
   book: string;
   disabled: boolean;
   send: SendFinancialCommand;
+  timezone: string;
 }) {
-  const [date, setDate] = useState(today()),
+  const [date, setDate] = useState(today(timezone)),
     [reason, setReason] = useState(""),
     [evidence, setEvidence] = useState(""),
     [attest, setAttest] = useState(false);
@@ -1007,6 +1016,7 @@ export function PaymentEditor({
   accounts,
   disabled,
   send,
+  timezone,
 }: {
   settlement: Settlement;
   payment: Payment | null;
@@ -1017,9 +1027,11 @@ export function PaymentEditor({
       mode === "correct" ? (payment?.effective_amount ?? "") : "",
     ),
     [actual, setActual] = useState(
-      last?.actual_external_date ?? payment?.actual_external_date ?? today(),
+      last?.actual_external_date ??
+        payment?.actual_external_date ??
+        today(timezone),
     ),
-    [date, setDate] = useState(today()),
+    [date, setDate] = useState(today(timezone)),
     [cash, setCash] = useState(
       last?.cash_account_id ?? payment?.cash_account_id ?? "",
     ),

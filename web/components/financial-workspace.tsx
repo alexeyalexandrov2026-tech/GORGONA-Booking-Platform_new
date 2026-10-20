@@ -467,6 +467,8 @@ export function FinancialWorkspace({
     accounts,
     disabled: writeDisabled,
     send: (command: FinancialCommand) => submit(command),
+    // Default dates are today in the business time zone (K5b).
+    timezone: capability?.timezone ?? "",
   };
   const name = (id: string) =>
     parties?.items.find((x) => x.counterparty_id === id)?.display_name ?? id;
@@ -1310,6 +1312,7 @@ export function FinancialWorkspace({
                       credit={credit}
                       disabled={writeDisabled}
                       send={common.send}
+                      timezone={common.timezone}
                     />
                   )}
                 </section>

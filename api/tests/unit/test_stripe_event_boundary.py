@@ -58,6 +58,7 @@ def event(kind: str = "payment_intent.succeeded") -> dict[str, Any]:
             "object": "charge",
             "id": "ch_FAKEcharge1",
             "amount": 1000,
+            "amount_captured": 1000,
             "amount_refunded": 500,
             "currency": "usd",
             "status": "succeeded",
@@ -358,6 +359,30 @@ def test_duplicate_nested_keys_and_missing_required_facts_are_refused(
         decode(payload, signed(payload, key), policy, (key,))
     value = event()
     del value["data"]["object"]["amount_received"]
+    payload = body(value)
+    with pytest.raises(ProviderEventRejectedError):
+        decode(payload, signed(payload, key), policy, (key,))
+
+
+def test_a_charge_counts_only_its_captured_amount(
+    key: SecretStr,
+    policy: StripeEventPolicy,
+) -> None:
+    # K5a finding 12: a partial capture is the captured amount, never the authorized one.
+    value = event("charge.succeeded")
+    value["data"]["object"].update(amount=1000, amount_captured=600)
+    payload = body(value)
+    result = decode(payload, signed(payload, key), policy, (key,))
+    assert isinstance(result.resource, StripeCharge)
+    assert result.resource.amount_minor == 600
+    for patch in ({"amount_captured": None}, {"amount_captured": "600"}, {"amount_captured": -1}):
+        value = event("charge.succeeded")
+        value["data"]["object"].update(patch)
+        payload = body(value)
+        with pytest.raises(ProviderEventRejectedError):
+            decode(payload, signed(payload, key), policy, (key,))
+    value = event("charge.succeeded")
+    del value["data"]["object"]["amount_captured"]
     payload = body(value)
     with pytest.raises(ProviderEventRejectedError):
         decode(payload, signed(payload, key), policy, (key,))

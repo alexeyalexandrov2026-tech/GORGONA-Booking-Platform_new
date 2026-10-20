@@ -3,16 +3,24 @@
 import asyncio
 import copy
 import secrets
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from uuid import UUID, uuid7
 
 import psycopg
 import pytest
 from psycopg import sql
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg.types.json import Jsonb
 from pydantic import SecretStr
 
-from gorgona_booking.db.pool import RuntimePool, set_tenant_context, tenant_transaction
+from gorgona_booking.db.bootstrap import BootstrapSpec, bootstrap
+from gorgona_booking.db.pool import (
+    RuntimePool,
+    create_runtime_pool,
+    set_tenant_context,
+    tenant_transaction,
+)
 from gorgona_booking.db.provider_receipt_guard import assert_provider_receipt_ready
 from gorgona_booking.db.provisioning import owner_tenant_transaction
 from gorgona_booking.errors import DatabaseUnavailableError
@@ -37,6 +45,35 @@ idp = shared.idp
 manager_a = shared.manager_a
 manager_b = shared.manager_b
 enabled = shared.enabled
+
+# K5b (0059, IR-03): only the receipt writer records events; the runtime reads them.
+WRITER_ROLE = "gba_test_receipt_writer"
+
+
+@pytest.fixture
+async def writer_pool(test_database: ProvisionedDatabase) -> AsyncIterator[RuntimePool]:
+    owner = conninfo_to_dict(test_database.owner_dsn)
+    app = conninfo_to_dict(test_database.app_dsn)
+    password = secrets.token_urlsafe(32)
+    bootstrap(
+        test_database.admin_dsn,
+        BootstrapSpec(
+            database=test_database.name,
+            owner_role=str(owner["user"]),
+            owner_password=str(owner["password"]),
+            app_role=str(app["user"]),
+            app_password=str(app["password"]),
+            receipt_writer_role=WRITER_ROLE,
+            receipt_writer_password=password,
+        ),
+    )
+    dsn = make_conninfo(test_database.app_dsn, user=WRITER_ROLE, password=password)
+    pool = create_runtime_pool(dsn)
+    await pool.open(wait=True)
+    try:
+        yield pool
+    finally:
+        await pool.close()
 
 
 @dataclass(frozen=True)
@@ -101,26 +138,26 @@ async def counts(pool: RuntimePool, fixture: Inbox) -> tuple[int, int]:
 
 
 async def test_receipt_replay_and_transport_difference_keep_one_identity(
-    inbox: Inbox, app_pool: RuntimePool
+    inbox: Inbox, writer_pool: RuntimePool
 ) -> None:
-    first = await receive(app_pool, inbox, inbox.event())
+    first = await receive(writer_pool, inbox, inbox.event())
     assert first.disposition == "recorded"
     assert first.authority == "receipt_only_not_admitted"
-    assert (await receive(app_pool, inbox, inbox.event())).disposition == "duplicate"
-    other_bytes = await receive(app_pool, inbox, inbox.event(delivery="b"))
+    assert (await receive(writer_pool, inbox, inbox.event())).disposition == "duplicate"
+    other_bytes = await receive(writer_pool, inbox, inbox.event(delivery="b"))
     assert other_bytes.disposition == "duplicate"
     assert other_bytes.event_id == first.event_id
-    assert await counts(app_pool, inbox) == (1, 2)
+    assert await counts(writer_pool, inbox) == (1, 2)
 
 
 async def test_conflicting_facts_are_retained_without_rewriting_first_event(
-    inbox: Inbox, app_pool: RuntimePool
+    inbox: Inbox, writer_pool: RuntimePool
 ) -> None:
-    await receive(app_pool, inbox, inbox.event())
+    await receive(writer_pool, inbox, inbox.event())
     changed = inbox.event(amount=2000, delivery="b")
-    assert (await receive(app_pool, inbox, changed)).disposition == "conflict"
-    assert (await receive(app_pool, inbox, changed)).disposition == "conflict"
-    async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
+    assert (await receive(writer_pool, inbox, changed)).disposition == "conflict"
+    assert (await receive(writer_pool, inbox, changed)).disposition == "conflict"
+    async with tenant_transaction(writer_pool, inbox.ledger.business) as conn:
         rows = await (
             await conn.execute(
                 "select facts->'resource'->>'amount_minor' from gba.provider_event_inbox"
@@ -131,32 +168,32 @@ async def test_conflicting_facts_are_retained_without_rewriting_first_event(
             await conn.execute("select matches_original from gba.provider_event_deliveries")
         ).fetchall()
         assert sorted(rows) == [(False,), (True,)]
-    assert await counts(app_pool, inbox) == (1, 2)
+    assert await counts(writer_pool, inbox) == (1, 2)
 
 
 async def test_same_delivery_digest_cannot_be_reused_for_different_facts(
-    inbox: Inbox, app_pool: RuntimePool
+    inbox: Inbox, writer_pool: RuntimePool
 ) -> None:
-    await receive(app_pool, inbox, inbox.event())
+    await receive(writer_pool, inbox, inbox.event())
     with pytest.raises(ReceiptBindingRejectedError):
-        await receive(app_pool, inbox, inbox.event(amount=2000))
-    assert await counts(app_pool, inbox) == (1, 1)
+        await receive(writer_pool, inbox, inbox.event(amount=2000))
+    assert await counts(writer_pool, inbox) == (1, 1)
 
 
 async def test_rollback_before_commit_has_no_receipt_and_replay_can_commit(
-    inbox: Inbox, app_pool: RuntimePool
+    inbox: Inbox, writer_pool: RuntimePool
 ) -> None:
     with pytest.raises(RuntimeError, match="synthetic crash"):  # noqa: PT012 - rollback at exit
-        async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
+        async with tenant_transaction(writer_pool, inbox.ledger.business) as conn:
             await record_event(conn, inbox.connection, inbox.event())
             raise RuntimeError("synthetic crash before acknowledgement")
-    assert await counts(app_pool, inbox) == (0, 0)
-    assert (await receive(app_pool, inbox, inbox.event())).disposition == "recorded"
+    assert await counts(writer_pool, inbox) == (0, 0)
+    assert (await receive(writer_pool, inbox, inbox.event())).disposition == "recorded"
 
 
 @pytest.mark.parametrize("kind", ["payment_intent.succeeded", "charge.succeeded", "refund.updated"])
 async def test_signed_snapshots_reach_storage_without_customer_data_or_journals(
-    inbox: Inbox, app_pool: RuntimePool, kind: str
+    inbox: Inbox, writer_pool: RuntimePool, app_pool: RuntimePool, kind: str
 ) -> None:
     payload = signed_fixtures.event(kind)
     payload["account"] = "acct_FAKEreceipt"
@@ -172,8 +209,14 @@ async def test_signed_snapshots_reach_storage_without_customer_data_or_journals(
         ),
         (key,),
     )
-    async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
-        before = await (await conn.execute("select count(*) from gba.journal_entries")).fetchone()
+
+    # The writer cannot read journals; the runtime counts them before and after.
+    async def journals() -> object:
+        async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
+            return await (await conn.execute("select count(*) from gba.journal_entries")).fetchone()
+
+    before = await journals()
+    async with tenant_transaction(writer_pool, inbox.ledger.business) as conn:
         result = await record_event(conn, inbox.connection, event)
         assert result.disposition == "recorded"
         stored = await (
@@ -184,14 +227,14 @@ async def test_signed_snapshots_reach_storage_without_customer_data_or_journals(
             private not in stored[0]
             for private in ("metadata", "customer", "email", "FAKE private")
         )
-        assert (
-            before
-            == await (await conn.execute("select count(*) from gba.journal_entries")).fetchone()
-        )
+    assert before == await journals()
 
 
 async def test_revocation_waits_for_inflight_receipt_then_blocks_next_delivery(
-    inbox: Inbox, app_pool: RuntimePool, test_database: ProvisionedDatabase
+    inbox: Inbox,
+    writer_pool: RuntimePool,
+    app_pool: RuntimePool,
+    test_database: ProvisionedDatabase,
 ) -> None:
     async def revoke() -> None:
         async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
@@ -206,7 +249,7 @@ async def test_revocation_waits_for_inflight_receipt_then_blocks_next_delivery(
         test_database.admin_dsn, dbname=test_database.name, autocommit=True
     )
     try:
-        async with tenant_transaction(app_pool, inbox.ledger.business) as leader:
+        async with tenant_transaction(writer_pool, inbox.ledger.business) as leader:
             await record_event(leader, inbox.connection, inbox.event())
             identity = await (
                 await leader.execute("select pg_backend_pid(),pg_current_xact_id()::text")
@@ -240,8 +283,8 @@ async def test_revocation_waits_for_inflight_receipt_then_blocks_next_delivery(
             await asyncio.gather(follower, return_exceptions=True)
         await monitor.close()
     with pytest.raises(ReceiptBindingRejectedError):
-        await receive(app_pool, inbox, inbox.event(delivery="b"))
-    assert await counts(app_pool, inbox) == (1, 1)
+        await receive(writer_pool, inbox, inbox.event(delivery="b"))
+    assert await counts(writer_pool, inbox) == (1, 1)
 
 
 @pytest.mark.parametrize(
@@ -253,19 +296,19 @@ async def test_revocation_waits_for_inflight_receipt_then_blocks_next_delivery(
     ],
 )
 async def test_connection_scope_mismatch_never_records(
-    inbox: Inbox, app_pool: RuntimePool, field: str, value: str
+    inbox: Inbox, writer_pool: RuntimePool, field: str, value: str
 ) -> None:
     body = inbox.event().model_dump(mode="json")
     body[field] = value
     with pytest.raises(ReceiptBindingRejectedError):
-        await receive(app_pool, inbox, SignedStripeEvent.model_validate(body))
-    assert await counts(app_pool, inbox) == (0, 0)
+        await receive(writer_pool, inbox, SignedStripeEvent.model_validate(body))
+    assert await counts(writer_pool, inbox) == (0, 0)
 
 
 async def test_revocation_is_permanent_and_history_is_preserved(
-    inbox: Inbox, app_pool: RuntimePool
+    inbox: Inbox, writer_pool: RuntimePool, app_pool: RuntimePool
 ) -> None:
-    await receive(app_pool, inbox, inbox.event())
+    await receive(writer_pool, inbox, inbox.event())
     async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
         await conn.execute(
             "update gba.provider_receipt_connections set revoked=true, "
@@ -273,22 +316,22 @@ async def test_revocation_is_permanent_and_history_is_preserved(
             (inbox.connection,),
         )
     with pytest.raises(ReceiptBindingRejectedError):
-        await receive(app_pool, inbox, inbox.event(delivery="b"))
+        await receive(writer_pool, inbox, inbox.event(delivery="b"))
     with pytest.raises(psycopg.errors.CheckViolation):
         async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
             await conn.execute(
                 "update gba.provider_receipt_connections set revoked=false where id=%s",
                 (inbox.connection,),
             )
-    assert await counts(app_pool, inbox) == (1, 1)
+    assert await counts(writer_pool, inbox) == (1, 1)
 
 
 @pytest.mark.parametrize("scope", ["unscoped", "foreign", "branch"])
 async def test_tenant_and_company_scope_fail_closed(
-    inbox: Inbox, app_pool: RuntimePool, scope: str
+    inbox: Inbox, writer_pool: RuntimePool, scope: str
 ) -> None:
-    await receive(app_pool, inbox, inbox.event())
-    async with app_pool.connection() as conn, conn.transaction():
+    await receive(writer_pool, inbox, inbox.event())
+    async with writer_pool.connection() as conn, conn.transaction():
         if scope != "unscoped":
             tenant = uuid7() if scope == "foreign" else inbox.ledger.business
             await conn.execute("select set_config('gba.tenant_id',%s,true)", (str(tenant),))
@@ -302,9 +345,9 @@ async def test_tenant_and_company_scope_fail_closed(
 @pytest.mark.parametrize("table", ["provider_event_inbox", "provider_event_deliveries"])
 @pytest.mark.parametrize("operation", ["update", "delete", "truncate"])
 async def test_runtime_cannot_mutate_receipt_history(
-    inbox: Inbox, app_pool: RuntimePool, table: str, operation: str
+    inbox: Inbox, writer_pool: RuntimePool, app_pool: RuntimePool, table: str, operation: str
 ) -> None:
-    await receive(app_pool, inbox, inbox.event())
+    await receive(writer_pool, inbox, inbox.event())
     statement = (
         sql.SQL("update gba.{} set facts=facts").format(sql.Identifier(table))
         if operation == "update"
@@ -332,7 +375,7 @@ async def test_runtime_cannot_provision_a_connection_or_grant_admission(
 
 @pytest.mark.parametrize("tamper", ["extra", "mode", "amount", "event_type", "null", "string"])
 async def test_direct_sql_rejects_untyped_or_private_facts(
-    inbox: Inbox, app_pool: RuntimePool, tamper: str
+    inbox: Inbox, writer_pool: RuntimePool, tamper: str
 ) -> None:
     facts = inbox.event().model_dump(mode="json", exclude={"delivery_sha256"})
     facts = copy.deepcopy(facts)
@@ -349,7 +392,7 @@ async def test_direct_sql_rejects_untyped_or_private_facts(
     else:
         facts["resource"]["amount_minor"] = "1000"
     with pytest.raises(psycopg.errors.CheckViolation):
-        async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
+        async with tenant_transaction(writer_pool, inbox.ledger.business) as conn:
             await conn.execute(
                 "insert into gba.provider_event_inbox (tenant_id,id,connection_id,facts) "
                 "values (%s,%s,%s,%s)",
@@ -359,21 +402,21 @@ async def test_direct_sql_rejects_untyped_or_private_facts(
 
 @pytest.mark.parametrize("rollback", [False, True])
 async def test_duplicate_writers_wait_on_the_uncommitted_event_insert(
-    inbox: Inbox, app_pool: RuntimePool, test_database: ProvisionedDatabase, rollback: bool
+    inbox: Inbox, writer_pool: RuntimePool, test_database: ProvisionedDatabase, rollback: bool
 ) -> None:
     follower = None
     monitor = await psycopg.AsyncConnection.connect(
         test_database.admin_dsn, dbname=test_database.name, autocommit=True
     )
     try:
-        async with app_pool.connection() as leader, leader.transaction(force_rollback=rollback):
+        async with writer_pool.connection() as leader, leader.transaction(force_rollback=rollback):
             await set_tenant_context(leader, inbox.ledger.business)
             identity = await (
                 await leader.execute("select pg_backend_pid(),pg_current_xact_id()::text")
             ).fetchone()
             assert identity is not None
             original = await record_event(leader, inbox.connection, inbox.event())
-            follower = asyncio.create_task(receive(app_pool, inbox, inbox.event(delivery="b")))
+            follower = asyncio.create_task(receive(writer_pool, inbox, inbox.event(delivery="b")))
             deadline = asyncio.get_running_loop().time() + 8
             while asyncio.get_running_loop().time() < deadline:
                 waiting = await (
@@ -396,7 +439,7 @@ async def test_duplicate_writers_wait_on_the_uncommitted_event_insert(
         replay = await asyncio.wait_for(follower, 15)
         assert replay.disposition == ("recorded" if rollback else "duplicate")
         assert (replay.event_id == original.event_id) is not rollback
-        assert await counts(app_pool, inbox) == (1, 1 if rollback else 2)
+        assert await counts(writer_pool, inbox) == (1, 1 if rollback else 2)
     finally:
         if follower is not None:
             if not follower.done():
@@ -435,24 +478,24 @@ async def test_duplicate_writers_wait_on_the_uncommitted_event_insert(
     ],
 )
 async def test_schema_damage_refuses_receipt(
-    inbox: Inbox, app_pool: RuntimePool, owner_conn: psycopg.Connection, damage: str, repair: str
+    inbox: Inbox, writer_pool: RuntimePool, owner_conn: psycopg.Connection, damage: str, repair: str
 ) -> None:
-    async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
+    async with tenant_transaction(writer_pool, inbox.ledger.business) as conn:
         await assert_provider_receipt_ready(conn)
     owner_conn.execute(damage)
     try:
         with pytest.raises(DatabaseUnavailableError):
-            await receive(app_pool, inbox, inbox.event())
+            await receive(writer_pool, inbox, inbox.event())
     finally:
         owner_conn.execute(repair)
 
 
 @pytest.mark.parametrize("switch", ["company", "branch"])
 async def test_orphan_event_cannot_hide_from_deferred_check_by_switching_scope(
-    inbox: Inbox, app_pool: RuntimePool, switch: str
+    inbox: Inbox, writer_pool: RuntimePool, switch: str
 ) -> None:
     with pytest.raises(psycopg.errors.CheckViolation):  # noqa: PT012 - deferred check at exit
-        async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
+        async with tenant_transaction(writer_pool, inbox.ledger.business) as conn:
             await conn.execute(
                 "insert into gba.provider_event_inbox (tenant_id,id,connection_id,facts) "
                 "values (%s,%s,%s,%s)",
@@ -465,27 +508,27 @@ async def test_orphan_event_cannot_hide_from_deferred_check_by_switching_scope(
             )
             setting = "gba.tenant_id" if switch == "company" else "gba.location_id"
             await conn.execute("select set_config(%s,%s,true)", (setting, str(uuid7())))
-    assert await counts(app_pool, inbox) == (0, 0)
+    assert await counts(writer_pool, inbox) == (0, 0)
 
 
-async def test_missing_connection_does_not_write(inbox: Inbox, app_pool: RuntimePool) -> None:
-    async with tenant_transaction(app_pool, inbox.ledger.business) as conn:
+async def test_missing_connection_does_not_write(inbox: Inbox, writer_pool: RuntimePool) -> None:
+    async with tenant_transaction(writer_pool, inbox.ledger.business) as conn:
         with pytest.raises(ReceiptBindingRejectedError):
             await record_event(conn, uuid7(), inbox.event())
-    assert await counts(app_pool, inbox) == (0, 0)
+    assert await counts(writer_pool, inbox) == (0, 0)
 
 
 async def test_receipt_requires_explicit_read_committed_transaction(
-    inbox: Inbox, app_pool: RuntimePool
+    inbox: Inbox, writer_pool: RuntimePool
 ) -> None:
-    async with app_pool.connection() as conn:
+    async with writer_pool.connection() as conn:
         with pytest.raises(ReceiptBindingRejectedError):
             await record_event(conn, inbox.connection, inbox.event())
-    async with app_pool.connection() as conn, conn.transaction():
+    async with writer_pool.connection() as conn, conn.transaction():
         await conn.execute("set transaction isolation level repeatable read")
         await conn.execute(
             "select set_config('gba.tenant_id',%s,true)", (str(inbox.ledger.business),)
         )
         with pytest.raises(ReceiptBindingRejectedError):
             await record_event(conn, inbox.connection, inbox.event())
-    assert await counts(app_pool, inbox) == (0, 0)
+    assert await counts(writer_pool, inbox) == (0, 0)

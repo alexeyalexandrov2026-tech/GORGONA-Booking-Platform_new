@@ -29,6 +29,8 @@ _MIGRATIONS = (
     "0056_provider_money_review_fixes.sql",
     # K0b: provider money needs the connection's test-access admission (0057).
     "0058_provider_money_admission.sql",
+    # K5b: links need the enabled workflow; the link date window calls pg_catalog.abs.
+    "0060_provider_link_review_fixes.sql",
 )
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
@@ -60,6 +62,8 @@ _MONEY = (
     "settlement_documents",
     "settlement_allocations",
     *_PAYMENT_TABLES,
+    # K5b (0060): a link of a manual payment to a provider operation, as every money table.
+    "provider_payment_links",
 )
 _TRIGGERS = (
     *((t, f"{t}_immutable", 27, "reject_ledger_mutation", False) for t in FINANCIAL_TABLES),

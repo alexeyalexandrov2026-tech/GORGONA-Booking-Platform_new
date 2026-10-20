@@ -1,6 +1,7 @@
 import { test, expect, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { join } from "node:path";
+import { businessDateTime } from "../lib/business-time";
 test.use({ baseURL: process.env.GBA_MGMT_BROWSER_URL, actionTimeout: 15000 });
 async function choose(select: Locator, text: string | RegExp) {
   const value = await select
@@ -42,8 +43,19 @@ test("financial documents: real gates, recovery, partial settlement, correction,
     return;
   }
   await expect(newInvoice).toBeEnabled();
+  // K5b: under a browser clock whose UTC date is not the business date, every
+  // editor defaults to today in the business time zone.
+  const at = new Date();
+  at.setUTCHours(2, 0, 0, 0);
+  if (at.getTime() > Date.now()) at.setUTCDate(at.getUTCDate() - 1);
+  const today = businessDateTime(at, process.env.GBA_H4_TIMEZONE ?? "").date;
+  expect(today).not.toBe(at.toISOString().slice(0, 10));
+  await page.clock.setSystemTime(at);
   await newInvoice.click();
   const draft = page.getByRole("form", { name: "New invoice", exact: true });
+  await expect(draft.getByLabel("Document date", { exact: true })).toHaveValue(
+    today,
+  );
   await choose(
     draft.getByRole("combobox", { name: "Counterparty version", exact: true }),
     "FAKE Finance Customer",
@@ -79,6 +91,9 @@ test("financial documents: real gates, recovery, partial settlement, correction,
     name: "Issue saved draft",
     exact: true,
   });
+  await expect(issue.getByLabel("Posting date", { exact: true })).toHaveValue(
+    today,
+  );
   await issue.getByLabel("Posting date", { exact: true }).fill("2026-10-01");
   await issue.getByRole("checkbox").check();
   let lostIssue = false;
@@ -163,6 +178,12 @@ test("financial documents: real gates, recovery, partial settlement, correction,
     name: "Record external payment",
     exact: true,
   });
+  for (const label of [
+    "Payment posting date",
+    "Actual external payment date",
+  ]) {
+    await expect(payment.getByLabel(label, { exact: true })).toHaveValue(today);
+  }
   await payment
     .getByLabel("Payment posting date", { exact: true })
     .fill("2026-10-02");
@@ -233,6 +254,9 @@ test("financial documents: real gates, recovery, partial settlement, correction,
     name: "Correct erroneous confirmation",
     exact: true,
   });
+  await expect(
+    correction.getByLabel("Payment posting date", { exact: true }),
+  ).toHaveValue(today);
   await correction.getByLabel("Payment amount", { exact: true }).fill("60.00");
   await correction.getByLabel(/^Payment allocation /).fill("60.00");
   await correction
@@ -287,6 +311,9 @@ test("financial documents: real gates, recovery, partial settlement, correction,
     name: "New credit note",
     exact: true,
   });
+  await expect(credit.getByLabel("Credit date", { exact: true })).toHaveValue(
+    today,
+  );
   await credit.getByLabel("Credit date", { exact: true }).fill("2026-10-05");
   await credit
     .getByLabel("Credit title", { exact: true })
@@ -321,6 +348,9 @@ test("financial documents: real gates, recovery, partial settlement, correction,
     name: "Issue saved draft",
     exact: true,
   });
+  await expect(
+    issueCredit.getByLabel("Posting date", { exact: true }),
+  ).toHaveValue(today);
   await issueCredit
     .getByLabel("Posting date", { exact: true })
     .fill("2026-10-05");
@@ -346,6 +376,9 @@ test("financial documents: real gates, recovery, partial settlement, correction,
     name: "Void erroneous credit",
     exact: true,
   });
+  await expect(
+    voidCredit.getByLabel("Credit void posting date", { exact: true }),
+  ).toHaveValue(today);
   await voidCredit
     .getByLabel("Credit void posting date", { exact: true })
     .fill("2026-10-06");
