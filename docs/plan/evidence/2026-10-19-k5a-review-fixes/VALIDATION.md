@@ -3,7 +3,7 @@
 **PASS for this bounded local slice.** Branch `codex/package-k5a-review-fixes`, parent `59c54a0`
 (the K5a review record), source commit `76f776447b0b4fcb1699047aa2fa496531ee6b34`. [CHECKS.json](CHECKS.json) was generated before
 the source commit and binds source blobs (including the runbook), commands, exit codes and log
-digests. Not published. Findings: [K5a review](../2026-10-19-k5a-review/REVIEW.md). Executor:
+digests. Published for CI only on 2026-10-20 (no PR). Findings: [K5a review](../2026-10-19-k5a-review/REVIEW.md). Executor:
 Claude, inline, after the owner's decisions of 2026-10-19: fix findings 1, 2, 3, 5, 7, 10, 11, 13
 and 14 in one slice, failing tests first; finding 4: only a `compromise` revocation of a
 verification config blocks money, `rotation` and `retired` do not.
@@ -67,7 +67,7 @@ runtime has no UPDATE right on K rows, so a `FOR SHARE` lock was not possible.
 | Ruff check and format, strict mypy | PASS: 332 source files |
 | Web typecheck, lint, format, unit (122 passed), build | PASS |
 | Runtime / development npm audit | PASS 0 / FAIL 5 high (existing, not required) |
-| K CI | NOT TESTED for K5a-fix (not published) |
+| K CI | PASS: published for CI only on 2026-10-20 by the owner's word; run 39371433810 for `7b08507` SUCCESS (read once). CHECKS.json predates the push (`published: false`) |
 
 New cases 18, regression cases 509 (see CHECKS.json).
 

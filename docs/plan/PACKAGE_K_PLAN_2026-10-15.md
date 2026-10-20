@@ -15,7 +15,8 @@ Source `76f776447b0b4fcb1699047aa2fa496531ee6b34` on local branch `codex/package
 [review](evidence/2026-10-19-k5a-review/REVIEW.md) findings 1, 2, 3, 4 (owner: only `compromise`
 blocks), 5, 7, 10, 11, 13 and 14 fixed; 11b NOT TESTED (no voided refund can exist); 6, 8, 9, 12, 15
 open. Migrations 0055 (K) and 0056 (H); 18 new cases. Final focused **527 passed in 577.17s (0:09:37)**; full
-**2250 passed, 4 skipped in 1868.37s (0:31:08)**. Kept failures: product RED and test defects. Not published. Next: K0a (the K5 plan).
+**2250 passed, 4 skipped in 1868.37s (0:31:08)**. Kept failures: product RED and test defects. Published for CI only (`7b08507`, run
+39371433810 SUCCESS); no PR. Next: K0a (the K5 plan).
 [Validation](evidence/2026-10-19-k5a-review-fixes/VALIDATION.md),
 [CHECKS.json](evidence/2026-10-19-k5a-review-fixes/CHECKS.json),
 [handoff](NEXT_AGENT_PACKAGE_K5A_FIX_2026-10-19.md), [prompt](NEXT_AGENT_PACKAGE_K5A_FIX_PROMPT_2026-10-19.md).
