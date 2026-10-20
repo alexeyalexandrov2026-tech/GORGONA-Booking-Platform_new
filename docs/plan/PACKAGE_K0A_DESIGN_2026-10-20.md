@@ -1,7 +1,10 @@
 # K0a — admission, entry points and the owner's Stripe test run: design and questions (2026-10-20)
 
-**Status: proposed, docs only, waiting for the owner's answers.** Nothing here is built or
-executed. Code starts in K0b, on a new branch, after the answers, with failing tests first. No
+**Status: owner answered 2026-10-20 — «i trust you» to the seven questions below, so every
+default is taken (owner records the admission with the `gba-db` command; H4 link optional; worker
+loop every 5 s plus `--once`; `127.0.0.1:8787`; no new dependency; the agent reads the database
+after the owner's run; a suspended connection may get a new `test_access` revision). K0b is next.**
+Nothing here is built or executed. Code starts in K0b, on a new branch, after the answers, with failing tests first. No
 provider account, credential, Azure action, publication or readiness change happens without the
 owner's separate word. Parent: `d03ae53` (K5a-fix handoff). Next migration: **0057**.
 
