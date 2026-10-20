@@ -184,12 +184,13 @@ async def _link(
 async def _candidates(
     conn: RuntimeConnection, business_id: UUID, book_id: UUID, operation: ProviderOperationSummary
 ) -> tuple[ProviderLinkCandidate, ...]:
-    """Manual payments of the book that name the provider ID, as K3a's refusal finds them."""
+    """Manual payments of the book that name the provider ID under the H identity key (K5a-fix
+    finding 13), voided ones included so that their state is shown."""
     rows = await (
         await conn.execute(
             "select id from gba.external_payments where tenant_id=%s and book_id=%s "
             "and attestation='manual_attestation' "
-            "and external_reference ~ ('(^|[^A-Za-z0-9_])' || %s || '($|[^A-Za-z0-9_])') "
+            "and pg_catalog.lower(%s)=any(gba.provider_reference_ids(external_reference)) "
             "order by id limit 20",
             (business_id, book_id, operation.provider_object_id),
         )
@@ -291,11 +292,19 @@ async def link(
         raise ProviderLinkMismatchError(
             "This manual payment does not match the provider operation", reason=reason
         )
-    await conn.execute(
-        "insert into gba.provider_payment_links "
-        "(tenant_id,book_id,payment_id,operation_id,note,created_by) values (%s,%s,%s,%s,%s,%s)",
-        (business_id, book_id, body.payment_id, operation_id, body.note, user_id),
-    )
+    try:
+        async with conn.transaction():
+            await conn.execute(
+                "insert into gba.provider_payment_links "
+                "(tenant_id,book_id,payment_id,operation_id,note,created_by) "
+                "values (%s,%s,%s,%s,%s,%s)",
+                (business_id, book_id, body.payment_id, operation_id, body.note, user_id),
+            )
+    except psycopg.errors.CheckViolation as exc:
+        # K5a-fix (finding 10): SQL saw facts the checks above did not; nothing was linked.
+        raise ProviderLinkMismatchError(
+            "The provider facts changed; reload and compare again", reason="facts"
+        ) from exc
     summary = await load_operation(conn, business_id, book_id, operation_id)
     recorded = await _link(conn, business_id, operation_id)
     if summary is None or recorded is None:
@@ -399,6 +408,11 @@ async def acknowledge(
                 )
         except psycopg.errors.UniqueViolation:
             pass  # Another request recorded it first; compare its note below.
+        except psycopg.errors.CheckViolation as exc:
+            # K5a-fix (finding 10): SQL decides that this event takes no acknowledgement.
+            raise ProviderAttentionNotNeededError(
+                "This event takes no acknowledgement; reload to see its decision", reason="facts"
+            ) from exc
         item = await _attention_item(conn, business_id, book_id, event_id)
         if item is None or item.acknowledgement is None:
             raise DatabaseUnavailableError("The acknowledgement is unavailable")

@@ -47,6 +47,8 @@ export const financialOverviewSchema = z
     business_id: id,
     write_enabled: z.boolean(),
     blocked_reason: z.enum(["not_ready", "module_disabled"]).nullable(),
+    // K5a-fix (finding 14): the zone that decides "today" for this company's dates.
+    timezone: z.string().min(1).max(64),
   })
   .refine((v) => v.write_enabled === (v.blocked_reason === null));
 const invoiceLine = z.strictObject({

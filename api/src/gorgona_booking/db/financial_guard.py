@@ -25,6 +25,8 @@ _MIGRATIONS = (
     "0052_provider_payment_provenance.sql",
     # K3b: an earlier manual payment linked to the provider operation it names.
     "0054_provider_payment_links.sql",
+    # K5a-fix: names, effective amounts and the manual-payment identity of provider money.
+    "0056_provider_money_review_fixes.sql",
 )
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")
@@ -119,6 +121,13 @@ _TRIGGERS = (
         "enforce_provider_payment_link",
         False,
     ),
+    (
+        "external_payments",
+        "external_payments_provider_identity",
+        7,
+        "enforce_manual_provider_identity",
+        False,
+    ),
     *(
         (t, f"{t}_payment_consistent", 5, "check_payment_integrity", True)
         for t in ("journal_entries", "journal_lines")
@@ -211,6 +220,10 @@ _HELPERS = (
     ("gba.cash_account_used(uuid,uuid,uuid)", "boolean", "cash_account_used"),
     ("gba.credit_voided(uuid,uuid,uuid)", "boolean", "credit_voided"),
     ("gba.assert_provider_payment(uuid,uuid,uuid)", "void", "assert_provider_payment"),
+    ("gba.provider_reference_ids(text)", "text[]", "provider_reference_ids"),
+    ("gba.effective_payment_amount(uuid,uuid,uuid)", "bigint", "effective_payment_amount"),
+    ("gba.provider_manual_payment(uuid,uuid,text)", "uuid", "provider_manual_payment"),
+    ("gba.provider_operation_payment(uuid,uuid)", "uuid", "provider_operation_payment"),
     (
         "gba.financial_mirror_original(uuid,uuid,uuid,text)",
         "uuid",

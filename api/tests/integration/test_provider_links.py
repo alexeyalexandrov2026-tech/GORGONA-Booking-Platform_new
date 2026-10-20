@@ -187,7 +187,9 @@ async def test_an_operation_that_is_not_observed_is_not_linked(money: Money) -> 
 
 async def test_an_applied_operation_is_not_linked(money: Money) -> None:
     _, _, applied = await money.paid()
-    _, _, payment = await manual(money)
+    # K5a-fix (finding 1): a manual payment naming the applied operation is no longer recorded;
+    # the operation's state is checked before the reference.
+    _, _, payment = await manual(money, reference="FAKE bank payout without a provider ID")
     refused = await link(money, await money.operation(), payment)
     assert error(refused)[:2] == (409, "PROVIDER_OPERATION_APPLIED"), refused.text
     assert error(refused)[2]["payment_id"] == str(applied)

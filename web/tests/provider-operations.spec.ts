@@ -1,5 +1,6 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { businessDateTime } from "../lib/business-time";
 test.use({ baseURL: process.env.GBA_MGMT_BROWSER_URL, actionTimeout: 15000 });
 
 type Fixture = {
@@ -21,7 +22,8 @@ const fixtures = JSON.parse(process.env.GBA_K4A_FIXTURE ?? "{}") as Record<
   Fixture
 >;
 const total = Number(process.env.GBA_K4A_TOTAL),
-  slow = Number(process.env.GBA_K4A_SLOW);
+  slow = Number(process.env.GBA_K4A_SLOW),
+  timezone = process.env.GBA_K4A_TIMEZONE ?? "";
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 async function choose(select: Locator, text: string | RegExp) {
   const value = await select
@@ -142,6 +144,10 @@ test("provider operations: truthful states, clearing account, apply, recovery an
     .getByRole("button", { name: "Apply provider operation", exact: true })
     .click();
   const apply = detail.getByRole("form", { name: "Apply provider operation" });
+  // K5a-fix (finding 14): "today" in the business time zone, not the UTC date.
+  await expect(apply.getByLabel("Payment posting date")).toHaveValue(
+    businessDateTime(new Date(), timezone).date,
+  );
   await choose(
     apply.getByRole("combobox", { name: "Observed provider operation" }),
     f.apply,

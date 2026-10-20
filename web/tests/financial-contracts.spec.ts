@@ -425,29 +425,32 @@ test("payment correction sequences strictly advance and void removes effective c
   ).toBe(false);
 });
 test("capability overview is finite, truthful and closed when blocked", () => {
+  const overview = {
+    schema_version: 1,
+    business_id: business,
+    write_enabled: false,
+    blocked_reason: "not_ready",
+    timezone: "America/New_York",
+  };
+  expect(financialOverviewSchema.safeParse(overview).success).toBe(true);
   expect(
-    financialOverviewSchema.safeParse({
-      schema_version: 1,
-      business_id: business,
-      write_enabled: false,
-      blocked_reason: "not_ready",
-    }).success,
-  ).toBe(true);
-  expect(
-    financialOverviewSchema.safeParse({
-      schema_version: 1,
-      business_id: business,
-      write_enabled: true,
-      blocked_reason: "not_ready",
-    }).success,
+    financialOverviewSchema.safeParse({ ...overview, write_enabled: true })
+      .success,
   ).toBe(false);
   expect(
     financialOverviewSchema.safeParse({
+      ...overview,
       schema_version: 2,
-      business_id: business,
       write_enabled: true,
       blocked_reason: null,
     }).success,
+  ).toBe(false);
+  // K5a-fix (finding 14): the zone that decides "today" is always named.
+  const unnamed: Record<string, unknown> = { ...overview };
+  delete unnamed.timezone;
+  expect(financialOverviewSchema.safeParse(unnamed).success).toBe(false);
+  expect(
+    financialOverviewSchema.safeParse({ ...overview, timezone: "" }).success,
   ).toBe(false);
 });
 test("recovery references follow subject revision or settlement sequence and never bodies", () => {
@@ -615,6 +618,7 @@ test("API response context rejects foreign tenant and foreign financial book", (
         business_id: party,
         write_enabled: true,
         blocked_reason: null,
+        timezone: "UTC",
       },
       business,
     ),

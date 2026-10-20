@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ManagementApiError } from "../lib/management-api";
 import type { LedgerAccount } from "../lib/ledger-contracts";
 import { minorUnits } from "../lib/ledger-contracts";
+import { businessDateTime } from "../lib/business-time";
 import * as api from "../lib/financial-api";
 import {
   financialCommandSchema,
@@ -44,6 +45,7 @@ const LINK_MISMATCH: Record<string, string> = {
   payment_linked: "It is already linked to another provider operation.",
   not_manual: "It is not a manually recorded payment.",
   reference: "Its reference does not name this provider ID.",
+  facts: "The provider facts changed while linking; reload and compare again.",
 };
 const stateText = (state: State) =>
   STATES.find(([value]) => value === state)?.[1] ?? state;
@@ -820,6 +822,7 @@ export function ProviderApplyEditor({
   businessId,
   settlement,
   book,
+  timezone,
   disabled,
   send,
   draft,
@@ -828,6 +831,8 @@ export function ProviderApplyEditor({
   businessId: string;
   settlement: Settlement;
   book: string;
+  /** The business time zone from the financial overview: "today" is its date. */
+  timezone: string;
   disabled: boolean;
   send: SendFinancialCommand;
   draft: ProviderDraft | null;
@@ -843,7 +848,7 @@ export function ProviderApplyEditor({
       () =>
         draft ?? {
           chosen: "",
-          date: new Date().toISOString().slice(0, 10),
+          date: businessDateTime(new Date(), timezone).date,
           allocated: {},
         },
     ),

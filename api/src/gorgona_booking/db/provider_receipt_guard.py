@@ -18,6 +18,8 @@ _SQL = "".join(
         "0050_provider_receipt_decisions.sql",
         "0051_provider_money_access.sql",
         "0053_provider_attention_acknowledgements.sql",
+        # K5a-fix: refund failures conflict with success; revocations take the ledger lock.
+        "0055_provider_review_fixes.sql",
     )
 )
 # A later `create or replace` (0048) supersedes the earlier body of the same function.

@@ -10,6 +10,7 @@ from gorgona_booking.business import modules
 from gorgona_booking.business.readiness_registry import Readiness
 from tests.integration import test_invoice_issue as shared
 from tests.integration.configuration_support import Config
+from tests.integration.seed import FAKE_TIMEZONE
 from tests.integration.test_invoice_issue import InvoiceWorld
 from tests.integration.test_ledger import LedgerWorld
 from tests.support.fake_idp import FakeIdp
@@ -44,6 +45,8 @@ async def test_accepted_h_stays_closed_until_published_and_when_acceptance_is_wi
         "business_id": str(enabled.business),
         "write_enabled": False,
         "blocked_reason": "module_disabled",
+        # K5a-fix (finding 14): the zone that decides "today" for this company's dates.
+        "timezone": FAKE_TIMEZONE,
     }
     monkeypatch.setitem(
         modules.MODULES_BY_ID,

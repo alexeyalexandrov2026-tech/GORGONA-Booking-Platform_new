@@ -88,6 +88,14 @@ class FinancialDocumentStateError(ConflictError):
     code = "FINANCIAL_STATE_INVALID"
 
 
+async def business_timezone(conn: RuntimeConnection, business: UUID) -> str:
+    """The zone the H triggers use for this company's "today" (one zone of all its locations)."""
+    row = await (await conn.execute("select gba.business_timezone(%s)", (business,))).fetchone()
+    if row is None or not row[0]:
+        raise DatabaseUnavailableError("The business time zone is unavailable")
+    return str(row[0])
+
+
 async def require_workflow(conn: RuntimeConnection, business: UUID) -> None:
     """New H effects need the current registry readiness and every published module."""
     current = modules.MODULES_BY_ID[FEATURE]

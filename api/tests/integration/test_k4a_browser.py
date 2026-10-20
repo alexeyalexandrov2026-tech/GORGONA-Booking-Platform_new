@@ -10,7 +10,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from uuid import uuid7
+from uuid import UUID, uuid7
 
 import anyio
 import psycopg
@@ -46,6 +46,14 @@ backend = shared.backend
 money = shared.money
 PROJECTS = {"desktop": 1, "mobile": 2}
 SLOW = 22  # with the six per-project operations, more than one 20-row page
+
+
+def _timezone(owner_conn: psycopg.Connection, tenant: UUID) -> str:
+    # In the company's context: FORCE RLS hides its locations from a bare owner session.
+    with owner_tenant_transaction(owner_conn, tenant):
+        row = owner_conn.execute("select gba.business_timezone(%s)", (tenant,)).fetchone()
+    assert row is not None
+    return str(row[0])
 
 
 async def project(money: Money, name: str, n: int) -> dict[str, str]:
@@ -195,6 +203,7 @@ async def test_k4a_real_browser_provider_operations(
         "GBA_K4A_FIXTURE": json.dumps(fixture),
         "GBA_K4A_TOTAL": str(total),
         "GBA_K4A_SLOW": str(SLOW),
+        "GBA_K4A_TIMEZONE": _timezone(owner_conn, routed.tenant_id),
     }
     output = await anyio.to_thread.run_sync(
         _browse, ((provider, idp_port), (app, app_port)), web, npm, env

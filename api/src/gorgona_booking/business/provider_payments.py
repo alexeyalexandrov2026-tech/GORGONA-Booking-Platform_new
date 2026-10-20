@@ -107,25 +107,20 @@ _FACTS = (
     "join gba.provider_event_attestations a on a.tenant_id=d.tenant_id and a.event_id=d.event_id "
     "join gba.provider_verification_configs v on v.tenant_id=a.tenant_id "
     "and v.id=a.verification_config_id where d.tenant_id=o.tenant_id and d.operation_id=o.id "
-    "and (v.revoked or a.book_id<>c.book_id)),"
+    # K5a-fix (finding 4): only a compromised verification config blocks its attested facts.
+    "and ((v.revoked and v.revoked_reason='compromise') or a.book_id<>c.book_id)),"
     "s.amount,s.happened,k.minor_units,"
     "(select v.payment_id from gba.external_payment_provenance v "
     "where v.tenant_id=o.tenant_id and v.operation_id=o.id),"
     # K3b: the linked manual payment, whether it still states the provider's amount, and
-    # whether any manual payment of the book names the operation's provider ID.
+    # whether a manual payment of the book that is not voided names the operation's provider ID
+    # (K5a-fix findings 5 and 13: the SQL helpers decide both, as the H triggers do).
     "(select l.payment_id from gba.provider_payment_links l "
     "where l.tenant_id=o.tenant_id and l.operation_id=o.id),"
-    "exists(select 1 from gba.provider_payment_links l join gba.external_payments p "
-    "on p.tenant_id=l.tenant_id and p.book_id=l.book_id and p.id=l.payment_id "
-    "left join lateral (select r.kind,r.amount_minor from gba.external_payment_revisions r "
-    "where r.tenant_id=p.tenant_id and r.book_id=p.book_id and r.payment_id=p.id "
-    "order by r.revision desc limit 1) r on true "
+    "exists(select 1 from gba.provider_payment_links l "
     "where l.tenant_id=o.tenant_id and l.operation_id=o.id "
-    "and r.kind is distinct from 'voided' and coalesce(r.amount_minor,p.amount_minor)=s.amount),"
-    "exists(select 1 from gba.external_payments m where m.tenant_id=o.tenant_id "
-    "and m.book_id=c.book_id and m.attestation='manual_attestation' "
-    "and m.external_reference ~ ('(^|[^A-Za-z0-9_])' || o.provider_object_id "
-    "|| '($|[^A-Za-z0-9_])')) "
+    "and gba.effective_payment_amount(l.tenant_id,l.book_id,l.payment_id)=s.amount),"
+    "gba.provider_manual_payment(o.tenant_id,c.book_id,o.provider_object_id) is not null "
     "from gba.provider_operations o join gba.provider_receipt_connections c "
     "on c.tenant_id=o.tenant_id and c.id=o.connection_id "
     "left join lateral (select (gba.provider_receipt_operation(e.facts)).amount_minor as amount,"

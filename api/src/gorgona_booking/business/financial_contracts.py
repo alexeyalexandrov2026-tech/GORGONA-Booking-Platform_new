@@ -179,6 +179,8 @@ class FinancialWorkflowStatus(Versioned):
     business_id: UUID
     write_enabled: bool
     blocked_reason: Literal["not_ready", "module_disabled"] | None
+    # K5a-fix (finding 14): the IANA zone that decides "today" for this company's dates.
+    timezone: str = Field(min_length=1, max_length=64)
 
     @model_validator(mode="after")
     def consistent_gate(self) -> Self:

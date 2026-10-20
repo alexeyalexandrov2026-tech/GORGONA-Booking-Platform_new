@@ -55,6 +55,8 @@ from gorgona_booking.business.ledger_contracts import (
 from gorgona_booking.business.module_gate import FINANCE_MODULE, module_writes
 from gorgona_booking.business.provider_payments import (
     ProviderClearingAccountRequiredError,
+    ProviderOperationAppliedError,
+    ProviderOperationLinkedError,
     ProviderPaymentLinkRequiredError,
     ProviderPaymentMismatchError,
 )
@@ -799,6 +801,35 @@ async def load_payment(
     )
 
 
+async def _refuse_recorded_provider_id(
+    conn: RuntimeConnection, business: UUID, reference: str
+) -> None:
+    """K5a-fix (finding 1): a manual payment never names a provider operation whose money already
+    counts, as its applied provider payment or its linked manual payment; the H trigger agrees."""
+    row = await (
+        await conn.execute(
+            "select o.id,gba.provider_operation_payment(o.tenant_id,o.id),"
+            "exists(select 1 from gba.external_payment_provenance v "
+            "where v.tenant_id=o.tenant_id and v.operation_id=o.id) "
+            "from gba.provider_operations o where o.tenant_id=%s "
+            "and pg_catalog.lower(o.provider_object_id)=any(gba.provider_reference_ids(%s)) "
+            "and gba.provider_operation_payment(o.tenant_id,o.id) is not null "
+            "order by o.id limit 1",
+            (business, reference),
+        )
+    ).fetchone()
+    if row is None:
+        return
+    details = {"operation_id": str(row[0]), "payment_id": str(row[1])}
+    if row[2]:
+        raise ProviderOperationAppliedError(
+            "The provider operation this reference names already moved money", **details
+        )
+    raise ProviderOperationLinkedError(
+        "The provider operation this reference names is linked to a manual payment", **details
+    )
+
+
 async def _require_attested_date(conn: RuntimeConnection, business: UUID, actual: date) -> None:
     """No external date after the business's own today, decided by the same SQL the
     trigger uses at the same instant; there is no provider time zone for an attestation."""
@@ -895,6 +926,7 @@ async def confirm(
         raise FinancialDocumentStateError(f"A {current.status} settlement cannot be confirmed")
     await require_workflow(conn, business_id)
     await _require_attested_date(conn, business_id, body.actual_external_date)
+    await _refuse_recorded_provider_id(conn, business_id, body.external_reference)
     try:
         amount = to_minor(body.amount, current.minor_units)
     except ValueError as exc:
@@ -1174,16 +1206,14 @@ async def confirm_provider(
             "Register the clearing account of this connection first",
             connection_id=str(observed.connection_id),
         )
+    # K5a-fix (findings 5 and 13): the SQL helper the H trigger uses decides "names the ID".
     manual = await (
         await conn.execute(
-            "select id from gba.external_payments where tenant_id=%s and book_id=%s "
-            "and attestation='manual_attestation' "
-            "and external_reference ~ ('(^|[^A-Za-z0-9_])' || %s || '($|[^A-Za-z0-9_])') "
-            "order by id limit 1",
+            "select gba.provider_manual_payment(%s,%s,%s)",
             (business_id, book_id, observed.provider_object_id),
         )
     ).fetchone()
-    if manual is not None:
+    if manual is not None and manual[0] is not None:
         raise ProviderPaymentLinkRequiredError(
             "A manual payment already names this provider operation", payment_id=str(manual[0])
         )
@@ -1212,12 +1242,11 @@ async def _require_refund_parent(
     conn: RuntimeConnection, current: SettlementView, refund: provider_payments.ObservedOperation
 ) -> None:
     """The refunded payment was applied in this book, is not voided, to the same party, and
-    every applied refund of it stays within what it received."""
+    every applied refund of it stays within what it now states (K5a-fix finding 11: effective
+    amounts, the latest correction; a voided payment counts nothing)."""
     parent = await (
         await conn.execute(
-            "select x.amount_minor,d.counterparty_id,exists(select 1 from "
-            "gba.external_payment_revisions r where r.tenant_id=x.tenant_id "
-            "and r.book_id=x.book_id and r.payment_id=x.id and r.kind='voided') "
+            "select gba.effective_payment_amount(x.tenant_id,x.book_id,x.id),d.counterparty_id "
             "from gba.external_payments x join gba.external_payment_provenance y "
             "on y.tenant_id=x.tenant_id and y.book_id=x.book_id and y.payment_id=x.id "
             "join gba.provider_operations o on o.tenant_id=y.tenant_id and o.id=y.operation_id "
@@ -1228,7 +1257,7 @@ async def _require_refund_parent(
             (current.business_id, current.book_id, refund.connection_id, refund.parent_object_id),
         )
     ).fetchone()
-    if parent is None or parent[2]:
+    if parent is None or parent[0] is None:
         raise ProviderPaymentMismatchError(
             "Apply the refunded provider payment in this book first", reason="refund_parent"
         )
@@ -1238,7 +1267,8 @@ async def _require_refund_parent(
         )
     applied = await (
         await conn.execute(
-            "select coalesce(sum(r.amount_minor),0) from gba.external_payments r "
+            "select coalesce(sum(gba.effective_payment_amount(r.tenant_id,r.book_id,r.id)),0) "
+            "from gba.external_payments r "
             "join gba.external_payment_provenance y on y.tenant_id=r.tenant_id "
             "and y.book_id=r.book_id and y.payment_id=r.id "
             "join gba.provider_operations o on o.tenant_id=y.tenant_id and o.id=y.operation_id "

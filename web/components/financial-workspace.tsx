@@ -1139,12 +1139,13 @@ export function FinancialWorkspace({
                       )}
                     </section>
                   )}
-                  {paymentMode === "provider" && (
+                  {paymentMode === "provider" && capability && (
                     <ProviderApplyEditor
                       key={`${settlement.settlement_id}:${settlement.sequence}:provider`}
                       businessId={businessId}
                       settlement={settlement}
                       book={bookId}
+                      timezone={capability.timezone}
                       disabled={writeDisabled}
                       send={common.send}
                       draft={

@@ -109,7 +109,10 @@ async def overview(
         except ModuleDisabledError:
             blocked = "module_disabled"
         return FinancialWorkflowStatus(
-            business_id=business_id, write_enabled=blocked is None, blocked_reason=blocked
+            business_id=business_id,
+            write_enabled=blocked is None,
+            blocked_reason=blocked,
+            timezone=await service.business_timezone(access.conn, business_id),
         )
 
 
@@ -700,9 +703,13 @@ async def settlement_provider_confirm(
     principal: CurrentPrincipal,
     idempotency_key: MutationKey,
 ) -> SettlementView:
-    """A finance user applies one observed provider operation; its facts set the money."""
-    try:
-        async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+    """A finance user applies one observed provider operation; its facts set the money.
+
+    Only an authorized request of a real company is counted (K5a-fix finding 3), so a refused
+    caller cannot grow the metric with company IDs of its own choosing.
+    """
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        try:
             result = await settlements.confirm_provider(
                 access.conn,
                 business_id=business_id,
@@ -714,9 +721,9 @@ async def settlement_provider_confirm(
                 key=idempotency_key,
                 body=body,
             )
-    except DomainError as error:
-        record_provider_application(error.code, business_id)
-        raise
+        except DomainError as error:
+            record_provider_application(error.code, business_id)
+            raise
     record_provider_application("applied", business_id)
     return result
 
