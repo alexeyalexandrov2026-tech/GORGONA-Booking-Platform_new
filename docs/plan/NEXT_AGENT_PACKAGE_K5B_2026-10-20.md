@@ -56,7 +56,15 @@ launch. See the block at the top of the [master plan](GORGONA_MASTER_PLAN.md) an
   only in memory; races only with an observed `pg_locks` wait; never hide a failure. Work inline;
   write to the owner in Russian, simply; the owner is they/them.
 
-## 4. Next step: K0c — the real Stripe test run (in progress)
+## 4. K0c — the real Stripe test run: DONE, PASS (2026-10-20)
+
+The owner enabled Connect (platform) and entered the test SSN; the agent created the connected test
+account `acct_1USjOo0mkpWSHVnd` and ran the steps below with
+[`test_k0c_run.py.txt`](evidence/2026-10-20-k0c-stripe-sandbox/test_k0c_run.py.txt):
+[validation](evidence/2026-10-20-k0c-stripe-sandbox/VALIDATION.md). **Next: K5-CI** (publish the final
+branch for CI only on the owner's word, read the result once, VALIDATION K-01–K-14) **and K5c** (the
+owner's readiness decision for FIN-02). The original plan of the run follows.
+
 
 Done on 2026-10-20:
 - Stripe CLI 1.54.1 at `C:\Users\alexa\AppData\Local\GorgonaBookingTests\stripe-cli-1.54.1\bin\stripe.exe`

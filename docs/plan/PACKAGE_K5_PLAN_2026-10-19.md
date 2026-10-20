@@ -1,5 +1,7 @@
 # Package K5 — FIN-02 evidence plan: K0, independent review, CI (2026-10-19)
 
+**Update 2026-10-20 (evening): K0c PASS** on real Stripe sandbox events (E-02–E-05; [validation](evidence/2026-10-20-k0c-stripe-sandbox/VALIDATION.md)). Next: K5-CI and K5c.
+
 **Update 2026-10-20 (later): K5b done locally** (`58cf561d0f2d065ad44dac850182fdd61d3fae20`, findings 6, 8, 9, 12, 15 and manual
 editor dates; [validation](evidence/2026-10-20-k5b-open-findings/VALIDATION.md)). Step 5 below
 (exact-head CI and evidence) is now called **K5-CI**. **K0c resumed** the same day on the owner's

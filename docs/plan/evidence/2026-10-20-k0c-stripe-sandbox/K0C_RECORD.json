@@ -1,0 +1,195 @@
+{
+  "account": "acct_1USjOo0mkpWSHVnd",
+  "api_version": "2026-08-26.dahlia",
+  "mode": "test (sandbox)",
+  "decisions_after_triggers": [
+    {
+      "event_id": "evt_3USjXT0mkpWSHVnd0AsBnMrb",
+      "event_type": "payment_intent.succeeded",
+      "object_id": "pi_3USjXT0mkpWSHVnd0KYSI3w9",
+      "amount_minor": "2000",
+      "outcome": "observed",
+      "reason": "success",
+      "operation_id": "281cfdf4-b047-439e-b549-0b169a15faf1"
+    },
+    {
+      "event_id": "evt_3USjXT0mkpWSHVnd0JY81lEz",
+      "event_type": "charge.succeeded",
+      "object_id": "ch_3USjXT0mkpWSHVnd0stgpw0K",
+      "amount_minor": "2000",
+      "outcome": "observed",
+      "reason": "success",
+      "operation_id": "281cfdf4-b047-439e-b549-0b169a15faf1"
+    },
+    {
+      "event_id": "evt_3USjXV0mkpWSHVnd1vhY6xhC",
+      "event_type": "charge.failed",
+      "object_id": "ch_3USjXV0mkpWSHVnd1FJupvWh",
+      "amount_minor": "0",
+      "outcome": "observed",
+      "reason": "not_final",
+      "operation_id": "5eca4223-7772-4824-8c6e-ad2bb8f98b62"
+    },
+    {
+      "event_id": "evt_3USjXV0mkpWSHVnd15doKouX",
+      "event_type": "payment_intent.payment_failed",
+      "object_id": "pi_3USjXV0mkpWSHVnd1z2tVJVR",
+      "amount_minor": "2000",
+      "outcome": "observed",
+      "reason": "not_final",
+      "operation_id": "5eca4223-7772-4824-8c6e-ad2bb8f98b62"
+    },
+    {
+      "event_id": "evt_3USjXY0mkpWSHVnd1EqMGAkl",
+      "event_type": "charge.succeeded",
+      "object_id": "ch_3USjXY0mkpWSHVnd1OAUi4oB",
+      "amount_minor": "100",
+      "outcome": "observed",
+      "reason": "success",
+      "operation_id": "2cc0f15f-7ab9-46a3-93c8-a74c9a30afc9"
+    },
+    {
+      "event_id": "evt_3USjXY0mkpWSHVnd1goALmty",
+      "event_type": "payment_intent.succeeded",
+      "object_id": "pi_3USjXY0mkpWSHVnd1mkVzPAu",
+      "amount_minor": "100",
+      "outcome": "observed",
+      "reason": "success",
+      "operation_id": "2cc0f15f-7ab9-46a3-93c8-a74c9a30afc9"
+    },
+    {
+      "event_id": "evt_3USjXY0mkpWSHVnd1jDBLLuY",
+      "event_type": "refund.created",
+      "object_id": "re_3USjXY0mkpWSHVnd17vxYwqn",
+      "amount_minor": "100",
+      "outcome": "observed",
+      "reason": "success",
+      "operation_id": "aa739855-2b6c-4af0-84b7-5ad6a8ea358b"
+    },
+    {
+      "event_id": "evt_3USjXY0mkpWSHVnd1Vn6P8oz",
+      "event_type": "charge.refunded",
+      "object_id": "ch_3USjXY0mkpWSHVnd1OAUi4oB",
+      "amount_minor": "100",
+      "outcome": "needs_review",
+      "reason": "unkeyed_operation",
+      "operation_id": null
+    },
+    {
+      "event_id": "evt_3USjXY0mkpWSHVnd1kG4FH54",
+      "event_type": "refund.updated",
+      "object_id": "re_3USjXY0mkpWSHVnd17vxYwqn",
+      "amount_minor": "100",
+      "outcome": "observed",
+      "reason": "success",
+      "operation_id": "aa739855-2b6c-4af0-84b7-5ad6a8ea358b"
+    }
+  ],
+  "payment": {
+    "payment_id": "01a15afa-4b75-7301-a51e-fbb61500a3dc",
+    "operation": "pi_3USjXT0mkpWSHVnd0KYSI3w9",
+    "amount": "20.00",
+    "direction": "receivable",
+    "attestation": "provider_observed",
+    "journal": [
+      [
+        "01a15afa-0a10-74c3-a216-49da8916e715",
+        "debit",
+        "20.00"
+      ],
+      [
+        "01a15afa-0a10-74c3-a216-49dc158e7639",
+        "credit",
+        "20.00"
+      ]
+    ]
+  },
+  "failed_payment_apply": [
+    409,
+    409,
+    "PROVIDER_OPERATION_NOT_READY",
+    {
+      "reason": "not_final"
+    }
+  ],
+  "refund": {
+    "parent_payment_id": "01a15afa-4ec0-7429-aa78-d244d1a747f7",
+    "parent_operation": "pi_3USjXY0mkpWSHVnd1mkVzPAu",
+    "parent_amount": "1.00",
+    "refund_payment_id": "01a15afa-5081-779f-99b8-77e21eb758c4",
+    "operation": "re_3USjXY0mkpWSHVnd17vxYwqn",
+    "amount": "1.00",
+    "direction": "payable",
+    "journal": [
+      [
+        "01a15afa-0a10-74c3-a216-49da8916e715",
+        "credit",
+        "1.00"
+      ],
+      [
+        "01a15afa-0a10-74c3-a216-49e1ea120a0c",
+        "debit",
+        "1.00"
+      ]
+    ]
+  },
+  "listed": [
+    {
+      "provider_object_id": "pi_3USjXT0mkpWSHVnd0KYSI3w9",
+      "kind": "payment",
+      "state": "applied",
+      "amount": "20.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "pi_3USjXY0mkpWSHVnd1mkVzPAu",
+      "kind": "payment",
+      "state": "applied",
+      "amount": "1.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "pi_3USjXV0mkpWSHVnd1z2tVJVR",
+      "kind": "payment",
+      "state": "not_final",
+      "amount": null,
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "re_3USjXY0mkpWSHVnd17vxYwqn",
+      "kind": "refund",
+      "state": "applied",
+      "amount": "1.00",
+      "currency": "USD"
+    }
+  ],
+  "resend": {
+    "event": "evt_3USjXT0mkpWSHVnd0AsBnMrb",
+    "rows_before": 9,
+    "rows_after": 9,
+    "deliveries_seen": [
+      "evt_3USjXT0mkpWSHVnd0AsBnMrb 200"
+    ]
+  },
+  "suspended": {
+    "rows_before": 9,
+    "rows_after": 9,
+    "deliveries_after": [
+      "evt_3USjXt0mkpWSHVnd0i0uLmHj 400",
+      "evt_3USjXt0mkpWSHVnd0acmL7QU 400"
+    ]
+  },
+  "deliveries": [
+    "evt_3USjXT0mkpWSHVnd0AsBnMrb 200",
+    "evt_3USjXT0mkpWSHVnd0JY81lEz 200",
+    "evt_3USjXV0mkpWSHVnd1vhY6xhC 200",
+    "evt_3USjXV0mkpWSHVnd15doKouX 200",
+    "evt_3USjXY0mkpWSHVnd1EqMGAkl 200",
+    "evt_3USjXY0mkpWSHVnd1goALmty 200",
+    "evt_3USjXY0mkpWSHVnd1jDBLLuY 200",
+    "evt_3USjXY0mkpWSHVnd1Vn6P8oz 200",
+    "evt_3USjXY0mkpWSHVnd1kG4FH54 200",
+    "evt_3USjXt0mkpWSHVnd0i0uLmHj 400",
+    "evt_3USjXt0mkpWSHVnd0acmL7QU 400"
+  ]
+}

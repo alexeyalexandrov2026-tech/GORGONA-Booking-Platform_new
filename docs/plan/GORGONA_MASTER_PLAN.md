@@ -10,7 +10,18 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-20: K5b open review findings and manual editor dates locally verified
+## Current checkpoint — 2026-10-20: K0c real Stripe sandbox events PASS
+
+On `dd013fd` (no source change), owner-delegated («ты сам все делай»): Stripe sandbox
+`acct_1UJtGO0mkpVWlKYX` as the Connect platform, connected test account `acct_1USjOo0mkpWSHVnd`, test
+mode only. Real signed events (success, failure, refund) reached the local ingress through
+`stripe listen`, were attested and decided; one payment (20.00) and one refund (1.00) were applied with
+provider provenance; a Stripe resend made no second effect; a suspension refused the next deliveries
+(400, nothing stored). E-02–E-05 PASS; the signing secret stayed in memory (0 in every log). Next:
+K5-CI (exact-head CI; publishing needs the owner's word) and K5c (the owner's readiness decision for
+FIN-02, still `planned`). [Validation](evidence/2026-10-20-k0c-stripe-sandbox/VALIDATION.md).
+
+## Previous checkpoint — 2026-10-20: K5b open review findings and manual editor dates locally verified
 
 Source `58cf561d0f2d065ad44dac850182fdd61d3fae20`, local branch `codex/package-k5b-open-findings`, parent `1b89958` (the owner postponed
 K0c; FIN-02 stays planned). 0059 (K): inbox index by connection (finding 6); only the receipt writer

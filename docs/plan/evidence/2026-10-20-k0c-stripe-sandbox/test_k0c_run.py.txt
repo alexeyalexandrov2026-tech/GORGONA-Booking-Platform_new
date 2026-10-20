@@ -1,0 +1,344 @@
+"""K0c: real Stripe sandbox events through the local ingress, worker and finance API.
+
+Owner-delegated run (2026-10-20, «ты сам все делай»): Stripe sandbox acct_1UJtGO0mkpVWlKYX (test
+mode), connected test account acct_1USjOo0mkpWSHVnd. The signing secret of `stripe listen` lives in
+memory only and is redacted from every log. Nothing here is part of the repository.
+"""
+
+import asyncio
+import json
+import re
+import subprocess
+import sys
+import threading
+from pathlib import Path
+from typing import Any
+from uuid import uuid7
+
+import psycopg
+import pytest
+
+from gorgona_booking.db.provisioning import owner_tenant_transaction, record_receipt_admission
+from gorgona_booking.providers import receipt_worker as worker
+from gorgona_booking.providers.receipt_processes import ingress_settings, serve_ingress
+from gorgona_booking.providers.stripe_contracts import StripeEventPolicy
+from tests.integration import test_payment_corrections as correction_shared
+from tests.integration import test_provider_event_inbox as archive
+from tests.integration import test_provider_payments as shared
+from tests.integration import test_provider_receipt_attestations as attested
+from tests.integration import test_provider_receipt_processes as processes
+from tests.integration.test_ledger import LedgerWorld
+from tests.integration.test_provider_payments import Money, _refund_settlement, error
+
+pytestmark = pytest.mark.anyio
+client = shared.client
+idp = shared.idp
+manager_a = shared.manager_a
+manager_b = shared.manager_b
+enabled = shared.enabled
+invoices = shared.invoices
+payments = shared.payments
+credits = shared.credits
+writer_pool = shared.writer_pool
+worker_pool = shared.worker_pool
+backend = shared.backend
+money = shared.money
+corrections = correction_shared.corrections
+logins = processes.logins
+
+STRIPE = r"C:\Users\alexa\AppData\Local\GorgonaBookingTests\stripe-cli-1.54.1\bin\stripe.exe"
+ACCOUNT = "acct_1USjOo0mkpWSHVnd"
+API_VERSION = "2026-08-26.dahlia"
+SECRET_NAME = "GBA_STRIPE_TEST_WEBHOOK_SECRET"
+REFERENCE = "env:" + SECRET_NAME
+EVENTS = ",".join(
+    (
+        "payment_intent.succeeded",
+        "payment_intent.payment_failed",
+        "payment_intent.processing",
+        "payment_intent.canceled",
+        "charge.succeeded",
+        "charge.failed",
+        "charge.pending",
+        "charge.refunded",
+        "refund.created",
+        "refund.updated",
+        "refund.failed",
+    )
+)
+OUT = Path(__file__).resolve().parent / "run"
+_SECRETS = re.compile(r"(whsec|sk_test|rk_test|sk_live|rk_live)_[A-Za-z0-9]+")
+
+
+def redact(text: str) -> str:
+    return _SECRETS.sub(r"\1_<redacted>", text)
+
+
+@pytest.fixture(scope="session")
+def anyio_backend() -> tuple[str, dict[str, object]]:
+    # psycopg needs the selector loop on Windows; subprocesses therefore run in threads.
+    options: dict[str, object] = {}
+    if sys.platform == "win32":
+        options["loop_factory"] = asyncio.SelectorEventLoop
+    return ("asyncio", options)
+
+
+@pytest.fixture
+def inbox(enabled: LedgerWorld, owner_conn: psycopg.Connection) -> archive.Inbox:
+    binding = archive.Inbox(enabled, uuid7(), "K0c-sandbox-" + uuid7().hex[:12])
+    with owner_tenant_transaction(owner_conn, enabled.business):
+        owner_conn.execute(
+            "insert into gba.provider_receipt_connections "
+            "(tenant_id,id,book_id,namespace,account_id,api_version) values (%s,%s,%s,%s,%s,%s)",
+            (enabled.business, binding.connection, enabled.book, binding.namespace, ACCOUNT, API_VERSION),
+        )
+    return binding
+
+
+@pytest.fixture
+def routed(inbox: archive.Inbox, owner_conn: psycopg.Connection) -> attested.Routed:
+    tenant = inbox.ledger.business
+    config, version = attested.provision_config(owner_conn, tenant, inbox.connection, REFERENCE)
+    assert version == 1
+    record_receipt_admission(
+        owner_conn,
+        tenant,
+        inbox.connection,
+        state="test_access",
+        account_id=ACCOUNT,
+        charge=True,
+        refund=True,
+        evidence="owner-delegated K0c sandbox run 2026-10-20",
+    )
+    return attested.Routed(
+        tenant_id=tenant,
+        connection_id=inbox.connection,
+        book_id=inbox.ledger.book,
+        ingress_id=attested.provision_route(owner_conn, tenant, inbox.connection),
+        verification_config_id=config,
+        secret_ref=REFERENCE,
+        policy=StripeEventPolicy(namespace=inbox.namespace, account_id=ACCOUNT, api_version=API_VERSION),
+        key=attested.fake_key(),  # unused: real events are signed by Stripe
+    )
+
+
+def log(name: str, text: str) -> None:
+    with (OUT / name).open("a", encoding="utf-8") as f:
+        f.write(redact(text))
+
+
+async def stripe(*args: str) -> str:
+    done = await asyncio.to_thread(
+        subprocess.run, [STRIPE, *args], capture_output=True, text=True, encoding="utf-8",
+        errors="replace", check=False,
+    )
+    text = done.stdout + done.stderr
+    log("stripe-commands.log", f"$ stripe {' '.join(args)}\n{text}\n")
+    assert done.returncode == 0, redact(text)
+    return text
+
+
+def stored(owner_conn: psycopg.Connection, money: Money) -> list[tuple[str, str, str, str]]:
+    with owner_tenant_transaction(owner_conn, money.routed.tenant_id):
+        rows = owner_conn.execute(
+            "select facts->>'event_id', facts->>'event_type', facts->'resource'->>'id', "
+            "coalesce(facts->'resource'->>'payment_intent_id', '') "
+            "from gba.provider_event_inbox where connection_id=%s order by received_at",
+            (money.routed.connection_id,),
+        ).fetchall()
+    return [(str(a), str(b), str(c), str(d)) for a, b, c, d in rows]
+
+
+async def wait_for(owner_conn: psycopg.Connection, money: Money, check: Any, seconds: int = 120) -> list[Any]:
+    deadline = asyncio.get_running_loop().time() + seconds
+    while True:
+        rows = stored(owner_conn, money)
+        if check(rows):
+            return rows
+        if asyncio.get_running_loop().time() > deadline:
+            raise AssertionError(f"timeout; stored {[(r[1], r[2]) for r in rows]}")
+        await asyncio.sleep(1)
+
+
+async def decide(money: Money) -> None:
+    for _ in range(10):
+        if not await worker.process_batch(money.worker, tenant_id=money.routed.tenant_id):
+            return
+    raise AssertionError("worker did not drain")
+
+
+def facts(owner_conn: psycopg.Connection, money: Money, event_type: str, object_id: str) -> dict[str, Any]:
+    with owner_tenant_transaction(owner_conn, money.routed.tenant_id):
+        row = owner_conn.execute(
+            "select facts from gba.provider_event_inbox where connection_id=%s "
+            "and facts->>'event_type'=%s and facts->'resource'->>'id'=%s order by received_at limit 1",
+            (money.routed.connection_id, event_type, object_id),
+        ).fetchone()
+    assert row is not None
+    value: dict[str, Any] = row[0]
+    return value
+
+
+def decisions(owner_conn: psycopg.Connection, money: Money) -> list[dict[str, Any]]:
+    with owner_tenant_transaction(owner_conn, money.routed.tenant_id):
+        rows = owner_conn.execute(
+            "select e.facts->>'event_id', e.facts->>'event_type', e.facts->'resource'->>'id', "
+            "e.facts->'resource'->>'amount_minor', d.outcome, d.reason, d.operation_id::text "
+            "from gba.provider_event_inbox e left join gba.provider_event_decisions d "
+            "on d.tenant_id=e.tenant_id and d.event_id=e.id "
+            "where e.connection_id=%s order by e.received_at",
+            (money.routed.connection_id,),
+        ).fetchall()
+    keys = ("event_id", "event_type", "object_id", "amount_minor", "outcome", "reason", "operation_id")
+    return [dict(zip(keys, row, strict=True)) for row in rows]
+
+
+def dollars(minor: str) -> str:
+    return f"{int(minor) / 100:.2f}"
+
+
+async def test_k0c_real_sandbox_events(
+    money: Money, logins: processes.Logins, owner_conn: psycopg.Connection
+) -> None:
+    OUT.mkdir(exist_ok=True)
+    record: dict[str, Any] = {"account": ACCOUNT, "api_version": API_VERSION, "mode": "test (sandbox)"}
+    # The signing secret: from the CLI into memory only, never printed or logged.
+    completed = await asyncio.to_thread(
+        subprocess.run, [STRIPE, "listen", "--print-secret"], capture_output=True, text=True, check=True
+    )
+    values = {
+        "GBA_RECEIPT_WRITER_DATABASE_URL": logins.writer,
+        "GBA_RECEIPT_SECRET_REFS": REFERENCE,
+        SECRET_NAME: completed.stdout.strip(),
+        "GBA_RECEIPT_PORT": "0",
+    }
+    assert values[SECRET_NAME].startswith("whsec_")
+    del completed
+    ports: list[int] = []
+    stop = asyncio.Event()
+    ingress = asyncio.create_task(serve_ingress(ingress_settings(values), started=ports.append, stop=stop))
+    del values
+    async with asyncio.timeout(20):
+        while not ports:
+            if ingress.done():
+                await ingress
+            await asyncio.sleep(0.05)
+    url = f"http://127.0.0.1:{ports[0]}/v1/provider-events/stripe/{money.routed.ingress_id}"
+    listen = subprocess.Popen(
+        [STRIPE, "listen", "--forward-connect-to", url, "--events", EVENTS],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
+    )
+    ready = threading.Event()
+    statuses: list[str] = []
+
+    def pump() -> None:
+        assert listen.stdout is not None
+        for line in listen.stdout:
+            log("listen.log", line.replace(str(money.routed.ingress_id), "<ingress>"))
+            if "Ready!" in line:
+                ready.set()
+            found = re.search(r"\[(\d{3})\]\s+POST .*\[(evt_[A-Za-z0-9]+)\]", line)
+            if found:
+                statuses.append(f"{found.group(2)} {found.group(1)}")
+
+    reader = threading.Thread(target=pump, daemon=True)
+    reader.start()
+    try:
+        assert await asyncio.to_thread(ready.wait, 60), "stripe listen did not become ready"
+        # 1. A successful payment on the connected account.
+        await stripe("trigger", "payment_intent.succeeded", "--stripe-account", ACCOUNT)
+        rows = await wait_for(owner_conn, money, lambda r: any(x[1] == "payment_intent.succeeded" for x in r))
+        paid_pi = next(x[2] for x in rows if x[1] == "payment_intent.succeeded")
+        # 2. A failed payment.
+        await stripe("trigger", "payment_intent.payment_failed", "--stripe-account", ACCOUNT)
+        rows = await wait_for(owner_conn, money, lambda r: any(x[1] == "payment_intent.payment_failed" for x in r))
+        failed_pi = next(x[2] for x in rows if x[1] == "payment_intent.payment_failed")
+        # 3. A refunded charge (its own payment, then a refund).
+        await stripe("trigger", "charge.refunded", "--stripe-account", ACCOUNT)
+        rows = await wait_for(owner_conn, money, lambda r: any(x[1].startswith("refund.") for x in r))
+        refund_id, refund_pi = next((x[2], x[3]) for x in rows if x[1].startswith("refund."))
+        await wait_for(owner_conn, money, lambda r: any(
+            x[1] == "payment_intent.succeeded" and x[2] == refund_pi for x in r))
+        await asyncio.sleep(5)  # let the remaining deliveries of the three triggers arrive
+        rows = stored(owner_conn, money)
+        await decide(money)
+        record["decisions_after_triggers"] = decisions(owner_conn, money)
+
+        # Apply the successful payment (receivable) through the finance API.
+        amount = dollars(facts(owner_conn, money, "payment_intent.succeeded", paid_pi)["resource"]["amount_received_minor"])
+        obligation, settlement = await money.reserved(amount)
+        payment = uuid7()
+        applied = await money.apply(settlement, await money.operation(paid_pi), [(obligation, amount)], payment=payment)
+        assert applied.status_code == 200, applied.text
+        recorded = await money.payment(payment)
+        record["payment"] = {
+            "payment_id": str(payment), "operation": paid_pi, "amount": amount,
+            "direction": recorded["direction"], "attestation": recorded["attestation"],
+            "journal": await money.credits.journal(recorded["entry_id"]),
+        }
+        # The failed payment moves no money.
+        other, other_settlement = await money.reserved("1.00")
+        refused = await money.apply(other_settlement, await money.operation(failed_pi), [(other, "1.00")])
+        record["failed_payment_apply"] = [refused.status_code, *error(refused)]
+        assert refused.status_code == 409, refused.text
+
+        # The refunded charge: its payment on an invoice, then the refund on a credit note.
+        parent = dollars(facts(owner_conn, money, "payment_intent.succeeded", refund_pi)["resource"]["amount_received_minor"])
+        refund_type = next(x[1] for x in rows if x[2] == refund_id)
+        refund_amount = dollars(facts(owner_conn, money, refund_type, refund_id)["resource"]["amount_minor"])
+        invoice, (line,) = await money.credits.invoice(parent)
+        invoice_settlement = await money.world.reserved(invoice, parent)
+        parent_payment = uuid7()
+        applied = await money.apply(invoice_settlement, await money.operation(refund_pi), [(invoice, parent)], payment=parent_payment)
+        assert applied.status_code == 200, applied.text
+        refund, payable = await _refund_settlement(money, invoice, line, refund_amount)
+        refund_payment = uuid7()
+        refunded = await money.apply(payable, await money.operation(refund_id), [(refund, refund_amount)], payment=refund_payment)
+        assert refunded.status_code == 200, refunded.text
+        recorded = await money.payment(refund_payment)
+        record["refund"] = {
+            "parent_payment_id": str(parent_payment), "parent_operation": refund_pi, "parent_amount": parent,
+            "refund_payment_id": str(refund_payment), "operation": refund_id, "amount": refund_amount,
+            "direction": recorded["direction"], "journal": await money.credits.journal(recorded["entry_id"]),
+        }
+        record["listed"] = [
+            {k: item.get(k) for k in ("provider_object_id", "kind", "state", "amount", "currency")}
+            for item in await money.listed()
+        ]
+
+        # Retried delivery (E-05): Stripe resends one event; no second receipt or effect.
+        resent_event = next(x[0] for x in rows if x[1] == "payment_intent.succeeded" and x[2] == paid_pi)
+        before = len(stored(owner_conn, money))
+        try:
+            await stripe("events", "resend", resent_event, "--stripe-account", ACCOUNT)
+            await asyncio.sleep(10)
+            await decide(money)
+            record["resend"] = {
+                "event": resent_event, "rows_before": before, "rows_after": len(stored(owner_conn, money)),
+                "deliveries_seen": [s for s in statuses if s.startswith(resent_event)],
+            }
+        except AssertionError as failure:
+            record["resend"] = {"event": resent_event, "result": "NOT TESTED", "reason": str(failure)[:300]}
+
+        # Suspension: the next real event is refused and nothing is stored.
+        record_receipt_admission(
+            owner_conn, money.routed.tenant_id, money.routed.connection_id, state="suspended",
+            account_id=ACCOUNT, charge=False, refund=False, evidence="K0c: suspension check",
+        )
+        before = len(stored(owner_conn, money))
+        seen = len(statuses)
+        await stripe("trigger", "payment_intent.succeeded", "--stripe-account", ACCOUNT)
+        await asyncio.sleep(20)
+        record["suspended"] = {
+            "rows_before": before, "rows_after": len(stored(owner_conn, money)),
+            "deliveries_after": statuses[seen:],
+        }
+        assert record["suspended"]["rows_after"] == before
+    finally:
+        listen.terminate()
+        await asyncio.to_thread(listen.wait, 20)
+        await asyncio.to_thread(reader.join, 10)
+        stop.set()
+        await asyncio.wait_for(ingress, 20)
+        record["deliveries"] = statuses
+        (OUT / "K0C_RECORD.json").write_text(redact(json.dumps(record, indent=2, default=str)), encoding="utf-8")
