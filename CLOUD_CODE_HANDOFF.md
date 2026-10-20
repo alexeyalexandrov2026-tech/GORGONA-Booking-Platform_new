@@ -1,6 +1,22 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-19: K5a-fix of verified review findings locally verified
+## Current checkpoint — 2026-10-20: K0b connection admission and receipt processes locally verified
+
+Source `1eacc1d73c4d13a759be95084d994ef1be6cf4fe`, local branch `codex/package-k0b-entry-points`, parent `4e0665c` (K0a design and the
+owner's answers: «i trust you», all defaults). 0057 adds the owner-only, append-only admission of a
+receipt connection (test access or suspension, test mode, USD, charge and refund flags); receipts,
+worker decisions and provider money need the latest revision to be test access, under one advisory
+lock per connection. 0058 gates provider payments and links in H. New processes:
+`python -m gorgona_booking.providers.ingress_main` (127.0.0.1 only, keys from named variables) and
+`python -m gorgona_booking.providers.worker_main`; owner command `gba-db admit-receipt-connection`.
+Found and fixed: uvicorn's raw-path access log carried the ingress ID. 58 new cases; focused
+**623 passed in 703.66s (0:11:43)**; full **2308 passed, 4 skipped in 2316.92s (0:38:36)**; static/mypy 340/web/build PASS; runtime audit 0;
+development audit 5 high (existing). K0c (the owner's real Stripe test run) next. Not published;
+next migration 0059. FIN-02/STOCK-01 planned; ADR-0026/0027 Proposed.
+[Validation](docs/plan/evidence/2026-10-20-k0b-entry-points/VALIDATION.md),
+[handoff](docs/plan/NEXT_AGENT_PACKAGE_K0B_2026-10-20.md), [prompt](docs/plan/NEXT_AGENT_PACKAGE_K0B_PROMPT_2026-10-20.md).
+
+## Previous checkpoint — 2026-10-19: K5a-fix of verified review findings locally verified
 
 Source `76f776447b0b4fcb1699047aa2fa496531ee6b34`, local branch `codex/package-k5a-review-fixes`, parent `59c54a0`.
 The K5a review's verified findings, by the owner's decisions of 2026-10-19: a manual payment

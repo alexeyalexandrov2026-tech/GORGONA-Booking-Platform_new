@@ -1,5 +1,7 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K0b source `1eacc1d73c4d13a759be95084d994ef1be6cf4fe` implements the K0b decision below;
+[validation](../plan/evidence/2026-10-20-k0b-entry-points/VALIDATION.md).
 Local K3a source `2f91368271458d6f20030e43ab9409751c3fa62d` implements the K3a decision below;
 [validation](../plan/evidence/2026-10-17-k3a-provider-money/VALIDATION.md).
 Local K2a source `6e9bbfc74a09a5d472aaff25328356d6f71e8706` implements the K2a decision below;
@@ -19,6 +21,20 @@ Local K1d source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` implements the K1d d
 Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the proposed isolated verifier foundation;
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
+
+## K0b local decision — 2026-10-20, Proposed; locally implemented in `1eacc1d`
+
+Master plan §11.2.1 made concrete for receipts: only the database owner records an admission of a
+receipt connection, as append-only revisions (`test_access` or `suspended`; test mode; USD; charge
+and refund flags; the connection's own account; evidence; login and time). No row means "not
+checked"; approved or live states need a later decision. Attestations, worker decisions, provider
+payments and links require the latest revision to be test access (money: with the operation's
+flag), checked in the same transaction under a shared advisory lock per connection that the
+recording takes exclusively, so a suspension waits for work in flight and refuses the next. The
+ingress and worker run as separate local processes with their own logins, keys from named
+environment variables only, the ingress on 127.0.0.1 only and without uvicorn's raw-path access
+log. The owner's answers to the [K0a questions](../plan/PACKAGE_K0A_DESIGN_2026-10-20.md) chose
+every default. No provider account, key, public URL or readiness change.
 
 ## K5a-fix local decision — 2026-10-19, Proposed; locally implemented in `76f7764`
 

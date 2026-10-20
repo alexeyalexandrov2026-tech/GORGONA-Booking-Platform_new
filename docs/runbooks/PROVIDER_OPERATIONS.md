@@ -6,8 +6,9 @@ each case. Design: [K4a](../plan/PACKAGE_K4A_DESIGN_2026-10-18.md),
 [K4b](../plan/PACKAGE_K4B_DESIGN_2026-10-18.md); decisions: [ADR-0027](../adr/0027-provider-events-and-reconciliation.md).
 
 Current limits: test mode only, USD only, one clearing account per connection, synthetic events
-in local verification. Provider fees, payouts and bank reconciliation stay manual. The receipt
-worker has no scheduled entry point yet; until it does, events wait as "not decided yet".
+in local verification. Provider fees, payouts and bank reconciliation stay manual. A connection
+works only after the owner admits it for test access (K0, below); the receipt worker runs as a
+local process, so events wait as "not decided yet" while it is stopped.
 
 ## Ground rules
 
@@ -81,6 +82,28 @@ clearing account**. It cannot be changed later. Repeating the same account is sa
 delivery that differs names each field with both values (for example *Amount received (minor
 units) 3100 → 3099*; minor units are cents for USD). An event decided as "its facts disagree"
 contradicts earlier events of the same operation. Raw bodies, signatures and keys are never shown.
+
+## Admission and the receipt processes (K0, owner and operators)
+
+A connection receives events, decides them and moves money only while the owner's latest
+admission of it is **test access** (for money: test access for that operation, charge or refund).
+Design: [K0a](../plan/PACKAGE_K0A_DESIGN_2026-10-20.md).
+
+- Admit or suspend (owner database login in `GBA_MIGRATION_DATABASE_URL`):
+  `gba-db admit-receipt-connection --tenant <company> --connection <connection> --account acct_…
+  --state test_access --evidence "<short note>"`; use `--state suspended` to stop a connection and
+  `--operations charge` or `refund` to allow one kind only. Every revision is kept; a suspension
+  waits for work in flight and refuses the next delivery. Applying money for a connection that is
+  not admitted answers `PROVIDER_OPERATION_NOT_READY` with reason `not_admitted`.
+- Ingress: `python -m gorgona_booking.providers.ingress_main` with
+  `GBA_RECEIPT_WRITER_DATABASE_URL` (receipt writer login), `GBA_RECEIPT_SECRET_REFS` (for example
+  `env:GBA_STRIPE_TEST_WEBHOOK_SECRET`) and that variable set in the same terminal; it listens on
+  127.0.0.1 port `GBA_RECEIPT_PORT` (default 8787) and refuses to start without its key or with a
+  wrong login. Never paste a key into a document, chat or command line of another person.
+- Worker: `python -m gorgona_booking.providers.worker_main` (every 5 s; `--once` for one batch;
+  `--interval 1-300`) with `GBA_RECEIPT_WORKER_DATABASE_URL` (receipt worker login); Ctrl+C stops
+  it after the current batch. Events of a suspended or unadmitted connection wait undecided.
+- Logs carry counts and outcomes only: no payload, key, account or ingress ID.
 
 ## Metrics (operators)
 

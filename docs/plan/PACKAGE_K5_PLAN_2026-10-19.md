@@ -1,5 +1,11 @@
 # Package K5 — FIN-02 evidence plan: K0, independent review, CI (2026-10-19)
 
+**Update 2026-10-20: K0a done** ([design and the owner's answers](PACKAGE_K0A_DESIGN_2026-10-20.md),
+all defaults) **and K0b done locally** (admission 0057, money gate 0058, ingress and worker
+processes; [validation](evidence/2026-10-20-k0b-entry-points/VALIDATION.md)). The admission
+migration is 0057, not 0055 as written in step 3 below. **K0c, the owner's real Stripe test run, is
+next** ([handoff](NEXT_AGENT_PACKAGE_K0B_2026-10-20.md)).
+
 **Status: owner decisions received 2026-10-19; K5a done** (review
 [recorded](evidence/2026-10-19-k5a-review/REVIEW.md); K5a-fix locally implemented in `76f7764`,
 [validation](evidence/2026-10-19-k5a-review-fixes/VALIDATION.md)). **K0a next; migrations from

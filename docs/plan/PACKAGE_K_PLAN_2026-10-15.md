@@ -1,5 +1,14 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## K0b — connection admission and receipt processes (2026-10-20, local)
+
+Source `1eacc1d73c4d13a759be95084d994ef1be6cf4fe` on local branch `codex/package-k0b-entry-points`. The owner's admission of a receipt
+connection (0057) and its money gate (0058) are the only way a connection receives, decides and
+moves money; the ingress and worker now run as local processes. Synthetic only; K0c (real Stripe
+test events, operated by the owner) is next. Focused 623 passed in 703.66s (0:11:43); full 2308 passed, 4 skipped in 2316.92s (0:38:36).
+[K0a design](PACKAGE_K0A_DESIGN_2026-10-20.md), [validation](evidence/2026-10-20-k0b-entry-points/VALIDATION.md),
+[handoff](NEXT_AGENT_PACKAGE_K0B_2026-10-20.md).
+
 ## K5 plan — FIN-02 evidence: K0, independent review, CI (2026-10-19, docs only)
 
 What FIN-02 still lacks after K3b (a running ingress and worker, an admitted connection state,

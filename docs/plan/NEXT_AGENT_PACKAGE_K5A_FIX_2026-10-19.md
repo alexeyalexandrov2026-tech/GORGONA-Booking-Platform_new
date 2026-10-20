@@ -1,5 +1,8 @@
 # Next agent — Package K after K5a-fix, 2026-10-19 (updated 2026-10-20)
 
+**Superseded on 2026-10-20 by [the K0b handoff](NEXT_AGENT_PACKAGE_K0B_2026-10-20.md)** (K0a and K0b
+are done locally). Sections 2 and 6 below still apply.
+
 Read this whole file before any command. It replaces the K3b handoff. The ready-to-paste prompt is
 [NEXT_AGENT_PACKAGE_K5A_FIX_PROMPT_2026-10-19.md](NEXT_AGENT_PACKAGE_K5A_FIX_PROMPT_2026-10-19.md).
 
