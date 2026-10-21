@@ -1,3 +1,5 @@
+> **Superseded 2026-10-20** by the [handoff after FIN-02](NEXT_AGENT_AFTER_FIN02_2026-10-20.md); sections 3 and 4 still apply.
+
 # Next agent — Package K after K5b, 2026-10-20
 
 Read this whole file before any command. It replaces the

@@ -1,6 +1,17 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-20: K5r fixes of the K5 final review locally verified
+## Current checkpoint — 2026-10-20: FIN-02 technically verified (K5c)
+
+Code `ea74bec66808f217f7ea56370b9292b4844f7d2b`, local branch `codex/package-k5c-fin02-readiness`, parent
+`2b640e2` (K5r, CI SUCCESS run 39523031370). On the owner's delegation («делай, как ты считаешь нужным…
+я доверяю тебе») the readiness registry records **FIN-02 `technically_verified`** for code `b4e69e8`,
+schema 62: Stripe Connect test mode, USD, one admitted connection; K-01–K-14 PASS except K-05 and K-12
+PARTIAL (no provider retrieval, reconciliation or dead-letter queue); no live mode and no production
+approval. Focused **827 passed**; full **2328 passed, 4 skipped**. STOCK-01 stays `planned`.
+[Acceptance](docs/plan/evidence/2026-10-20-fin-02-acceptance/ACCEPTANCE.md),
+[handoff](docs/plan/NEXT_AGENT_AFTER_FIN02_2026-10-20.md), [prompt](docs/plan/NEXT_AGENT_AFTER_FIN02_PROMPT_2026-10-20.md).
+
+## Previous checkpoint — 2026-10-20: K5r fixes of the K5 final review locally verified
 
 Source `b4e69e82152961380d21761c9a100515ea1645d1`, local branch `codex/package-k5r-review-fixes`, parent `ec25a1f`. One independent
 review of K5a-fix, K0b and K5b (owner's «Да, запусти») found no Critical or High issue; K5r fixes the

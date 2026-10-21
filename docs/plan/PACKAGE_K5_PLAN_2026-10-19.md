@@ -1,5 +1,7 @@
 # Package K5 — FIN-02 evidence plan: K0, independent review, CI (2026-10-19)
 
+**K5c 2026-10-20: FIN-02 `technically_verified`** within its limits on the owner's delegation ([acceptance](evidence/2026-10-20-fin-02-acceptance/ACCEPTANCE.md)); K5 is complete. K5r CI SUCCESS (run 39523031370).
+
 **K5r 2026-10-20 (later):** the one independent review ran ([record](evidence/2026-10-20-k5-final-review/REVIEW.md));
 its fixes are local in `b4e69e82152961380d21761c9a100515ea1645d1` ([validation](evidence/2026-10-20-k5r-review-fixes/VALIDATION.md)). Next: the
 FIN-02 acceptance record (K-01–K-14); readiness only after it.

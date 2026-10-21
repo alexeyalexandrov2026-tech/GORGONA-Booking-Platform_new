@@ -1,5 +1,9 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## K5c — FIN-02 technically verified (2026-10-20)
+
+The registry records FIN-02 `technically_verified` (test mode, USD, one connection; K-05 and K-12 partial; no live mode or production approval): [acceptance](evidence/2026-10-20-fin-02-acceptance/ACCEPTANCE.md). Package K is complete for its technical scope; next: the merge plan with the owner.
+
 ## K5r — fixes of the K5 final review (2026-10-20, local)
 
 Source `b4e69e82152961380d21761c9a100515ea1645d1` on local branch `codex/package-k5r-review-fixes`: the final independent review of
