@@ -1,8 +1,8 @@
 # K6 — FIN-02 gaps K-05 and K-12: bounded retries, parked events and provider reconciliation (design and questions, 2026-10-21)
 
-**Status: proposal, waiting for the owner's answers.** Local branch `codex/package-k6-design` from
-`fba651e` (STOCK-01 record). No code, migration or provider call yet. The owner chose this work on
-2026-10-21 («1» = close the FIN-02 gaps K-05 and K-12).
+**Status: owner decisions received 2026-10-21 — all six defaults** («Да, все умолчания»). Local
+branch `codex/package-k6-design` from `fba651e` (STOCK-01 record). The owner chose this work on
+2026-10-21 («1» = close the FIN-02 gaps K-05 and K-12). Next: K6a on its own local branch.
 
 FIN-02 is `technically_verified` with two partial criteria
 ([acceptance](evidence/2026-10-20-fin-02-acceptance/ACCEPTANCE.md)):
