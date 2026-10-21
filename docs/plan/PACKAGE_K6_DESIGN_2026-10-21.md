@@ -94,6 +94,40 @@ FIN-02 is `technically_verified` with two partial criteria
    429/5xx, a wrong account in the answer (refused), a suspended connection (not asked) and logs
    without secrets.
 
+#### K6b detailed decisions (agent, 2026-10-21, within the owner's defaults)
+
+Checked before deciding: the Stripe API renders a listed event in the API version it was created
+with, not in the request's version, and keeps events for 30 days; the SDK `stripe==16.0.0` offers
+`StripeClient.raw_request` with a per-request connected account and a configurable base address and
+timeout (`RequestsClient`), so no new dependency is needed.
+
+1. **Same facts, provenance in the attestation.** A retrieved event is decoded by the same strict
+   decoder as a webhook (duplicate keys, number limits, resource shapes) into the **same facts**, so a
+   webhook and a retrieval of one event converge as a duplicate instead of a conflict. How it arrived
+   is recorded where authority is recorded: the attestation's `verifier` becomes `stripe_api_v1`
+   (0064 widens the check; the webhook stays `stripe_snapshot_v1`). The delivery digest of a retrieved
+   event is the SHA-256 of its canonical JSON (sorted keys, no spaces).
+2. **Version and account.** An event whose `api_version` differs from the connection's is refused and
+   counted (`event_version`), never recorded; the run reports how many. The connected account comes
+   from the request; an `account` field in the event must equal it.
+3. **One platform key.** Connect events of a connected account are listed with the platform's key and
+   the `Stripe-Account` header, so the reconciler holds one key reference (`GBA_STRIPE_API_KEY_REF`,
+   `env:NAME`), never a key per connection. The key lives in memory only.
+4. **Which connections.** Every receipt route whose connection is active and admitted for test access
+   (the same authority read as the ingress); the run never reads business data.
+5. **Run record.** 0064 adds `provider_reconciliation_runs` (append-only, writer only): connection,
+   window, pages, events seen, recorded, duplicates, conflicts, refused by version or shape, outcome
+   (`completed` or `failed` with the error class), start and end. A failed run is recorded as failed;
+   events already recorded by it stay (each was committed on its own).
+6. **Retries.** Timeouts, 429 and 5xx: up to 3 retries with waits of 1, 2 and 4 seconds, then the run
+   stops as `failed`. Any other answer stops it at once. Nothing is recorded for a page that did not
+   arrive complete.
+7. **Process.** `python -m gorgona_booking.providers.reconcile_main` (`--once`, `--interval` 60–3600 s,
+   default 900; `--days` 1–30, default 3) with the writer login.
+8. **Split.** K6b1: migration, decoder, reconciler, process and tests with a local fake Stripe API.
+   K6b2: the screen shows each delivery's source and marks an operation without a final event for
+   more than 24 hours.
+
 ### K6c — real sandbox run, review and readiness update
 
 1. In the owner's Stripe sandbox (test mode): make a payment and a refund while the ingress is
