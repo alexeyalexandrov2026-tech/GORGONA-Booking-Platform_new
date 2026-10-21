@@ -31,6 +31,8 @@ _MIGRATIONS = (
     "0058_provider_money_admission.sql",
     # K5b: links need the enabled workflow; the link date window calls pg_catalog.abs.
     "0060_provider_link_review_fixes.sql",
+    # K5r: indexed event lookups, refund cap over linked refunds, direction-aware names.
+    "0062_provider_money_final_fixes.sql",
 )
 _PACKAGED = tuple(
     (resources.files("gorgona_booking.db") / "migrations" / name).read_text(encoding="utf-8")

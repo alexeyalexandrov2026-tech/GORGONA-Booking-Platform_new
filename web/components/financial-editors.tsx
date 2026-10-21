@@ -1,7 +1,7 @@
 "use client";
 import { useState, type ReactNode } from "react";
 import { z } from "zod";
-import { businessDateTime } from "../lib/business-time";
+import { businessToday } from "../lib/business-time";
 import type { LedgerAccount } from "../lib/ledger-contracts";
 import { minorUnits } from "../lib/ledger-contracts";
 import type { CounterpartyPage } from "../lib/counterparty-contracts";
@@ -25,8 +25,7 @@ type Common = {
   timezone: string;
 };
 /** Today in the business time zone; empty while the zone is unknown, never the UTC date. */
-const today = (timezone: string) =>
-  timezone ? businessDateTime(new Date(), timezone).date : "";
+const today = (timezone: string) => businessToday(timezone);
 const key = () => crypto.randomUUID();
 export const money = (units: bigint, places: number) => {
   const digits = units.toString().padStart(places + 1, "0");

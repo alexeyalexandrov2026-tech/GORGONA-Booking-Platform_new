@@ -30,6 +30,20 @@ export function businessDateTime(instant: Date | string, timezone: string) {
   };
 }
 
+/** Today in the business time zone; empty while the zone is unknown or one the browser cannot
+ * resolve, never the UTC date (K5r, review R7). */
+export function businessToday(
+  timezone: string,
+  now: Date = new Date(),
+): string {
+  if (!timezone) return "";
+  try {
+    return businessDateTime(now, timezone).date;
+  } catch {
+    return "";
+  }
+}
+
 /** Calendar arithmetic, independent of the browser's local timezone and DST. */
 export function shiftDate(date: string, days: number): string {
   const value = new Date(`${date}T12:00:00Z`);

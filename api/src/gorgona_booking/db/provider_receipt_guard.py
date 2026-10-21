@@ -24,6 +24,8 @@ _SQL = "".join(
         "0057_provider_connection_admissions.sql",
         # K5b: the inbox index by connection; only the writer records events (IR-03).
         "0059_provider_receipt_review_fixes.sql",
+        # K5r: the operation-key index; a suspension is final.
+        "0061_provider_review_final_fixes.sql",
     )
 )
 # A later `create or replace` (0048) supersedes the earlier body of the same function.
@@ -118,6 +120,13 @@ _COLUMNS = [
     for table, block in re.findall(r"alter table gba\.(\w+)\n((?:    add column [^\n]*\n)+)", _SQL)
     for name, kind, tail in re.findall(r"^    add column (\w+) " + _KIND, block, re.MULTILINE)
 ]
+# K5r (0061): the stored operation key of each event, decoded by the K2a rules.
+for _approved in _COLUMNS:
+    if _approved[:2] in (
+        ["provider_event_inbox", "operation_kind"],
+        ["provider_event_inbox", "operation_object_id"],
+    ):
+        _approved[5] = f"(gba.provider_receipt_operation(facts)).{str(_approved[1])[10:]}"
 # Defaults that a later migration sets (0049).
 for _table, _name, _default in re.findall(
     r"alter table gba\.(\w+) alter column (\w+) set default ([^;]+);", _SQL
@@ -481,6 +490,13 @@ _INDEXES = (
         "provider_event_inbox_connection",
         "CREATE INDEX provider_event_inbox_connection "
         "ON gba.provider_event_inbox USING btree (tenant_id, connection_id)",
+    ),
+    # K5r (0061): the events of one operation, by the key their facts decode to.
+    (
+        "provider_event_inbox",
+        "provider_event_inbox_operation",
+        "CREATE INDEX provider_event_inbox_operation ON gba.provider_event_inbox "
+        "USING btree (tenant_id, connection_id, operation_object_id)",
     ),
 )
 _TENANT = "(tenant_id = gba.current_tenant_id())"

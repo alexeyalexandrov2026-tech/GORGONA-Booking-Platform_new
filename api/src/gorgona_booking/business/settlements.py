@@ -802,10 +802,11 @@ async def load_payment(
 
 
 async def _refuse_recorded_provider_id(
-    conn: RuntimeConnection, business: UUID, reference: str
+    conn: RuntimeConnection, business: UUID, reference: str, direction: str
 ) -> None:
     """K5a-fix (finding 1): a manual payment never names a provider operation whose money already
-    counts, as its applied provider payment or its linked manual payment; the H trigger agrees."""
+    counts, as its applied provider payment or its linked manual payment; the H trigger agrees.
+    K5r (review R6): a received payment names payments only, a paid one refunds only."""
     row = await (
         await conn.execute(
             "select o.id,gba.provider_operation_payment(o.tenant_id,o.id),"
@@ -814,8 +815,9 @@ async def _refuse_recorded_provider_id(
             "from gba.provider_operations o where o.tenant_id=%s "
             "and pg_catalog.lower(o.provider_object_id)=any(gba.provider_reference_ids(%s)) "
             "and gba.provider_operation_payment(o.tenant_id,o.id) is not null "
+            "and (o.kind='payment')=(%s='receivable') "
             "order by o.id limit 1",
-            (business, reference),
+            (business, reference, direction),
         )
     ).fetchone()
     if row is None:
@@ -926,7 +928,9 @@ async def confirm(
         raise FinancialDocumentStateError(f"A {current.status} settlement cannot be confirmed")
     await require_workflow(conn, business_id)
     await _require_attested_date(conn, business_id, body.actual_external_date)
-    await _refuse_recorded_provider_id(conn, business_id, body.external_reference)
+    await _refuse_recorded_provider_id(
+        conn, business_id, body.external_reference, current.direction
+    )
     try:
         amount = to_minor(body.amount, current.minor_units)
     except ValueError as exc:
@@ -1265,16 +1269,14 @@ async def _require_refund_parent(
         raise ProviderPaymentMismatchError(
             "A refund goes to the party that paid", reason="counterparty"
         )
+    # K5r (review R5): applied and linked refunds of the parent both count, as in SQL.
     applied = await (
         await conn.execute(
-            "select coalesce(sum(gba.effective_payment_amount(r.tenant_id,r.book_id,r.id)),0) "
-            "from gba.external_payments r "
-            "join gba.external_payment_provenance y on y.tenant_id=r.tenant_id "
-            "and y.book_id=r.book_id and y.payment_id=r.id "
-            "join gba.provider_operations o on o.tenant_id=y.tenant_id and o.id=y.operation_id "
-            "where r.tenant_id=%s and r.book_id=%s and o.connection_id=%s "
+            "select coalesce(sum(gba.effective_payment_amount(o.tenant_id,%s,"
+            "gba.provider_operation_payment(o.tenant_id,o.id))),0) "
+            "from gba.provider_operations o where o.tenant_id=%s and o.connection_id=%s "
             "and o.kind='refund' and o.parent_object_id=%s",
-            (current.business_id, current.book_id, refund.connection_id, refund.parent_object_id),
+            (current.book_id, current.business_id, refund.connection_id, refund.parent_object_id),
         )
     ).fetchone()
     if applied is None or int(applied[0]) + refund.amount_minor > int(parent[0]):

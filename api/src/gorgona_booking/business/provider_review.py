@@ -52,15 +52,20 @@ class ProviderAttentionNotNeededError(ConflictError):
     code = "PROVIDER_ATTENTION_NOT_NEEDED"
 
 
+def link_refusal_reason(exc: psycopg.errors.CheckViolation) -> str:
+    """K5r (review R9): name the 0058 admission gate, which a link can meet in a race."""
+    return "not_admitted" if "admitted connection" in str(exc) else "facts"
+
+
 # The attested events of one operation: mapped to it by their facts, or decided as it.
 _EVENTS = (
     "select e.id,e.facts->>'event_type',(e.facts->>'created')::bigint,e.facts,"
     "d.outcome,d.reason,d.decided_at from gba.provider_event_inbox e "
-    "left join lateral gba.provider_receipt_operation(e.facts) f on true "
     "left join gba.provider_event_decisions d on d.tenant_id=e.tenant_id and d.event_id=e.id "
     "where e.tenant_id=%s and e.connection_id=%s and exists(select 1 "
     "from gba.provider_event_attestations a where a.tenant_id=e.tenant_id and a.event_id=e.id) "
-    "and ((f.kind=%s and f.object_id=%s) or d.operation_id=%s) "
+    # K5r (review R1): the 0061 stored operation key and its index find this operation's events.
+    "and ((e.operation_kind=%s and e.operation_object_id=%s) or d.operation_id=%s) "
     "order by (e.facts->>'created')::bigint,e.id"
 )
 _DELIVERIES = (
@@ -302,9 +307,13 @@ async def link(
             )
     except psycopg.errors.CheckViolation as exc:
         # K5a-fix (finding 10): SQL saw facts the checks above did not; nothing was linked.
-        raise ProviderLinkMismatchError(
-            "The provider facts changed; reload and compare again", reason="facts"
-        ) from exc
+        reason = link_refusal_reason(exc)
+        message = (
+            "The provider connection is not admitted for money now"
+            if reason == "not_admitted"
+            else "The provider facts changed; reload and compare again"
+        )
+        raise ProviderLinkMismatchError(message, reason=reason) from exc
     summary = await load_operation(conn, business_id, book_id, operation_id)
     recorded = await _link(conn, business_id, operation_id)
     if summary is None or recorded is None:

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ManagementApiError } from "../lib/management-api";
 import type { LedgerAccount } from "../lib/ledger-contracts";
 import { minorUnits } from "../lib/ledger-contracts";
-import { businessDateTime } from "../lib/business-time";
+import { businessToday } from "../lib/business-time";
 import * as api from "../lib/financial-api";
 import {
   financialCommandSchema,
@@ -46,6 +46,7 @@ const LINK_MISMATCH: Record<string, string> = {
   not_manual: "It is not a manually recorded payment.",
   reference: "Its reference does not name this provider ID.",
   facts: "The provider facts changed while linking; reload and compare again.",
+  not_admitted: "The provider connection is not admitted for money now.",
 };
 const stateText = (state: State) =>
   STATES.find(([value]) => value === state)?.[1] ?? state;
@@ -850,7 +851,7 @@ export function ProviderApplyEditor({
       () =>
         draft ?? {
           chosen: "",
-          date: businessDateTime(new Date(), timezone).date,
+          date: businessToday(timezone),
           allocated: {},
         },
     ),

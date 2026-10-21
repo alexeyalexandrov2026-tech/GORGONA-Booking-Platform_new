@@ -2,9 +2,18 @@ import { expect, test } from "@playwright/test";
 import {
   businessDateTime,
   businessTimeToInstant,
+  businessToday,
   shiftDate,
   WEEKDAYS,
 } from "../lib/business-time";
+
+test("today is the business date, empty when the zone is unknown, never the UTC date", () => {
+  const at = new Date("2026-10-04T02:00:00Z");
+  expect(businessToday("America/New_York", at)).toBe("2026-10-03");
+  expect(businessToday("", at)).toBe("");
+  // K5r (review R7): a zone the browser's ICU lacks must not throw in an editor.
+  expect(businessToday("Mars/Olympus_Mons", at)).toBe("");
+});
 
 test("ISO weekdays and local midnight use the business zone", () => {
   expect(WEEKDAYS[0]).toEqual({ index: 1, label: "Monday" });

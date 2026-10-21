@@ -93,10 +93,11 @@ class ObservedOperation:
 _FACTS = (
     "o.id,o.connection_id,o.kind,o.provider_object_id,o.parent_object_id,"
     "pg_catalog.upper(o.currency),o.created_at,"
+    # K5r (review R1): the 0061 stored operation key and its index find this operation's events.
     "exists(select 1 from gba.provider_event_inbox e "
-    "cross join lateral gba.provider_receipt_operation(e.facts) f "
-    "where e.tenant_id=o.tenant_id and e.connection_id=o.connection_id and f.kind=o.kind "
-    "and f.object_id=o.provider_object_id and exists(select 1 from "
+    "where e.tenant_id=o.tenant_id and e.connection_id=o.connection_id "
+    "and e.operation_object_id=o.provider_object_id "
+    "and e.operation_kind=o.kind and exists(select 1 from "
     "gba.provider_event_attestations a where a.tenant_id=e.tenant_id and a.event_id=e.id) "
     "and not exists(select 1 from gba.provider_event_decisions d "
     "where d.tenant_id=e.tenant_id and d.event_id=e.id)),"

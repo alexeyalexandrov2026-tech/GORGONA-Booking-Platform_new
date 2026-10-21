@@ -66,7 +66,8 @@ async def test_the_inbox_of_one_connection_is_found_through_an_index(
     with owner_conn.transaction():
         owner_conn.execute("set local enable_seqscan=off")
         plan = "\n".join(str(r[0]) for r in owner_conn.execute(query).fetchall())
-    assert "provider_event_inbox_connection" in plan
+    # K5r (0061): the operation-key index starts with the same columns and may serve it too.
+    assert "provider_event_inbox_connection" in plan or "provider_event_inbox_operation" in plan
 
 
 # 8 ------------------------------------------------------------------------

@@ -100,12 +100,12 @@ async def test_the_owner_records_revisions_that_stay_permanent(
     test_database: ProvisionedDatabase,
 ) -> None:
     owner = str(conninfo_to_dict(test_database.owner_dsn)["user"])
-    assert admit(owner_conn, routed, "suspended") == 2
-    assert admit(owner_conn, routed, charge=True, refund=False) == 3
+    assert admit(owner_conn, routed, charge=True, refund=False) == 2
+    assert admit(owner_conn, routed, "suspended") == 3
     assert await history(app_pool, routed) == [
         (1, "test_access", "test", True, True, "USD", "acct_FAKEreceipt", owner),
-        (2, "suspended", "test", True, True, "USD", "acct_FAKEreceipt", owner),
-        (3, "test_access", "test", True, False, "USD", "acct_FAKEreceipt", owner),
+        (2, "test_access", "test", True, False, "USD", "acct_FAKEreceipt", owner),
+        (3, "suspended", "test", True, True, "USD", "acct_FAKEreceipt", owner),
     ]
     for statement in (
         "update gba.provider_connection_admissions set state='test_access'",
@@ -263,7 +263,7 @@ async def test_the_owner_command_records_an_admission_without_printing_a_secret(
     assert [(row[0], row[1], row[3], row[4]) for row in rows] == [(1, "test_access", True, False)]
 
 
-async def test_an_unadmitted_or_suspended_connection_attests_nothing_until_readmitted(
+async def test_an_unadmitted_or_suspended_connection_attests_nothing(
     unadmitted: Routed,
     owner_conn: psycopg.Connection,
     writer_pool: RuntimePool,
@@ -272,13 +272,16 @@ async def test_an_unadmitted_or_suspended_connection_attests_nothing_until_readm
     with pytest.raises(ReceiptBindingRejectedError):
         await attested.receive(writer_pool, unadmitted, attested.delivery())
     assert admit(owner_conn, unadmitted) == 1
-    first = await attested.receive(writer_pool, unadmitted, attested.delivery())
+    await attested.receive(writer_pool, unadmitted, attested.delivery())
     assert admit(owner_conn, unadmitted, "suspended") == 2
     with pytest.raises(ReceiptBindingRejectedError):
         await attested.receive(writer_pool, unadmitted, attested.delivery(amount=2000))
-    assert admit(owner_conn, unadmitted) == 3
-    again = await attested.receive(writer_pool, unadmitted, attested.delivery())
-    assert (again.event_id, again.disposition) == (first.event_id, "duplicate")
+    # K5r (review R2): deliveries refused while suspended are lost to it, so the suspension is
+    # final; a new connection is provisioned instead of re-admitting this one.
+    with pytest.raises(psycopg.errors.CheckViolation, match="suspended"):
+        admit(owner_conn, unadmitted)
+    with pytest.raises(ReceiptBindingRejectedError):
+        await attested.receive(writer_pool, unadmitted, attested.delivery())
     rows = await attested.attestations(app_pool, unadmitted.tenant_id)
     assert len(rows) == 1
 
@@ -318,21 +321,21 @@ async def test_sql_alone_cannot_attest_or_decide_for_a_suspended_connection(
             await attempt()
 
 
-async def test_the_worker_leaves_a_suspended_connection_undecided_until_readmitted(
+async def test_the_worker_leaves_a_suspended_connection_undecided(
     routed: Routed,
     owner_conn: psycopg.Connection,
     writer_pool: RuntimePool,
     worker_pool: RuntimePool,
 ) -> None:
-    events = await decided.receive_all(
-        writer_pool, routed, decided.stripe("payment_intent.succeeded")
-    )
+    await decided.receive_all(writer_pool, routed, decided.stripe("payment_intent.succeeded"))
     admit(owner_conn, routed, "suspended")
     assert await worker.process_batch(worker_pool, tenant_id=routed.tenant_id) == []
     assert await decided.decisions(worker_pool, routed.tenant_id) == {}
-    admit(owner_conn, routed)
-    done = await worker.process_batch(worker_pool, tenant_id=routed.tenant_id)
-    assert [d.event_id for d in done] == events
+    # K5r (review R2): the suspension is final, so its events never become decidable again.
+    with pytest.raises(psycopg.errors.CheckViolation, match="suspended"):
+        admit(owner_conn, routed)
+    assert await worker.process_batch(worker_pool, tenant_id=routed.tenant_id) == []
+    assert await decided.decisions(worker_pool, routed.tenant_id) == {}
 
 
 @pytest.mark.parametrize("admission", ["suspended", "refund_only"])
@@ -353,6 +356,11 @@ async def test_money_needs_an_admission_for_its_operation(
     assert paid.error(refused)[:2] == (409, "PROVIDER_OPERATION_NOT_READY")
     assert paid.error(refused)[2]["reason"] == "not_admitted"
     assert await money.count(app_pool, "external_payments") == 0
+    if admission == "suspended":
+        # K5r (review R2): a suspension is final; the operation stays without money.
+        with pytest.raises(psycopg.errors.CheckViolation, match="suspended"):
+            admit(owner_conn, money.routed)
+        return
     admit(owner_conn, money.routed)
     applied = await money.apply(settlement, operation, [(obligation, "10.00")])
     assert applied.status_code == 200, applied.text

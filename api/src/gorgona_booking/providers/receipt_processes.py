@@ -175,12 +175,20 @@ async def run_worker(settings: WorkerSettings, *, stop: asyncio.Event | None = N
         async with pool.connection() as conn, conn.transaction():
             await assert_safe_receipt_worker_role(conn)
         while True:
-            decisions = await process_batch(pool)
-            total += len(decisions)
-            outcomes = Counter(f"{d.outcome}:{d.reason}" for d in decisions)
-            logger.info(
-                "provider receipt batch", extra={"decided": len(decisions), **dict(outcomes)}
-            )
+            try:
+                decisions = await process_batch(pool)
+            except Exception as exc:
+                if settings.once:
+                    raise
+                # K5r (review R3): one failed batch never ends the worker; it waits one interval
+                # and tries again. Only the error class is logged, never a payload or message.
+                logger.warning("provider receipt batch failed", extra={"error": type(exc).__name__})
+            else:
+                total += len(decisions)
+                outcomes = Counter(f"{d.outcome}:{d.reason}" for d in decisions)
+                logger.info(
+                    "provider receipt batch", extra={"decided": len(decisions), **dict(outcomes)}
+                )
             if settings.once or (stop is not None and stop.is_set()):
                 return total
             if stop is None:
