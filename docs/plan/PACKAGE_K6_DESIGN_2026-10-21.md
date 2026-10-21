@@ -2,7 +2,7 @@
 
 **Status: owner decisions received 2026-10-21 — all six defaults** («Да, все умолчания»). Local
 branch `codex/package-k6-design` from `fba651e` (STOCK-01 record). The owner chose this work on
-2026-10-21 («1» = close the FIN-02 gaps K-05 and K-12). **K6a done** (`2f577bc`, [validation](evidence/2026-10-21-k6a-bounded-retries/VALIDATION.md)); next K6b.
+2026-10-21 («1» = close the FIN-02 gaps K-05 and K-12). **K6a done** (`2f577bc`, [validation](evidence/2026-10-21-k6a-bounded-retries/VALIDATION.md)); **K6b1 done** (`73f5c45`, [validation](evidence/2026-10-21-k6b-event-backfill/VALIDATION.md)); next K6b2, then K6c.
 
 FIN-02 is `technically_verified` with two partial criteria
 ([acceptance](evidence/2026-10-20-fin-02-acceptance/ACCEPTANCE.md)):

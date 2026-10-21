@@ -1,6 +1,16 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-21: K6a bounded retries and parked provider events (FIN-02 gaps)
+## Current checkpoint — 2026-10-21: K6b1 lost provider events reconciled from the Stripe API
+
+Code `73f5c45`, local branch `codex/package-k6b-event-backfill`, parent `73570bd` (K6b detailed
+decisions). A reconciler of one platform namespace lists each admitted connection's events from the
+Stripe API and records them through the same inbox as webhooks (same facts; provenance
+`stripe_api_v1` on the attestation; every run recorded, migration 0064; retries 1, 2, 4 s then a
+visible failure). Tested against a local fake Stripe API; the real sandbox run is K6c. Focused
+**673 passed**; full **2395 passed, 4 skipped**. FIN-02 unchanged (K-05/K-12 PARTIAL until K6c).
+Next migration **0065**. [Validation](evidence/2026-10-21-k6b-event-backfill/VALIDATION.md).
+
+## Previous checkpoint — 2026-10-21: K6a bounded retries and parked provider events (FIN-02 gaps)
 
 Code `2f577bc`, local branch `codex/package-k6a-bounded-retries`, parent `8b8f8a3` (K6 design,
 owner: «1» and «Да, все умолчания»). The receipt worker no longer lets one failing event stop its
