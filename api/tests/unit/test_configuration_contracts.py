@@ -156,6 +156,20 @@ def test_work_01_and_core_04_are_verified_and_workforce_follows_work_01() -> Non
     assert workforce.depends_on == ("users_access",)
 
 
+def test_fin_02_is_technically_verified_within_its_stated_limits() -> None:
+    # K5c (owner 2026-10-20: «делай, как ты считаешь нужным… я доверяю тебе»): the acceptance
+    # record and the K5r source; never a pilot or production approval.
+    fin = next(scenario for scenario in SCENARIOS if scenario.id == "FIN-02")
+    assert (fin.status, fin.code_version, fin.schema_version) == (
+        Readiness.TECHNICALLY_VERIFIED,
+        "b4e69e82152961380d21761c9a100515ea1645d1",
+        62,
+    )
+    assert "docs/plan/evidence/2026-10-20-fin-02-acceptance/ACCEPTANCE.md" in fin.evidence
+    for limit in ("test mode", "USD", "no live", "no production approval"):
+        assert limit in fin.scope, limit
+
+
 def test_catalog_readiness_comes_from_the_registry() -> None:
     by_id = {profile.industry_id: profile.status for profile in PROFILES}
     assert {i.id: i.workflow_readiness for i in CATALOG.industries} == by_id
