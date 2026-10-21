@@ -13,10 +13,10 @@ Read, in this order: `docs/plan/NEXT_AGENT_AFTER_FIN02_2026-10-20.md` (whole fil
 `docs/plan/evidence/2026-10-20-fin-02-acceptance/ACCEPTANCE.md`;
 `docs/plan/evidence/2026-10-20-k5r-review-fixes/VALIDATION.md`; the master plan top block, §13 and §14.
 
-FIN-02 is technically verified within its limits; packages J and K are on stacked branches not yet in
-`main`. Start by proposing a merge plan to the owner (merging needs their word), then the next work
-they choose: FIN-02 gaps (K-05, K-12), the STOCK-01 record, or the industry modules toward one launch
-of all 39 directions.
+FIN-02 and STOCK-01 are technically verified within their limits; `main` is `1a8a180` (packages J and
+K); the STOCK-01 record is on `codex/package-stock01-readiness`, one step ahead of `main`. Ask the
+owner for the next work: FIN-02 gaps (K-05, K-12), or the industry modules toward one launch of all
+39 directions.
 
 Hard rules: no push of a new branch, PR, merge, `main`, rebase, amend, reset, clean, force-push,
 Azure, production or live-mode provider action without the owner's separate direct word. The owner

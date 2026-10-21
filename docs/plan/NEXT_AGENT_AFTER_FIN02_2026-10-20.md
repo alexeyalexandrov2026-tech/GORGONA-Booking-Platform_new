@@ -19,14 +19,16 @@ branches, each built on the previous:
 |---|---|---|---|
 | `codex/package-k5b-open-findings` | `e03c678` | yes, CI SUCCESS (run 39502582514) | K5b fixes, K0c real Stripe run |
 | `codex/package-k5r-review-fixes` | `2b640e2` | yes, CI SUCCESS (run 39523031370) | final review and K5r fixes (0061, 0062) |
-| `codex/package-k5c-fin02-readiness` | code `ea74bec` + docs | see the K5c checkpoint | FIN-02 `technically_verified` |
+| `codex/package-k5c-fin02-readiness` | code `ea74bec` + docs `1a8a180` | yes, CI SUCCESS (run 39527769354) | FIN-02 `technically_verified` |
+| `codex/package-stock01-readiness` | code `3f68e3f` + docs | see the STOCK-01 checkpoint | STOCK-01 `technically_verified`, inventory enableable |
 
-- `main` is `fedd0f1`; everything since (packages J and K) is unmerged. **Merging to `main` needs the
-  owner's word.**
+- `main` was fast-forwarded on the owner's word to `1a8a180` (packages J and K, FIN-02); CI on `main`
+  SUCCESS (run 39536393894). Further merges to `main` need the owner's word.
 - Migrations 0001–0062 are immutable; the next is **0063**.
 - FIN-02 is `technically_verified` (test mode, USD, one connection; K-05 and K-12 partial; no live mode,
   no production approval): [acceptance](evidence/2026-10-20-fin-02-acceptance/ACCEPTANCE.md).
-  STOCK-01 stays `planned` (technical PASS 2026-10-15 waits for its own record).
+  STOCK-01 is `technically_verified` since 2026-10-21 on the owner's «ok»:
+  [record](evidence/2026-10-20-stock-01-readiness/RECORD.md); the `inventory` module may be enabled.
 - Stripe: CLI 1.54.1 authorized for the owner's sandbox `acct_1UJtGO0mkpVWlKYX`; connected test account
   `acct_1USjOo0mkpWSHVnd`; the K0c driver is kept in
   `docs/plan/evidence/2026-10-20-k0c-stripe-sandbox/test_k0c_run.py.txt`.
@@ -52,10 +54,10 @@ owner is they/them. GateGuard denies the first write of each file: state the fac
 
 ## 4. What is next (choose with the owner)
 
-1. **Merge plan.** Packages J and K sit on stacked branches; propose the order and ask the owner for
-   the word to merge into `main`.
+1. **Merge plan.** Done: `main` is `1a8a180`. The STOCK-01 branch is one step ahead; ask the owner
+   before it goes into `main`.
 2. **FIN-02 gaps** (optional before live): provider retrieval for missing objects (K-05), a
    dead-letter queue and reconciliation (K-12), a refund of a linked parent.
-3. **STOCK-01 record** (its technical evidence exists).
+3. **STOCK-01 record.** Done (`3f68e3f`).
 4. **The road to one launch of all 39 directions** (master plan §13): the industry modules of stages
    3–8 and the stage 9 operations in Azure (each Azure action needs the owner's consent).

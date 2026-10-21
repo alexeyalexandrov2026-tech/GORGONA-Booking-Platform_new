@@ -1,6 +1,16 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-20: FIN-02 technically verified (K5c)
+## Current checkpoint — 2026-10-21: STOCK-01 technically verified; inventory may be enabled
+
+Code `3f68e3f`, local branch `codex/package-stock01-readiness`, parent `1a8a180` (`main`, CI SUCCESS run
+39536393894). On the owner's «ok» the readiness registry records **STOCK-01 `technically_verified`** for
+code `ea74bec`, schema 62, citing the [2026-10-15 acceptance](evidence/2026-10-15-stock-01-acceptance/ACCEPTANCE.md)
+(J-01–J-14 PASS) and the [readiness record](evidence/2026-10-20-stock-01-readiness/RECORD.md). The
+`inventory` module follows STOCK-01 and **may now be enabled** with `finance`; nothing is enabled
+automatically. Limits unchanged (no customer-owned goods, batches, serial numbers, purchase orders or
+multi-warehouse WMS); no production approval. Focused **261 passed**; full **2329 passed, 4 skipped**.
+
+## Previous checkpoint — 2026-10-20: FIN-02 technically verified (K5c)
 
 Code `ea74bec66808f217f7ea56370b9292b4844f7d2b`, local branch `codex/package-k5c-fin02-readiness`, parent
 `2b640e2` (K5r, CI SUCCESS run 39523031370). On the owner's delegation («делай, как ты считаешь нужным…
