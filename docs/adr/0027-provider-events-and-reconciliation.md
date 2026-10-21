@@ -1,5 +1,7 @@
 # ADR-0027 — Provider events and reconciliation
 
+Local K5r source `b4e69e82152961380d21761c9a100515ea1645d1` implements the K5r decision below;
+[validation](../plan/evidence/2026-10-20-k5r-review-fixes/VALIDATION.md).
 Local K5b source `58cf561d0f2d065ad44dac850182fdd61d3fae20` implements the K5b decision below;
 [validation](../plan/evidence/2026-10-20-k5b-open-findings/VALIDATION.md).
 Local K0b source `1eacc1d73c4d13a759be95084d994ef1be6cf4fe` implements the K0b decision below;
@@ -23,6 +25,14 @@ Local K1d source `e9c86bfbd1d22e00ea66a96637cd98e9a58f27b4` implements the K1d d
 Local K1c source `0c72a719cb9743a1f3cd7d60ea26bc46e9e2638c` implements the proposed isolated verifier foundation;
 [validation](../plan/evidence/2026-10-16-k1c-receipt-attestations/VALIDATION.md).
 Status remains Proposed. Operational admission/payment authority and readiness unchanged.
+
+## K5r local decision — 2026-10-20, Proposed; locally implemented in `b4e69e8`
+
+After the K5 final review: each receipt stores the operation key its facts decode to (generated
+columns), so checks look up one operation's events by an index (an expression index on the decoding
+function cannot serve under FORCE RLS); a suspension of a connection is final, because deliveries
+refused while suspended are lost to it; the refund cap counts applied and linked refunds; "names the
+provider ID" follows the direction of the manual payment.
 
 ## K5b local decision — 2026-10-20, Proposed; locally implemented in `58cf561`
 

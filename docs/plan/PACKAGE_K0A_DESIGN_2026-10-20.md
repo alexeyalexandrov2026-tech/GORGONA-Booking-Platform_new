@@ -127,7 +127,7 @@ it in the Stripe Dashboard (step 1 uses that value).
 5. **New dependency?** Default: none (standard library, existing uvicorn and Starlette).
 6. **Evidence of your Stripe run?** Default: I read the database after your run and write a
    redacted record; you send me only the event IDs Stripe printed, if any are missing.
-7. **Suspension undo?** Default: after `suspended` a new `test_access` revision is allowed (both
+7. **Suspension undo?** *(Changed 2026-10-20 by K5r after the final review, R2: a suspension is now final, because deliveries refused while suspended are lost to the connection; provision a new connection.)* Default: after `suspended` a new `test_access` revision is allowed (both
    recorded). Alternative: a suspended connection stays suspended; a new connection is needed.
 
 ## Out of scope

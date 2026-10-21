@@ -92,7 +92,9 @@ Design: [K0a](../plan/PACKAGE_K0A_DESIGN_2026-10-20.md).
 - Admit or suspend (owner database login in `GBA_MIGRATION_DATABASE_URL`):
   `gba-db admit-receipt-connection --tenant <company> --connection <connection> --account acct_…
   --state test_access --evidence "<short note>"`; use `--state suspended` to stop a connection and
-  `--operations charge` or `refund` to allow one kind only. Every revision is kept; a suspension
+  `--operations charge` or `refund` to allow one kind only. **A suspension is final** (K5r): the
+  connection cannot be admitted again, because deliveries refused while suspended are lost to it;
+  provision a new connection to resume. Every revision is kept; a suspension
   waits for work in flight and refuses the next delivery. Applying money for a connection that is
   not admitted answers `PROVIDER_OPERATION_NOT_READY` with reason `not_admitted`.
 - Ingress: `python -m gorgona_booking.providers.ingress_main` with

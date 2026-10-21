@@ -10,7 +10,20 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-20: K5-CI SUCCESS after K0c
+## Current checkpoint — 2026-10-20: K5r fixes of the K5 final review locally verified
+
+Source `b4e69e82152961380d21761c9a100515ea1645d1`, local branch `codex/package-k5r-review-fixes`, parent `ec25a1f`. One independent
+review of K5a-fix, K0b and K5b (owner's «Да, запусти») found no Critical or High issue; K5r fixes the
+two Medium and the Low findings: stored operation keys with an index for the money checks (measured
+~390 ms -> 0.02 ms at 100k events; an expression index was found unusable under FORCE RLS), a
+suspension is final, the refund cap counts linked refunds, direction-aware "names the ID", a worker
+that survives a failed batch, plus web and refusal details. Migrations 0061 (K) and 0062 (H); next
+0063. Focused **787 passed in 817.60s (0:13:37)**; full **2327 passed, 4 skipped in 1907.66s
+(0:31:47)**; static/web/build PASS. Not published. FIN-02 and STOCK-01 stay `planned` until the FIN-02
+acceptance record. [Review](evidence/2026-10-20-k5-final-review/REVIEW.md),
+[validation](evidence/2026-10-20-k5r-review-fixes/VALIDATION.md).
+
+## Previous checkpoint — 2026-10-20: K5-CI SUCCESS after K0c
 
 Branch `codex/package-k5b-open-findings` published for CI only (owner's trust, no PR, no `main`); exact head `e03c678` CI SUCCESS, run 39502582514, including the production image build. FIN-02 stays `planned` until its acceptance record (K-01–K-14) and one independent review of K5a-fix, K0b and K5b. [K5 plan](PACKAGE_K5_PLAN_2026-10-19.md).
 

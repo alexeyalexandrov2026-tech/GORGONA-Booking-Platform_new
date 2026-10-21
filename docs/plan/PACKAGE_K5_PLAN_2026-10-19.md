@@ -1,5 +1,9 @@
 # Package K5 — FIN-02 evidence plan: K0, independent review, CI (2026-10-19)
 
+**K5r 2026-10-20 (later):** the one independent review ran ([record](evidence/2026-10-20-k5-final-review/REVIEW.md));
+its fixes are local in `b4e69e82152961380d21761c9a100515ea1645d1` ([validation](evidence/2026-10-20-k5r-review-fixes/VALIDATION.md)). Next: the
+FIN-02 acceptance record (K-01–K-14); readiness only after it.
+
 **K5-CI 2026-10-20:** branch `codex/package-k5b-open-findings` published for CI only on the owner's «делай, как ты считаешь нужным… я доверяю тебе» (no PR, no `main`); exact head `e03c678` CI **SUCCESS**, run 39502582514 (job 118903498671, read once): web build, PostgreSQL 18, production image build, ruff, mypy and pytest all success. Next: the FIN-02 acceptance record (K-01–K-14) and, as for FIN-01/FIN-03/WORK-01, one independent review of K5a-fix, K0b and K5b before any readiness change (K-14 requires it).
 
 **Update 2026-10-20 (evening): K0c PASS** on real Stripe sandbox events (E-02–E-05; [validation](evidence/2026-10-20-k0c-stripe-sandbox/VALIDATION.md)). Next: K5-CI and K5c.

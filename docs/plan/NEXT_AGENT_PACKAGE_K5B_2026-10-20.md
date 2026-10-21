@@ -56,6 +56,14 @@ launch. See the block at the top of the [master plan](GORGONA_MASTER_PLAN.md) an
   only in memory; races only with an observed `pg_locks` wait; never hide a failure. Work inline;
   write to the owner in Russian, simply; the owner is they/them.
 
+## 4b. Final review and K5r — DONE (2026-10-20)
+
+One independent review of K5a-fix, K0b and K5b ([record](evidence/2026-10-20-k5-final-review/REVIEW.md));
+its fixes are local on branch `codex/package-k5r-review-fixes` in `b4e69e82152961380d21761c9a100515ea1645d1`
+([validation](evidence/2026-10-20-k5r-review-fixes/VALIDATION.md)); migrations 0061 and 0062, next 0063.
+A suspension is now final. Next: the FIN-02 acceptance record (K-01–K-14 with test and run evidence),
+then the readiness decision.
+
 ## 4a. K5-CI — DONE (2026-10-20)
 
 Published for CI only; `e03c678` CI SUCCESS, run 39502582514. Next: the FIN-02 acceptance record (K-01–K-14 with test and run evidence) and one independent review of K5a-fix, K0b and K5b (an agent needs the owner's consent); FIN-02 readiness only after both.

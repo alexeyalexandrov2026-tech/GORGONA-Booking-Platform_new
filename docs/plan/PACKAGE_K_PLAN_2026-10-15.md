@@ -1,5 +1,13 @@
 # Package K — provider events and reconciliation (FIN-02)
 
+## K5r — fixes of the K5 final review (2026-10-20, local)
+
+Source `b4e69e82152961380d21761c9a100515ea1645d1` on local branch `codex/package-k5r-review-fixes`: the final independent review of
+K5a-fix, K0b and K5b found no Critical or High issue; its Medium and Low findings are fixed (0061 K,
+0062 H). Focused 787 passed; full 2327 passed, 4 skipped.
+[Review](evidence/2026-10-20-k5-final-review/REVIEW.md),
+[validation](evidence/2026-10-20-k5r-review-fixes/VALIDATION.md). Next: the FIN-02 acceptance record.
+
 ## K5b — open K5a review findings and manual editor dates (2026-10-20, local)
 
 Source `58cf561d0f2d065ad44dac850182fdd61d3fae20` on local branch `codex/package-k5b-open-findings`: findings 6, 8, 9, 12 and 15 fixed

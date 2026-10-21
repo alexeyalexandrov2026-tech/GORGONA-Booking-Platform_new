@@ -27,5 +27,12 @@ orders, finding-4 revocation rule, effective amounts and voids, captured amounts
 authorization, process login checks, 127.0.0.1 binding, secrets as `SecretStr`, the disabled access
 logger, and the web zone defaults.
 
+## Resolution — K5r, 2026-10-20
+
+Locally implemented in `b4e69e82152961380d21761c9a100515ea1645d1` ([validation](../2026-10-20-k5r-review-fixes/VALIDATION.md)): R1–R7 and
+R9 fixed as decided, PASS. R1 needed a second design: the expression index was unusable under FORCE
+RLS (measured), so the key is stored in generated columns. R8 accepted; a refund of a linked parent
+stays a recorded limit.
+
 Next: the fix slice **K5r** (failing tests first, same process), then the FIN-02 acceptance record
 (K-01–K-14). FIN-02 stays `planned` until both are done.
