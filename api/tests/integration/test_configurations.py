@@ -130,6 +130,7 @@ async def test_lifecycle_keeps_every_version_and_replays(
         "documents",
         "finance",
         "finance_documents",
+        "inventory",
     ]
     assert len(catalog["modules"]) == 19
     registry = (

@@ -206,8 +206,19 @@ async def test_packaged_inventory_schema_passes_guard(
 
 
 async def test_unaccepted_inventory_refuses_writes_and_still_reads(
-    client: httpx.AsyncClient, world: BookingWorld, manager_a: FakeUser, idp: FakeIdp
+    client: httpx.AsyncClient,
+    world: BookingWorld,
+    manager_a: FakeUser,
+    idp: FakeIdp,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # STOCK-01 is technically verified now; a module that is not accepted still refuses writes.
+    current = modules.MODULES_BY_ID["inventory"]
+    monkeypatch.setitem(
+        modules.MODULES_BY_ID,
+        "inventory",
+        current.model_copy(update={"enableable": False, "readiness": Readiness.PLANNED}),
+    )
     base = f"/v1/businesses/{world.a.tenant_id}/inventory"
     auth = idp.bearer(manager_a.subject, email=manager_a.email)
     for path, body in (

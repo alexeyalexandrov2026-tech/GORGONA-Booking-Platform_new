@@ -216,7 +216,25 @@ SCENARIOS: tuple[ScenarioReadiness, ...] = (
         ),
         verified_on=date(2026, 10, 9),
     ),
-    _planned("STOCK-01", "No owner-linked material documents or movements."),
+    ScenarioReadiness(
+        id="STOCK-01",
+        status=Readiness.TECHNICALLY_VERIFIED,
+        code_version="ea74bec66808f217f7ea56370b9292b4844f7d2b",
+        schema_version=62,
+        scope="Basic materials: the shared material list, storage places of a branch, accounts "
+        "of materials per book, receipts with amounts and write-offs at the moving-average cost "
+        "posting to the ledger, transfers between places that move no money, and returns against "
+        "a receipt or write-off line, with the Materials and Stock documents screens. A repeated "
+        "command never repeats a movement. Technical evidence: J-01-J-14 acceptance with exact-SHA "
+        "CI and two independent reviews, then the full suite on the current code; no "
+        "customer-owned goods, batches, serial numbers, purchase orders or multi-warehouse WMS, "
+        "and no production approval.",
+        evidence=(
+            "docs/plan/evidence/2026-10-15-stock-01-acceptance/ACCEPTANCE.md",
+            "docs/plan/evidence/2026-10-20-stock-01-readiness/RECORD.md",
+        ),
+        verified_on=date(2026, 10, 20),
+    ),
     ScenarioReadiness(
         id="WORK-01",
         status=Readiness.TECHNICALLY_VERIFIED,

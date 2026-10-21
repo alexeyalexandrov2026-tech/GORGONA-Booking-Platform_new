@@ -98,6 +98,7 @@ def test_module_registry_is_consistent() -> None:
         "documents",
         "finance",
         "finance_documents",
+        "inventory",
     ]
     assert BASELINE_MODULE_IDS == (BOOKING_MODULE,)
 

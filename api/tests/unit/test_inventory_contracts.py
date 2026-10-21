@@ -14,7 +14,7 @@ from gorgona_booking.auth.permissions import (
 )
 from gorgona_booking.business import modules
 from gorgona_booking.business.inventory_contracts import ItemInput, PlaceInput
-from gorgona_booking.business.readiness_registry import SCENARIOS, at_least
+from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 
 ITEM: dict[str, object] = {
     "expected_revision": 0,
@@ -53,6 +53,23 @@ def test_inventory_module_depends_on_finance_and_follows_stock_01() -> None:
     assert ("DEPENDENCY_MISSING", "inventory") in {
         (code, module_id) for code, module_id, _ in modules.selection_problems(["inventory"])
     }
+
+
+def test_stock_01_is_technically_verified_and_inventory_may_be_enabled() -> None:
+    # Owner 2026-10-20: «ok» to the STOCK-01 readiness record; never a pilot or production approval.
+    scenario = next(s for s in SCENARIOS if s.id == "STOCK-01")
+    assert (scenario.status, scenario.code_version, scenario.schema_version) == (
+        Readiness.TECHNICALLY_VERIFIED,
+        "ea74bec66808f217f7ea56370b9292b4844f7d2b",
+        62,
+    )
+    assert "docs/plan/evidence/2026-10-15-stock-01-acceptance/ACCEPTANCE.md" in scenario.evidence
+    assert "docs/plan/evidence/2026-10-20-stock-01-readiness/RECORD.md" in scenario.evidence
+    assert "no production approval" in scenario.scope
+    module = modules.MODULES_BY_ID["inventory"]
+    assert module.enableable
+    assert "cannot be enabled" not in module.limits
+    assert "Screens are not implemented" not in module.limits
 
 
 def test_material_and_place_inputs_accept_the_documented_shape() -> None:

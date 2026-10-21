@@ -198,8 +198,8 @@ MODULES: tuple[PlatformModule, ...] = (
         "amounts and write-offs at the moving-average cost, which post to the ledger, and "
         "transfers between storage places, which move no money, and returns against a line "
         "of a receipt or a write-off. "
-        "Screens are not implemented, and the module cannot be "
-        "enabled before the STOCK-01 acceptance. "
+        "The Materials and Stock documents screens show and post them (STOCK-01, technically "
+        "verified 2026-10-20). "
         "No customer-owned goods, batches, serial numbers or purchase orders.",
         "New materials, storage places, posting rules and stock documents. Reads and history "
         "continue.",
