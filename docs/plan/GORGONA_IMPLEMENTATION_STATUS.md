@@ -1,6 +1,17 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-21: STOCK-01 technically verified; inventory may be enabled
+## Current checkpoint — 2026-10-21: K6a bounded retries and parked provider events (FIN-02 gaps)
+
+Code `2f577bc`, local branch `codex/package-k6a-bounded-retries`, parent `8b8f8a3` (K6 design,
+owner: «1» and «Да, все умолчания»). The receipt worker no longer lets one failing event stop its
+batch or retry forever: failures are recorded (migration 0063), retried after 1, 2, 4, 8 minutes and
+parked after 5; a finance user presses **Try again** with a note. Every order of a payment and its
+refund (720) converges (K-05). Focused **599 passed**; full **2354 passed, 4 skipped**. FIN-02 stays
+`technically_verified` with K-05/K-12 PARTIAL until K6b (event backfill) and K6c (sandbox run). Next
+migration **0064**. [Validation](evidence/2026-10-21-k6a-bounded-retries/VALIDATION.md),
+[K6 design](PACKAGE_K6_DESIGN_2026-10-21.md).
+
+## Previous checkpoint — 2026-10-21: STOCK-01 technically verified; inventory may be enabled
 
 Code `3f68e3f`, local branch `codex/package-stock01-readiness`, parent `1a8a180` (`main`, CI SUCCESS run
 39536393894). On the owner's «ok» the readiness registry records **STOCK-01 `technically_verified`** for
