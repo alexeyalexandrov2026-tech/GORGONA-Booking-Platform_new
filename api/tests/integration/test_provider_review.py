@@ -205,6 +205,8 @@ async def test_attention_lists_undecided_events_and_decisions_without_an_operati
             "created",
             "reason",
             "acknowledgement",
+            # K6a: failed decisions of the current round, if any.
+            "failure",
         }
 
 

@@ -41,6 +41,9 @@ K_TABLES = {
     "provider_payment_links",
     # K0b (0057): the owner's admissions of receipt connections.
     "provider_connection_admissions",
+    # K6a (0063): failed decisions and releases of parked events.
+    "provider_event_failures",
+    "provider_event_releases",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

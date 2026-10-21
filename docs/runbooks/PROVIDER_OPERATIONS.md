@@ -48,7 +48,8 @@ local process, so events wait as "not decided yet" while it is stopped.
 | `PROVIDER_OPERATION_LINKED` | The operation is linked to a manual payment, or a new manual payment names a linked operation | It never moves money itself. A second link, another note or a second manual payment for it is refused; read the existing link. |
 | `PROVIDER_LINK_MISMATCH` | The manual payment does not match: amount, currency, direction, a date more than 3 days apart, voided, already linked, not a manual payment, its reference does not name the ID, or the facts changed while linking (`facts`; the message names which) | Choose the manual payment that recorded this provider operation, or correct it first through its settlement. |
 | `PROVIDER_ATTENTION_ACKNOWLEDGED` | The item was already acknowledged with another note | Read the existing note; an acknowledgement is permanent. |
-| `PROVIDER_ATTENTION_NOT_NEEDED` | The event belongs to an operation or is not decided yet (`facts`: the database decided so while it was being acknowledged) | Use the operation's state instead; undecided events need no acknowledgement. |
+| `PROVIDER_ATTENTION_NOT_NEEDED` | The event belongs to an operation or is not decided yet (`facts`: the database decided so while it was being acknowledged); for **Try again**, the event is not stopped after failed attempts (`not_failed`) | Use the operation's state instead; undecided events need no acknowledgement, and only a stopped event takes **Try again**. |
+| `PROVIDER_EVENT_RELEASED` | The stopped event was already released with another note (K6a) | Read the existing note; the worker is already trying it again. |
 
 ## Linking a manual payment (K3b)
 
@@ -69,7 +70,13 @@ clearing account**. It cannot be changed later. Repeating the same account is sa
 
 - **Waiting for the receipt worker**: an event is attested but not decided. It is decided
   automatically; there is nothing to do on this screen. If it stays for long, the worker is not
-  running — tell the operator.
+  running — tell the operator. When earlier attempts failed, the item shows how many and the
+  error class; the worker tries again after 1, 2, 4 and 8 minutes by itself.
+- **Stopped after 5 failed attempts** (K6a): the worker could not decide the event five times in a
+  row and stopped trying, so it does not hold up other events. Nothing was decided or booked. Tell
+  the operator the error class; once the cause is fixed, press **Try again** with a note of what was
+  fixed. The note is permanent; the worker then tries again with the same limits. Repeating the
+  same note is safe; another note is refused (`PROVIDER_EVENT_RELEASED`).
 - **No payment to attach it to** (`unkeyed_operation`) or **a refund without its payment**
   (`refund_without_payment`): the provider reported something that does not belong to a payment
   this platform can see. Check it in the provider's dashboard by its ID (`ch_…`, `re_…`), then
@@ -105,6 +112,11 @@ Design: [K0a](../plan/PACKAGE_K0A_DESIGN_2026-10-20.md).
 - Worker: `python -m gorgona_booking.providers.worker_main` (every 5 s; `--once` for one batch;
   `--interval 1-300`) with `GBA_RECEIPT_WORKER_DATABASE_URL` (receipt worker login); Ctrl+C stops
   it after the current batch. Events of a suspended or unadmitted connection wait undecided.
+  K6a: when deciding one event fails with a database error about that event (a check, data or
+  integrity error), the worker records the error class, goes on with the other events and tries
+  that one again after 1, 2, 4 and 8 minutes; after 5 failures it stops trying until a finance user
+  presses **Try again**. A lost connection, a timeout or damaged privileges stop the whole batch
+  without counting, so an outage never stops healthy events; the next batch tries again.
 - Logs carry counts and outcomes only: no payload, key, account or ingress ID.
 - A `charge.refunded` event has no operation key and always appears under "needs attention"
   (`unkeyed_operation`); the refund itself is decided from its `refund.*` events. Acknowledge it.
@@ -115,11 +127,13 @@ Design: [K0a](../plan/PACKAGE_K0A_DESIGN_2026-10-20.md).
 
 ## Metrics (operators)
 
-With telemetry configured, the API and worker export two counters, each with the company
+With telemetry configured, the API and worker export four counters, each with the company
 identifier and no payload values:
 
 - `gorgona.provider_receipt_decisions` — by `outcome` and `reason`;
-- `gorgona.provider_applications` — by `result` (`applied` or the refusal code); only requests that passed authorization for a real company are counted.
+- `gorgona.provider_applications` — by `result` (`applied` or the refusal code); only requests that passed authorization for a real company are counted;
+- `gorgona.provider_receipt_failures` — failed decisions by `error_class` and `parked` (K6a);
+- `gorgona.provider_receipt_releases` — **Try again** releases of stopped events (K6a).
 
 Refusals also appear in `gorgona.domain_errors` by code and route. A rising `needs_review` count
 or `PROVIDER_OPERATION_NOT_READY` results for one company points to a provider-side difference;

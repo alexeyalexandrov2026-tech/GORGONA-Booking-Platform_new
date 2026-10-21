@@ -14,6 +14,7 @@ type Fixture = {
   conflict_delivered: string;
   orphan: string;
   waiting: string;
+  parked: string;
 };
 // Row actions other than "Details" (K4b): an operation row offers none.
 const action = { name: /^(?!Details of )/ };
@@ -311,6 +312,23 @@ test("provider review: what disagrees, needs attention and acknowledgement", asy
     items.getByRole("listitem").filter({ hasText: f.orphan }),
   ).toContainText(`Handled: ${note}`);
   await expect(form).toHaveCount(0);
+
+  // K6a: an event stopped after five failed decisions is tried again only after a note.
+  const stopped = attention.getByRole("form", {
+    name: `Try again ${f.parked}`,
+  });
+  await expect(stopped).toContainText("Stopped after 5 failed attempts");
+  await expect(stopped).toContainText("DivisionByZero");
+  await expect(stopped).toContainText("Nothing was decided or booked");
+  await accessible(page);
+  await stopped
+    .getByLabel("What was fixed")
+    .fill(`FAKE ${name} fixed the cause`);
+  await stopped.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(
+    items.getByRole("listitem").filter({ hasText: f.parked }),
+  ).toContainText("Waiting for the receipt worker");
+  await expect(stopped).toHaveCount(0);
 
   // Owner decision 1: the fields that disagree, with both values.
   await choose(

@@ -101,12 +101,16 @@ export function providerRefusal(e: ManagementApiError): string | null {
                 : e.code === "PROVIDER_ATTENTION_ACKNOWLEDGED"
                   ? "This event was already acknowledged with another note."
                   : e.code === "PROVIDER_ATTENTION_NOT_NEEDED"
-                    ? "This event needs no acknowledgement: it belongs to an operation or is not decided yet."
-                    : e.code === "PROVIDER_OPERATION_LINKED"
-                      ? "This provider operation is linked to a manual payment and never moves money itself."
-                      : e.code === "PROVIDER_LINK_MISMATCH"
-                        ? `This manual payment does not match the provider operation. ${LINK_MISMATCH[reason ?? ""] ?? ""}`.trim()
-                        : null;
+                    ? reason === "not_failed"
+                      ? "This event is not stopped: the worker still tries it by itself."
+                      : "This event needs no acknowledgement: it belongs to an operation or is not decided yet."
+                    : e.code === "PROVIDER_EVENT_RELEASED"
+                      ? "This event was already released with another note; the worker is trying it again."
+                      : e.code === "PROVIDER_OPERATION_LINKED"
+                        ? "This provider operation is linked to a manual payment and never moves money itself."
+                        : e.code === "PROVIDER_LINK_MISMATCH"
+                          ? `This manual payment does not match the provider operation. ${LINK_MISMATCH[reason ?? ""] ?? ""}`.trim()
+                          : null;
   return text && `${text} (${e.code})`;
 }
 const failure = (e: unknown) =>
@@ -655,10 +659,21 @@ function ProviderAttention({
               </strong>{" "}
               · created {new Date(x.created).toLocaleDateString()}
             </p>
-            {x.kind === "undecided" ? (
+            {x.kind === "failed" && x.failure ? (
+              <ReleaseForm
+                businessId={businessId}
+                bookId={bookId}
+                item={x}
+                failure={x.failure}
+                disabled={disabled || busy}
+                done={() => setLocal((n) => n + 1)}
+              />
+            ) : x.kind === "undecided" ? (
               <p>
                 Waiting for the receipt worker. It is decided automatically;
                 there is nothing to acknowledge.
+                {x.failure &&
+                  ` Earlier attempts failed ${x.failure.attempts} of 5 times (${x.failure.error_class}); the worker tries again by itself.`}
               </p>
             ) : x.acknowledgement ? (
               <p>
@@ -685,6 +700,62 @@ function ProviderAttention({
         </button>
       )}
     </section>
+  );
+}
+
+/** K6a: a stopped event is tried again only after a finance user's note. */
+function ReleaseForm({
+  businessId,
+  bookId,
+  item,
+  failure: stopped,
+  disabled,
+  done,
+}: {
+  businessId: string;
+  bookId: string;
+  item: ProviderAttentionItem;
+  failure: NonNullable<ProviderAttentionItem["failure"]>;
+  disabled: boolean;
+  done: () => void;
+}) {
+  const [note, setNote] = useState(""),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null);
+  return (
+    <form
+      aria-label={`Try again ${item.object_id}`}
+      onSubmit={(e) => {
+        e.preventDefault();
+        setBusy(true);
+        setError(null);
+        // Safe to repeat: the same note again returns the existing release.
+        void api
+          .releaseProviderEvent(businessId, bookId, item.event_id, note.trim())
+          .then(done, (e) => setError(failure(e)))
+          .finally(() => setBusy(false));
+      }}
+    >
+      <fieldset disabled={disabled || busy}>
+        <legend>Stopped after {stopped.attempts} failed attempts</legend>
+        <p>
+          The receipt worker could not decide this event ({stopped.error_class},
+          last at {new Date(stopped.last_failed_at).toLocaleString()}) and
+          stopped trying. Nothing was decided or booked. Once the cause is
+          fixed, record what was fixed; the note is permanent.
+        </p>
+        <Field label="What was fixed">
+          <input
+            required
+            maxLength={500}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </Field>
+        <button type="submit">Try again</button>
+      </fieldset>
+      {error && <p role="alert">{error}</p>}
+    </form>
   );
 }
 

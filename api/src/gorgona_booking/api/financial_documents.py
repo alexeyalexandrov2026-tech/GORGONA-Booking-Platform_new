@@ -54,6 +54,8 @@ from gorgona_booking.business.settlement_contracts import (
     ProviderOperationList,
     ProviderOperationState,
     ProviderPaymentConfirmInput,
+    ProviderReleaseInput,
+    ProviderReleaseResult,
     SettlementAction,
     SettlementActionInput,
     SettlementCancelInput,
@@ -646,6 +648,27 @@ async def provider_acknowledgement(
     """A finance user marks a decision without an operation as handled, with a note."""
     async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
         return await provider_review.acknowledge(
+            access.conn,
+            business_id=business_id,
+            book_id=book_id,
+            event_id=event_id,
+            user_id=principal.user_id,
+            body=body,
+        )
+
+
+@router.put("/books/{book_id}/provider-attention/{event_id}/release")
+async def provider_release(
+    business_id: UUID,
+    book_id: UUID,
+    event_id: UUID,
+    body: ProviderReleaseInput,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ProviderReleaseResult:
+    """K6a: a finance user lets the worker try a parked event again, with a note."""
+    async with _access(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await provider_review.release(
             access.conn,
             business_id=business_id,
             book_id=book_id,

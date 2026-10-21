@@ -31,7 +31,8 @@ def test_the_runbook_names_every_operation_state() -> None:
 def test_the_runbook_explains_every_provider_refusal_code() -> None:
     text = RUNBOOK.read_text(encoding="utf-8")
     codes = _codes()
-    assert len(codes) == 10
+    # K6a adds PROVIDER_EVENT_RELEASED (a stopped event released with another note).
+    assert len(codes) == 11
     for code in codes:
         assert f"| `{code}` |" in text, code
 

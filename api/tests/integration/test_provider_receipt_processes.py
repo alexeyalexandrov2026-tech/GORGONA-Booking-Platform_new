@@ -172,8 +172,12 @@ async def test_the_processes_receive_and_decide_a_signed_payment_once(
         answer = await deliver(port, keyed, raw)
         assert (answer.status_code, answer.content) == (200, b'{"received":true}')
     settings = worker_settings(started.values, ["--once"])
-    # The shared test database may hold other companies' undecided events; count this one's.
-    assert await run_worker(settings) >= 1
+    # The shared test database may hold other companies' undecided events, oldest first, more
+    # than one batch of them; run batches until this company's event is decided (K6a).
+    for _ in range(20):
+        assert await run_worker(settings) >= 0
+        if await decided.decisions(app_pool, keyed.tenant_id):
+            break
     assert len(await decided.decisions(app_pool, keyed.tenant_id)) == 1
     await run_worker(settings)
     assert len(await decided.decisions(app_pool, keyed.tenant_id)) == 1

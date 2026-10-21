@@ -3,6 +3,10 @@
 Reads name stored facts only: never a raw body, signature, secret reference or verification
 config. An acknowledgement (owner decision 2, 2026-10-18) records that a finance user handled a
 decision without an operation; it changes no money and no decision (migration 0053).
+
+K6a (owner 2026-10-21): an undecided event parked after five failed decisions is listed as
+`failed` with its error class; a finance user's release (migration 0063) lets the worker try
+again. A release decides, books and edits nothing.
 """
 
 import json
@@ -32,16 +36,21 @@ from gorgona_booking.business.settlement_contracts import (
     ProviderDeliveryDifference,
     ProviderDeliveryView,
     ProviderEventView,
+    ProviderFailureView,
     ProviderLinkCandidate,
     ProviderLinkInput,
     ProviderLinkResult,
     ProviderLinkView,
     ProviderOperationDetail,
     ProviderOperationSummary,
+    ProviderReleaseInput,
+    ProviderReleaseResult,
 )
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.db.provider_receipt_guard import assert_provider_receipt_ready
 from gorgona_booking.errors import ConflictError, DatabaseUnavailableError, NotFoundError
+from gorgona_booking.observability import record_provider_release
+from gorgona_booking.providers.receipt_worker import MAX_FAILURES
 
 
 class ProviderAttentionAcknowledgedError(ConflictError):
@@ -50,6 +59,12 @@ class ProviderAttentionAcknowledgedError(ConflictError):
 
 class ProviderAttentionNotNeededError(ConflictError):
     code = "PROVIDER_ATTENTION_NOT_NEEDED"
+
+
+class ProviderEventReleasedError(ConflictError):
+    """K6a: the event was released with another note; its worker is already trying again."""
+
+    code = "PROVIDER_EVENT_RELEASED"
 
 
 def link_refusal_reason(exc: psycopg.errors.CheckViolation) -> str:
@@ -76,11 +91,18 @@ _DELIVERIES = (
 # An attested event of the book without a decision, or decided without an operation.
 _ATTENTION = (
     "select e.id,e.connection_id,e.facts->>'event_type',(e.facts->>'created')::bigint,d.reason,"
-    "k.note,k.created_by,k.created_at,e.facts->'resource'->>'id' from gba.provider_event_inbox e "
+    "k.note,k.created_by,k.created_at,e.facts->'resource'->>'id',"
+    "x.attempts,x.error_class,x.last_failed_at from gba.provider_event_inbox e "
     "join gba.provider_receipt_connections c on c.tenant_id=e.tenant_id and c.id=e.connection_id "
     "left join gba.provider_event_decisions d on d.tenant_id=e.tenant_id and d.event_id=e.id "
     "left join gba.provider_event_acknowledgements k "
     "on k.tenant_id=e.tenant_id and k.event_id=e.id "
+    # K6a: failed decisions of the current round (after the latest release), newest class.
+    "cross join lateral (select count(*) attempts,max(f.failed_at) last_failed_at,"
+    "(array_agg(f.error_class order by f.failed_at desc,f.generation desc))[1] error_class "
+    "from gba.provider_event_failures f where f.tenant_id=e.tenant_id and f.event_id=e.id "
+    "and f.round=(select count(*) from gba.provider_event_releases r "
+    "where r.tenant_id=e.tenant_id and r.event_id=e.id)) x "
     "where e.tenant_id=%s and c.book_id=%s and exists(select 1 "
     "from gba.provider_event_attestations a where a.tenant_id=e.tenant_id and a.event_id=e.id) "
     "and (d.event_id is null or d.operation_id is null) "
@@ -324,10 +346,15 @@ async def link(
 
 
 def _item(row: tuple[Any, ...]) -> ProviderAttentionItem:
+    attempts = int(row[9])
     return ProviderAttentionItem(
         event_id=row[0],
         connection_id=row[1],
-        kind="undecided" if row[4] is None else "no_operation",
+        kind="no_operation"
+        if row[4] is not None
+        else "failed"
+        if attempts >= MAX_FAILURES
+        else "undecided",
         event_type=row[2],
         object_id=row[8],
         created=_created(row[3]),
@@ -337,6 +364,9 @@ def _item(row: tuple[Any, ...]) -> ProviderAttentionItem:
         else ProviderAcknowledgementView(
             note=row[5], acknowledged_by=row[6], acknowledged_at=row[7]
         ),
+        failure=None
+        if attempts == 0
+        else ProviderFailureView(attempts=attempts, error_class=row[10], last_failed_at=row[11]),
     )
 
 
@@ -374,6 +404,79 @@ async def _attention_item(
     return None if row is None else _item(tuple(row))
 
 
+async def _not_listed(
+    conn: RuntimeConnection, business_id: UUID, book_id: UUID, event_id: UUID
+) -> ConflictError | NotFoundError:
+    """The refusal for an event the attention list does not hold: unknown, or decided."""
+    known = await (
+        await conn.execute(
+            "select 1 from gba.provider_event_inbox e "
+            "join gba.provider_receipt_connections c "
+            "on c.tenant_id=e.tenant_id and c.id=e.connection_id "
+            "where e.tenant_id=%s and c.book_id=%s and e.id=%s and exists(select 1 "
+            "from gba.provider_event_attestations a "
+            "where a.tenant_id=e.tenant_id and a.event_id=e.id)",
+            (business_id, book_id, event_id),
+        )
+    ).fetchone()
+    if known is None:
+        return NotFoundError("Provider event not found")
+    return ProviderAttentionNotNeededError(
+        "This event belongs to a provider operation", reason="operation"
+    )
+
+
+async def release(
+    conn: RuntimeConnection,
+    *,
+    business_id: UUID,
+    book_id: UUID,
+    event_id: UUID,
+    user_id: UUID,
+    body: ProviderReleaseInput,
+) -> ProviderReleaseResult:
+    """K6a: release a parked event once per parking; the same note again returns the result."""
+    await require_workflow(conn, business_id)
+    await ledger.require_book(conn, business_id, book_id)
+    await assert_provider_receipt_ready(conn)
+    item = await _attention_item(conn, business_id, book_id, event_id)
+    if item is None:
+        raise await _not_listed(conn, business_id, book_id, event_id)
+    if item.kind == "failed":
+        try:
+            async with conn.transaction():
+                await conn.execute(
+                    "insert into gba.provider_event_releases (tenant_id,event_id,note,released_by) "
+                    "values (%s,%s,%s,%s)",
+                    (business_id, event_id, body.note, user_id),
+                )
+        except psycopg.errors.UniqueViolation:
+            pass  # Another request released it first; compare its note below.
+        except psycopg.errors.CheckViolation as exc:
+            raise ProviderAttentionNotNeededError(
+                "This event takes no release; reload to see its state", reason="facts"
+            ) from exc
+        else:
+            record_provider_release(business_id)
+        item = await _attention_item(conn, business_id, book_id, event_id)
+        if item is None:
+            raise await _not_listed(conn, business_id, book_id, event_id)
+    latest = await (
+        await conn.execute(
+            "select note from gba.provider_event_releases where tenant_id=%s and event_id=%s "
+            "order by round desc limit 1",
+            (business_id, event_id),
+        )
+    ).fetchone()
+    if item.kind == "failed" or latest is None:
+        raise ProviderAttentionNotNeededError(
+            "Only an event parked after failed decisions takes a release", reason="not_failed"
+        )
+    if latest[0] != body.note:
+        raise ProviderEventReleasedError("This event was already released with another note")
+    return ProviderReleaseResult(business_id=business_id, book_id=book_id, item=item)
+
+
 async def acknowledge(
     conn: RuntimeConnection,
     *,
@@ -389,23 +492,8 @@ async def acknowledge(
     await assert_provider_receipt_ready(conn)
     item = await _attention_item(conn, business_id, book_id, event_id)
     if item is None:
-        known = await (
-            await conn.execute(
-                "select 1 from gba.provider_event_inbox e "
-                "join gba.provider_receipt_connections c "
-                "on c.tenant_id=e.tenant_id and c.id=e.connection_id "
-                "where e.tenant_id=%s and c.book_id=%s and e.id=%s and exists(select 1 "
-                "from gba.provider_event_attestations a "
-                "where a.tenant_id=e.tenant_id and a.event_id=e.id)",
-                (business_id, book_id, event_id),
-            )
-        ).fetchone()
-        if known is None:
-            raise NotFoundError("Provider event not found")
-        raise ProviderAttentionNotNeededError(
-            "This event belongs to a provider operation", reason="operation"
-        )
-    if item.kind == "undecided":
+        raise await _not_listed(conn, business_id, book_id, event_id)
+    if item.kind in ("undecided", "failed"):
         raise ProviderAttentionNotNeededError("This event is not decided yet", reason="undecided")
     if item.acknowledgement is None:
         try:

@@ -517,18 +517,31 @@ class ProviderAcknowledgementView(Strict):
     acknowledged_at: AwareDatetime
 
 
+class ProviderFailureView(Strict):
+    """K6a: failed decisions of an event in its current round; the error class only."""
+
+    attempts: int
+    error_class: str
+    last_failed_at: AwareDatetime
+
+
 class ProviderAttentionItem(Strict):
-    """An attested event without a decision, or a decision without a provider operation."""
+    """An attested event without a decision, or a decision without a provider operation.
+
+    K6a: `failed` is an undecided event parked after five failed decisions; it waits for a
+    finance user's release.
+    """
 
     event_id: UUID
     connection_id: UUID
-    kind: Literal["undecided", "no_operation"]
+    kind: Literal["undecided", "no_operation", "failed"]
     event_type: str
     # The provider's own ID of the object (pi_, ch_ or re_), to find it at the provider.
     object_id: str
     created: AwareDatetime
     reason: ProviderOrphanReason | None
     acknowledgement: ProviderAcknowledgementView | None
+    failure: ProviderFailureView | None = None
 
 
 class ProviderAttentionList(Versioned):
@@ -553,6 +566,16 @@ class ProviderAcknowledgeInput(Versioned):
 
 
 class ProviderAcknowledgementResult(Versioned):
+    business_id: UUID
+    book_id: UUID
+    item: ProviderAttentionItem
+
+
+class ProviderReleaseInput(ProviderAcknowledgeInput):
+    """K6a: a finance user's note that the cause of a parked event's failures was handled."""
+
+
+class ProviderReleaseResult(Versioned):
     business_id: UUID
     book_id: UUID
     item: ProviderAttentionItem

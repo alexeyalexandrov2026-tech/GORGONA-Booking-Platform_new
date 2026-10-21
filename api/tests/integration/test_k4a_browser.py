@@ -18,6 +18,8 @@ import pytest
 from fastapi import FastAPI
 
 from gorgona_booking.db.provisioning import add_membership, owner_tenant_transaction
+from gorgona_booking.providers.receipt_worker import MAX_FAILURES
+from tests.integration import test_k6a_bounded_retries as retries
 from tests.integration import test_provider_payments as shared
 from tests.integration import test_provider_receipt_attestations as attested
 from tests.integration import test_provider_receipt_decisions as decided
@@ -113,6 +115,8 @@ async def project(money: Money, name: str, n: int) -> dict[str, str]:
         "conflict_delivered": f"3{n}99",
         "orphan": orphan,
         "waiting": f"pi_FAKE{name}Waiting",
+        # K6a: stopped after five failed decisions; released in the browser.
+        "parked": f"pi_FAKE{name}Parked",
     }
 
 
@@ -191,6 +195,13 @@ async def test_k4a_real_browser_provider_operations(
         ),
     )
     assert total == SLOW + 3 * len(PROJECTS)
+    parked = await decided.receive_all(
+        money.writer,
+        money.routed,
+        *(event("payment_intent.succeeded", object_id=item["parked"]) for item in fixture.values()),
+    )
+    for event_id in parked:
+        await retries.fail(money.worker, money.routed.tenant_id, event_id, MAX_FAILURES)
     app_port, idp_port = free_port(), free_port()
     origin, issuer = f"http://127.0.0.1:{app_port}", f"http://127.0.0.1:{idp_port}"
     owner = seed_user(owner_conn, f"FAKE-k4a-browser-{uuid7()}", issuer=issuer)
@@ -255,4 +266,14 @@ async def test_k4a_real_browser_provider_operations(
         assert rows == sorted(
             (item["orphan"], f"FAKE {name} checked with the provider")
             for name, item in fixture.items()
+        )
+        # K6a: each project released its stopped event once, with its own note.
+        rows = owner_conn.execute(
+            "select e.facts->'resource'->>'id',r.round,r.note from gba.provider_event_releases r "
+            "join gba.provider_event_inbox e on e.tenant_id=r.tenant_id and e.id=r.event_id "
+            "where r.tenant_id=%s order by 1",
+            (routed.tenant_id,),
+        ).fetchall()
+        assert rows == sorted(
+            (item["parked"], 1, f"FAKE {name} fixed the cause") for name, item in fixture.items()
         )

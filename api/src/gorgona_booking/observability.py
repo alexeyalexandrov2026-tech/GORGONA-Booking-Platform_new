@@ -67,6 +67,15 @@ _provider_applications = _meter.create_counter(
     "gorgona.provider_applications",
     description="Applications of observed provider operations, by result and company",
 )
+# K6a: failed receipt decisions and releases of parked events; error classes only.
+_provider_failures = _meter.create_counter(
+    "gorgona.provider_receipt_failures",
+    description="Failed provider receipt decisions, by error class, parking and company",
+)
+_provider_releases = _meter.create_counter(
+    "gorgona.provider_receipt_releases",
+    description="Releases of parked provider receipt events, by company",
+)
 
 
 class JsonFormatter(logging.Formatter):
@@ -114,6 +123,16 @@ def record_provider_decision(outcome: str, reason: str, tenant_id: UUID) -> None
 def record_provider_application(result: str, tenant_id: UUID) -> None:
     """`applied`, or the refusal code; a replayed request counts again."""
     _provider_applications.add(1, {"result": result, "tenant_id": str(tenant_id)})
+
+
+def record_provider_failure(error_class: str, parked: bool, tenant_id: UUID) -> None:
+    _provider_failures.add(
+        1, {"error_class": error_class, "parked": parked, "tenant_id": str(tenant_id)}
+    )
+
+
+def record_provider_release(tenant_id: UUID) -> None:
+    _provider_releases.add(1, {"tenant_id": str(tenant_id)})
 
 
 def route_template(scope: Scope) -> str:

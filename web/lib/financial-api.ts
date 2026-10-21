@@ -19,6 +19,7 @@ import {
   providerOperationDetailSchema,
   providerAttentionListSchema,
   providerAcknowledgementSchema,
+  providerReleaseSchema,
   providerLinkResultSchema,
   type FinancialCommand,
   type FinancialReference,
@@ -240,6 +241,23 @@ export async function acknowledgeProviderEvent(
     business,
     providerAcknowledgementSchema,
     `${bookBase(business, book)}/provider-attention/${event}/acknowledgement`,
+    book,
+    { method: "PUT", body: JSON.stringify({ schema_version: 1, note }) },
+  );
+  exact(result.item.event_id, event);
+  return result;
+}
+/** K6a: let the worker try a stopped event again; the same note again is safe. */
+export async function releaseProviderEvent(
+  business: string,
+  book: string,
+  event: string,
+  note: string,
+) {
+  const result = await read(
+    business,
+    providerReleaseSchema,
+    `${bookBase(business, book)}/provider-attention/${event}/release`,
     book,
     { method: "PUT", body: JSON.stringify({ schema_version: 1, note }) },
   );

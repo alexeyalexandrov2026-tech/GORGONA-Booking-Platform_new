@@ -555,7 +555,8 @@ const providerAttentionItem = z
   .strictObject({
     event_id: id,
     connection_id: id,
-    kind: z.enum(["undecided", "no_operation"]),
+    // K6a: `failed` is an undecided event stopped after five failed decisions.
+    kind: z.enum(["undecided", "no_operation", "failed"]),
     event_type: providerEventType,
     object_id: z.string().regex(/^(pi|ch|re)_[A-Za-z0-9]{1,100}$/),
     created: instant,
@@ -567,9 +568,17 @@ const providerAttentionItem = z
         acknowledged_at: instant,
       })
       .nullable(),
+    failure: z
+      .strictObject({
+        attempts: z.number().int().min(1).max(5),
+        error_class: z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,63}$/),
+        last_failed_at: instant,
+      })
+      .nullable(),
   })
-  .refine((v) => (v.kind === "undecided") === (v.reason === null))
-  .refine((v) => v.kind === "no_operation" || v.acknowledgement === null);
+  .refine((v) => (v.kind === "no_operation") === (v.reason !== null))
+  .refine((v) => v.kind === "no_operation" || v.acknowledgement === null)
+  .refine((v) => (v.kind === "failed") === (v.failure?.attempts === 5));
 export const providerAttentionListSchema = z
   .strictObject({
     ...envelope,
@@ -582,6 +591,10 @@ export const providerAcknowledgementSchema = z
   .refine(
     (v) => v.item.kind === "no_operation" && v.item.acknowledgement !== null,
   );
+/** K6a: a released event is no longer stopped; it waits for the worker or is decided. */
+export const providerReleaseSchema = z
+  .strictObject({ ...envelope, item: providerAttentionItem })
+  .refine((v) => v.item.kind !== "failed");
 const settlementStatus = z.enum([
   "prepared",
   "approved",
@@ -1002,7 +1015,7 @@ export function financialResponseSchema(
   )
     return financialStatusSchema;
   const provider =
-    /^\/financial-documents\/books\/[0-9a-f-]{36}\/(provider-operations|provider-connections|provider-attention)(\/[0-9a-f-]{36})?(\/(?:clearing-account|acknowledgement|link))?$/i.exec(
+    /^\/financial-documents\/books\/[0-9a-f-]{36}\/(provider-operations|provider-connections|provider-attention)(\/[0-9a-f-]{36})?(\/(?:clearing-account|acknowledgement|release|link))?$/i.exec(
       path,
     );
   if (provider) {
@@ -1022,9 +1035,11 @@ export function financialResponseSchema(
         ? providerClearingAccountSchema
         : family === "provider-attention" && action === "/acknowledgement"
           ? providerAcknowledgementSchema
-          : family === "provider-operations" && action === "/link"
-            ? providerLinkResultSchema
-            : undefined;
+          : family === "provider-attention" && action === "/release"
+            ? providerReleaseSchema
+            : family === "provider-operations" && action === "/link"
+              ? providerLinkResultSchema
+              : undefined;
     return undefined;
   }
   const match =

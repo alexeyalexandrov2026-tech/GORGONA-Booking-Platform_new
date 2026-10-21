@@ -18,6 +18,7 @@ import {
   providerOperationDetailSchema,
   providerAttentionListSchema,
   providerAcknowledgementSchema,
+  providerReleaseSchema,
   providerLinkResultSchema,
 } from "../lib/financial-contracts";
 import {
@@ -1044,6 +1045,7 @@ test("attention items are undecided or without an operation, and acknowledged on
     created: instant,
     reason: null,
     acknowledgement: null,
+    failure: null,
   };
   const orphan = {
     ...undecided,
@@ -1086,6 +1088,50 @@ test("attention items are undecided or without an operation, and acknowledged on
       .success,
   ).toBe(false);
 });
+test("K6a: a stopped event shows five failures and a release no longer shows it stopped", () => {
+  const failure = {
+    attempts: 5,
+    error_class: "DivisionByZero",
+    last_failed_at: instant,
+  };
+  const waiting = {
+    event_id: entry,
+    connection_id: connection,
+    kind: "undecided",
+    event_type: "payment_intent.succeeded",
+    object_id: "pi_FAKEwaiting1",
+    created: instant,
+    reason: null,
+    acknowledgement: null,
+    failure: { ...failure, attempts: 2 },
+  };
+  const stopped = { ...waiting, event_id: document, kind: "failed", failure };
+  expect(
+    providerAttentionListSchema.safeParse(operationPage(waiting, stopped))
+      .success,
+  ).toBe(true);
+  for (const item of [
+    { ...stopped, failure: null },
+    { ...stopped, failure: { ...failure, attempts: 4 } },
+    { ...waiting, failure },
+    { ...stopped, reason: "unkeyed_operation" },
+    { ...stopped, failure: { ...failure, error_class: "not a class" } },
+    { ...stopped, failure: { ...failure, message: "FAKE secret" } },
+    { ...waiting, failure: { ...failure, attempts: 0 } },
+  ])
+    expect(
+      providerAttentionListSchema.safeParse(operationPage(item)).success,
+    ).toBe(false);
+  expect(
+    providerReleaseSchema.safeParse({
+      ...envelope,
+      item: { ...waiting, failure: null },
+    }).success,
+  ).toBe(true);
+  expect(
+    providerReleaseSchema.safeParse({ ...envelope, item: stopped }).success,
+  ).toBe(false);
+});
 test("provider review routes have closed response contracts", () => {
   const books = `/financial-documents/books/${book}`;
   expect(
@@ -1100,10 +1146,17 @@ test("provider review routes have closed response contracts", () => {
       "PUT",
     ),
   ).toBe(providerAcknowledgementSchema);
+  expect(
+    financialResponseSchema(
+      `${books}/provider-attention/${entry}/release`,
+      "PUT",
+    ),
+  ).toBe(providerReleaseSchema);
   for (const [path, method] of [
     [`${books}/provider-operations/${operation}`, "PUT"],
     [`${books}/provider-attention/${entry}`, "GET"],
     [`${books}/provider-attention/${entry}/acknowledgement`, "GET"],
+    [`${books}/provider-attention/${entry}/release`, "GET"],
   ])
     expect(financialResponseSchema(path!, method!)).toBeUndefined();
 });

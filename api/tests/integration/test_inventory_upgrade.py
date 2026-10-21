@@ -42,6 +42,9 @@ K_TABLES = {
     "provider_payment_links",
     # K0b (0057): the owner's admissions of receipt connections.
     "provider_connection_admissions",
+    # K6a (0063): failed decisions and releases of parked events.
+    "provider_event_failures",
+    "provider_event_releases",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

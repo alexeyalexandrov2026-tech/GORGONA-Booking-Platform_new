@@ -26,6 +26,8 @@ _SQL = "".join(
         "0059_provider_receipt_review_fixes.sql",
         # K5r: the operation-key index; a suspension is final.
         "0061_provider_review_final_fixes.sql",
+        # K6a: failures and releases of events; a parked event takes no lease.
+        "0063_provider_event_failures.sql",
     )
 )
 # A later `create or replace` (0048) supersedes the earlier body of the same function.
@@ -52,8 +54,11 @@ _DECISIONS = ("provider_operations", "provider_event_leases", "provider_event_de
 _ACKNOWLEDGEMENTS = "provider_event_acknowledgements"
 # K0b (0057): the owner's admissions of receipt connections, read by every group.
 _ADMISSIONS = "provider_connection_admissions"
+# K6a (0063): the worker's failed decisions and a finance user's releases of parked events.
+_FAILURES = "provider_event_failures"
+_RELEASES = "provider_event_releases"
 # Company-scoped tables: tenant and company policies.
-_SCOPED = (*_RECEIPTS, *_DECISIONS, _ACKNOWLEDGEMENTS, _ADMISSIONS)
+_SCOPED = (*_RECEIPTS, *_DECISIONS, _ACKNOWLEDGEMENTS, _ADMISSIONS, _FAILURES, _RELEASES)
 _TABLES = (*_SCOPED, _ROUTES)
 _GROUPS = ("gba_runtime", "gba_receipt_writer", "gba_receipt_worker")
 # Tables each group may read; a role running the guard is checked against its own group.
@@ -64,6 +69,8 @@ _READS = {
         "provider_event_decisions",
         _ACKNOWLEDGEMENTS,
         _ADMISSIONS,
+        _FAILURES,
+        _RELEASES,
     },
     "gba_receipt_writer": {*_RECEIPTS, _ROUTES, _ADMISSIONS},
     "gba_receipt_worker": {
@@ -72,6 +79,8 @@ _READS = {
         "provider_event_attestations",
         *_DECISIONS,
         _ADMISSIONS,
+        _FAILURES,
+        _RELEASES,
     },
 }
 # Every K policy depends on these context functions (migrations 0001 and 0009).
@@ -245,6 +254,11 @@ _TRIGGERS = (
         (table, f"{table}_admission", 7, "require_provider_receipt_admission", False)
         for table in ("provider_event_attestations", "provider_event_decisions")
     ),
+    # 0063: failures under a lease and releases of parked events; both permanent.
+    (_FAILURES, "provider_event_failures_check", 7, "record_provider_event_failure", False),
+    (_FAILURES, "provider_event_failures_immutable", 27, "reject_ledger_mutation", False),
+    (_RELEASES, "provider_event_releases_check", 7, "check_provider_event_release", False),
+    (_RELEASES, "provider_event_releases_immutable", 27, "reject_ledger_mutation", False),
     # 0049: BEFORE TRUNCATE FOR EACH STATEMENT on every receipt table.
     *(
         (table, f"{table}_no_truncate", 34, "reject_provider_receipt_truncate", False)
@@ -337,6 +351,12 @@ _CHECKS = (
         "AND (evidence !~ '[[:cntrl:]]'::text))",
     ),
     (_ADMISSIONS, "((state = 'suspended'::text) OR charge_allowed OR refund_allowed)"),
+    (_FAILURES, "(error_class ~ '^[A-Za-z][A-Za-z0-9_]{0,63}$'::text)"),
+    (
+        _RELEASES,
+        "(((length(btrim(note)) >= 1) AND (length(btrim(note)) <= 500)) "
+        "AND (note !~ '[[:cntrl:]]'::text))",
+    ),
 )
 _KEYS = (
     ("provider_receipt_connections", "p", ["tenant_id", "id"], None, None),
@@ -475,6 +495,23 @@ _KEYS = (
         "provider_receipt_connections",
         ["tenant_id", "id"],
     ),
+    (_FAILURES, "p", ["tenant_id", "event_id", "generation"], None, None),
+    (
+        _FAILURES,
+        "f",
+        ["tenant_id", "event_id"],
+        "provider_event_leases",
+        ["tenant_id", "event_id"],
+    ),
+    (_RELEASES, "p", ["tenant_id", "event_id", "round"], None, None),
+    (
+        _RELEASES,
+        "f",
+        ["tenant_id", "event_id"],
+        "provider_event_leases",
+        ["tenant_id", "event_id"],
+    ),
+    (_RELEASES, "f", ["released_by"], "users", ["id"]),
 )
 _INDEXES = (
     (
@@ -516,7 +553,14 @@ _POLICIES: list[tuple[str, str, bool, str, list[str], str, str]] = [
     # 0050: discovery without a company context, for the worker group only.
     *(
         (table, table + "_discover", True, "r", ["gba_receipt_worker"], "true", "")
-        for table in ("provider_event_attestations", "provider_event_decisions", _ADMISSIONS)
+        for table in (
+            "provider_event_attestations",
+            "provider_event_decisions",
+            _ADMISSIONS,
+            # 0063: discovery skips parked and waiting events.
+            _FAILURES,
+            _RELEASES,
+        )
     ),
 ]
 # Column privileges per group; any role running the guard is checked against its own group.
@@ -530,6 +574,10 @@ _INBOX_INSERTS = {
 # the receipt writer records events and deliveries (IR-03).
 _RUNTIME_INSERTS = {
     (_ACKNOWLEDGEMENTS, column) for column in ("tenant_id", "event_id", "note", "created_by")
+} | {
+    # 0063: a finance user releases a parked event; the round and time are the database's.
+    (_RELEASES, column)
+    for column in ("tenant_id", "event_id", "note", "released_by")
 }
 _WRITER_INSERTS = _INBOX_INSERTS | {
     ("provider_event_attestations", column)
@@ -555,6 +603,10 @@ _WORKER_INSERTS = (
     | {
         ("provider_event_decisions", column)
         for column in ("tenant_id", "event_id", "generation", "holder")
+    }
+    | {
+        (_FAILURES, column)
+        for column in ("tenant_id", "event_id", "generation", "holder", "error_class")
     }
 )
 _INSERTS = {
