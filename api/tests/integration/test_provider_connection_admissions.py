@@ -20,7 +20,7 @@ from gorgona_booking.db.provisioning import (
 from gorgona_booking.errors import DatabaseUnavailableError
 from gorgona_booking.providers import authenticated_receipts as service
 from gorgona_booking.providers import receipt_worker as worker
-from gorgona_booking.providers.authenticated_receipts import ReceiptAuthority
+from gorgona_booking.providers.authenticated_receipts import ReceiptAuthority, Verifier
 from gorgona_booking.providers.inbox import ReceiptBindingRejectedError, ReceiptResult
 from gorgona_booking.providers.stripe_contracts import SignedStripeEvent
 from tests.integration import test_provider_event_inbox as archive
@@ -382,8 +382,9 @@ async def test_a_suspension_waits_for_a_receipt_in_flight_then_refuses_the_next(
         authority: ReceiptAuthority,
         event: SignedStripeEvent,
         result: ReceiptResult,
+        verifier: Verifier,
     ) -> None:
-        await original(conn, authority, event, result)
+        await original(conn, authority, event, result, verifier)
         pids.append(await decided.backend(conn))
         held.set()
         await release.wait()

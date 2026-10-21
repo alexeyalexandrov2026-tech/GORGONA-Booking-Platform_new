@@ -3,9 +3,12 @@
 An owner-provisioned route selects the company and connection; the active verification
 config names which server-held key may check the raw bytes. A compromised writer can lie;
 SQL does not verify the MAC. Only a connection the owner admitted for test access is served (K0b).
+
+K6b: an event the reconciler listed from the Stripe API takes the same path without a signature
+and is attested as `stripe_api_v1`; its facts are decoded by the same strict rules.
 """
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
@@ -18,7 +21,7 @@ from gorgona_booking.db.pool import RuntimeConnection, RuntimePool, set_tenant_c
 from gorgona_booking.db.provider_receipt_guard import assert_provider_receipt_ready
 from gorgona_booking.providers.inbox import ReceiptBindingRejectedError, ReceiptResult, record_event
 from gorgona_booking.providers.stripe_contracts import Sha256, SignedStripeEvent, StripeEventPolicy
-from gorgona_booking.providers.stripe_events import verify_stripe_event
+from gorgona_booking.providers.stripe_events import retrieved_stripe_event, verify_stripe_event
 
 LOCK_TIMEOUT_MS = 5_000
 STATEMENT_TIMEOUT_MS = 10_000
@@ -50,6 +53,9 @@ class AuthenticatedReceiptResult(Versioned):
     authority: Literal["signature_checked_not_admitted"] = "signature_checked_not_admitted"
 
 
+Verifier = Literal["stripe_snapshot_v1", "stripe_api_v1"]
+
+
 async def assert_safe_receipt_writer_role(conn: RuntimeConnection) -> None:
     row = await (
         await conn.execute("""
@@ -69,7 +75,7 @@ select bool_and(not (r.rolsuper or r.rolbypassrls or r.rolcreaterole
             (c.relname<>all(array['provider_receipt_connections','provider_event_inbox',
                 'provider_event_deliveries','provider_event_attestations',
                 'provider_verification_configs','provider_receipt_routes',
-                'provider_connection_admissions']) and (
+                'provider_connection_admissions','provider_reconciliation_runs']) and (
                 pg_catalog.has_table_privilege(r.oid,c.oid,
                     'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
                 or pg_catalog.has_any_column_privilege(r.oid,c.oid,
@@ -83,7 +89,7 @@ from pg_catalog.pg_roles r where r.rolname in (current_user,session_user)
     await assert_provider_receipt_ready(conn)
 
 
-_ACTIVE_AUTHORITY = (
+ACTIVE_AUTHORITY = (
     "select v.id,v.secret_ref,c.book_id,c.namespace,c.account_id,c.api_version "
     "from gba.provider_verification_configs v join gba.provider_receipt_connections c "
     "on c.tenant_id=v.tenant_id and c.id=v.connection_id "
@@ -110,7 +116,7 @@ async def _read_authority(conn: RuntimeConnection, ingress_id: UUID) -> ReceiptA
         raise ReceiptBindingRejectedError()
     tenant_id, connection_id = route
     await set_tenant_context(conn, tenant_id)
-    row = await (await conn.execute(_ACTIVE_AUTHORITY, (tenant_id, connection_id))).fetchone()
+    row = await (await conn.execute(ACTIVE_AUTHORITY, (tenant_id, connection_id))).fetchone()
     if row is None:
         raise ReceiptBindingRejectedError()
     return _authority(tenant_id, connection_id, row)
@@ -120,7 +126,7 @@ async def _confirm_authority(conn: RuntimeConnection, authority: ReceiptAuthorit
     """After the signature: the same active config and binding, share-locked until commit."""
     row = await (
         await conn.execute(
-            _ACTIVE_AUTHORITY
+            ACTIVE_AUTHORITY
             + " and current_setting('transaction_isolation')='read committed' for share of v,c",
             (authority.tenant_id, authority.connection_id),
         )
@@ -148,16 +154,18 @@ async def _attest_event(
     authority: ReceiptAuthority,
     event: SignedStripeEvent,
     result: ReceiptResult,
+    verifier: Verifier,
 ) -> None:
     await conn.execute(
         "insert into gba.provider_event_attestations "
-        "(tenant_id,event_id,delivery_sha256,verification_config_id) values (%s,%s,%s,%s) "
-        "on conflict do nothing",
+        "(tenant_id,event_id,delivery_sha256,verification_config_id,verifier) "
+        "values (%s,%s,%s,%s,%s) on conflict do nothing",
         (
             authority.tenant_id,
             result.event_id,
             event.delivery_sha256,
             authority.verification_config_id,
+            verifier,
         ),
     )
 
@@ -185,6 +193,52 @@ async def receive_routed_receipt(
     retroactively trusted, overwritten or relabeled. No raw bytes or keys are stored. The
     writer is a trusted verifier, not a financial worker.
     """
+
+    def verified(authority: ReceiptAuthority) -> SignedStripeEvent:
+        key = key_store.get(authority.secret_ref)
+        if key is None:
+            raise ReceiptBindingRejectedError()
+        return verify_stripe_event(
+            payload, signature, policy=authority.policy, signing_keys=(key,), now=now
+        )
+
+    return await _receive(
+        pool, ingress_id, verified, "stripe_snapshot_v1", lock_timeout_ms, statement_timeout_ms
+    )
+
+
+async def receive_retrieved_event(
+    pool: RuntimePool,
+    ingress_id: UUID,
+    value: dict[str, object],
+    *,
+    lock_timeout_ms: int = LOCK_TIMEOUT_MS,
+    statement_timeout_ms: int = STATEMENT_TIMEOUT_MS,
+) -> AuthenticatedReceiptResult:
+    """K6b: record one event the reconciler listed for this route's connected account.
+
+    The account and version come from the owner's binding, as for a webhook; only the
+    authentication differs (the platform key over TLS, recorded as `stripe_api_v1`).
+    """
+
+    def decoded(authority: ReceiptAuthority) -> SignedStripeEvent:
+        return retrieved_stripe_event(
+            value, policy=authority.policy, account=authority.policy.account_id
+        )
+
+    return await _receive(
+        pool, ingress_id, decoded, "stripe_api_v1", lock_timeout_ms, statement_timeout_ms
+    )
+
+
+async def _receive(
+    pool: RuntimePool,
+    ingress_id: UUID,
+    authenticate: Callable[[ReceiptAuthority], SignedStripeEvent],
+    verifier: Verifier,
+    lock_timeout_ms: int,
+    statement_timeout_ms: int,
+) -> AuthenticatedReceiptResult:
     if not (1 <= lock_timeout_ms <= MAX_TIMEOUT_MS and 1 <= statement_timeout_ms <= MAX_TIMEOUT_MS):
         raise ValueError("Receipt timeouts are out of range")
     async with pool.connection() as conn:
@@ -204,18 +258,13 @@ async def receive_routed_receipt(
                 # Fail fast for the ordinary runtime; the full role scan follows the signature.
                 raise UnsafeReceiptWriterRoleError("Receipt writer database role is unsafe")
             authority = await _read_authority(conn, ingress_id)
-            key = key_store.get(authority.secret_ref)
-            if key is None:
-                raise ReceiptBindingRejectedError()
-            event = verify_stripe_event(
-                payload, signature, policy=authority.policy, signing_keys=(key,), now=now
-            )
+            event = authenticate(authority)
             await assert_safe_receipt_writer_role(conn)
             await _confirm_authority(conn, authority)
             result = await record_event(conn, authority.connection_id, event)
             if result.book_id != authority.book_id:
                 raise ReceiptBindingRejectedError()
-            await _attest_event(conn, authority, event, result)
+            await _attest_event(conn, authority, event, result, verifier)
     return AuthenticatedReceiptResult(
         event_id=result.event_id,
         connection_id=result.connection_id,

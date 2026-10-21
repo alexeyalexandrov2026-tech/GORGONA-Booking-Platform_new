@@ -28,6 +28,8 @@ _SQL = "".join(
         "0061_provider_review_final_fixes.sql",
         # K6a: failures and releases of events; a parked event takes no lease.
         "0063_provider_event_failures.sql",
+        # K6b: retrieved events are attested as stripe_api_v1; reconciliation runs are recorded.
+        "0064_provider_event_backfill.sql",
     )
 )
 # A later `create or replace` (0048) supersedes the earlier body of the same function.
@@ -57,8 +59,18 @@ _ADMISSIONS = "provider_connection_admissions"
 # K6a (0063): the worker's failed decisions and a finance user's releases of parked events.
 _FAILURES = "provider_event_failures"
 _RELEASES = "provider_event_releases"
+# K6b (0064): one permanent record per reconciliation run, written by the receipt writer.
+_RUNS = "provider_reconciliation_runs"
 # Company-scoped tables: tenant and company policies.
-_SCOPED = (*_RECEIPTS, *_DECISIONS, _ACKNOWLEDGEMENTS, _ADMISSIONS, _FAILURES, _RELEASES)
+_SCOPED = (
+    *_RECEIPTS,
+    *_DECISIONS,
+    _ACKNOWLEDGEMENTS,
+    _ADMISSIONS,
+    _FAILURES,
+    _RELEASES,
+    _RUNS,
+)
 _TABLES = (*_SCOPED, _ROUTES)
 _GROUPS = ("gba_runtime", "gba_receipt_writer", "gba_receipt_worker")
 # Tables each group may read; a role running the guard is checked against its own group.
@@ -71,8 +83,9 @@ _READS = {
         _ADMISSIONS,
         _FAILURES,
         _RELEASES,
+        _RUNS,
     },
-    "gba_receipt_writer": {*_RECEIPTS, _ROUTES, _ADMISSIONS},
+    "gba_receipt_writer": {*_RECEIPTS, _ROUTES, _ADMISSIONS, _RUNS},
     "gba_receipt_worker": {
         "provider_event_inbox",
         "provider_event_deliveries",
@@ -259,6 +272,9 @@ _TRIGGERS = (
     (_FAILURES, "provider_event_failures_immutable", 27, "reject_ledger_mutation", False),
     (_RELEASES, "provider_event_releases_check", 7, "check_provider_event_release", False),
     (_RELEASES, "provider_event_releases_immutable", 27, "reject_ledger_mutation", False),
+    # 0064: reconciliation runs, recorded once by the writer.
+    (_RUNS, "provider_reconciliation_runs_check", 7, "check_provider_reconciliation_run", False),
+    (_RUNS, "provider_reconciliation_runs_immutable", 27, "reject_ledger_mutation", False),
     # 0049: BEFORE TRUNCATE FOR EACH STATEMENT on every receipt table.
     *(
         (table, f"{table}_no_truncate", 34, "reject_provider_receipt_truncate", False)
@@ -278,7 +294,11 @@ _CHECKS = (
     ("provider_event_deliveries", "(delivery_sha256 ~ '^[0-9a-f]{64}$'::text)"),
     ("provider_event_deliveries", "gba.provider_receipt_facts_valid(facts)"),
     ("provider_event_attestations", "(delivery_sha256 ~ '^[0-9a-f]{64}$'::text)"),
-    ("provider_event_attestations", "(verifier = 'stripe_snapshot_v1'::text)"),
+    # K6b (0064): a signed webhook or an event retrieved from the provider's API.
+    (
+        "provider_event_attestations",
+        "(verifier = ANY (ARRAY['stripe_snapshot_v1'::text, 'stripe_api_v1'::text]))",
+    ),
     ("provider_verification_configs", "(version > 0)"),
     (
         "provider_verification_configs",
@@ -352,6 +372,15 @@ _CHECKS = (
     ),
     (_ADMISSIONS, "((state = 'suspended'::text) OR charge_allowed OR refund_allowed)"),
     (_FAILURES, "(error_class ~ '^[A-Za-z][A-Za-z0-9_]{0,63}$'::text)"),
+    *(
+        (_RUNS, f"({name} >= 0)")
+        for name in ("pages", "seen", "recorded", "duplicates", "conflicts", "refused")
+    ),
+    (_RUNS, "(outcome = ANY (ARRAY['completed'::text, 'failed'::text]))"),
+    (_RUNS, "(error_class ~ '^[A-Za-z][A-Za-z0-9_]{0,63}$'::text)"),
+    (_RUNS, "(window_start < window_end)"),
+    (_RUNS, "(seen = (((recorded + duplicates) + conflicts) + refused))"),
+    (_RUNS, "((outcome = 'failed'::text) = (error_class IS NOT NULL))"),
     (
         _RELEASES,
         "(((length(btrim(note)) >= 1) AND (length(btrim(note)) <= 500)) "
@@ -512,6 +541,14 @@ _KEYS = (
         ["tenant_id", "event_id"],
     ),
     (_RELEASES, "f", ["released_by"], "users", ["id"]),
+    (_RUNS, "p", ["tenant_id", "id"], None, None),
+    (
+        _RUNS,
+        "f",
+        ["tenant_id", "connection_id"],
+        "provider_receipt_connections",
+        ["tenant_id", "id"],
+    ),
 )
 _INDEXES = (
     (
@@ -579,10 +616,38 @@ _RUNTIME_INSERTS = {
     (_RELEASES, column)
     for column in ("tenant_id", "event_id", "note", "released_by")
 }
-_WRITER_INSERTS = _INBOX_INSERTS | {
-    ("provider_event_attestations", column)
-    for column in ("tenant_id", "event_id", "delivery_sha256", "verification_config_id")
-}
+_WRITER_INSERTS = (
+    _INBOX_INSERTS
+    | {
+        ("provider_event_attestations", column)
+        # K6b (0064): the writer names how the event arrived.
+        for column in (
+            "tenant_id",
+            "event_id",
+            "delivery_sha256",
+            "verification_config_id",
+            "verifier",
+        )
+    }
+    | {
+        (_RUNS, column)
+        for column in (
+            "tenant_id",
+            "connection_id",
+            "window_start",
+            "window_end",
+            "started_at",
+            "pages",
+            "seen",
+            "recorded",
+            "duplicates",
+            "conflicts",
+            "refused",
+            "outcome",
+            "error_class",
+        )
+    }
+)
 _WORKER_INSERTS = (
     {
         ("provider_operations", column)

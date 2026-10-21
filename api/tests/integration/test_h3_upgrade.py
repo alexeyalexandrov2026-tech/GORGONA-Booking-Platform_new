@@ -175,6 +175,10 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                         "where e.tenant_id=t.tenant_id and e.id=t.entry_id "
                         "and e.source_kind='stock')"
                     )
+            # K6b: an attestation of an event retrieved from the provider's API cannot be
+            # represented before migration 0064; the event stays an unattested archive row there.
+            if target_version[0] < 64 and table == "provider_event_attestations":
+                predicate = sql.SQL(" where t.verifier = 'stripe_snapshot_v1'")
             # A schema stopped at 0037 or 0038 cannot hold the stock documents of later
             # kinds. A company that has one keeps none of its stock rows there, so every
             # running total stays whole.

@@ -31,6 +31,7 @@ from gorgona_booking.providers.authenticated_receipts import (
     AuthenticatedReceiptResult,
     ReceiptAuthority,
     UnsafeReceiptWriterRoleError,
+    Verifier,
     assert_safe_receipt_writer_role,
     receive_routed_receipt,
 )
@@ -480,7 +481,9 @@ async def test_attestation_duplicate_waits_on_observed_insert_then_survives_lead
     try:
         async with writer_pool.connection() as leader, leader.transaction(force_rollback=rollback):
             await set_tenant_context(leader, scope.tenant_id)
-            await service._attest_event(leader, scope.authority(), event, archived)
+            await service._attest_event(
+                leader, scope.authority(), event, archived, "stripe_snapshot_v1"
+            )
             identity = await (
                 await leader.execute("select pg_backend_pid(),pg_current_xact_id()::text")
             ).fetchone()
@@ -530,8 +533,9 @@ async def test_commit_failure_rolls_back_archive_and_attestation_before_return(
         authority: ReceiptAuthority,
         event: SignedStripeEvent,
         result: ReceiptResult,
+        verifier: Verifier,
     ) -> None:
-        await original(conn, authority, event, result)
+        await original(conn, authority, event, result, verifier)
         await conn.execute("select set_config('gba.location_id',%s,true)", (str(uuid7()),))
 
     monkeypatch.setattr(service, "_attest_event", switch_context)
@@ -605,7 +609,9 @@ async def test_mixed_runtime_login_cannot_hide_behind_set_role_to_attest(
                 await set_tenant_context(conn, scope.tenant_id)
                 await conn.execute("set local role gba_receipt_writer")
                 with pytest.raises(psycopg.errors.CheckViolation):
-                    await service._attest_event(conn, scope.authority(), inbox.event(), archived)
+                    await service._attest_event(
+                        conn, scope.authority(), inbox.event(), archived, "stripe_snapshot_v1"
+                    )
         finally:
             await admin.execute(
                 sql.SQL("revoke gba_receipt_writer from {}").format(sql.Identifier(app_role))

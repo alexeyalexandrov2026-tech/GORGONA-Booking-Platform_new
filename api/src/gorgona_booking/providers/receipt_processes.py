@@ -6,6 +6,10 @@ as `env:GBA_STRIPE_TEST_WEBHOOK_SECRET`; a config's `secret_ref` names the same 
 worker runs `process_batch` once or in a bounded loop with the worker login. Keys and database
 URLs live only in memory as secrets; logs carry counts and outcomes, never a payload, key, URL,
 account or ingress ID. Each process refuses a login of the wrong group before it does anything.
+
+K6b: the reconciler runs with the writer login, lists the events of one platform namespace's
+admitted connections from the Stripe API with the platform key (`GBA_STRIPE_API_KEY_REF`, an
+`env:NAME` reference) and records them through the same inbox, once or every `--interval`.
 """
 
 import argparse
@@ -27,6 +31,12 @@ from gorgona_booking.providers.receipt_worker import (
     assert_safe_receipt_worker_role,
     process_batch,
 )
+from gorgona_booking.providers.reconciliation import (
+    DEFAULT_DAYS,
+    MAX_DAYS,
+    StripeApiSource,
+    reconcile,
+)
 
 HOST = "127.0.0.1"
 DEFAULT_PORT = 8787
@@ -35,6 +45,11 @@ MIN_INTERVAL, MAX_INTERVAL = 1.0, 300.0
 WRITER_DATABASE = "GBA_RECEIPT_WRITER_DATABASE_URL"
 WORKER_DATABASE = "GBA_RECEIPT_WORKER_DATABASE_URL"
 REFERENCE_LIST = "GBA_RECEIPT_SECRET_REFS"
+API_KEY_REFERENCE = "GBA_STRIPE_API_KEY_REF"
+NAMESPACE = "GBA_STRIPE_NAMESPACE"
+DEFAULT_RECONCILE_INTERVAL = 900.0
+MIN_RECONCILE_INTERVAL, MAX_RECONCILE_INTERVAL = 60.0, 3600.0
+_NAMESPACE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,99}")
 _NAME = re.compile(r"[A-Z][A-Z0-9_]{0,99}")
 
 logger = logging.getLogger("gorgona_booking.providers.receipt_processes")
@@ -118,6 +133,48 @@ def worker_settings(environ: Mapping[str, str], argv: Sequence[str]) -> WorkerSe
     )
 
 
+@dataclass(frozen=True)
+class ReconcileSettings:
+    database_url: SecretStr
+    namespace: str
+    key: SecretStr = field(repr=False)
+    interval: float = DEFAULT_RECONCILE_INTERVAL
+    days: int = DEFAULT_DAYS
+    once: bool = False
+
+
+def reconcile_settings(environ: Mapping[str, str], argv: Sequence[str]) -> ReconcileSettings:
+    parser = _Parser(prog="python -m gorgona_booking.providers.reconcile_main", add_help=False)
+    parser.add_argument("--once", action="store_true", help="reconcile once and exit")
+    parser.add_argument("--interval", default=str(DEFAULT_RECONCILE_INTERVAL))
+    parser.add_argument("--days", default=str(DEFAULT_DAYS))
+    args = parser.parse_args(list(argv))
+    try:
+        interval, days = float(args.interval), int(args.days)
+    except ValueError:
+        raise ReceiptProcessError("--interval and --days must be numbers") from None
+    if not MIN_RECONCILE_INTERVAL <= interval <= MAX_RECONCILE_INTERVAL:
+        raise ReceiptProcessError(
+            f"--interval must be {MIN_RECONCILE_INTERVAL:g} to {MAX_RECONCILE_INTERVAL:g} seconds"
+        )
+    if not 1 <= days <= MAX_DAYS:
+        raise ReceiptProcessError(f"--days must be 1 to {MAX_DAYS}")
+    namespace = environ.get(NAMESPACE, "").strip()
+    if not _NAMESPACE.fullmatch(namespace):
+        raise ReceiptProcessError(f"{NAMESPACE} must name the platform namespace of the key")
+    scheme, _, name = environ.get(API_KEY_REFERENCE, "").strip().partition(":")
+    if scheme != "env" or not _NAME.fullmatch(name):
+        raise ReceiptProcessError(f"{API_KEY_REFERENCE} must be env:NAME")
+    return ReconcileSettings(
+        database_url=_required(environ, WRITER_DATABASE),
+        namespace=namespace,
+        key=_required(environ, name),
+        interval=interval,
+        days=days,
+        once=args.once,
+    )
+
+
 async def serve_ingress(
     settings: IngressSettings,
     *,
@@ -189,6 +246,45 @@ async def run_worker(settings: WorkerSettings, *, stop: asyncio.Event | None = N
                 logger.info(
                     "provider receipt batch", extra={"decided": len(decisions), **dict(outcomes)}
                 )
+            if settings.once or (stop is not None and stop.is_set()):
+                return total
+            if stop is None:
+                await asyncio.sleep(settings.interval)
+                continue
+            try:
+                await asyncio.wait_for(stop.wait(), settings.interval)
+            except TimeoutError:
+                continue
+            return total
+    finally:
+        await pool.close()
+
+
+async def run_reconciler(settings: ReconcileSettings, *, stop: asyncio.Event | None = None) -> int:
+    """Check the writer login, then reconcile; returns how many runs were recorded."""
+    pool = create_runtime_pool(settings.database_url.get_secret_value())
+    await pool.open(wait=True)
+    source = StripeApiSource(settings.key)
+    total = 0
+    try:
+        async with pool.connection() as conn, conn.transaction():
+            await assert_safe_receipt_writer_role(conn)
+        while True:
+            try:
+                runs = await reconcile(
+                    pool, source, namespace=settings.namespace, days=settings.days
+                )
+            except Exception as exc:
+                if settings.once:
+                    raise
+                # Only the error class is logged, never a key, account or payload.
+                logger.warning(
+                    "provider reconciliation failed", extra={"error": type(exc).__name__}
+                )
+            else:
+                total += len(runs)
+                outcomes = Counter(str(run.outcome) for run in runs)
+                logger.info("provider reconciliation", extra={"runs": len(runs), **dict(outcomes)})
             if settings.once or (stop is not None and stop.is_set()):
                 return total
             if stop is None:

@@ -44,6 +44,8 @@ K_TABLES = {
     # K6a (0063): failed decisions and releases of parked events.
     "provider_event_failures",
     "provider_event_releases",
+    # K6b (0064): one record per reconciliation run.
+    "provider_reconciliation_runs",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

@@ -12,6 +12,7 @@ from gorgona_booking.providers.receipt_processes import (
     ReceiptProcessError,
     ingress_settings,
     load_key_store,
+    reconcile_settings,
     worker_settings,
 )
 
@@ -124,3 +125,52 @@ def test_worker_settings_refuse_unbounded_intervals_and_unknown_flags(argv: list
 def test_worker_settings_need_their_database() -> None:
     with pytest.raises(ReceiptProcessError):
         worker_settings({}, [])
+
+
+# K6b: the reconciler of one platform namespace, with the platform key from a named variable.
+
+
+def reconcile_environment(key: str) -> dict[str, str]:
+    return {
+        "GBA_RECEIPT_WRITER_DATABASE_URL": WRITER_URL,
+        "GBA_STRIPE_API_KEY_REF": "env:GBA_STRIPE_TEST_API_KEY",
+        "GBA_STRIPE_TEST_API_KEY": key,
+        "GBA_STRIPE_NAMESPACE": "FAKE-platform.test",
+    }
+
+
+def test_reconcile_settings_default_to_three_days_every_fifteen_minutes() -> None:
+    key = "rk_test_FAKE" + secrets.token_urlsafe(24)
+    settings = reconcile_settings(reconcile_environment(key), [])
+    assert (settings.interval, settings.days, settings.once) == (900.0, 3, False)
+    assert settings.namespace == "FAKE-platform.test"
+    assert settings.key.get_secret_value() == key
+    assert key not in repr(settings)
+    assert WRITER_URL not in repr(settings)
+    once = reconcile_settings(reconcile_environment(key), ["--once", "--days", "30"])
+    assert (once.once, once.days) == (True, 30)
+
+
+@pytest.mark.parametrize(
+    ("change", "argv"),
+    [
+        ({"GBA_STRIPE_API_KEY_REF": ""}, []),
+        ({"GBA_STRIPE_API_KEY_REF": "kv:stripe"}, []),
+        ({"GBA_STRIPE_TEST_API_KEY": " "}, []),
+        ({"GBA_STRIPE_NAMESPACE": ""}, []),
+        ({"GBA_STRIPE_NAMESPACE": "bad namespace"}, []),
+        ({"GBA_RECEIPT_WRITER_DATABASE_URL": ""}, []),
+        ({}, ["--days", "0"]),
+        ({}, ["--days", "31"]),
+        ({}, ["--interval", "59"]),
+        ({}, ["--interval", "3601"]),
+        ({}, ["--everything"]),
+    ],
+)
+def test_reconcile_settings_refuse_missing_or_unbounded_values(
+    change: dict[str, str], argv: list[str]
+) -> None:
+    key = "rk_test_FAKE" + secrets.token_urlsafe(24)
+    with pytest.raises(ReceiptProcessError) as error:
+        reconcile_settings({**reconcile_environment(key), **change}, argv)
+    assert key not in str(error.value)

@@ -117,6 +117,19 @@ Design: [K0a](../plan/PACKAGE_K0A_DESIGN_2026-10-20.md).
   that one again after 1, 2, 4 and 8 minutes; after 5 failures it stops trying until a finance user
   presses **Try again**. A lost connection, a timeout or damaged privileges stop the whole batch
   without counting, so an outage never stops healthy events; the next batch tries again.
+- Reconciler (K6b): `python -m gorgona_booking.providers.reconcile_main` (every 15 minutes over the
+  last 3 days; `--once`, `--interval 60-3600`, `--days 1-30`, Stripe keeps events for 30 days) with
+  `GBA_RECEIPT_WRITER_DATABASE_URL` (receipt writer login), `GBA_STRIPE_NAMESPACE` (the platform
+  namespace of the key) and `GBA_STRIPE_API_KEY_REF` (for example `env:GBA_STRIPE_TEST_API_KEY`, a
+  read-only test key set in the same terminal). For each admitted connection of that namespace it
+  lists the connected account's events from the Stripe API and records them through the same inbox
+  as webhooks: an event that already arrived is a duplicate, a lost one fills the gap, a different
+  fact under the same ID is a visible conflict. Retrieved deliveries are attested as
+  `stripe_api_v1`, webhooks as `stripe_snapshot_v1`. An event of another API version, account or
+  live mode is refused and counted, never recorded. Timeouts, rate limits and server errors are
+  retried three times (1, 2, 4 s); then the run fails. Each run is recorded in
+  `gba.provider_reconciliation_runs` with its counts and outcome (`failed` names the error class); a
+  failed run reports nothing as received that was not. Suspended connections are never asked.
 - Logs carry counts and outcomes only: no payload, key, account or ingress ID.
 - A `charge.refunded` event has no operation key and always appears under "needs attention"
   (`unkeyed_operation`); the refund itself is decided from its `refund.*` events. Acknowledge it.

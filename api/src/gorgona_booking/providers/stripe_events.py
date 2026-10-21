@@ -1,4 +1,8 @@
-"""Offline signature-first Stripe snapshot decoding; no route, storage or API client."""
+"""Offline signature-first Stripe snapshot decoding; no route, storage or API client.
+
+K6b: an event listed by the Stripe API is decoded by the same strict rules into the same facts;
+only its digest (canonical JSON) and its attestation differ from a signed webhook.
+"""
 
 import hashlib
 import json
@@ -26,6 +30,9 @@ from gorgona_booking.providers.stripe_contracts import (
 )
 
 MAX_BODY_BYTES = 262_144
+# K6b: one `GET /v1/events` page of at most 100 events.
+MAX_PAGE_BYTES = 8_388_608
+MAX_PAGE_EVENTS = 100
 MAX_SIGNATURE_BYTES = 4096
 MAX_CLOCK_SKEW_SECONDS = 300
 _MAX_SIGNATURES = 8
@@ -47,12 +54,22 @@ _OBJECTS: dict[StripeEventType, Literal["payment_intent", "charge", "refund"]] =
 }
 
 
+# K6b: the reconciler asks only for the event types FIN-02 supports.
+SUPPORTED_EVENT_TYPES: tuple[StripeEventType, ...] = tuple(_OBJECTS)
+
+
 class ProviderEventRejectedError(DomainError):
     code = "PROVIDER_EVENT_REJECTED"
 
 
 class ProviderEventConfigurationError(DomainError):
     code = "PROVIDER_EVENT_CONFIGURATION_INVALID"
+
+
+class ProviderPageRejectedError(DomainError):
+    """K6b: a page of listed events is not a bounded, well-formed Stripe list."""
+
+    code = "PROVIDER_PAGE_REJECTED"
 
 
 def _rejected(reason: str) -> ProviderEventRejectedError:
@@ -185,12 +202,62 @@ def verify_stripe_event(
     else:
         raise _rejected("signature") from None
     try:
-        value: object = json.loads(
-            payload.decode("utf-8"),
-            object_pairs_hook=_unique_object,
-            parse_constant=_nonfinite,
-            parse_float=_finite_float,
-        )
+        value = _strict_json(payload)
+    except ValueError, RecursionError:
+        raise _rejected("event_shape") from None
+    return _decode(value, policy, hashlib.sha256(payload).hexdigest())
+
+
+def _strict_json(payload: bytes) -> object:
+    """Duplicate keys and non-finite numbers are refused, as Stripe never sends them."""
+    return json.loads(
+        payload.decode("utf-8"),
+        object_pairs_hook=_unique_object,
+        parse_constant=_nonfinite,
+        parse_float=_finite_float,
+    )
+
+
+def decode_event_page(payload: bytes) -> tuple[list[dict[str, object]], bool]:
+    """K6b: the events of one bounded `GET /v1/events` page and whether more pages follow."""
+    if not isinstance(payload, bytes) or not 1 <= len(payload) <= MAX_PAGE_BYTES:
+        raise ProviderPageRejectedError("Provider page was refused", reason="page_budget")
+    try:
+        value = _strict_json(payload)
+    except ValueError, RecursionError:
+        raise ProviderPageRejectedError("Provider page was refused", reason="page_shape") from None
+    if (
+        not isinstance(value, dict)
+        or value.get("object") != "list"
+        or type(value.get("has_more")) is not bool
+        or not isinstance(value.get("data"), list)
+        or len(value["data"]) > MAX_PAGE_EVENTS
+        or not all(isinstance(item, dict) for item in value["data"])
+    ):
+        raise ProviderPageRejectedError("Provider page was refused", reason="page_shape")
+    return list(value["data"]), value["has_more"]
+
+
+def retrieved_stripe_event(
+    value: dict[str, object], *, policy: StripeEventPolicy, account: str
+) -> SignedStripeEvent:
+    """K6b: decode one listed event of `account` into the same facts as its webhook.
+
+    The digest is the SHA-256 of the event's canonical JSON. The list API may leave out
+    `account`; the request named it, and an `account` that is present must equal it.
+    """
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
+        "utf-8"
+    )
+    if len(canonical) > MAX_BODY_BYTES:
+        raise _rejected("body_budget")
+    if value.get("account", account) != account:
+        raise _rejected("event_scope")
+    return _decode({**value, "account": account}, policy, hashlib.sha256(canonical).hexdigest())
+
+
+def _decode(value: object, policy: StripeEventPolicy, digest: str) -> SignedStripeEvent:
+    try:
         event = _Event.model_validate(value)
     except ValueError, RecursionError:
         raise _rejected("event_shape") from None
@@ -209,7 +276,7 @@ def verify_stripe_event(
             event_type=event.type,
             created=event.created,
             resource=_resource(event),
-            delivery_sha256=hashlib.sha256(payload).hexdigest(),
+            delivery_sha256=digest,
         )
     except KeyError, ValueError, ValidationError:
         raise _rejected("event_shape") from None

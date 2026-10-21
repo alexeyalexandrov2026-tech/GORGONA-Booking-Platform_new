@@ -23,7 +23,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from gorgona_booking.db.pool import RuntimeConnection, RuntimePool, tenant_transaction
 from gorgona_booking.providers import authenticated_receipts as service
-from gorgona_booking.providers.authenticated_receipts import ReceiptAuthority
+from gorgona_booking.providers.authenticated_receipts import ReceiptAuthority, Verifier
 from gorgona_booking.providers.inbox import ReceiptResult, record_event
 from gorgona_booking.providers.receipt_ingress import IngressLimits, create_receipt_ingress_app
 from gorgona_booking.providers.stripe_contracts import SignedStripeEvent
@@ -432,8 +432,9 @@ async def test_a_failed_commit_is_never_acknowledged(
         authority: ReceiptAuthority,
         event: SignedStripeEvent,
         result: ReceiptResult,
+        verifier: Verifier,
     ) -> None:
-        await original(conn, authority, event, result)
+        await original(conn, authority, event, result, verifier)
         await conn.execute("select set_config('gba.location_id',%s,true)", (str(uuid7()),))
 
     monkeypatch.setattr(service, "_attest_event", switch_context)
