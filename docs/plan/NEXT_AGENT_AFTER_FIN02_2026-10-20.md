@@ -61,3 +61,20 @@ owner is they/them. GateGuard denies the first write of each file: state the fac
 3. **STOCK-01 record.** Done (`3f68e3f`).
 4. **The road to one launch of all 39 directions** (master plan §13): the industry modules of stages
    3–8 and the stage 9 operations in Azure (each Azure action needs the owner's consent).
+
+## Update 2026-10-22 — package K6 (FIN-02 gaps) done
+
+Stacked branches, all published for CI only (no PR, `main` untouched): `codex/package-k6a-bounded-retries`
+(0063 bounded retries and parked events), `codex/package-k6b-event-backfill` (0064 read-only event
+backfill from the Stripe API), `codex/package-k6b2-screen` (delivery source, stalled marker),
+`codex/package-k6c-sandbox` (real sandbox run with lost webhooks), `codex/package-k6r-review-fixes`
+(0065, fixes of the independent K6 review), `codex/package-k6s-fin02-record` (FIN-02 record: K-05 and
+K-12 PASS, status unchanged). CI SUCCESS on the K6a–K6r heads. `main` is still `1a8a180`; the STOCK-01
+record (`fba651e`) sits under K6 in this stack. Migrations 0001–0065 immutable; next **0066**.
+Lessons: a new K table with a company policy must join `test_location_access`'s migration list and
+the upgrade tests' K table lists, and `copy_fixture_data` must omit row values an older schema refuses;
+the JSON log formatter drops any field not on its allowlist; this computer's clock runs a few seconds
+ahead of Stripe's; `stripe events resend` refuses events created while no CLI listened (and exits 0).
+Next, with the owner: merging the stack into `main` (needs their word), the restricted test key for one
+real call of the product's HTTP client (their action), or the industry modules toward one launch of all
+39 directions.

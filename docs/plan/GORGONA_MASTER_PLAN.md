@@ -10,7 +10,18 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-22: K6 reviewed, CI green; K6r review fixes locally verified
+## Current checkpoint — 2026-10-22: FIN-02 K-05 and K-12 PASS after K6
+
+FIN-02 stays `technically_verified`; its record now names the reviewed K6r source `2eb6cf7`, schema
+65: events lost on the way are fetched back by a read-only reconciler with the same facts, every run is
+recorded, a failing event is retried and then parked until a finance user releases it
+([K6 acceptance](evidence/2026-10-22-fin-02-k6-acceptance/ACCEPTANCE.md)). Evidence: the real sandbox
+run with lost webhooks (K6c), one independent review with its fixes (K6r), CI SUCCESS on every K6 head
+(K6r run 39732441848). Registry commit `47e60c5` on `codex/package-k6s-fin02-record`; full **2415
+passed, 4 skipped**. Limit: the product's HTTP client still needs one call with a restricted test key
+that only the owner may create. No live mode, no production approval. Next migration **0066**.
+
+## Previous checkpoint — 2026-10-22: K6 reviewed, CI green; K6r review fixes locally verified
 
 K6a, K6b1, K6b2 and K6c published for CI on the owner's word («Да, и то и другое»), no PR: CI SUCCESS
 on all four heads (runs 39724421746, 39724425326, 39724428029, 39724431070). One independent read-only
