@@ -1,0 +1,437 @@
+{
+  "account": "acct_1USjOo0mkpWSHVnd",
+  "api_version": "2026-08-26.dahlia",
+  "mode": "test (sandbox)",
+  "start_unix": 1792641144,
+  "lost_webhooks": "nothing listened; the inbox stayed empty",
+  "first_run": {
+    "schema_version": 1,
+    "run_id": "130d5c1c-d77b-4c3a-bab4-82784e760b3c",
+    "window_start": "2026-10-21T03:54:35.101514Z",
+    "window_end": "2026-10-22T03:54:35.101514Z",
+    "pages": 1,
+    "seen": 28,
+    "recorded": 28,
+    "duplicates": 0,
+    "conflicts": 0,
+    "refused": 0,
+    "outcome": "completed",
+    "error_class": null
+  },
+  "fetched_new_events": [
+    {
+      "event_id": "evt_3UTD590mkpWSHVnd1ldbDjxe",
+      "event_type": "refund.updated",
+      "object_id": "re_3UTD590mkpWSHVnd1LYGvHQ2",
+      "verifiers": [
+        "stripe_api_v1"
+      ],
+      "deliveries": 1
+    },
+    {
+      "event_id": "evt_3UTD590mkpWSHVnd1GvS9Z0M",
+      "event_type": "charge.refunded",
+      "object_id": "ch_3UTD590mkpWSHVnd1gDlHeZv",
+      "verifiers": [
+        "stripe_api_v1"
+      ],
+      "deliveries": 1
+    },
+    {
+      "event_id": "evt_3UTD590mkpWSHVnd1v0er6XM",
+      "event_type": "refund.created",
+      "object_id": "re_3UTD590mkpWSHVnd1LYGvHQ2",
+      "verifiers": [
+        "stripe_api_v1"
+      ],
+      "deliveries": 1
+    },
+    {
+      "event_id": "evt_3UTD590mkpWSHVnd12kdUiPm",
+      "event_type": "payment_intent.succeeded",
+      "object_id": "pi_3UTD590mkpWSHVnd1kBUwA8E",
+      "verifiers": [
+        "stripe_api_v1"
+      ],
+      "deliveries": 1
+    },
+    {
+      "event_id": "evt_3UTD590mkpWSHVnd1Ph4SHD0",
+      "event_type": "charge.succeeded",
+      "object_id": "ch_3UTD590mkpWSHVnd1gDlHeZv",
+      "verifiers": [
+        "stripe_api_v1"
+      ],
+      "deliveries": 1
+    },
+    {
+      "event_id": "evt_3UTD580mkpWSHVnd1uo4AhAC",
+      "event_type": "payment_intent.succeeded",
+      "object_id": "pi_3UTD580mkpWSHVnd1YNv3fSX",
+      "verifiers": [
+        "stripe_api_v1"
+      ],
+      "deliveries": 1
+    },
+    {
+      "event_id": "evt_3UTD580mkpWSHVnd1k1EY6mg",
+      "event_type": "charge.succeeded",
+      "object_id": "ch_3UTD580mkpWSHVnd1qsiXgGW",
+      "verifiers": [
+        "stripe_api_v1"
+      ],
+      "deliveries": 1
+    }
+  ],
+  "decisions": [
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "needs_review",
+      "reason": "unkeyed_operation"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "needs_review",
+      "reason": "unkeyed_operation"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "needs_review",
+      "reason": "unkeyed_operation"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "needs_review",
+      "reason": "unkeyed_operation"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    },
+    {
+      "outcome": "observed",
+      "reason": "success"
+    }
+  ],
+  "payment": {
+    "operation": "pi_3UTD580mkpWSHVnd1YNv3fSX",
+    "amount": "20.00",
+    "direction": "receivable",
+    "attestation": "provider_observed",
+    "journal": [
+      [
+        "01a161be-e9b6-735f-bbd8-f89ea556695f",
+        "debit",
+        "20.00"
+      ],
+      [
+        "01a161be-e9b6-735f-bbd8-f8a083afc9e2",
+        "credit",
+        "20.00"
+      ]
+    ]
+  },
+  "refund": {
+    "operation": "re_3UTD590mkpWSHVnd1LYGvHQ2",
+    "parent_operation": "pi_3UTD590mkpWSHVnd1kBUwA8E",
+    "parent_amount": "1.00",
+    "amount": "1.00",
+    "direction": "payable",
+    "journal": [
+      [
+        "01a161be-e9b6-735f-bbd8-f89ea556695f",
+        "credit",
+        "1.00"
+      ],
+      [
+        "01a161be-e9b6-735f-bbd8-f8a563aab74b",
+        "debit",
+        "1.00"
+      ]
+    ]
+  },
+  "second_run": {
+    "schema_version": 1,
+    "run_id": "18729d48-f6f4-490f-bb2f-802644c956e9",
+    "window_start": "2026-10-21T03:54:38.131501Z",
+    "window_end": "2026-10-22T03:54:38.131501Z",
+    "pages": 1,
+    "seen": 28,
+    "recorded": 0,
+    "duplicates": 28,
+    "conflicts": 0,
+    "refused": 0,
+    "outcome": "completed",
+    "error_class": null
+  },
+  "third_run": {
+    "schema_version": 1,
+    "run_id": "addd0a75-98cf-48d8-bfcc-2f2e4b997a13",
+    "window_start": "2026-10-21T03:54:50.795550Z",
+    "window_end": "2026-10-22T03:54:50.795550Z",
+    "pages": 1,
+    "seen": 30,
+    "recorded": 0,
+    "duplicates": 30,
+    "conflicts": 0,
+    "refused": 0,
+    "outcome": "completed",
+    "error_class": null
+  },
+  "webhook_then_retrieval": {
+    "event": "evt_3UTD5O0mkpWSHVnd1lm1IGxw",
+    "events_before": 28,
+    "events_after": 30,
+    "deliveries_seen": [
+      "evt_3UTD5O0mkpWSHVnd1lm1IGxw 200"
+    ],
+    "verifiers": [
+      "stripe_api_v1",
+      "stripe_snapshot_v1"
+    ],
+    "deliveries": 2,
+    "all_match": true,
+    "new_decisions_after_reconcile": []
+  },
+  "screen_sources": [
+    "provider_api",
+    "provider_api",
+    "webhook",
+    "webhook"
+  ],
+  "cli_calls": [
+    {
+      "args": "get /v1/events --stripe-account acct_1USjOo0mkpWSHVnd -d limit=100 -d created[gte]=1792554875 -d created[lt]=1792641275 -d -d -d -d -d -d -d -d -d -d -d",
+      "exit": 0,
+      "bytes": 91370
+    },
+    {
+      "args": "get /v1/events --stripe-account acct_1USjOo0mkpWSHVnd -d limit=100 -d created[gte]=1792554878 -d created[lt]=1792641278 -d -d -d -d -d -d -d -d -d -d -d",
+      "exit": 0,
+      "bytes": 91370
+    },
+    {
+      "args": "get /v1/events --stripe-account acct_1USjOo0mkpWSHVnd -d limit=100 -d created[gte]=1792554890 -d created[lt]=1792641290 -d -d -d -d -d -d -d -d -d -d -d",
+      "exit": 0,
+      "bytes": 99224
+    }
+  ],
+  "runs": [
+    {
+      "pages": 1,
+      "seen": 28,
+      "recorded": 28,
+      "duplicates": 0,
+      "conflicts": 0,
+      "refused": 0,
+      "outcome": "completed",
+      "error_class": null,
+      "window_start": "2026-10-20 23:54:35.101514-04:00",
+      "window_end": "2026-10-21 23:54:35.101514-04:00",
+      "finished_at": "2026-10-21 23:54:36.598387-04:00"
+    },
+    {
+      "pages": 1,
+      "seen": 28,
+      "recorded": 0,
+      "duplicates": 28,
+      "conflicts": 0,
+      "refused": 0,
+      "outcome": "completed",
+      "error_class": null,
+      "window_start": "2026-10-20 23:54:38.131501-04:00",
+      "window_end": "2026-10-21 23:54:38.131501-04:00",
+      "finished_at": "2026-10-21 23:54:39.503667-04:00"
+    },
+    {
+      "pages": 1,
+      "seen": 30,
+      "recorded": 0,
+      "duplicates": 30,
+      "conflicts": 0,
+      "refused": 0,
+      "outcome": "completed",
+      "error_class": null,
+      "window_start": "2026-10-20 23:54:50.795550-04:00",
+      "window_end": "2026-10-21 23:54:50.795550-04:00",
+      "finished_at": "2026-10-21 23:54:52.403527-04:00"
+    }
+  ],
+  "listed": [
+    {
+      "provider_object_id": "re_3UTD140mkpWSHVnd1VZpLJZe",
+      "kind": "refund",
+      "state": "observed",
+      "amount": "1.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "re_3UTD2z0mkpWSHVnd07pXfOJP",
+      "kind": "refund",
+      "state": "observed",
+      "amount": "1.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "pi_3UTD2y0mkpWSHVnd0LNiMaQb",
+      "kind": "payment",
+      "state": "observed",
+      "amount": "20.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "pi_3UTD140mkpWSHVnd10MJwMBy",
+      "kind": "payment",
+      "state": "observed",
+      "amount": "1.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "pi_3UTD590mkpWSHVnd1kBUwA8E",
+      "kind": "payment",
+      "state": "applied",
+      "amount": "1.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "pi_3UTD0B0mkpWSHVnd0HMXrQfi",
+      "kind": "payment",
+      "state": "observed",
+      "amount": "20.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "re_3UTD590mkpWSHVnd1LYGvHQ2",
+      "kind": "refund",
+      "state": "applied",
+      "amount": "1.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "pi_3UTD580mkpWSHVnd1YNv3fSX",
+      "kind": "payment",
+      "state": "applied",
+      "amount": "20.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "pi_3UTD130mkpWSHVnd1rbewhw8",
+      "kind": "payment",
+      "state": "observed",
+      "amount": "20.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "re_3UTD0C0mkpWSHVnd05WNPBZb",
+      "kind": "refund",
+      "state": "observed",
+      "amount": "1.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "pi_3UTD0C0mkpWSHVnd0vANxSot",
+      "kind": "payment",
+      "state": "observed",
+      "amount": "1.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "pi_3UTD2z0mkpWSHVnd0rjVgJQU",
+      "kind": "payment",
+      "state": "observed",
+      "amount": "1.00",
+      "currency": "USD"
+    },
+    {
+      "provider_object_id": "pi_3UTD5O0mkpWSHVnd1e9MhkpN",
+      "kind": "payment",
+      "state": "observed",
+      "amount": "20.00",
+      "currency": "USD"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+$ stripe trigger payment_intent.succeeded --stripe-account acct_1USjOo0mkpWSHVnd
+Setting up fixture for: payment_intent
+Running fixture for: payment_intent
+Trigger succeeded! Check dashboard for event details.
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+▸ Running in Alexey AAA logistics LLC · sandbox (acct_1UJtGO0mkpVWlKYX)
+
+$ stripe trigger charge.refunded --stripe-account acct_1USjOo0mkpWSHVnd
+Setting up fixture for: payment_intent
+Running fixture for: payment_intent
+Setting up fixture for: refund
+Running fixture for: refund
+Trigger succeeded! Check dashboard for event details.
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+▸ Running in Alexey AAA logistics LLC · sandbox (acct_1UJtGO0mkpVWlKYX)
+
+$ stripe trigger payment_intent.succeeded --stripe-account acct_1USjOo0mkpWSHVnd
+Setting up fixture for: payment_intent
+Running fixture for: payment_intent
+Trigger succeeded! Check dashboard for event details.
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+▸ Running in Alexey AAA logistics LLC · sandbox (acct_1UJtGO0mkpVWlKYX)
+
