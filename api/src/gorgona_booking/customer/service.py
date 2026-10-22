@@ -62,6 +62,9 @@ class CustomerBookingService:
             variant_id=body.variant_id,
             starts_at=body.start_at,
             add_on_ids=tuple(body.add_on_ids),
+            extra_lines=tuple(
+                (line.variant_id, tuple(line.add_on_ids)) for line in body.extra_lines
+            ),
         )
         scope = IdempotencyScope(tenant_id, actor, "customer.hold", key)
         fingerprint = hashlib.sha256(

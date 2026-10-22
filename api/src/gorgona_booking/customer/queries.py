@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from gorgona_booking.booking.stages import candidates, stage_spans
 from gorgona_booking.catalog.models import Quote
-from gorgona_booking.catalog.quote import build_quote
+from gorgona_booking.catalog.quote import build_quote, build_visit_quote
 from gorgona_booking.catalog.repository import load_add_ons, load_variant
 from gorgona_booking.customer.availability import available_starts, wall_windows
 from gorgona_booking.customer.contracts import (
@@ -76,18 +76,53 @@ async def policies(conn: RuntimeConnection) -> tuple[BookingRules, CancellationP
 async def quote_selection(conn: RuntimeConnection, selection: Selection) -> Quote:
     # A hold must validate and persist exactly the same catalog revisions. Lock in
     # stable order before loading composition, so concurrent price edits wait.
-    await conn.execute(
-        "select id from gba.service_variants where id = %s for share", (selection.variant_id,)
-    )
-    if selection.add_on_ids:
+    if not selection.extra_lines:
         await conn.execute(
-            "select id from gba.add_ons where id = any(%s) order by id for share",
-            (selection.add_on_ids,),
+            "select id from gba.service_variants where id = %s for share", (selection.variant_id,)
         )
-    return build_quote(
-        await load_variant(conn, selection.variant_id),
-        await load_add_ons(conn, selection.add_on_ids),
+        if selection.add_on_ids:
+            await conn.execute(
+                "select id from gba.add_ons where id = any(%s) order by id for share",
+                (selection.add_on_ids,),
+            )
+        return build_quote(
+            await load_variant(conn, selection.variant_id),
+            await load_add_ons(conn, selection.add_on_ids),
+        )
+    # L2c: a visit of several services, locked in the same stable order.
+    lines = [(selection.variant_id, selection.add_on_ids)] + [
+        (line.variant_id, line.add_on_ids) for line in selection.extra_lines
+    ]
+    await conn.execute(
+        "select id from gba.service_variants where id = any(%s) order by id for share",
+        ([variant for variant, _ in lines],),
     )
+    add_on_ids = sorted({a for _, add_ons in lines for a in add_ons})
+    if add_on_ids:
+        await conn.execute(
+            "select id from gba.add_ons where id = any(%s) order by id for share", (add_on_ids,)
+        )
+    return build_visit_quote(
+        [
+            (await load_variant(conn, variant), await load_add_ons(conn, add_ons))
+            for variant, add_ons in lines
+        ]
+    )
+
+
+async def serving_all(conn: RuntimeConnection, variant_ids: list[UUID]) -> set[UUID]:
+    """L2c: artists linked to the services of every given variant."""
+    rows = await (
+        await conn.execute(
+            "select rs.resource_id from gba.resource_services rs "
+            "where rs.service_id in (select service_id from gba.service_variants "
+            "where id = any(%s)) group by rs.resource_id "
+            "having count(distinct rs.service_id) = (select count(distinct service_id) "
+            "from gba.service_variants where id = any(%s))",
+            (variant_ids, variant_ids),
+        )
+    ).fetchall()
+    return {UUID(str(r[0])) for r in rows}
 
 
 async def artists(
@@ -277,6 +312,12 @@ async def availability(
     if not today <= query.day <= today + timedelta(days=rules.max_days_ahead):
         raise DomainError("Date is outside the booking window")
     eligible = await artists(conn, query.location_id, query.variant_id)
+    if query.extra_lines:
+        # L2c: one artist serves the whole visit.
+        serving = await serving_all(
+            conn, [query.variant_id, *(line.variant_id for line in query.extra_lines)]
+        )
+        eligible = [a for a in eligible if a.id in serving]
     if query.resource_id is not None:
         eligible = [a for a in eligible if a.id == query.resource_id]
         if not eligible:

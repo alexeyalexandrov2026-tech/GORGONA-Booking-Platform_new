@@ -16,6 +16,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.booking.models import BookingResult, ReservationRequest
 from gorgona_booking.booking.service import BookingService
+from gorgona_booking.customer.contracts import ExtraLine
 from gorgona_booking.errors import DatabaseUnavailableError
 from gorgona_booking.tenancy.resolver import resolve_tenant_by_host
 
@@ -34,6 +35,8 @@ class HoldCreate(BaseModel):
     start_at: AwareDatetime
     # L2: resources for stage kinds other than the specialist; a kind left out is found.
     stage_resources: dict[str, UUID] = Field(default_factory=dict, max_length=3)
+    # L2c: up to four more services in the same visit, in order.
+    extra_lines: list[ExtraLine] = Field(default_factory=list, max_length=4)
 
 
 class HoldView(BaseModel):
@@ -100,6 +103,9 @@ async def create_hold(
             starts_at=body.start_at,
             add_on_ids=tuple(body.add_on_ids),
             stage_resources=tuple(sorted(body.stage_resources.items())),
+            extra_lines=tuple(
+                (line.variant_id, tuple(line.add_on_ids)) for line in body.extra_lines
+            ),
         ),
         actor=ANONYMOUS_ACTOR,
         idempotency_key=idempotency_key,

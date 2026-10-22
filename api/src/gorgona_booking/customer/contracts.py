@@ -30,11 +30,20 @@ class CancellationPolicy(Contract):
     summary: str = Field(min_length=1, max_length=2000)
 
 
+class ExtraLine(Contract):
+    """L2c: a service after the first in one visit, with its own add-ons."""
+
+    variant_id: UUID
+    add_on_ids: list[UUID] = Field(default_factory=list, max_length=10)
+
+
 class Selection(Contract):
     location_id: UUID
     variant_id: UUID
     add_on_ids: list[UUID] = Field(default_factory=list, max_length=10)
     resource_id: UUID | None = None
+    # L2c: up to four more services in the same visit, in order.
+    extra_lines: list[ExtraLine] = Field(default_factory=list, max_length=4)
 
 
 class AvailabilityQuery(Selection):

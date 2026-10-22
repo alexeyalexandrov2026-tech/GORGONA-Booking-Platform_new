@@ -54,6 +54,8 @@ class ReservationRequest:
     add_on_ids: tuple[UUID, ...] = ()
     # L2: resources named for stage kinds other than the specialist, as sorted (kind, id) pairs.
     stage_resources: tuple[tuple[str, UUID], ...] = ()
+    # L2c: the services after the first, in order, each with its add-ons.
+    extra_lines: tuple[tuple[UUID, tuple[UUID, ...]], ...] = ()
 
     def fingerprint(self, operation: str) -> str:
         """Stable hash of the logical request, for idempotency comparison."""
@@ -69,6 +71,12 @@ class ReservationRequest:
             payload["stage_resources"] = sorted(
                 [kind, str(resource)] for kind, resource in self.stage_resources
             )
+        if self.extra_lines:
+            # Only when given, so a one-service request keeps its fingerprint.
+            payload["extra_lines"] = [
+                [str(variant), sorted(str(a) for a in add_ons)]
+                for variant, add_ons in self.extra_lines
+            ]
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
 

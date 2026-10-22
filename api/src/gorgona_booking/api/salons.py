@@ -35,6 +35,7 @@ from gorgona_booking.customer import queries
 from gorgona_booking.customer.contracts import (
     AvailabilityQuery,
     AvailabilityView,
+    ExtraLine,
     QuoteView,
     Selection,
 )
@@ -300,6 +301,8 @@ class StaffBookingCreate(Strict):
     add_on_ids: list[UUID] = Field(default_factory=list)
     # L2: resources for stage kinds other than the specialist; a kind left out is found.
     stage_resources: dict[str, UUID] = Field(default_factory=dict, max_length=3)
+    # L2c: up to four more services in the same visit, in order.
+    extra_lines: list[ExtraLine] = Field(default_factory=list, max_length=4)
 
 
 class BookingRescheduleRequest(Strict):
@@ -748,8 +751,9 @@ async def _claim_mutation(
     conn = access.conn
     scope = IdempotencyScope(salon_id, principal.actor, operation, key)
     payload = body.model_dump(mode="json")
-    if not payload.get("stage_resources"):
-        payload.pop("stage_resources", None)
+    for optional in ("stage_resources", "extra_lines"):
+        if not payload.get(optional):
+            payload.pop(optional, None)
     if "add_on_ids" in payload:
         payload["add_on_ids"] = sorted(payload["add_on_ids"])
     fingerprint = hashlib.sha256(
@@ -930,6 +934,7 @@ async def create_staff_booking(
             resource_id=body.resource_id,
             variant_id=body.variant_id,
             add_on_ids=body.add_on_ids,
+            extra_lines=body.extra_lines,
         )
         quote = await queries.quote_selection(conn, selection)
         starts_at, ends_at = booking_interval(body.starts_at, quote.booking_duration_minutes)

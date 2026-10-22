@@ -21,7 +21,7 @@ from gorgona_booking.booking.models import (
     StageResourceError,
     booking_interval,
 )
-from gorgona_booking.catalog.quote import build_quote
+from gorgona_booking.catalog.quote import build_quote, build_visit_quote
 from gorgona_booking.catalog.repository import load_add_ons, load_variant
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction
 
@@ -107,7 +107,19 @@ class BookingService:
 
             variant = await load_variant(conn, request.variant_id)
             add_ons = await load_add_ons(conn, request.add_on_ids)
-            quote = build_quote(variant, add_ons)
+            if request.extra_lines:
+                # L2c: a visit of several services, one quote.
+                quote = build_visit_quote(
+                    [
+                        (variant, add_ons),
+                        *[
+                            (await load_variant(conn, v), await load_add_ons(conn, list(a)))
+                            for v, a in request.extra_lines
+                        ],
+                    ]
+                )
+            else:
+                quote = build_quote(variant, add_ons)
             starts_at, ends_at = booking_interval(request.starts_at, quote.booking_duration_minutes)
             allocations: list[tuple[UUID, datetime, datetime]] | None = None
             unplaced = False
