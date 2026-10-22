@@ -1,6 +1,16 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-22: L4 visit billing, locally verified
+## Current checkpoint — 2026-10-22: L5 commissions and tips, locally verified
+
+L4 CI SUCCESS (run 39812765674). L5 designed ([design](PACKAGE_L5_DESIGN_2026-10-22.md), `12b64c9`;
+decision 30 revised) and built in `7ff9249` on `codex/package-l5-commissions` (migration 0070): a commission
+plan per specialist; once the visit invoice is fully paid, the commission is one FIN-03 payable accrual to
+the payee; tips stay a liability on the visit invoice (never revenue) and are recorded with the
+commission. Focused **388 passed**; full **2504 passed, 4 skipped**
+([validation](evidence/2026-10-22-l5-commissions/VALIDATION.md)). Next: L6, packages and
+certificates. Next migration **0071**.
+
+## Previous checkpoint — 2026-10-22: L4 visit billing, locally verified
 
 L3 CI SUCCESS after raising the CI job limit to 75 minutes (run 39805277086, 43 min; the first run was
 cancelled at 45). L4 designed ([design](PACKAGE_L4_DESIGN_2026-10-22.md), `c45607f`) and built in

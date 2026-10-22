@@ -30,10 +30,13 @@ people a share of what they sold uses the same plan and accrual.
     payable manual-accrual draft to the payee holds the commission lines on the expense account.
     Issuing it (the existing route) posts expense and the payable once; the obligation is paid out by
     the existing settlements. Fee lines are never part of the base.
-30. **Tips are a payable, never revenue.** A tip is a line of the visit invoice (L4 fee line) on a
-    liability account; when the commission names that account as the tips account, the accrual adds
-    one line moving the tips from that liability to the payee's payable. A tips account that is not
-    a liability is refused.
+30. **Tips are a liability, never revenue** (revised during L5 dev-1). A tip is a line of the visit
+    invoice (L4 fee line) on a liability account, so issuing the invoice never books it as revenue.
+    FIN-03 lets a payable document name only expense or asset counter lines ("invoice needs an open
+    counter account"), so a tip cannot be moved into the payee's accrual; the commission records and
+    reports the tips held for the specialist (the sum of the visit invoice lines on the named tips
+    account, `gba.visit_commissions.tips_minor`). Paying tips out is a ledger entry for now; a payable
+    to the person is a later decision. A tips account that is not a liability is refused.
 31. **Once per visit.** `gba.visit_commissions` links a visit to its accrual once, permanently; the
     same key repeats the answer, another key `VISIT_ALREADY_COMMISSIONED`.
 32. **Refunds.** A credited visit invoice refuses the commission (`VISIT_INVOICE_CREDITED`); an issued
@@ -48,6 +51,6 @@ people a share of what they sold uses the same plan and accrual.
 | L5-01 | A plan is replaced whole with its revision; a percentage with three decimals, both or neither of percentage and amount, a second default and a foreign resource are refused |
 | L5-02 | An unpaid, partly paid, reserved or credited visit invoice refuses the commission; a fully paid one accrues it |
 | L5-03 | The accrual has one line per service line at the service rule, else the default, rounded half up; fees are not in the base |
-| L5-04 | Tips on a liability account move to the payee's payable in the same accrual; a revenue tips account is refused |
+| L5-04 | Tips on a liability account are recorded and reported with the commission (never revenue, not in the accrual); a revenue tips account is refused |
 | L5-05 | Once per visit; issuing posts expense and payable once; the obligation is paid by a settlement |
 | L5-06 | Without finance rights nothing is written; another company sees nothing |
