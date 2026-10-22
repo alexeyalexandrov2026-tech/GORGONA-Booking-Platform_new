@@ -7,8 +7,9 @@ component, such as heel care, is never charged again).
 """
 
 from collections.abc import Sequence
+from dataclasses import replace
 
-from gorgona_booking.catalog.models import AddOnSpec, Quote, QuoteLine, VariantSpec
+from gorgona_booking.catalog.models import AddOnSpec, Quote, QuoteLine, StageSpec, VariantSpec
 from gorgona_booking.errors import DomainError
 
 MAX_BOOKING_MINUTES = 720
@@ -35,7 +36,24 @@ def _variant_problem(variant: VariantSpec) -> str | None:
         return "not_published"
     if not variant.is_bookable:
         return "not_bookable"
+    if variant.stages and (
+        sum(s.minutes for s in variant.stages) != variant.booking_duration_minutes
+        or not any(s.kind == "active" for s in variant.stages)
+    ):
+        return "stages_mismatch"
     return None
+
+
+def _stages(variant: VariantSpec, add_ons: Sequence[AddOnSpec]) -> tuple[StageSpec, ...]:
+    """L1: the add-ons' minutes join the variant's last active stage."""
+    if not variant.stages:
+        return ()
+    extra = sum(a.duration_delta_minutes or 0 for a in add_ons)
+    last = max(i for i, s in enumerate(variant.stages) if s.kind == "active")
+    return tuple(
+        replace(s, minutes=s.minutes + extra) if i == last else s
+        for i, s in enumerate(variant.stages)
+    )
 
 
 def _add_on_problem(add_on: AddOnSpec) -> str | None:
@@ -139,4 +157,5 @@ def build_quote(variant: VariantSpec, add_ons: Sequence[AddOnSpec] = ()) -> Quot
         total_cents=sum(line.price_cents for line in lines),
         booking_duration_minutes=duration,
         lines=tuple(lines),
+        stages=_stages(variant, add_ons),
     )

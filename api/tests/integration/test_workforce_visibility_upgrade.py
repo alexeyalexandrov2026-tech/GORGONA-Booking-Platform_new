@@ -60,6 +60,9 @@ async def test_nonempty_0034_upgrade_preserves_every_fact_and_prior_checksum(
             conn.execute("select version,checksum from public.gba_schema_migrations")
         )
     assert {number: current[number] for number in prior} == prior
+    # The packaged guard approves the packaged schema: upgrade the same data to the head first
+    # (L1, 0066, changed a workforce-checked constraint after 0035).
+    assert apply_migrations(target.owner_dsn)
     pool = create_runtime_pool(target.app_dsn, min_size=1, max_size=2)
     await pool.open()
     try:

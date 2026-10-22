@@ -47,6 +47,8 @@ K_TABLES = {
     "provider_event_releases",
     # K6b (0064): one record per reconciliation run.
     "provider_reconciliation_runs",
+    # L1 (0066): the stages of a service variant (not a K table; created by the same upgrade).
+    "variant_stages",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

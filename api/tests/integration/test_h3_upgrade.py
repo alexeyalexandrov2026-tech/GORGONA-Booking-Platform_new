@@ -175,6 +175,12 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                         "where e.tenant_id=t.tenant_id and e.id=t.entry_id "
                         "and e.source_kind='stock')"
                     )
+            # L1: an equipment resource cannot be represented before migration 0066; nothing
+            # else refers to the ones the tests create. Kept together with the staff rule.
+            if target_version[0] < 66 and table == "resources":
+                predicate = sql.SQL(" where t.kind not in ('equipment'{})").format(
+                    sql.SQL(", 'staff'") if target_version[0] < 32 else sql.SQL("")
+                )
             # K6b: an attestation of an event retrieved from the provider's API cannot be
             # represented before migration 0064; the event stays an unattested archive row there.
             if target_version[0] < 64 and table == "provider_event_attestations":

@@ -4,13 +4,13 @@
 import hashlib
 import json
 from datetime import UTC, date, datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Self
 from uuid import UUID, uuid7
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Header, Request
 from psycopg import errors as pg
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from gorgona_booking.api.deps import get_principal, runtime_pool
 from gorgona_booking.api.request_id import get_request_id
@@ -24,7 +24,7 @@ from gorgona_booking.booking.models import IdempotencyKeyReusedError, booking_in
 from gorgona_booking.booking.repository import load_booking
 from gorgona_booking.business.configurations import module_enabled
 from gorgona_booking.business.modules import BOOKING_MODULE
-from gorgona_booking.catalog.models import Quote, QuoteLine
+from gorgona_booking.catalog.models import Quote, QuoteLine, StageKind, StageResource
 from gorgona_booking.catalog.quote import ServiceNotBookableError
 from gorgona_booking.customer import queries
 from gorgona_booking.customer.contracts import (
@@ -112,6 +112,46 @@ class ServiceVariantUpdate(Strict):
     is_bookable: bool | None = None
 
 
+class StageInput(Strict):
+    """L1: one stage of a service; the specialist works in active and finish stages only."""
+
+    kind: StageKind
+    minutes: int = Field(ge=1, le=720)
+    resources: list[StageResource] = Field(max_length=4)
+
+    @model_validator(mode="after")
+    def specialist_where_work_is_done(self) -> Self:
+        if len(set(self.resources)) != len(self.resources):
+            raise ValueError("A resource kind is listed twice")
+        if ("specialist" in self.resources) != (self.kind in ("active", "finish")):
+            raise ValueError("The specialist works in active and finish stages only")
+        return self
+
+
+class StagesReplace(Strict):
+    expected_revision: int = Field(ge=1)
+    stages: list[StageInput] = Field(max_length=10)
+
+    @model_validator(mode="after")
+    def bookable_stages(self) -> Self:
+        if self.stages and not any(s.kind == "active" for s in self.stages):
+            raise ValueError("A staged service needs an active stage")
+        if sum(s.minutes for s in self.stages) > 720:
+            raise ValueError("The stages are longer than one booking allows")
+        return self
+
+
+class StageView(BaseModel):
+    position: int
+    kind: StageKind
+    minutes: int
+    resources: list[StageResource]
+
+
+class ServiceRevisionConflictError(ConflictError):
+    code = "SERVICE_REVISION_CONFLICT"
+
+
 class ServiceView(BaseModel):
     id: UUID
     service_id: UUID
@@ -123,12 +163,15 @@ class ServiceView(BaseModel):
     booking_duration_minutes: int | None
     is_bookable: bool
     revision: int
+    # L1: ordered stages; empty for a service that books one stage of its whole duration.
+    stages: list[StageView] = []
 
 
 class StaffCreate(Strict):
     display_name: str = Field(min_length=1, max_length=200)
     location_id: UUID
-    kind: Literal["artist", "chair", "room"] = "artist"
+    # L1 (package L): equipment, e.g. a colour processor, is booked like a chair or a room.
+    kind: Literal["artist", "chair", "room", "equipment"] = "artist"
 
 
 class StaffUpdate(Strict):
@@ -343,6 +386,23 @@ _BOOKING_SUMMARY_SELECT = (
     "join gba.locations l on l.tenant_id = b.tenant_id and l.id = b.location_id "
     "left join gba.booking_customers c on c.tenant_id = b.tenant_id and c.booking_id = b.id"
 )
+
+
+_STAGES_OF = (
+    "select variant_id,position,kind,minutes,resources from gba.variant_stages "
+    "where variant_id=any(%s) order by variant_id,position"
+)
+
+
+async def _with_stages(conn: RuntimeConnection, views: list[ServiceView]) -> list[ServiceView]:
+    """L1: attach each service's ordered stages in one query."""
+    rows = await (await conn.execute(_STAGES_OF, ([v.id for v in views],))).fetchall()
+    stages: dict[UUID, list[StageView]] = {}
+    for variant, position, kind, minutes, resources in rows:
+        stages.setdefault(variant, []).append(
+            StageView(position=position, kind=kind, minutes=minutes, resources=list(resources))
+        )
+    return [v.model_copy(update={"stages": stages.get(v.id, [])}) for v in views]
 
 
 def _service(row: tuple[Any, ...]) -> ServiceView:
@@ -1159,7 +1219,7 @@ async def list_services(
                 f"select {_SERVICE_COLUMNS} from gba.service_variants order by code"  # noqa: S608
             )
         ).fetchall()
-    return [_service(r) for r in rows]
+        return await _with_stages(access.conn, [_service(r) for r in rows])
 
 
 @router.post("/salons/{salon_id}/services", status_code=201)
@@ -1255,9 +1315,60 @@ async def update_service_variant(
                 "The updated service definition violates constraints",
                 constraint=exc.diag.constraint_name,
             ) from None
-    if row is None:
-        raise NotFoundError("Service not found", variant_id=str(variant_id))
-    return _service(row)
+        if row is None:
+            raise NotFoundError("Service not found", variant_id=str(variant_id))
+        (view,) = await _with_stages(access.conn, [_service(row)])
+    return view
+
+
+@router.put("/salons/{salon_id}/services/{variant_id}/stages")
+async def replace_service_stages(
+    salon_id: UUID,
+    variant_id: UUID,
+    body: StagesReplace,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ServiceView:
+    """L1: replace a service's stages; its booking duration becomes their sum (or stays)."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.CATALOG_MANAGE,
+        request_id=get_request_id(request),
+    ) as access:
+        conn = access.conn
+        current = await (
+            await conn.execute(
+                "select revision from gba.service_variants where id=%s for update", (variant_id,)
+            )
+        ).fetchone()
+        if current is None:
+            raise NotFoundError("Service not found", variant_id=str(variant_id))
+        if current[0] != body.expected_revision:
+            raise ServiceRevisionConflictError(
+                "The service changed since it was read; reload it", revision=current[0]
+            )
+        await conn.execute("delete from gba.variant_stages where variant_id=%s", (variant_id,))
+        for position, stage in enumerate(body.stages, start=1):
+            await conn.execute(
+                "insert into gba.variant_stages (tenant_id,variant_id,position,kind,minutes,"
+                "resources) values (%s,%s,%s,%s,%s,%s)",
+                (salon_id, variant_id, position, stage.kind, stage.minutes, list(stage.resources)),
+            )
+        row = await (
+            await conn.execute(
+                "update gba.service_variants set booking_duration_minutes="
+                "coalesce(%s,booking_duration_minutes) where id=%s returning "
+                "id, service_id, code, name, status, price_cents, currency, "
+                "booking_duration_minutes, is_bookable, revision",
+                (sum(s.minutes for s in body.stages) or None, variant_id),
+            )
+        ).fetchone()
+        if row is None:
+            raise NotFoundError("Service not found", variant_id=str(variant_id))
+        (view,) = await _with_stages(conn, [_service(row)])
+    return view
 
 
 @router.post("/salons/{salon_id}/services/{variant_id}/publish")
@@ -1290,9 +1401,10 @@ async def publish_service(
                     reason="booking_duration_unknown",
                 ) from None
             raise
-    if row is None:
-        raise NotFoundError("Service not found", variant_id=str(variant_id))
-    return _service(row)
+        if row is None:
+            raise NotFoundError("Service not found", variant_id=str(variant_id))
+        (view,) = await _with_stages(access.conn, [_service(row)])
+    return view
 
 
 @router.post("/salons/{salon_id}/services/{variant_id}/unpublish")
@@ -1315,9 +1427,10 @@ async def unpublish_service(
                 (variant_id,),
             )
         ).fetchone()
-    if row is None:
-        raise NotFoundError("Service not found", variant_id=str(variant_id))
-    return _service(row)
+        if row is None:
+            raise NotFoundError("Service not found", variant_id=str(variant_id))
+        (view,) = await _with_stages(access.conn, [_service(row)])
+    return view
 
 
 # --- Staff Management ---

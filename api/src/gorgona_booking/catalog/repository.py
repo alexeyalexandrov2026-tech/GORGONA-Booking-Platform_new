@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from gorgona_booking.catalog.models import AddOnSpec, VariantSpec
+from gorgona_booking.catalog.models import AddOnSpec, StageSpec, VariantSpec
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import NotFoundError
 
@@ -18,6 +18,11 @@ left join gba.variant_components vc
 where v.id = %s
 group by v.tenant_id, v.id
 """
+
+# L1: the ordered stages of a variant.
+_STAGES = (
+    "select kind,minutes,resources from gba.variant_stages where variant_id=%s order by position"
+)
 
 _ADD_ONS = """
 select a.id, a.code, a.name, a.status, a.price_cents, a.currency,
@@ -49,7 +54,13 @@ async def load_variant(conn: RuntimeConnection, variant_id: UUID) -> VariantSpec
         is_bookable=row[7],
         revision=row[8],
         provides=frozenset(row[9]),
+        stages=await load_stages(conn, variant_id),
     )
+
+
+async def load_stages(conn: RuntimeConnection, variant_id: UUID) -> tuple[StageSpec, ...]:
+    rows = await (await conn.execute(_STAGES, (variant_id,))).fetchall()
+    return tuple(StageSpec(kind=r[0], minutes=r[1], resources=tuple(r[2])) for r in rows)
 
 
 async def load_add_ons(conn: RuntimeConnection, add_on_ids: Sequence[UUID]) -> list[AddOnSpec]:

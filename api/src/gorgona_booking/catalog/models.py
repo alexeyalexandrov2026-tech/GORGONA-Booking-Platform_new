@@ -5,6 +5,16 @@ from typing import Literal
 from uuid import UUID
 
 type CatalogStatus = Literal["draft", "published", "archived"]
+# L1 (package L): what a stage of a service does, and which resource kinds it occupies.
+type StageKind = Literal["active", "processing", "finish"]
+type StageResource = Literal["specialist", "chair", "room", "equipment"]
+
+
+@dataclass(frozen=True, slots=True)
+class StageSpec:
+    kind: StageKind
+    minutes: int
+    resources: tuple[StageResource, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +30,8 @@ class VariantSpec:
     is_bookable: bool
     revision: int
     provides: frozenset[str] = field(default_factory=frozenset)
+    # L1: ordered stages; empty means one active stage of the whole duration, as before.
+    stages: tuple[StageSpec, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,9 +67,24 @@ class Quote:
     total_cents: int
     booking_duration_minutes: int
     lines: tuple[QuoteLine, ...]
+    # L1: the stages of the visit, with the add-ons' minutes; empty for a variant without stages.
+    stages: tuple[StageSpec, ...] = ()
 
     def snapshot(self) -> dict[str, object]:
-        """Immutable record stored with a booking (JSON-serialisable)."""
+        """Immutable record stored with a booking (JSON-serialisable).
+
+        Version 1 is unchanged for a variant without stages; version 2 adds its stages.
+        """
+        record = self._lines_snapshot()
+        if self.stages:
+            record["version"] = 2
+            record["stages"] = [
+                {"kind": s.kind, "minutes": s.minutes, "resources": list(s.resources)}
+                for s in self.stages
+            ]
+        return record
+
+    def _lines_snapshot(self) -> dict[str, object]:
         return {
             "version": 1,
             "currency": self.currency,

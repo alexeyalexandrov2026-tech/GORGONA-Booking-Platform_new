@@ -342,7 +342,8 @@ _SHARED_CHECKS = {
     (
         "resources",
         "resources_kind_valid",
-    ): "((kind = ANY (ARRAY['artist'::text, 'chair'::text, 'room'::text, 'staff'::text])))",
+    ): "((kind = ANY (ARRAY['artist'::text, 'chair'::text, 'room'::text, 'staff'::text, "
+    "'equipment'::text])))",  # L1 (0066): equipment is a resource kind
     (
         "resource_allocations",
         "resource_allocations_source_kind",

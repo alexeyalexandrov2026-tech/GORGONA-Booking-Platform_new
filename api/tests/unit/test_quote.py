@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pytest
 
-from gorgona_booking.catalog.models import AddOnSpec, VariantSpec
+from gorgona_booking.catalog.models import AddOnSpec, StageSpec, VariantSpec
 from gorgona_booking.catalog.quote import (
     AddOnNotBookableError,
     IncompatibleSelectionError,
@@ -154,3 +154,47 @@ def test_snapshot_is_json_and_records_revisions() -> None:
     decoded = json.loads(json.dumps(snapshot))
     assert decoded["total_cents"] == 8000
     assert [line["revision"] for line in decoded["lines"]] == [3, 1]
+
+
+# L1 (package L, BEAUTY-01): stages of a variant. --------------------------------------
+
+COLOUR = replace(
+    fake_variant("FAKE_COLOUR", 90, 9000, {"FAKE_COLOUR"}),
+    stages=(
+        StageSpec(kind="active", minutes=30, resources=("specialist", "chair")),
+        StageSpec(kind="processing", minutes=40, resources=("chair", "equipment")),
+        StageSpec(kind="finish", minutes=20, resources=("specialist", "chair")),
+    ),
+)
+
+
+def test_a_variant_without_stages_quotes_exactly_as_before() -> None:
+    quote = build_quote(GEL, [FRENCH])
+    assert quote.stages == ()
+    snapshot = quote.snapshot()
+    assert snapshot["version"] == 1
+    assert "stages" not in snapshot
+
+
+def test_stages_are_quoted_and_add_on_minutes_join_the_last_active_stage() -> None:
+    quote = build_quote(COLOUR, [MASSAGE])
+    assert [(s.kind, s.minutes, s.resources) for s in quote.stages] == [
+        ("active", 45, ("specialist", "chair")),
+        ("processing", 40, ("chair", "equipment")),
+        ("finish", 20, ("specialist", "chair")),
+    ]
+    assert quote.booking_duration_minutes == 105
+    snapshot = json.loads(json.dumps(quote.snapshot()))
+    assert snapshot["version"] == 2
+    assert snapshot["stages"] == [
+        {"kind": "active", "minutes": 45, "resources": ["specialist", "chair"]},
+        {"kind": "processing", "minutes": 40, "resources": ["chair", "equipment"]},
+        {"kind": "finish", "minutes": 20, "resources": ["specialist", "chair"]},
+    ]
+
+
+def test_stages_that_disagree_with_the_duration_are_not_bookable() -> None:
+    broken = replace(COLOUR, booking_duration_minutes=60)
+    with pytest.raises(ServiceNotBookableError) as error:
+        build_quote(broken)
+    assert error.value.details["reason"] == "stages_mismatch"
