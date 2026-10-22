@@ -1,6 +1,17 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-22: package L started; L1 service stages and equipment locally verified
+## Current checkpoint — 2026-10-22: L2a stage-by-stage occupancy locally verified
+
+L1 CI SUCCESS (run 39758206502; package L plan run 39758206876). L2 designed under the owner's full
+delegation ([design](PACKAGE_L2_DESIGN_2026-10-22.md), `f1403eb`). L2a in `edd0849` on
+`codex/package-l2-occupancy` (migration 0067): a staged visit holds each resource only for its stages,
+so the specialist is free while a colour develops and the chair stays held; all or nothing; chair,
+room or equipment named or found. Staff booking, reschedule and the hold API handle staged services;
+the customer site refuses them until L2b. 20 new tests; focused **214 passed**; full **2459 passed, 4
+skipped** ([validation](evidence/2026-10-22-l2a-stage-occupancy/VALIDATION.md)). Next: L2b.
+Next migration **0068**.
+
+## Previous checkpoint — 2026-10-22: package L started; L1 service stages and equipment locally verified
 
 Package L (BEAUTY-01, build order of stage 3, not a separate launch) planned under the owner's full
 delegation ([plan](PACKAGE_L_PLAN_2026-10-22.md), `5eb534c`). L1 in `7ce60ef` on
