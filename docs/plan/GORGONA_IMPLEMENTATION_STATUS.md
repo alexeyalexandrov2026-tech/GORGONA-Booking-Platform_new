@@ -1,6 +1,16 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-22: L6 prepaid packages and gift certificates, locally verified
+## Current checkpoint — 2026-10-22: L7a catalog screens, locally verified; Next.js security upgrade
+
+L6 CI SUCCESS (run 39828302644). L7 designed ([design](PACKAGE_L7_DESIGN_2026-10-22.md), `259cfd2`).
+L7a in `13919b3` on `codex/package-l7a-catalog-screens`: the Services screen edits the stages and the
+materials of a service, equipment is a resource kind; real browser desktop and mobile. `npm audit`
+flagged a critical Next.js advisory (GHSA-2464-fhr4-w9xw); `next` upgraded to 16.4.2 here — `main` and
+earlier branches still pin 16.3.8 until merged. Focused **434 passed**; full **2512 passed, 4 skipped**
+([validation](evidence/2026-10-22-l7a-catalog-screens/VALIDATION.md)). Next: L7b, the visit desk.
+Next migration **0072**.
+
+## Previous checkpoint — 2026-10-22: L6 prepaid packages and gift certificates, locally verified
 
 L5 CI SUCCESS (run 39819887470). L6 designed ([design](PACKAGE_L6_DESIGN_2026-10-22.md), `7c7230a`) and
 built in `affdaf3` on `codex/package-l6-prepaid` (migration 0071): a package or certificate is sold by an
