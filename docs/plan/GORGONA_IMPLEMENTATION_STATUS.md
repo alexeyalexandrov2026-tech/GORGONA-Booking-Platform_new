@@ -1,6 +1,15 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-22: L2c visits with several services, locally verified
+## Current checkpoint — 2026-10-22: L3 visit completion and material consumption, locally verified
+
+L2c CI SUCCESS (run 39783826823). L3 designed ([design](PACKAGE_L3_DESIGN_2026-10-22.md), `2402352`)
+and built in `4ed11af` on `codex/package-l3-consumption` (migration 0068): recipes per service and add-on;
+completing a started visit records planned and actual materials (booking right, branch scope); posting the
+consumption writes them off once through STOCK-01 (inventory and finance rights). Focused **257 passed**;
+full **2487 passed, 4 skipped** ([validation](evidence/2026-10-22-l3-consumption/VALIDATION.md)). Next:
+L4, visit billing. Next migration **0069**.
+
+## Previous checkpoint — 2026-10-22: L2c visits with several services, locally verified
 
 L2b CI SUCCESS (run 39777287553). L2c in `c32a1b0` on `codex/package-l2c-visits` (no migration): one
 booking holds several services in order (`extra_lines` after the first); the composition rules apply
