@@ -40,22 +40,41 @@ class InvalidBookingTimeError(DomainError):
     code = "INVALID_BOOKING_TIME"
 
 
+class StageResourceError(DomainError):
+    """L2: a named stage resource does not fit the service's stages (kind, branch, activity)."""
+
+    code = "STAGE_RESOURCE_INVALID"
+
+
+class StagedServiceNotOnlineError(DomainError):
+    """L2a: guests cannot book a staged service online until L2b."""
+
+    code = "STAGED_SERVICE_NOT_ONLINE"
+
+
 @dataclass(frozen=True, slots=True)
 class ReservationRequest:
     resource_id: UUID
     variant_id: UUID
     starts_at: datetime
     add_on_ids: tuple[UUID, ...] = ()
+    # L2: resources named for stage kinds other than the specialist, as sorted (kind, id) pairs.
+    stage_resources: tuple[tuple[str, UUID], ...] = ()
 
     def fingerprint(self, operation: str) -> str:
         """Stable hash of the logical request, for idempotency comparison."""
-        payload = {
+        payload: dict[str, object] = {
             "operation": operation,
             "resource_id": str(self.resource_id),
             "variant_id": str(self.variant_id),
             "add_on_ids": sorted(str(i) for i in self.add_on_ids),
             "starts_at": self.starts_at.astimezone(UTC).isoformat(),
         }
+        if self.stage_resources:
+            # Only when named, so every earlier request keeps its fingerprint.
+            payload["stage_resources"] = sorted(
+                [kind, str(resource)] for kind, resource in self.stage_resources
+            )
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
 

@@ -7,6 +7,8 @@ from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
+from gorgona_booking.booking.models import StagedServiceNotOnlineError
+from gorgona_booking.booking.stages import stage_spans
 from gorgona_booking.catalog.models import Quote
 from gorgona_booking.catalog.quote import build_quote
 from gorgona_booking.catalog.repository import load_add_ons, load_variant
@@ -210,6 +212,10 @@ async def availability(
         await live_name(conn)
     rules, _ = await policies(conn)
     quote = preserved_quote or await quote_selection(conn, query)
+    if quote.stages and require_live:
+        # L2a: guests book a staged service from L2b on (every stage resource must be free).
+        raise StagedServiceNotOnlineError("This service cannot be booked online yet")
+    works = stage_spans(quote.stages)["specialist"] if quote.stages else None
     zone = await location_zone(conn, query.location_id)
     now = datetime.now(UTC)
     today = now.astimezone(ZoneInfo(zone)).date()
@@ -275,6 +281,7 @@ async def availability(
                 minutes=quote.booking_duration_minutes,
                 step=rules.slot_interval_minutes,
                 after=now + timedelta(minutes=rules.advance_notice_minutes),
+                works=works,
             )
             slots.extend(
                 Slot(

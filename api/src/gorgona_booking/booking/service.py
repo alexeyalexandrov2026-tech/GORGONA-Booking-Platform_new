@@ -6,7 +6,7 @@ from uuid import UUID
 
 import psycopg
 
-from gorgona_booking.booking import idempotency
+from gorgona_booking.booking import idempotency, stages
 from gorgona_booking.booking import repository as repo
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import (
@@ -18,6 +18,7 @@ from gorgona_booking.booking.models import (
     InvalidTransitionError,
     ReservationRequest,
     SlotConflictError,
+    StageResourceError,
     booking_interval,
 )
 from gorgona_booking.catalog.quote import build_quote
@@ -28,6 +29,10 @@ _OPERATIONS: dict[BookingStatus, str] = {
     "HOLD": "booking.create_hold",
     "CONFIRMED": "booking.create_confirmed",
 }
+
+
+class _Unplaced(Exception):  # noqa: N818 - internal control flow, never leaves this module
+    """L2: a staged visit found no free resource of a kind."""
 
 
 def _slot_conflict() -> SlotConflictError:
@@ -104,21 +109,52 @@ class BookingService:
             add_ons = await load_add_ons(conn, request.add_on_ids)
             quote = build_quote(variant, add_ons)
             starts_at, ends_at = booking_interval(request.starts_at, quote.booking_duration_minutes)
-            location_id = await repo.active_resource_location(conn, request.resource_id)
-            await repo.lock_resource_schedule(conn, tenant_id, request.resource_id)
+            allocations: list[tuple[UUID, datetime, datetime]] | None = None
+            unplaced = False
+            if quote.stages:
+                # L2: every stage occupies its own resources (design PACKAGE_L2_DESIGN).
+                await repo.set_audit_context(
+                    conn,
+                    actor="system:hold-expiry",
+                    reason="expired_on_contention",
+                    request_id=request_id,
+                )
+                try:
+                    location_id, planned = await stages.plan(
+                        conn,
+                        tenant_id,
+                        specialist_id=request.resource_id,
+                        stages=quote.stages,
+                        starts_at=starts_at,
+                        named=request.stage_resources,
+                    )
+                except SlotConflictError:
+                    # No free resource of a kind: the same answer as a lost race.
+                    unplaced = True
+                else:
+                    allocations = [(a.resource_id, a.starts_at, a.ends_at) for a in planned]
+            else:
+                if request.stage_resources:
+                    raise StageResourceError("This service has no stages")
+                location_id = await repo.active_resource_location(conn, request.resource_id)
+                await repo.lock_resource_schedule(conn, tenant_id, request.resource_id)
 
-            await repo.set_audit_context(
-                conn,
-                actor="system:hold-expiry",
-                reason="expired_on_contention",
-                request_id=request_id,
-            )
-            await repo.expire_stale_holds_overlapping(conn, request.resource_id, starts_at, ends_at)
+                await repo.set_audit_context(
+                    conn,
+                    actor="system:hold-expiry",
+                    reason="expired_on_contention",
+                    request_id=request_id,
+                )
+                await repo.expire_stale_holds_overlapping(
+                    conn, request.resource_id, starts_at, ends_at
+                )
 
             await repo.set_audit_context(
                 conn, actor=actor, reason=f"created_{status.lower()}", request_id=request_id
             )
             try:
+                if unplaced:
+                    raise _Unplaced
                 async with conn.transaction():  # savepoint: a conflict keeps the key claim
                     booking_id = await repo.insert_booking(
                         conn,
@@ -132,8 +168,11 @@ class BookingService:
                         hold_ttl_seconds=self._hold_ttl_seconds,
                         quote=quote,
                         created_by=actor,
+                        allocations=allocations,
                     )
                 outcome = await repo.load_booking(conn, booking_id)
+            except _Unplaced:
+                outcome = _slot_conflict()
             except psycopg.errors.ExclusionViolation as exc:
                 if not repo.is_slot_conflict(exc):
                     raise

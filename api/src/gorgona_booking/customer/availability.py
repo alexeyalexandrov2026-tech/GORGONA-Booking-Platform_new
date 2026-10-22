@@ -36,18 +36,29 @@ def available_starts(
     minutes: int,
     step: int,
     after: datetime,
+    works: Sequence[tuple[int, int]] | None = None,
 ) -> list[datetime]:
+    """Starts where the whole visit fits the hours and the artist is free while working.
+
+    `works` (L2) are the minutes of the visit the artist works; by default the whole visit. A
+    staged visit leaves the artist free while a colour develops.
+    """
     if minutes <= 0 or step <= 0 or after.tzinfo is None:
         raise ValueError("positive duration/step and aware cutoff required")
     duration, increment = timedelta(minutes=minutes), timedelta(minutes=step)
+    working = [
+        (timedelta(minutes=left), timedelta(minutes=right))
+        for left, right in (works if works is not None else ((0, minutes),))
+    ]
     starts: set[datetime] = set()
     for left, right in location:
         for staff_left, staff_right in artist:
             start, end = max(left, staff_left), min(right, staff_right)
             while start + duration <= end:
                 if start >= after and not any(
-                    start < busy_end and start + duration > busy_start
+                    start + left < busy_end and start + right > busy_start
                     for busy_start, busy_end in occupied
+                    for left, right in working
                 ):
                     starts.add(start)
                 start += increment

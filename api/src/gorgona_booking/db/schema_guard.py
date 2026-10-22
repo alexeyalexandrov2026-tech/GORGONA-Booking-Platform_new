@@ -207,6 +207,7 @@ begin
     return null;
 end;
 """
+# L2a (0067): the mirror matches the interval too.
 _OCCUPANCY_MIRROR_SOURCE = """
 begin
     if tg_op = 'INSERT' then
@@ -219,6 +220,7 @@ begin
            set state = gba.booking_occupancy_state(new.booking_status)
          where r.tenant_id = new.tenant_id and r.source_kind = 'booking'
            and r.source_id = new.booking_id and r.resource_id = new.resource_id
+           and r.during = new.during
            and r.state <> gba.booking_occupancy_state(new.booking_status);
         -- Nothing to update means an allocation from before 0018; the backfill copies
         -- it later with the booking's state. The status cascade runs this trigger in

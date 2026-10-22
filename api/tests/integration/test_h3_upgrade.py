@@ -181,6 +181,23 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                 predicate = sql.SQL(" where t.kind not in ('equipment'{})").format(
                     sql.SQL(", 'staff'") if target_version[0] < 32 else sql.SQL("")
                 )
+            # L2a: before migration 0067 a booking holds one interval per resource; keep the
+            # first, which is what such a schema would have held.
+            if target_version[0] < 67 and table in ("booking_allocations", "resource_allocations"):
+                same = (
+                    "x.booking_id=t.booking_id"
+                    if table == "booking_allocations"
+                    else "x.source_kind=t.source_kind and x.source_id=t.source_id"
+                )
+                first = sql.SQL(
+                    "not exists (select 1 from gba.{} x where x.tenant_id=t.tenant_id and "
+                    + same
+                    + " and x.resource_id=t.resource_id and x.id<t.id)"
+                ).format(sql.Identifier(table))
+                if predicate == sql.SQL(""):
+                    predicate = sql.SQL(" where {}").format(first)
+                else:
+                    predicate = sql.SQL("{} and {}").format(predicate, first)
             # K6b: an attestation of an event retrieved from the provider's API cannot be
             # represented before migration 0064; the event stays an unattested archive row there.
             if target_version[0] < 64 and table == "provider_event_attestations":

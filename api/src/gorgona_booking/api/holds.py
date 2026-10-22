@@ -32,6 +32,8 @@ class HoldCreate(BaseModel):
     variant_id: UUID
     add_on_ids: list[UUID] = Field(default_factory=list, max_length=10)
     start_at: AwareDatetime
+    # L2: resources for stage kinds other than the specialist; a kind left out is found.
+    stage_resources: dict[str, UUID] = Field(default_factory=dict, max_length=3)
 
 
 class HoldView(BaseModel):
@@ -97,6 +99,7 @@ async def create_hold(
             variant_id=body.variant_id,
             starts_at=body.start_at,
             add_on_ids=tuple(body.add_on_ids),
+            stage_resources=tuple(sorted(body.stage_resources.items())),
         ),
         actor=ANONYMOUS_ACTOR,
         idempotency_key=idempotency_key,

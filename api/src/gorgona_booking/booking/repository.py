@@ -1,5 +1,6 @@
 """SQL for bookings and occupancy. Every function runs inside the caller's tenant transaction."""
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -76,7 +77,7 @@ async def lock_resource_schedule(
 async def booking_resource_ids(conn: RuntimeConnection, booking_id: UUID) -> list[UUID]:
     rows = await (
         await conn.execute(
-            "select resource_id from gba.booking_allocations where booking_id = %s "
+            "select distinct resource_id from gba.booking_allocations where booking_id = %s "
             "order by resource_id",
             (booking_id,),
         )
@@ -129,7 +130,10 @@ async def insert_booking(
     hold_ttl_seconds: int,
     quote: Quote,
     created_by: str,
+    allocations: Sequence[tuple[UUID, datetime, datetime]] | None = None,
 ) -> UUID:
+    """Insert a booking and its allocations: one of the whole visit on `resource_id`, or (L2)
+    the given intervals of a staged visit."""
     try:
         cursor = await conn.execute(
             """
@@ -168,15 +172,38 @@ async def insert_booking(
     assert row is not None  # noqa: S101 - INSERT ... RETURNING always yields a row
     booking_id = UUID(str(row[0]))
     # The exclusion constraint decides here; 23P01 aborts the caller's savepoint.
-    await conn.execute(
-        """
-        insert into gba.booking_allocations (tenant_id, booking_id, booking_status, resource_id,
-                                             during)
-        values (%s, %s, %s, %s, tstzrange(%s, %s, '[)'))
-        """,
-        (tenant_id, booking_id, status, resource_id, starts_at, ends_at),
-    )
+    for allocated, allocated_start, allocated_end in allocations or (
+        (resource_id, starts_at, ends_at),
+    ):
+        await conn.execute(
+            """
+            insert into gba.booking_allocations (tenant_id, booking_id, booking_status,
+                                                 resource_id, during)
+            values (%s, %s, %s, %s, tstzrange(%s, %s, '[)'))
+            """,
+            (tenant_id, booking_id, status, allocated, allocated_start, allocated_end),
+        )
     return booking_id
+
+
+# L2: the resource a booking is shown under — its specialist (the artist allocation that starts
+# first), else its only allocation.
+PRIMARY_ALLOCATION = (
+    "select a.resource_id from gba.booking_allocations a "
+    "left join gba.resources pr on pr.tenant_id = a.tenant_id and pr.id = a.resource_id "
+    "where a.tenant_id = b.tenant_id and a.booking_id = b.id "
+    "order by (pr.kind = 'artist') desc nulls last, lower(a.during), a.id limit 1"
+)
+
+
+async def primary_resource_id(conn: RuntimeConnection, booking_id: UUID) -> UUID | None:
+    row = await (
+        await conn.execute(
+            f"select ({PRIMARY_ALLOCATION}) from gba.bookings b where b.id = %s",  # noqa: S608
+            (booking_id,),
+        )
+    ).fetchone()
+    return None if row is None or row[0] is None else UUID(str(row[0]))
 
 
 async def lock_booking(conn: RuntimeConnection, booking_id: UUID) -> tuple[BookingStatus, bool]:
@@ -200,20 +227,16 @@ async def set_status(conn: RuntimeConnection, booking_id: UUID, status: BookingS
 async def load_booking(conn: RuntimeConnection, booking_id: UUID) -> BookingResult:
     row = await (
         await conn.execute(
-            """
-            select b.id, b.status, a.resource_id, b.starts_at, b.ends_at, b.hold_expires_at,
-                   b.total_cents, b.currency, b.quote
+            f"""
+            select b.id, b.status, ({PRIMARY_ALLOCATION}), b.starts_at, b.ends_at,
+                   b.hold_expires_at, b.total_cents, b.currency, b.quote
             from gba.bookings b
-            join gba.booking_allocations a
-              on a.tenant_id = b.tenant_id and a.booking_id = b.id
             where b.id = %s
-            order by a.id
-            limit 1
-            """,
+            """,  # noqa: S608 - a constant subquery
             (booking_id,),
         )
     ).fetchone()
-    if row is None:
+    if row is None or row[2] is None:
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
     quote: dict[str, Any] = row[8]
     return BookingResult(

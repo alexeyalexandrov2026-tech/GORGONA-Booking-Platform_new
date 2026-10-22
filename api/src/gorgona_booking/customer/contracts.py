@@ -1,10 +1,10 @@
 """Versioned public contracts. No tenant ID or caller-supplied price/duration."""
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from gorgona_booking.catalog.models import Quote
 
@@ -83,12 +83,30 @@ class QuoteLineView(Contract):
     revision: int
 
 
+class QuoteStageView(Contract):
+    """L2: one stage of a version 2 quote (stored with a staged booking)."""
+
+    kind: Literal["active", "processing", "finish"]
+    minutes: int = Field(ge=1, le=720)
+    resources: list[Literal["specialist", "chair", "room", "equipment"]] = Field(max_length=4)
+
+
 class QuoteView(Contract):
-    version: Literal[1] = 1
+    version: Literal[1, 2] = 1
     currency: str
     total_cents: int
     booking_duration_minutes: int
     lines: list[QuoteLineView]
+    # L1/L2: only a version 2 quote has stages; a version 1 quote serialises exactly as before.
+    stages: list[QuoteStageView] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+    @model_validator(mode="after")
+    def stages_mean_version_two(self) -> Self:
+        if (self.version == 2) != bool(self.stages):
+            raise ValueError("Only a version 2 quote has stages")
+        return self
 
     @classmethod
     def from_quote(cls, quote: Quote) -> QuoteView:

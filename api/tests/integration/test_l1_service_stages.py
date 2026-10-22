@@ -3,8 +3,8 @@
 Owner's delegation 2026-10-22 and the package L decisions 1-2: a variant may list ordered stages
 (active, processing, finish), each with minutes and the resource kinds it occupies; its booking
 duration is then the sum of the stages, which the database checks. A variant without stages behaves
-exactly as before. Equipment is a resource kind. Booking a staged variant still takes one resource
-for the whole time until L2.
+exactly as before. Equipment is a resource kind. Since L2a each stage occupies its own resources
+(test_l2_stage_occupancy).
 """
 
 from typing import Any
@@ -16,6 +16,7 @@ import pytest
 
 from gorgona_booking.booking.service import BookingService
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction
+from gorgona_booking.db.provisioning import owner_tenant_transaction
 from tests.integration import test_management_api as shared
 from tests.integration.booking_support import BookingWorld, at
 from tests.integration.seed import FakeUser
@@ -214,18 +215,27 @@ async def test_equipment_is_a_resource_kind(
     assert created.json()["kind"] == "equipment"
 
 
-# L1 compatibility ---------------------------------------------------------------
+# L1 quote snapshot ---------------------------------------------------------------
 
 
-async def test_a_staged_variant_still_books_one_resource_for_the_whole_time(
+async def test_a_staged_booking_stores_its_stages_in_the_quote(
     client: httpx.AsyncClient,
     world: BookingWorld,
     manager_a: FakeUser,
     idp: FakeIdp,
     app_pool: RuntimePool,
+    owner_conn: psycopg.Connection,
 ) -> None:
     headers = idp.bearer(manager_a.subject, email=manager_a.email)
     assert (await put_stages(client, world, headers, COLOUR)).status_code == 200
+    # Since L2a every stage occupies its own resources: the branch needs a chair and a processor.
+    for kind in ("chair", "equipment"):
+        with owner_tenant_transaction(owner_conn, world.a.tenant_id):
+            owner_conn.execute(
+                "insert into gba.resources (tenant_id, location_id, kind, display_name) "
+                "values (%s, %s, %s, %s)",
+                (world.a.tenant_id, world.a.location_id, kind, f"FAKE {kind}"),
+            )
     service = BookingService(app_pool)
     result = await service.create_confirmed_booking(
         world.a.tenant_id,

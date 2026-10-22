@@ -16,15 +16,20 @@ from gorgona_booking.api.deps import get_principal, runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.auth.principal import Principal, set_user_context
-from gorgona_booking.booking import idempotency
+from gorgona_booking.booking import idempotency, stages
 from gorgona_booking.booking import repository as repo
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.metrics import CurrencyAmount, confirmed_booking_value
-from gorgona_booking.booking.models import IdempotencyKeyReusedError, booking_interval
+from gorgona_booking.booking.models import (
+    IdempotencyKeyReusedError,
+    SlotConflictError,
+    StageResourceError,
+    booking_interval,
+)
 from gorgona_booking.booking.repository import load_booking
 from gorgona_booking.business.configurations import module_enabled
 from gorgona_booking.business.modules import BOOKING_MODULE
-from gorgona_booking.catalog.models import Quote, QuoteLine, StageKind, StageResource
+from gorgona_booking.catalog.models import Quote, QuoteLine, StageKind, StageResource, StageSpec
 from gorgona_booking.catalog.quote import ServiceNotBookableError
 from gorgona_booking.customer import queries
 from gorgona_booking.customer.contracts import (
@@ -293,6 +298,8 @@ class StaffBookingCreate(Strict):
     customer_email: str = Field(min_length=3, max_length=254)
     customer_phone: str = Field(min_length=7, max_length=32)
     add_on_ids: list[UUID] = Field(default_factory=list)
+    # L2: resources for stage kinds other than the specialist; a kind left out is found.
+    stage_resources: dict[str, UUID] = Field(default_factory=dict, max_length=3)
 
 
 class BookingRescheduleRequest(Strict):
@@ -379,7 +386,8 @@ _BOOKING_SUMMARY_SELECT = (
     "b.starts_at, b.ends_at, b.total_cents, b.currency, "
     "c.customer_name, c.email, c.phone, b.created_at, b.created_by, l.timezone "
     "from gba.bookings b "
-    "join gba.booking_allocations a on a.tenant_id = b.tenant_id and a.booking_id = b.id "
+    # L2: one row per booking, shown under its primary resource (the specialist).
+    "join lateral (" + repo.PRIMARY_ALLOCATION + ") a on true "
     "left join gba.resources r on r.tenant_id = b.tenant_id and r.id = a.resource_id "
     "left join gba.service_variants v on v.tenant_id = b.tenant_id and v.id = b.variant_id "
     "left join gba.services s on s.tenant_id = b.tenant_id and s.id = v.service_id "
@@ -649,7 +657,16 @@ def _preserved_quote(data: object) -> Quote:
         total_cents=view.total_cents,
         booking_duration_minutes=view.booking_duration_minutes,
         lines=tuple(QuoteLine(**line.model_dump()) for line in view.lines),
+        stages=_preserved_stages(view),
     )
+
+
+def _preserved_stages(view: QuoteView) -> tuple[StageSpec, ...]:
+    """L2: the stages stored with a version 2 quote (none for version 1)."""
+    stored = view.stages or []
+    if stored and sum(stage.minutes for stage in stored) != view.booking_duration_minutes:
+        raise DomainError("Stored booking quote is invalid")
+    return tuple(StageSpec(s.kind, s.minutes, tuple(s.resources)) for s in stored)
 
 
 async def _ensure_available(
@@ -674,6 +691,49 @@ async def _ensure_available(
         raise ConflictError("That time is no longer available for this resource")
 
 
+async def _stage_kinds(conn: RuntimeConnection, booking_id: UUID) -> list[tuple[str, UUID]]:
+    """L2: the non-specialist stage kinds of a booking's stored quote, with its branch."""
+    row = await (
+        await conn.execute(
+            "select b.location_id, b.quote from gba.bookings b where b.id = %s", (booking_id,)
+        )
+    ).fetchone()
+    if row is None or not isinstance(row[1], dict):
+        return []
+    kinds = {
+        kind
+        for stage in row[1].get("stages") or []
+        for kind in stage.get("resources", [])
+        if kind in stages.RESOURCE_KIND and kind != "specialist"
+    }
+    return [(kind, row[0]) for kind in sorted(kinds)]
+
+
+async def _plan_stages(
+    conn: RuntimeConnection,
+    salon_id: UUID,
+    *,
+    specialist_id: UUID,
+    quote: Quote,
+    starts_at: datetime,
+    named: tuple[tuple[str, UUID], ...] = (),
+    preferred: tuple[UUID, ...] = (),
+) -> list[tuple[UUID, datetime, datetime]]:
+    try:
+        _, planned = await stages.plan(
+            conn,
+            salon_id,
+            specialist_id=specialist_id,
+            stages=quote.stages,
+            starts_at=starts_at,
+            named=named,
+            preferred=preferred,
+        )
+    except SlotConflictError:
+        raise ConflictError("That time is no longer available for this visit") from None
+    return [(a.resource_id, a.starts_at, a.ends_at) for a in planned]
+
+
 async def _claim_mutation(
     access: TenantAccess,
     salon_id: UUID,
@@ -688,6 +748,8 @@ async def _claim_mutation(
     conn = access.conn
     scope = IdempotencyScope(salon_id, principal.actor, operation, key)
     payload = body.model_dump(mode="json")
+    if not payload.get("stage_resources"):
+        payload.pop("stage_resources", None)
     if "add_on_ids" in payload:
         payload["add_on_ids"] = sorted(payload["add_on_ids"])
     fingerprint = hashlib.sha256(
@@ -807,7 +869,11 @@ async def list_bookings(
             conditions.append("b.starts_at <= %s")
             params.append(end_date)
         if resource_id is not None:
-            conditions.append("a.resource_id = %s")
+            # Any resource the booking holds (a chair or processor of a staged visit too).
+            conditions.append(
+                "exists (select 1 from gba.booking_allocations x "
+                "where x.tenant_id = b.tenant_id and x.booking_id = b.id and x.resource_id = %s)"
+            )
             params.append(resource_id)
         if status is not None:
             conditions.append("b.status = %s")
@@ -867,16 +933,38 @@ async def create_staff_booking(
         )
         quote = await queries.quote_selection(conn, selection)
         starts_at, ends_at = booking_interval(body.starts_at, quote.booking_duration_minutes)
-        await repo.lock_resource_schedule(conn, salon_id, body.resource_id)
-        await _ensure_available(conn, selection, starts_at, quote)
+        allocations: list[tuple[UUID, datetime, datetime]] | None = None
+        if quote.stages:
+            # L2: every stage occupies its own resources; the specialist must be free while
+            # working (the slot check), the others are named or found (the planner).
+            await repo.set_audit_context(
+                conn,
+                actor="system:hold-expiry",
+                reason="expired_on_contention",
+                request_id=get_request_id(request),
+            )
+            allocations = await _plan_stages(
+                conn,
+                salon_id,
+                specialist_id=body.resource_id,
+                quote=quote,
+                starts_at=starts_at,
+                named=tuple(sorted(body.stage_resources.items())),
+            )
+            await _ensure_available(conn, selection, starts_at, quote)
+        else:
+            if body.stage_resources:
+                raise StageResourceError("This service has no stages")
+            await repo.lock_resource_schedule(conn, salon_id, body.resource_id)
+            await _ensure_available(conn, selection, starts_at, quote)
 
-        await repo.set_audit_context(
-            conn,
-            actor="system:hold-expiry",
-            reason="expired_on_contention",
-            request_id=get_request_id(request),
-        )
-        await repo.expire_stale_holds_overlapping(conn, body.resource_id, starts_at, ends_at)
+            await repo.set_audit_context(
+                conn,
+                actor="system:hold-expiry",
+                reason="expired_on_contention",
+                request_id=get_request_id(request),
+            )
+            await repo.expire_stale_holds_overlapping(conn, body.resource_id, starts_at, ends_at)
 
         await repo.set_audit_context(
             conn,
@@ -898,6 +986,7 @@ async def create_staff_booking(
                     hold_ttl_seconds=600,
                     quote=quote,
                     created_by=principal.actor,
+                    allocations=allocations,
                 )
                 cap_hash = hashlib.sha256(f"staff:{uuid7()}".encode()).hexdigest()
                 await conn.execute(
@@ -962,8 +1051,14 @@ async def reschedule_booking(
         resources = await repo.booking_resource_ids(conn, booking_id)
         if not resources:
             raise NotFoundError("Booking not found")
-        target_resource_id = body.new_resource_id or resources[0]
-        for resource_id in sorted({*resources, target_resource_id}):
+        primary = await repo.primary_resource_id(conn, booking_id)
+        target_resource_id = body.new_resource_id or primary or resources[0]
+        # L2: a staged visit may move to any free resource of its stage kinds; every one of them
+        # is locked here, in the same id order, before anything else.
+        locked = {*resources, target_resource_id}
+        for kind, location in await _stage_kinds(conn, booking_id):
+            locked.update(await stages.candidates(conn, location, kind))
+        for resource_id in sorted(locked):
             await repo.lock_resource_schedule(conn, salon_id, resource_id)
         status, _ = await repo.lock_booking(conn, booking_id)
         if status != "CONFIRMED":
@@ -971,11 +1066,9 @@ async def reschedule_booking(
 
         old_row = await (
             await conn.execute(
-                "select b.location_id, b.variant_id, b.quote, a.resource_id, "
+                "select b.location_id, b.variant_id, b.quote, (" + repo.PRIMARY_ALLOCATION + "), "
                 "c.customer_name, c.email, c.phone, c.capability_hash "
                 "from gba.bookings b "
-                "join gba.booking_allocations a on a.tenant_id = b.tenant_id "
-                "and a.booking_id = b.id "
                 "left join gba.booking_customers c on c.tenant_id = b.tenant_id "
                 "and c.booking_id = b.id "
                 "where b.tenant_id = %s and b.id = %s",
@@ -1004,13 +1097,14 @@ async def reschedule_booking(
             exclude_booking_id=booking_id,
         )
 
-        await repo.set_audit_context(
-            conn,
-            actor="system:hold-expiry",
-            reason="expired_on_contention",
-            request_id=get_request_id(request),
-        )
-        await repo.expire_stale_holds_overlapping(conn, target_resource_id, starts_at, ends_at)
+        if not quote.stages:
+            await repo.set_audit_context(
+                conn,
+                actor="system:hold-expiry",
+                reason="expired_on_contention",
+                request_id=get_request_id(request),
+            )
+            await repo.expire_stale_holds_overlapping(conn, target_resource_id, starts_at, ends_at)
 
         # Cancel old booking to release its allocation in gba.booking_allocations
         await repo.set_audit_context(
@@ -1020,6 +1114,24 @@ async def reschedule_booking(
             request_id=get_request_id(request),
         )
         await repo.set_status(conn, booking_id, "CANCELLED")
+        allocations: list[tuple[UUID, datetime, datetime]] | None = None
+        if quote.stages:
+            # L2: the same resources where still free, otherwise others of the same kinds; a
+            # refusal rolls the whole transaction back, the old visit included.
+            await repo.set_audit_context(
+                conn,
+                actor="system:hold-expiry",
+                reason="expired_on_contention",
+                request_id=get_request_id(request),
+            )
+            allocations = await _plan_stages(
+                conn,
+                salon_id,
+                specialist_id=target_resource_id,
+                quote=quote,
+                starts_at=starts_at,
+                preferred=tuple(resources),
+            )
 
         # Insert new booking
         await repo.set_audit_context(
@@ -1042,6 +1154,7 @@ async def reschedule_booking(
                     hold_ttl_seconds=600,
                     quote=quote,
                     created_by=principal.actor,
+                    allocations=allocations,
                 )
                 if customer_name is not None:
                     await conn.execute(
