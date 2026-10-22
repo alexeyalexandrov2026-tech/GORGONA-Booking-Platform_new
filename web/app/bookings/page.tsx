@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { ManagementLayout } from "../../components/management-layout";
 import { LocationFilter } from "../../components/location-filter";
+import { VisitDeskDialog } from "../../components/visit-desk";
 import {
   businessDateTime,
   businessTimeToInstant,
@@ -65,6 +66,8 @@ function BookingsContent({
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Modals
+  // L7b1: the booking whose visit desk is open.
+  const [deskBooking, setDeskBooking] = useState<BookingSummary | null>(null);
   const [inspectBooking, setInspectBooking] = useState<BookingSummary | null>(
     null,
   );
@@ -518,7 +521,7 @@ function BookingsContent({
             </thead>
             <tbody>
               {bookings.map((b) => (
-                <tr key={b.booking_id}>
+                <tr key={b.booking_id} data-booking-id={b.booking_id}>
                   <td>
                     <strong>
                       {formatTime(b.starts_at, b.location_timezone)}
@@ -569,6 +572,14 @@ function BookingsContent({
                       </button>
                       {b.status === "CONFIRMED" && (
                         <>
+                          <button
+                            type="button"
+                            className="secondary mgmt-btn-small"
+                            aria-label={`Visit desk: ${b.service_name}, ${formatTime(b.starts_at, b.location_timezone)}`}
+                            onClick={() => setDeskBooking(b)}
+                          >
+                            Visit desk
+                          </button>
                           {bookingEnabled === true && (
                             <button
                               type="button"
@@ -594,6 +605,14 @@ function BookingsContent({
             </tbody>
           </table>
         </div>
+      )}
+
+      {deskBooking && (
+        <VisitDeskDialog
+          salonId={salonId}
+          booking={deskBooking}
+          onClose={() => setDeskBooking(null)}
+        />
       )}
 
       {/* Inspect Modal */}

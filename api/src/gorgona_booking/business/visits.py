@@ -55,6 +55,12 @@ class VisitNotCompletedError(ConflictError):
     code = "VISIT_NOT_COMPLETED"
 
 
+class VisitCompletionNotFoundError(NotFoundError):
+    """L7b1: reading the completion of a visit that is not completed."""
+
+    code = "VISIT_NOT_COMPLETED"
+
+
 class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 

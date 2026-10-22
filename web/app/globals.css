@@ -825,6 +825,18 @@ footer {
   flex-direction: row;
   align-items: center;
 }
+/* L7b1: the visit desk. */
+.visit-desk form > label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  max-width: 100%;
+}
+.visit-desk select,
+.visit-desk input {
+  max-width: 100%;
+}
 @media (max-width: 600px) {
   .mgmt-modal-card {
     padding: 20px 16px;

@@ -142,6 +142,21 @@ export interface RecipeView {
   lines: RecipeLine[];
 }
 
+export interface MaterialUse {
+  item_id: string;
+  planned: string;
+  actual: string;
+}
+export interface CompletionView {
+  booking_id: string;
+  location_id: string;
+  completed_at: string;
+  completed_by: string;
+  materials: MaterialUse[];
+  stock_document_id: string | null;
+  consumption_posted_at: string | null;
+}
+
 export interface StaffView {
   id: string;
   location_id: string;
@@ -846,6 +861,49 @@ async function bookingMutation<T>(path: string, payload: unknown): Promise<T> {
 }
 
 // --- Specific API Calls ---
+
+/** L7b1: the completion of a visit, or null when it is not completed yet. */
+export async function fetchCompletion(
+  salonId: string,
+  bookingId: string,
+): Promise<CompletionView | null> {
+  try {
+    return await managementFetch<CompletionView>(
+      `/v1/salons/${salonId}/bookings/${bookingId}/completion`,
+    );
+  } catch (error) {
+    if (
+      error instanceof ManagementApiError &&
+      error.code === "VISIT_NOT_COMPLETED"
+    )
+      return null;
+    throw error;
+  }
+}
+
+/** L3: complete a started visit; actual quantities replace the planned ones. */
+export function completeVisit(
+  salonId: string,
+  bookingId: string,
+  quantities: RecipeLine[],
+): Promise<CompletionView> {
+  return bookingMutation<CompletionView>(
+    `/v1/salons/${salonId}/bookings/${bookingId}/complete`,
+    { quantities },
+  );
+}
+
+/** L3: write the actual quantities off once through the stock documents. */
+export function postConsumption(
+  salonId: string,
+  bookingId: string,
+  body: { legal_entity_id: string; place_id: string; document_date: string },
+): Promise<CompletionView> {
+  return bookingMutation<CompletionView>(
+    `/v1/salons/${salonId}/bookings/${bookingId}/consumption`,
+    body,
+  );
+}
 
 export async function fetchMe(): Promise<MeView> {
   return managementFetch<MeView>("/v1/me");

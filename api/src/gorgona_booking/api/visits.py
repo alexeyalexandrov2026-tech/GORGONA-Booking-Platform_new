@@ -142,6 +142,28 @@ async def complete_visit(
         )
 
 
+@router.get("/bookings/{booking_id}/completion")
+async def get_completion(
+    salon_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> CompletionView:
+    """L7b1: the completion of a visit for the visit desk; anyone who reads bookings."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        view = await service.load_completion(access.conn, booking_id)
+        if view is None:
+            raise service.VisitCompletionNotFoundError(
+                "This visit is not completed", booking_id=str(booking_id)
+            )
+        return view
+
+
 @router.post("/bookings/{booking_id}/consumption")
 async def post_consumption(
     salon_id: UUID,

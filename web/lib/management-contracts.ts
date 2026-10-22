@@ -96,6 +96,25 @@ const service = z.object({
   revision: z.number().int().positive(),
   stages: z.array(stage).max(10).default([]),
 });
+// L3/L7b1: a visit's completion — planned and actual materials, and its write-off.
+const quantityText = z.string().regex(/^(0|[1-9][0-9]{0,14})(\.[0-9]{1,3})?$/);
+const completion = z.strictObject({
+  booking_id: id,
+  location_id: id,
+  completed_at: z.iso.datetime({ offset: true }),
+  completed_by: id,
+  materials: z
+    .array(
+      z.strictObject({
+        item_id: id,
+        planned: quantityText,
+        actual: quantityText,
+      }),
+    )
+    .max(60),
+  stock_document_id: id.nullable(),
+  consumption_posted_at: z.iso.datetime({ offset: true }).nullable(),
+});
 // L3/L7a: the materials one service uses, in the material's own unit.
 const recipe = z.strictObject({
   owner_id: id,
@@ -347,6 +366,12 @@ export function managementResponseSchema(
   if (suffix === "/clients/history") return z.array(booking);
   if (suffix === "/bookings")
     return method === "GET" ? z.array(booking) : booking;
+  if (
+    /^\/bookings\/[0-9a-f-]{36}\/(complete|completion|consumption)$/i.test(
+      suffix,
+    )
+  )
+    return completion;
   if (/^\/bookings\//.test(suffix)) return booking;
   if (suffix === "/services")
     return method === "GET" ? z.array(service) : service;
