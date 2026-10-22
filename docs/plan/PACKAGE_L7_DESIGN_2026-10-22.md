@@ -51,3 +51,20 @@ L7b2: the visit invoice, the commission, prepaid redemption, the commission plan
 | L7-05 | A started visit is completed from the desk with an actual quantity; planned and actual are shown and read back after a reload |
 | L7-06 | Its materials are written off from the desk once; the database holds the write-off of the actual quantity |
 | L7-07 | Desktop and mobile, keyboard only, axe without violations, no horizontal scroll |
+
+## L7b2 split (added during L7b2, same delegation)
+
+L7b2a: the visit desk gets **Billing** — one draft invoice of the visit (book, customer, receivable and
+revenue accounts, number, date); finance issues it and records the payment on its own screens; the desk
+then shows "paid of total" and, once the visit is paid, accrues the specialist's commission once (expense
+and payable accounts, number, date). The Staff screen gets the **commission plan** of a specialist (who is
+paid, currency, rules of one service or of all other services, each a percentage or a fixed amount). Two
+reads are added for the screens: `GET .../staff/{id}/commission` and `GET .../bookings/{id}/commission`
+(`finance.read`). L7b2b: selling a prepaid balance and redeeming it from the desk.
+
+| id | Requirement (L7b2a, NOT TESTED) |
+|---|---|
+| L7-08 | A manager saves a specialist's commission plan (payee, rule for all other services, percentage) and reads it back |
+| L7-09 | A confirmed visit is billed from its desk as a draft invoice; after finance issues and settles it, the desk shows it paid in full |
+| L7-10 | The commission of the paid visit is accrued once from the desk; the database holds the accrual of the plan's amount |
+| L7-11 | Desktop and mobile, keyboard only, axe without violations, no horizontal scroll |
