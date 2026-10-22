@@ -1,6 +1,15 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-22: L2a stage-by-stage occupancy locally verified
+## Current checkpoint — 2026-10-22: L2b guests book staged services, locally verified
+
+L2a CI SUCCESS (run 39765610640). L2b in `ca44785` on `codex/package-l2b-guest-stages` (no migration):
+guests see a staged start only when the artist is free in their working stages and a chair, room or
+processor is free for each stage that needs one; the hold places every stage, all or nothing; the web
+quote parser accepts version 2 with stages. Focused **219 passed**; full **2464 passed, 4 skipped**
+([validation](evidence/2026-10-22-l2b-guest-stages/VALIDATION.md)). Next: L2c, visits with several
+services. Next migration **0068**.
+
+## Previous checkpoint — 2026-10-22: L2a stage-by-stage occupancy locally verified
 
 L1 CI SUCCESS (run 39758206502; package L plan run 39758206876). L2 designed under the owner's full
 delegation ([design](PACKAGE_L2_DESIGN_2026-10-22.md), `f1403eb`). L2a in `edd0849` on
