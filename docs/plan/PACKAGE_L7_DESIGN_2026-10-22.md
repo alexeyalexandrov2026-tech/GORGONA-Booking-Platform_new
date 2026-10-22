@@ -38,3 +38,16 @@ never a single direction.
 | L7-02 | A manager edits the materials of a service (material, quantity) and reads them back; a quantity finer than the material allows shows the refusal |
 | L7-03 | Equipment can be added as a resource kind |
 | L7-04 | Desktop and mobile, keyboard only, axe without violations, no horizontal scroll |
+
+## L7b split (added during L7b, same delegation)
+
+L7b1: on a confirmed booking, the **visit desk** completes the visit (optional actual quantities;
+planned and actual shown) and writes its materials off (owner, storage place of the visit's branch,
+date); `GET .../bookings/{id}/completion` reads a completion back (`booking.read`, branch scope).
+L7b2: the visit invoice, the commission, prepaid redemption, the commission plan and prepaid sales.
+
+| id | Requirement (L7b1, NOT TESTED) |
+|---|---|
+| L7-05 | A started visit is completed from the desk with an actual quantity; planned and actual are shown and read back after a reload |
+| L7-06 | Its materials are written off from the desk once; the database holds the write-off of the actual quantity |
+| L7-07 | Desktop and mobile, keyboard only, axe without violations, no horizontal scroll |

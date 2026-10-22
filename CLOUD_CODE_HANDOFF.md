@@ -1,6 +1,14 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-22: L7a catalog screens, locally verified; Next.js security upgrade
+## Current checkpoint — 2026-10-22: L7b1 visit desk, locally verified
+
+L7a CI SUCCESS (run 39838977982). L7b1 in `d1c12ca` on `codex/package-l7b1-visit-desk`: on a confirmed
+booking the visit desk completes the visit with actual quantities and writes its materials off; real
+browser desktop and mobile with the database read back. Focused **436 passed**; full **2514 passed, 4
+skipped** ([validation](docs/plan/evidence/2026-10-22-l7b1-visit-desk/VALIDATION.md)). Next: L7b2 (billing,
+commission, prepaid on screen). Next migration **0072**.
+
+## Previous checkpoint — 2026-10-22: L7a catalog screens, locally verified; Next.js security upgrade
 
 L6 CI SUCCESS (run 39828302644). L7 designed ([design](docs/plan/PACKAGE_L7_DESIGN_2026-10-22.md), `259cfd2`).
 L7a in `13919b3` on `codex/package-l7a-catalog-screens`: the Services screen edits the stages and the
