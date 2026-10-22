@@ -1,7 +1,7 @@
 "use client";
 
 // L7b1 (package L): the visit desk — complete a visit with actual quantities and write its
-// materials off. Words stay neutral: every direction that consumes materials uses this desk.
+// materials off; L7b2a adds billing and the commission. Words stay neutral: every direction that consumes materials uses this desk.
 import React, { useEffect, useId, useState } from "react";
 import { businessDateTime } from "../lib/business-time";
 import { fetchAllItems, fetchAllPlaces } from "../lib/inventory-api";
@@ -17,6 +17,7 @@ import {
   postConsumption,
   type RecipeLine,
 } from "../lib/management-api";
+import { VisitBillingSection } from "./visit-billing";
 
 function refusal(error: unknown): string {
   if (error instanceof ManagementApiError) return error.message;
@@ -63,9 +64,10 @@ export function VisitDeskDialog({
   const [busy, setBusy] = useState(false);
   const [entity, setEntity] = useState("");
   const [place, setPlace] = useState("");
-  const [day, setDay] = useState(
+  const [today] = useState(
     () => businessDateTime(new Date(), booking.location_timezone).date,
   );
+  const [day, setDay] = useState(today);
 
   useEffect(() => {
     let live = true;
@@ -180,6 +182,7 @@ export function VisitDeskDialog({
                 <label>
                   Material
                   <select
+                    aria-label="Material"
                     value={row.item_id}
                     onChange={(e) =>
                       setActuals((current) =>
@@ -292,6 +295,7 @@ export function VisitDeskDialog({
                 <label>
                   Owner
                   <select
+                    aria-label="Owner"
                     value={entity}
                     onChange={(e) => setEntity(e.target.value)}
                     required
@@ -309,6 +313,7 @@ export function VisitDeskDialog({
                 <label>
                   Storage place
                   <select
+                    aria-label="Storage place"
                     value={place}
                     onChange={(e) => setPlace(e.target.value)}
                     required
@@ -348,6 +353,11 @@ export function VisitDeskDialog({
             {notice}
           </p>
         )}
+        <VisitBillingSection
+          salonId={salonId}
+          bookingId={booking.booking_id}
+          today={today}
+        />
         <div className="mgmt-form-actions">
           <button type="button" className="secondary" onClick={onClose}>
             Close

@@ -837,6 +837,26 @@ footer {
 .visit-desk input {
   max-width: 100%;
 }
+/* L7b2a: billing on the visit desk and the commission plan. */
+.visit-billing {
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 8px;
+}
+.visit-billing h4 {
+  margin: 16px 0 8px;
+}
+.commission-plan form > label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  max-width: 100%;
+}
+.commission-plan select,
+.commission-plan input {
+  max-width: 100%;
+}
 @media (max-width: 600px) {
   .mgmt-modal-card {
     padding: 20px 16px;

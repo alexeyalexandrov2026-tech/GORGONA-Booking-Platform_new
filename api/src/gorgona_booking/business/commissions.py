@@ -40,6 +40,18 @@ class CommissionPlanMissingError(ConflictError):
     code = "COMMISSION_PLAN_MISSING"
 
 
+class CommissionPlanNotFoundError(NotFoundError):
+    """L7b2a: reading the plan of a specialist who has none."""
+
+    code = "COMMISSION_PLAN_MISSING"
+
+
+class VisitNotCommissionedError(NotFoundError):
+    """L7b2a: reading the commission of a visit that has none."""
+
+    code = "VISIT_NOT_COMMISSIONED"
+
+
 class CommissionCurrencyError(ConflictError):
     code = "COMMISSION_CURRENCY_MISMATCH"
 

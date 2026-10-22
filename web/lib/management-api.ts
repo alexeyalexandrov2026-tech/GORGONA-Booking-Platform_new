@@ -4,6 +4,7 @@ import {
   type Readiness,
 } from "./management-contracts";
 import { availabilitySchema, Availability } from "./contracts";
+import type { Invoice, Obligation } from "./financial-contracts";
 import {
   legalEntityListSchema,
   legalEntitySchema,
@@ -902,6 +903,139 @@ export function postConsumption(
   return bookingMutation<CompletionView>(
     `/v1/salons/${salonId}/bookings/${bookingId}/consumption`,
     body,
+  );
+}
+
+/** L4/L7b2a: a visit's invoice and, once issued, its open obligation. */
+export type VisitInvoiceView = {
+  booking_id: string;
+  book_id: string;
+  document_id: string;
+  invoice: Invoice;
+  obligation: Obligation | null;
+};
+/** L5/L7b2a: the payable accrual of a paid visit to its specialist's payee. */
+export type VisitCommissionView = {
+  booking_id: string;
+  book_id: string;
+  document_id: string;
+  accrual: Invoice;
+  tips_account_id: string | null;
+  tips: string;
+};
+export type CommissionRule = {
+  service_id: string | null;
+  percent: string | null;
+  amount: string | null;
+};
+export type CommissionPlan = {
+  resource_id: string;
+  counterparty_id: string;
+  currency: string;
+  revision: number;
+  updated_at: string;
+  rules: CommissionRule[];
+};
+
+async function orNull<T>(read: Promise<T>, codes: string[]): Promise<T | null> {
+  try {
+    return await read;
+  } catch (error) {
+    if (error instanceof ManagementApiError && codes.includes(error.code))
+      return null;
+    throw error;
+  }
+}
+
+/** The visit's invoice, or null while it has none. */
+export function fetchVisitInvoice(
+  salonId: string,
+  bookingId: string,
+): Promise<VisitInvoiceView | null> {
+  return orNull(
+    managementFetch<VisitInvoiceView>(
+      `/v1/salons/${salonId}/bookings/${bookingId}/invoice`,
+    ),
+    ["NOT_FOUND"],
+  );
+}
+
+/** L4: one draft invoice of a completed visit; finance issues it. */
+export function billVisit(
+  salonId: string,
+  bookingId: string,
+  body: {
+    book_id: string;
+    counterparty_id: string;
+    control_account_id: string;
+    revenue_account_id: string;
+    invoice_date: string;
+    number: string;
+  },
+): Promise<VisitInvoiceView> {
+  return bookingMutation<VisitInvoiceView>(
+    `/v1/salons/${salonId}/bookings/${bookingId}/invoice`,
+    body,
+  );
+}
+
+/** The commission of a visit, or null while it has none. */
+export function fetchVisitCommission(
+  salonId: string,
+  bookingId: string,
+): Promise<VisitCommissionView | null> {
+  return orNull(
+    managementFetch<VisitCommissionView>(
+      `/v1/salons/${salonId}/bookings/${bookingId}/commission`,
+    ),
+    ["VISIT_NOT_COMMISSIONED"],
+  );
+}
+
+/** L5: accrue the commission of a fully paid visit once. */
+export function accrueVisitCommission(
+  salonId: string,
+  bookingId: string,
+  body: {
+    expense_account_id: string;
+    payable_account_id: string;
+    accrual_date: string;
+    number: string;
+  },
+): Promise<VisitCommissionView> {
+  return bookingMutation<VisitCommissionView>(
+    `/v1/salons/${salonId}/bookings/${bookingId}/commission`,
+    body,
+  );
+}
+
+/** A specialist's commission plan, or null while it has none. */
+export function fetchCommissionPlan(
+  salonId: string,
+  resourceId: string,
+): Promise<CommissionPlan | null> {
+  return orNull(
+    managementFetch<CommissionPlan>(
+      `/v1/salons/${salonId}/staff/${resourceId}/commission`,
+    ),
+    ["COMMISSION_PLAN_MISSING"],
+  );
+}
+
+/** L5: replace a specialist's whole plan; a stale revision is refused. */
+export function saveCommissionPlan(
+  salonId: string,
+  resourceId: string,
+  body: {
+    expected_revision: number;
+    counterparty_id: string;
+    currency: string;
+    rules: CommissionRule[];
+  },
+): Promise<CommissionPlan> {
+  return managementFetch<CommissionPlan>(
+    `/v1/salons/${salonId}/staff/${resourceId}/commission`,
+    { method: "PUT", body: JSON.stringify(body) },
   );
 }
 

@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { ledgerResponseSchema } from "./ledger-contracts";
 import { inventoryResponseSchema } from "./inventory-contracts";
-import { financialResponseSchema } from "./financial-contracts";
+import {
+  financialResponseSchema,
+  invoiceSchema,
+  obligationSchema,
+} from "./financial-contracts";
 import { admissionResponseSchema } from "./admission-contracts";
 import { counterpartyResponseSchema } from "./counterparty-contracts";
 import { documentResponseSchema } from "./document-contracts";
@@ -114,6 +118,44 @@ const completion = z.strictObject({
     .max(60),
   stock_document_id: id.nullable(),
   consumption_posted_at: z.iso.datetime({ offset: true }).nullable(),
+});
+// L4/L5/L7b2a: the visit invoice, the visit commission and a specialist's plan.
+const money = z.string().regex(/^(0|[1-9][0-9]{0,17})(\.[0-9]{1,3})?$/);
+const visitInvoice = z.strictObject({
+  booking_id: id,
+  book_id: id,
+  document_id: id,
+  invoice: invoiceSchema,
+  obligation: obligationSchema.nullable(),
+});
+const visitCommission = z.strictObject({
+  booking_id: id,
+  book_id: id,
+  document_id: id,
+  accrual: invoiceSchema,
+  tips_account_id: id.nullable(),
+  tips: money,
+});
+const commissionPlan = z.strictObject({
+  resource_id: id,
+  counterparty_id: id,
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  revision: z.number().int().positive(),
+  updated_at: z.iso.datetime({ offset: true }),
+  rules: z
+    .array(
+      z
+        .strictObject({
+          service_id: id.nullable(),
+          percent: z
+            .string()
+            .regex(/^(0|[1-9][0-9]{0,2})\.[0-9]{2}$/)
+            .nullable(),
+          amount: money.nullable(),
+        })
+        .refine((rule) => (rule.percent === null) !== (rule.amount === null)),
+    )
+    .max(50),
 });
 // L3/L7a: the materials one service uses, in the material's own unit.
 const recipe = z.strictObject({
@@ -372,6 +414,9 @@ export function managementResponseSchema(
     )
   )
     return completion;
+  if (/^\/bookings\/[0-9a-f-]{36}\/invoice$/i.test(suffix)) return visitInvoice;
+  if (/^\/bookings\/[0-9a-f-]{36}\/commission$/i.test(suffix))
+    return visitCommission;
   if (/^\/bookings\//.test(suffix)) return booking;
   if (suffix === "/services")
     return method === "GET" ? z.array(service) : service;
@@ -380,6 +425,8 @@ export function managementResponseSchema(
   if (suffix === "/members" && method === "GET") return z.array(member);
   if (suffix === "/staff") return method === "GET" ? z.array(staff) : staff;
   if (/^\/staff\/[^/]+\/(schedule|services)$/.test(suffix)) return schedule;
+  if (/^\/staff\/[0-9a-f-]{36}\/commission$/i.test(suffix))
+    return commissionPlan;
   if (/^\/staff\//.test(suffix)) return staff;
   if (suffix === "/readiness" && method === "GET") return readinessSchema;
   if (

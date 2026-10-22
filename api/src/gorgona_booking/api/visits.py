@@ -252,6 +252,48 @@ async def get_visit_invoice(
         return view
 
 
+@router.get("/staff/{resource_id}/commission")
+async def get_commission_plan(
+    salon_id: UUID, resource_id: UUID, request: Request, principal: CurrentPrincipal
+) -> PlanView:
+    """L7b2a: a specialist's plan for the Staff screen; finance read access."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.FINANCE_READ,
+        request_id=get_request_id(request),
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        plan = await commissions.load_plan(access.conn, resource_id)
+        if plan is None:
+            raise commissions.CommissionPlanNotFoundError(
+                "This specialist has no commission plan", resource_id=str(resource_id)
+            )
+        return plan
+
+
+@router.get("/bookings/{booking_id}/commission")
+async def get_visit_commission(
+    salon_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> VisitCommissionView:
+    """L7b2a: the commission of a visit for the visit desk; finance read access."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.FINANCE_READ,
+        request_id=get_request_id(request),
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        view = await commissions.load_commission(access.conn, salon_id, booking_id)
+        if view is None:
+            raise commissions.VisitNotCommissionedError(
+                "This visit has no commission", booking_id=str(booking_id)
+            )
+        return view
+
+
 @router.put("/staff/{resource_id}/commission")
 async def put_commission_plan(
     salon_id: UUID,

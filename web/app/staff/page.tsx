@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { ManagementLayout } from "../../components/management-layout";
 import { WorkingHoursEditor } from "../../components/working-hours-editor";
+import { CommissionPlanDialog } from "../../components/commission-plan-dialog";
 import {
   workingHoursDraft,
   workingHoursPayload,
@@ -76,6 +77,11 @@ function StaffContent({
   const [loadingServicesTarget, setLoadingServicesTarget] = useState(false);
   const [isSubmittingServices, setIsSubmittingServices] = useState(false);
   const [servicesError, setServicesError] = useState<string | null>(null);
+
+  // L7b2a: the commission plan of one specialist.
+  const [commissionTarget, setCommissionTarget] = useState<StaffView | null>(
+    null,
+  );
 
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -426,6 +432,16 @@ function StaffContent({
                       >
                         Services
                       </button>
+                      {member.kind === "artist" && (
+                        <button
+                          type="button"
+                          className="secondary mgmt-btn-small"
+                          aria-label={`Commission plan of ${member.display_name}`}
+                          onClick={() => setCommissionTarget(member)}
+                        >
+                          Commission
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="secondary mgmt-btn-small"
@@ -440,6 +456,16 @@ function StaffContent({
             </tbody>
           </table>
         </div>
+      )}
+
+      {commissionTarget && (
+        <CommissionPlanDialog
+          salonId={salonId}
+          member={commissionTarget}
+          services={servicesList}
+          defaultCurrency={servicesList[0]?.currency ?? "USD"}
+          onClose={() => setCommissionTarget(null)}
+        />
       )}
 
       {/* Add Staff Modal */}

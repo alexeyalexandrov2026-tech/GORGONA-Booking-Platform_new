@@ -32,6 +32,7 @@
     "test:management:materials": "playwright test tests/materials.spec.ts --max-failures=1",
     "test:management:catalog": "playwright test tests/service-catalog.spec.ts --max-failures=1",
     "test:management:visit": "playwright test tests/visit-desk.spec.ts --max-failures=1",
+    "test:management:billing": "playwright test tests/visit-billing.spec.ts --max-failures=1",
     "test:management:stock-documents": "playwright test tests/stock-documents.spec.ts --max-failures=1"
   },
   "dependencies": {
