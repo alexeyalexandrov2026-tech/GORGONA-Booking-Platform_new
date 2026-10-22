@@ -31,6 +31,7 @@ from gorgona_booking.api import (
     shift_changes,
     stock,
     timesheets,
+    visits,
     workforce,
     workforce_desk,
 )
@@ -142,6 +143,7 @@ def create_app(
     app.include_router(workforce_desk.router)
     app.include_router(inventory.router)
     app.include_router(stock.router)
+    app.include_router(visits.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

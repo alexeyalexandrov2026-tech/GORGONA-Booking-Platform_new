@@ -48,6 +48,11 @@ K_TABLES = {
     "provider_reconciliation_runs",
     # L1 (0066): the stages of a service variant (not a K table; created by the same upgrade).
     "variant_stages",
+    # L3 (0068): recipes, visit completions and their material uses.
+    "variant_materials",
+    "add_on_materials",
+    "visit_completions",
+    "visit_material_uses",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
