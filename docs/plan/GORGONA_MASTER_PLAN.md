@@ -10,7 +10,17 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-22: L3 visit completion and material consumption, locally verified
+## Current checkpoint — 2026-10-22: L4 visit billing, locally verified
+
+L3 CI SUCCESS after raising the CI job limit to 75 minutes (run 39805277086, 43 min; the first run was
+cancelled at 45). L4 designed ([design](PACKAGE_L4_DESIGN_2026-10-22.md), `c45607f`) and built in
+`0738b4a` on `codex/package-l4-billing` (migration 0069): a visit is billed as one FIN-03 invoice (its
+services and add-ons, plus fee lines; a cancelled visit only fees); deposit and the rest are FIN-03
+payments of it. Focused **378 passed**; full **2494 passed, 4 skipped**
+([validation](evidence/2026-10-22-l4-billing/VALIDATION.md)). Next: L5, commissions and tips. Next
+migration **0070**.
+
+## Previous checkpoint — 2026-10-22: L3 visit completion and material consumption, locally verified
 
 L2c CI SUCCESS (run 39783826823). L3 designed ([design](PACKAGE_L3_DESIGN_2026-10-22.md), `2402352`)
 and built in `4ed11af` on `codex/package-l3-consumption` (migration 0068): recipes per service and add-on;
