@@ -1,6 +1,15 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-22: L2b guests book staged services, locally verified
+## Current checkpoint — 2026-10-22: L2c visits with several services, locally verified
+
+L2b CI SUCCESS (run 39777287553). L2c in `c32a1b0` on `codex/package-l2c-visits` (no migration): one
+booking holds several services in order (`extra_lines` after the first); the composition rules apply
+across the visit; one artist serves the whole visit; staff, the hold API and guests book it. Focused
+**234 passed**; full **2479 passed, 4 skipped**
+([validation](evidence/2026-10-22-l2c-visits/VALIDATION.md)). L2 (occupancy, guests, visits) is
+complete; next: L3, visit completion and material consumption. Next migration **0068**.
+
+## Previous checkpoint — 2026-10-22: L2b guests book staged services, locally verified
 
 L2a CI SUCCESS (run 39765610640). L2b in `ca44785` on `codex/package-l2b-guest-stages` (no migration):
 guests see a staged start only when the artist is free in their working stages and a chair, room or
