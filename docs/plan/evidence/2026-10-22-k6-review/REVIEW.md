@@ -36,3 +36,11 @@ grants and RLS of all new tables and the guard's lists; which errors count; the 
 (the webhook path reused, same facts, version, account and live-mode checks, namespace binding, no
 network inside a transaction, key hidden); provenance from the attestation; the screen contract
 indexes; no signing secret or key in the evidence.
+
+## Resolution (K6r)
+
+R1–R5, R7 and R8 fixed and R6 partly (exact request asserted) in `2eb6cf7`; see the
+[K6r validation](../2026-10-22-k6r-review-fixes/VALIDATION.md). Full suite 2415 passed, 4 skipped.
+Left as recorded limits: a real call of `StripeApiSource` (needs the owner's restricted test key), an
+own revocation record for the platform key, and R9. The K6c sandbox VALIDATION said "failures stay
+visible"; before K6r that held for the run rows only, not for logs or the screen — corrected here.

@@ -1,6 +1,16 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-21: K6b2 delivery source and stalled operations on the screen
+## Current checkpoint — 2026-10-22: K6 reviewed, CI green; K6r review fixes locally verified
+
+K6a, K6b1, K6b2 and K6c published for CI on the owner's word («Да, и то и другое»), no PR: CI SUCCESS
+on all four heads (runs 39724421746, 39724425326, 39724428029, 39724431070). One independent read-only
+review: APPROVE with conditions, no Critical or High ([REVIEW](evidence/2026-10-22-k6-review/REVIEW.md)).
+K6r fixes R1–R8 in `2eb6cf7` on `codex/package-k6r-review-fixes` (migration 0065): focused **700
+passed**; full **2415 passed, 4 skipped** ([validation](evidence/2026-10-22-k6r-review-fixes/VALIDATION.md)).
+The real sandbox run K6c passed ([validation](evidence/2026-10-21-k6c-stripe-sandbox/VALIDATION.md)).
+Next: the FIN-02 record and acceptance update (K-05, K-12). Next migration **0066**.
+
+## Previous checkpoint — 2026-10-21: K6b2 delivery source and stalled operations on the screen
 
 Code `0af2a46`, local branch `codex/package-k6b2-screen`, parent `9435e7f` (K6b1). Each delivery names
 how it arrived (signed webhook or fetched by reconciliation); an operation without a final event for
