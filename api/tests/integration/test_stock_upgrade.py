@@ -53,6 +53,8 @@ K_TABLES = {
     "add_on_materials",
     "visit_completions",
     "visit_material_uses",
+    # L4 (0069): the link of a visit to its invoice.
+    "visit_invoices",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

@@ -1,4 +1,4 @@
-"""L3: recipes, visit completion and material consumption (design PACKAGE_L3_DESIGN)."""
+"""L3 and L4: recipes, visit completion, material consumption and visit billing."""
 
 from uuid import UUID
 
@@ -8,7 +8,9 @@ from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import ROLE_PERMISSIONS, Permission
+from gorgona_booking.business import visit_billing
 from gorgona_booking.business import visits as service
+from gorgona_booking.business.visit_billing import VisitInvoiceInput, VisitInvoiceView
 from gorgona_booking.business.visits import (
     CompletionInput,
     CompletionView,
@@ -18,6 +20,7 @@ from gorgona_booking.business.visits import (
 )
 from gorgona_booking.db.inventory_guard import assert_inventory_ready
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
+from gorgona_booking.errors import NotFoundError
 from gorgona_booking.tenancy.authorization import PermissionDeniedError, authorized_tenant
 
 router = APIRouter(prefix="/v1/salons/{salon_id}", tags=["visits"])
@@ -135,3 +138,52 @@ async def post_consumption(
             key=idempotency_key,
             body=body,
         )
+
+
+@router.post("/bookings/{booking_id}/invoice")
+async def bill_visit(
+    salon_id: UUID,
+    booking_id: UUID,
+    body: VisitInvoiceInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> VisitInvoiceView:
+    """L4 decisions 22-24 and 27: a company-wide finance member, under the ledger lock."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.FINANCE_MANAGE,
+        request_id=get_request_id(request),
+        exclusive="ledger",
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        return await visit_billing.bill_visit(
+            access.conn,
+            salon_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/bookings/{booking_id}/invoice")
+async def get_visit_invoice(
+    salon_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> VisitInvoiceView:
+    """L4 decision 25: the visit's invoice and, once issued, what is paid and what is open."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.FINANCE_READ,
+        request_id=get_request_id(request),
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        view = await visit_billing.load_visit_invoice(access.conn, salon_id, booking_id)
+        if view is None:
+            raise NotFoundError("This visit has no invoice", booking_id=str(booking_id))
+        return view
