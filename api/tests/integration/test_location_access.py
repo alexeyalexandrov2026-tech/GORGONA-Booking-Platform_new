@@ -403,6 +403,8 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (68, "-- Visit branch scope:"),
                 # L4: the link of a visit to its invoice.
                 (69, "-- Visit invoice branch scope:"),
+                # L5: commission plans, rules and the visit commission link.
+                (70, "-- Commission branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker

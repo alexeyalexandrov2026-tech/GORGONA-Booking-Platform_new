@@ -1,4 +1,4 @@
-"""L3 and L4: recipes, visit completion, material consumption and visit billing."""
+"""L3, L4 and L5: recipes, completion, consumption, billing and commissions of a visit."""
 
 from uuid import UUID
 
@@ -8,8 +8,14 @@ from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import ROLE_PERMISSIONS, Permission
-from gorgona_booking.business import visit_billing
+from gorgona_booking.business import commissions, visit_billing
 from gorgona_booking.business import visits as service
+from gorgona_booking.business.commissions import (
+    CommissionInput,
+    PlanInput,
+    PlanView,
+    VisitCommissionView,
+)
 from gorgona_booking.business.visit_billing import VisitInvoiceInput, VisitInvoiceView
 from gorgona_booking.business.visits import (
     CompletionInput,
@@ -187,3 +193,55 @@ async def get_visit_invoice(
         if view is None:
             raise NotFoundError("This visit has no invoice", booking_id=str(booking_id))
         return view
+
+
+@router.put("/staff/{resource_id}/commission")
+async def put_commission_plan(
+    salon_id: UUID,
+    resource_id: UUID,
+    body: PlanInput,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> PlanView:
+    """L5 decision 28: a specialist's whole plan; finance rights of a company-wide member."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.FINANCE_MANAGE,
+        request_id=get_request_id(request),
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        return await commissions.save_plan(
+            access.conn, salon_id, resource_id, principal.user_id, body
+        )
+
+
+@router.post("/bookings/{booking_id}/commission")
+async def accrue_commission(
+    salon_id: UUID,
+    booking_id: UUID,
+    body: CommissionInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> VisitCommissionView:
+    """L5 decisions 29-31: once, after the visit invoice is fully paid, under the ledger lock."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.FINANCE_MANAGE,
+        request_id=get_request_id(request),
+        exclusive="ledger",
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        return await commissions.accrue_commission(
+            access.conn,
+            salon_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )

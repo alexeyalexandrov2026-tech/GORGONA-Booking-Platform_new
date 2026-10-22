@@ -55,6 +55,10 @@ K_TABLES = {
     "visit_material_uses",
     # L4 (0069): the link of a visit to its invoice.
     "visit_invoices",
+    # L5 (0070): commission plans, rules and the visit commission link.
+    "commission_plans",
+    "commission_rules",
+    "visit_commissions",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
