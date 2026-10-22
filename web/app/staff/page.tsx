@@ -49,7 +49,9 @@ function StaffContent({
   // Add Staff Modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newKind, setNewKind] = useState<"artist" | "chair" | "room">("artist");
+  const [newKind, setNewKind] = useState<
+    "artist" | "chair" | "room" | "equipment"
+  >("artist");
   const [isSubmittingAdd, setIsSubmittingAdd] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -484,13 +486,16 @@ function StaffContent({
                 id="staff-kind"
                 value={newKind}
                 onChange={(e) =>
-                  setNewKind(e.target.value as "artist" | "chair" | "room")
+                  setNewKind(
+                    e.target.value as "artist" | "chair" | "room" | "equipment",
+                  )
                 }
                 style={{ width: "100%", marginBottom: "20px" }}
               >
                 <option value="artist">Artist / Technician (Person)</option>
                 <option value="chair">Chair / Station</option>
                 <option value="room">Private Treatment Room</option>
+                <option value="equipment">Equipment</option>
               </select>
 
               <div className="mgmt-form-actions">

@@ -13,7 +13,7 @@
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "test:e2e": "playwright test tests/booking.spec.ts",
-    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts tests/counterparty-contracts.spec.ts tests/document-contracts.spec.ts tests/agreement-contracts.spec.ts tests/reservation-contracts.spec.ts tests/ledger-contracts.spec.ts --project=desktop tests/financial-contracts.spec.ts tests/admission-contracts.spec.ts tests/workforce-contracts.spec.ts tests/inventory-contracts.spec.ts tests/stock-document-contracts.spec.ts tests/booking-contracts.spec.ts",
+    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts tests/counterparty-contracts.spec.ts tests/document-contracts.spec.ts tests/agreement-contracts.spec.ts tests/reservation-contracts.spec.ts tests/ledger-contracts.spec.ts --project=desktop tests/financial-contracts.spec.ts tests/admission-contracts.spec.ts tests/workforce-contracts.spec.ts tests/inventory-contracts.spec.ts tests/stock-document-contracts.spec.ts tests/booking-contracts.spec.ts tests/catalog-contracts.spec.ts",
     "test:management": "playwright test tests/management.spec.ts",
     "test:management:location": "playwright test tests/location-access.spec.ts",
     "test:management:delegation": "playwright test tests/delegation.spec.ts",
@@ -30,10 +30,11 @@
     "test:management:workforce": "playwright test tests/workforce.spec.ts --max-failures=1",
     "test:management:workforce:situations": "playwright test tests/workforce-situations.spec.ts --max-failures=1",
     "test:management:materials": "playwright test tests/materials.spec.ts --max-failures=1",
+    "test:management:catalog": "playwright test tests/service-catalog.spec.ts --max-failures=1",
     "test:management:stock-documents": "playwright test tests/stock-documents.spec.ts --max-failures=1"
   },
   "dependencies": {
-    "next": "16.3.8",
+    "next": "16.4.2",
     "oidc-client-ts": "3.5.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -46,7 +47,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.2",
     "prettier": "3.9.9",
     "typescript": "6.0.3"
   }

@@ -118,6 +118,28 @@ export interface ServiceView {
   booking_duration_minutes: number | null;
   is_bookable: boolean;
   revision: number;
+  // L1: ordered stages; empty for a service of one stage.
+  stages: ServiceStage[];
+}
+
+export type StageKind = "active" | "processing" | "finish";
+export type StageResource = "specialist" | "chair" | "room" | "equipment";
+export interface StageInput {
+  kind: StageKind;
+  minutes: number;
+  resources: StageResource[];
+}
+export interface ServiceStage extends StageInput {
+  position: number;
+}
+export interface RecipeLine {
+  item_id: string;
+  quantity: string;
+}
+export interface RecipeView {
+  owner_id: string;
+  owner_revision: number;
+  lines: RecipeLine[];
 }
 
 export interface StaffView {
@@ -1019,6 +1041,48 @@ export async function unpublishService(
   );
 }
 
+/** L1: replace a service's stages; its duration becomes their sum. */
+export async function replaceServiceStages(
+  salonId: string,
+  variantId: string,
+  expectedRevision: number,
+  stages: StageInput[],
+): Promise<ServiceView> {
+  return managementFetch<ServiceView>(
+    `/v1/salons/${salonId}/services/${variantId}/stages`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ expected_revision: expectedRevision, stages }),
+    },
+  );
+}
+
+/** L7a: the materials one service uses. */
+export async function fetchServiceMaterials(
+  salonId: string,
+  variantId: string,
+): Promise<RecipeView> {
+  return managementFetch<RecipeView>(
+    `/v1/salons/${salonId}/services/${variantId}/materials`,
+  );
+}
+
+/** L3: replace the whole recipe of a service with its expected revision. */
+export async function replaceServiceMaterials(
+  salonId: string,
+  variantId: string,
+  expectedRevision: number,
+  lines: RecipeLine[],
+): Promise<RecipeView> {
+  return managementFetch<RecipeView>(
+    `/v1/salons/${salonId}/services/${variantId}/materials`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ expected_revision: expectedRevision, lines }),
+    },
+  );
+}
+
 export async function fetchStaff(salonId: string): Promise<StaffView[]> {
   return managementFetch<StaffView[]>(`/v1/salons/${salonId}/staff`);
 }
@@ -1028,7 +1092,7 @@ export async function createStaff(
   data: {
     display_name: string;
     location_id: string;
-    kind: "artist" | "chair" | "room";
+    kind: "artist" | "chair" | "room" | "equipment";
   },
 ): Promise<StaffView> {
   return managementFetch<StaffView>(`/v1/salons/${salonId}/staff`, {

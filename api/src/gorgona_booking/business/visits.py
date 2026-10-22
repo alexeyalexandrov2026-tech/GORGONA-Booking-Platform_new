@@ -175,6 +175,20 @@ async def replace_recipe(
     return await load_recipe(conn, owner, owner_id, int(moved[0]))
 
 
+async def read_recipe(conn: RuntimeConnection, owner: RecipeOwner, owner_id: UUID) -> RecipeView:
+    """L7a: the current recipe of a variant or an add-on with that owner's revision."""
+    owner_table, _, _ = _OWNER[owner]
+    current = await (
+        await conn.execute(
+            f"select revision from {owner_table} where id = %s",  # noqa: S608 - fixed table
+            (owner_id,),
+        )
+    ).fetchone()
+    if current is None:
+        raise NotFoundError("Service not found", owner_id=str(owner_id))
+    return await load_recipe(conn, owner, owner_id, int(current[0]))
+
+
 async def load_recipe(
     conn: RuntimeConnection, owner: RecipeOwner, owner_id: UUID, revision: int
 ) -> RecipeView:

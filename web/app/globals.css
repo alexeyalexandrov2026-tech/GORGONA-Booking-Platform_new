@@ -789,6 +789,47 @@ footer {
   margin-top: 0;
   font-size: 1.6rem;
 }
+/* L7a: stages and materials of a service. */
+.service-catalog-dialog h3 {
+  margin: 24px 0 8px;
+}
+.service-stage-row,
+.service-material-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 0 0 12px;
+  min-width: 0;
+}
+.service-stage-row label,
+.service-material-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.service-stage-resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.service-stage-resources label.inline {
+  flex-direction: row;
+  align-items: center;
+}
+@media (max-width: 600px) {
+  .mgmt-modal-card {
+    padding: 20px 16px;
+  }
+}
 .mgmt-filter-bar {
   display: flex;
   flex-wrap: wrap;

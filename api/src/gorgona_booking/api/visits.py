@@ -51,6 +51,40 @@ async def _recipe(
         return await service.replace_recipe(access.conn, owner, owner_id, body)
 
 
+async def _read_recipe(
+    salon_id: UUID,
+    owner: service.RecipeOwner,
+    owner_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> RecipeView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.CATALOG_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        return await service.read_recipe(access.conn, owner, owner_id)
+
+
+@router.get("/services/{variant_id}/materials")
+async def get_variant_materials(
+    salon_id: UUID, variant_id: UUID, request: Request, principal: CurrentPrincipal
+) -> RecipeView:
+    """L7a: the recipe of a variant, read back for the catalog screen."""
+    return await _read_recipe(salon_id, "variant", variant_id, request, principal)
+
+
+@router.get("/add-ons/{add_on_id}/materials")
+async def get_add_on_materials(
+    salon_id: UUID, add_on_id: UUID, request: Request, principal: CurrentPrincipal
+) -> RecipeView:
+    """L7a: the recipe of an add-on."""
+    return await _read_recipe(salon_id, "add_on", add_on_id, request, principal)
+
+
 @router.put("/services/{variant_id}/materials")
 async def put_variant_materials(
     salon_id: UUID,

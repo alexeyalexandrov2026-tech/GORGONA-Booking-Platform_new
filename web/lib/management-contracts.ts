@@ -69,6 +69,20 @@ const activity = z.object({
   details: record,
   occurred_at: instant,
 });
+// L1/L7a: the ordered stages of a service; empty for a service of one stage.
+export const stageKinds = ["active", "processing", "finish"] as const;
+export const stageResources = [
+  "specialist",
+  "chair",
+  "room",
+  "equipment",
+] as const;
+const stage = z.strictObject({
+  position: z.number().int().min(1).max(10),
+  kind: z.enum(stageKinds),
+  minutes: z.number().int().min(1).max(720),
+  resources: z.array(z.enum(stageResources)).max(4),
+});
 const service = z.object({
   id,
   service_id: id,
@@ -80,6 +94,20 @@ const service = z.object({
   booking_duration_minutes: count.nullable(),
   is_bookable: z.boolean(),
   revision: z.number().int().positive(),
+  stages: z.array(stage).max(10).default([]),
+});
+// L3/L7a: the materials one service uses, in the material's own unit.
+const recipe = z.strictObject({
+  owner_id: id,
+  owner_revision: z.number().int().positive(),
+  lines: z
+    .array(
+      z.strictObject({
+        item_id: id,
+        quantity: z.string().regex(/^(0|[1-9][0-9]{0,14})(\.[0-9]{1,3})?$/),
+      }),
+    )
+    .max(20),
 });
 const staff = z.object({
   id,
@@ -322,6 +350,7 @@ export function managementResponseSchema(
   if (/^\/bookings\//.test(suffix)) return booking;
   if (suffix === "/services")
     return method === "GET" ? z.array(service) : service;
+  if (/^\/services\/[0-9a-f-]{36}\/materials$/i.test(suffix)) return recipe;
   if (/^\/services\//.test(suffix)) return service;
   if (suffix === "/members" && method === "GET") return z.array(member);
   if (suffix === "/staff") return method === "GET" ? z.array(staff) : staff;

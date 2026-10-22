@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { ManagementLayout } from "../../components/management-layout";
+import { ServiceCatalogDialog } from "../../components/service-catalog-editors";
 import {
   createService,
   fetchServices,
@@ -54,6 +55,8 @@ function ServicesContent({
   const [editError, setEditError] = useState<string | null>(null);
 
   const [refreshKey, setRefreshKey] = useState(0);
+  // L7a: the service whose stages and materials are open.
+  const [catalogTarget, setCatalogTarget] = useState<string | null>(null);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -238,6 +241,7 @@ function ServicesContent({
                     {s.booking_duration_minutes
                       ? `${s.booking_duration_minutes} min`
                       : "Not set"}
+                    {s.stages.length > 0 && ` · ${s.stages.length} stages`}
                   </td>
                   <td>
                     <span className={`mgmt-status-pill status-${s.status}`}>
@@ -271,6 +275,14 @@ function ServicesContent({
                       >
                         {s.is_bookable ? "Unpublish" : "Publish"}
                       </button>
+                      <button
+                        type="button"
+                        className="secondary mgmt-btn-small"
+                        aria-label={`Stages and materials of ${s.name}`}
+                        onClick={() => setCatalogTarget(s.id)}
+                      >
+                        Stages and materials
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -279,6 +291,19 @@ function ServicesContent({
           </table>
         </div>
       )}
+
+      {catalogTarget &&
+        (() => {
+          const target = services.find((s) => s.id === catalogTarget);
+          return target ? (
+            <ServiceCatalogDialog
+              salonId={salonId}
+              service={target}
+              onClose={() => setCatalogTarget(null)}
+              onChanged={loadServices}
+            />
+          ) : null;
+        })()}
 
       {/* Add Modal */}
       {showAddModal && (
