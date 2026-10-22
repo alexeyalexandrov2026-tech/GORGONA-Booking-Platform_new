@@ -125,6 +125,12 @@ test("provider operations: truthful states, clearing account, apply, recovery an
   await expect(list.getByRole("listitem")).toHaveCount(20);
   await loadAll(region, list);
   await expect(list.getByRole("listitem")).toHaveCount(slow);
+  // K6b2: these processing payments were created long ago and are marked as stalled.
+  await expect(
+    list
+      .getByRole("listitem")
+      .filter({ hasText: "No final event for over 24 hours" }),
+  ).toHaveCount(slow);
   await choose(state, "Applied; later provider data disagrees");
   const conflict = list.getByRole("listitem").filter({ hasText: f.conflict });
   await expect(conflict).toContainText("Manual review needed.");

@@ -106,7 +106,15 @@ async def test_the_detail_lists_every_event_decision_and_delivery(money: Money) 
         assert item["decision"]["outcome"] == "observed"
         assert item["decision"]["reason"] == "success"
         (delivery,) = item["deliveries"]
-        assert set(delivery) == {"received_at", "digest", "matches_original", "differences"}
+        # K6b2: each delivery also names how it arrived.
+        assert set(delivery) == {
+            "received_at",
+            "source",
+            "digest",
+            "matches_original",
+            "differences",
+        }
+        assert delivery["source"] == "webhook"
         assert delivery["matches_original"] is True
         assert delivery["differences"] == []
         assert len(delivery["digest"]) == 12

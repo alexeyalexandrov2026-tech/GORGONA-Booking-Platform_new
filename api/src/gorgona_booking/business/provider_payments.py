@@ -7,7 +7,7 @@ clearing account registered for its connection. SQL rechecks everything where it
 """
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
 from uuid import UUID
 
@@ -123,7 +123,11 @@ _FACTS = (
     "exists(select 1 from gba.provider_payment_links l "
     "where l.tenant_id=o.tenant_id and l.operation_id=o.id "
     "and gba.effective_payment_amount(l.tenant_id,l.book_id,l.payment_id)=s.amount),"
-    "gba.provider_manual_payment(o.tenant_id,c.book_id,o.provider_object_id) is not null "
+    "gba.provider_manual_payment(o.tenant_id,c.book_id,o.provider_object_id) is not null,"
+    # K6b2: the provider's time of the operation's latest event, by the stored operation key.
+    "(select max((e.facts->>'created')::bigint) from gba.provider_event_inbox e "
+    "where e.tenant_id=o.tenant_id and e.connection_id=o.connection_id "
+    "and e.operation_object_id=o.provider_object_id and e.operation_kind=o.kind) "
     "from gba.provider_operations o join gba.provider_receipt_connections c "
     "on c.tenant_id=o.tenant_id and c.id=o.connection_id "
     "left join lateral (select (gba.provider_receipt_operation(e.facts)).amount_minor as amount,"
@@ -142,7 +146,7 @@ _FACTS = (
 _NAMED = (
     ") f(id,connection_id,kind,provider_object_id,parent_object_id,currency,created_at,"
     "pending,review,delivery,revoked,amount,happened,minor_units,payment_id,"
-    "link_payment,link_holds,manual_named) "
+    "link_payment,link_holds,manual_named,latest_created) "
 )
 # One state per operation, in SQL so that a state filter is complete across cursor pages. The
 # order matches the refusal reasons of `observed`.
@@ -159,6 +163,17 @@ _STATE = (
 )
 
 
+# K6b2: an operation without a final event for longer than this is marked on the screen.
+STALLED_AFTER = timedelta(hours=24)
+
+
+def _stalled_since(state: str, latest_created: int | None) -> datetime | None:
+    if state not in ("pending", "not_final") or latest_created is None:
+        return None
+    latest = datetime.fromtimestamp(latest_created, UTC)
+    return latest if datetime.now(UTC) - latest > STALLED_AFTER else None
+
+
 def _summary(row: tuple[Any, ...]) -> ProviderOperationSummary:
     amount, scale = row[11], row[13]
     return ProviderOperationSummary(
@@ -169,9 +184,10 @@ def _summary(row: tuple[Any, ...]) -> ProviderOperationSummary:
         parent_object_id=row[4],
         currency=row[5],
         amount=None if amount is None or scale is None else from_minor(int(amount), scale),
-        state=row[18],
+        state=row[19],
         payment_id=row[14],
         created_at=row[6],
+        stalled_since=_stalled_since(row[19], row[18]),
     )
 
 

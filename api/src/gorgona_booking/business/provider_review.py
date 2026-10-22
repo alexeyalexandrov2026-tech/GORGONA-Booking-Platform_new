@@ -84,10 +84,14 @@ _EVENTS = (
     "order by (e.facts->>'created')::bigint,e.id"
 )
 _DELIVERIES = (
-    "select event_id,delivery_sha256,facts,matches_original,received_at "
-    "from gba.provider_event_deliveries where tenant_id=%s and event_id=any(%s) "
-    "order by received_at,delivery_sha256"
+    "select d.event_id,d.delivery_sha256,d.facts,d.matches_original,d.received_at,"
+    # K6b: how the delivery arrived, from its attestation (none for an untrusted archive row).
+    "(select a.verifier from gba.provider_event_attestations a where a.tenant_id=d.tenant_id "
+    "and a.event_id=d.event_id and a.delivery_sha256=d.delivery_sha256) "
+    "from gba.provider_event_deliveries d where d.tenant_id=%s and d.event_id=any(%s) "
+    "order by d.received_at,d.delivery_sha256"
 )
+_SOURCES = {"stripe_snapshot_v1": "webhook", "stripe_api_v1": "provider_api"}
 # An attested event of the book without a decision, or decided without an operation.
 _ATTENTION = (
     "select e.id,e.connection_id,e.facts->>'event_type',(e.facts->>'created')::bigint,d.reason,"
@@ -172,6 +176,7 @@ async def operation_detail(
             deliveries=tuple(
                 ProviderDeliveryView(
                     received_at=delivery[4],
+                    source=_SOURCES.get(delivery[5]),
                     digest=delivery[1][:12],
                     matches_original=delivery[3],
                     differences=() if delivery[3] else _differences(row[3], delivery[2]),

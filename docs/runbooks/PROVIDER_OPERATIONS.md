@@ -89,6 +89,10 @@ clearing account**. It cannot be changed later. Repeating the same account is sa
 delivery that differs names each field with both values (for example *Amount received (minor
 units) 3100 → 3099*; minor units are cents for USD). An event decided as "its facts disagree"
 contradicts earlier events of the same operation. Raw bodies, signatures and keys are never shown.
+Each delivery names how it arrived: *signed webhook* or *fetched by reconciliation* (K6b). An
+operation that is still waiting or has no final provider event, and whose latest event is more than
+24 hours old, shows **No final event for over 24 hours**: check it in the provider's dashboard by its
+ID; the reconciler fetches lost events by itself.
 
 ## Admission and the receipt processes (K0, owner and operators)
 

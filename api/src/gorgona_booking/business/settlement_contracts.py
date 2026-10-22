@@ -206,6 +206,8 @@ class ProviderOperationSummary(Strict):
     state: ProviderOperationState
     payment_id: UUID | None
     created_at: AwareDatetime
+    # K6b2: still pending or not final, and its latest event is more than 24 hours old.
+    stalled_since: AwareDatetime | None = None
 
 
 class ProviderOperationList(Versioned):
@@ -440,6 +442,8 @@ class ProviderDeliveryDifference(Strict):
 
 class ProviderDeliveryView(Strict):
     received_at: AwareDatetime
+    # K6b: a signed webhook, the reconciler's call to the provider's API, or not attested.
+    source: Literal["webhook", "provider_api"] | None = None
     # The first 12 hex digits of the delivery digest: enough to tell deliveries apart.
     digest: str
     matches_original: bool

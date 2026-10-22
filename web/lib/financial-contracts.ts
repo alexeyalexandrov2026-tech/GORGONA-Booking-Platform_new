@@ -425,7 +425,15 @@ const providerOperation = z
     ]),
     payment_id: id.nullable(),
     created_at: instant,
+    // K6b2: still pending or not final, its latest event more than 24 hours old.
+    stalled_since: instant.nullable(),
   })
+  .refine(
+    (v) =>
+      v.stalled_since === null ||
+      v.state === "pending" ||
+      v.state === "not_final",
+  )
   .refine((v) =>
     v.kind === "payment"
       ? v.provider_object_id.startsWith("pi_") && v.parent_object_id === null
@@ -475,6 +483,8 @@ export const providerConnectionListSchema = z
 const providerDelivery = z
   .strictObject({
     received_at: instant,
+    // K6b: a signed webhook, the reconciler's call to the provider's API, or not attested.
+    source: z.enum(["webhook", "provider_api"]).nullable(),
     digest: z.string().regex(/^[0-9a-f]{12}$/),
     matches_original: z.boolean(),
     differences: z

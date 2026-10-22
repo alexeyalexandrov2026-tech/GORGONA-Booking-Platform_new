@@ -21,6 +21,11 @@ import {
 } from "./financial-editors";
 
 type State = ProviderOperation["state"];
+/** K6b: how a delivery arrived. */
+const SOURCES: Record<string, string> = {
+  webhook: "signed webhook",
+  provider_api: "fetched by reconciliation",
+};
 const STATES: readonly (readonly [State, string])[] = [
   ["observed", "Observed by the provider, not applied yet"],
   ["pending", "Provider events still being decided"],
@@ -331,6 +336,14 @@ export function ProviderOperations({
               {stateText(x.state)}
               {x.payment_id && ` · payment ${x.payment_id}`}
             </p>
+            {x.stalled_since && (
+              <p className="provider-conflict">
+                <strong>No final event for over 24 hours</strong> (latest{" "}
+                {new Date(x.stalled_since).toLocaleString()}). Check it in the
+                provider&apos;s dashboard by its ID; the reconciler fetches lost
+                events by itself.
+              </p>
+            )}
             {x.state === "applied_with_conflict" && (
               <p className="provider-conflict">
                 <strong>Manual review needed.</strong> Money already moved and
@@ -437,7 +450,8 @@ function OperationDetail({
             <ul>
               {event.deliveries.map((delivery) => (
                 <li key={delivery.digest}>
-                  Delivery {delivery.digest} · received{" "}
+                  Delivery {delivery.digest} ·{" "}
+                  {SOURCES[delivery.source ?? ""] ?? "not attested"} · received{" "}
                   {new Date(delivery.received_at).toLocaleString()} ·{" "}
                   {delivery.matches_original
                     ? "same facts as the first delivery"

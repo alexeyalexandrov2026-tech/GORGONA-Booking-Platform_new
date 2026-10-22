@@ -795,6 +795,7 @@ const observedOperation = {
   state: "observed",
   payment_id: null,
   created_at: instant,
+  stalled_since: null,
 };
 const operationPage = (...items: object[]) => ({
   ...envelope,
@@ -812,6 +813,17 @@ test("provider operation list is strict and its state matches its money", () => 
         operationPage({ ...observedOperation, state, amount: null }),
       ).success,
     ).toBe(true);
+  for (const state of ["pending", "not_final"])
+    expect(
+      providerOperationListSchema.safeParse(
+        operationPage({
+          ...observedOperation,
+          state,
+          amount: null,
+          stalled_since: instant,
+        }),
+      ).success,
+    ).toBe(true);
   for (const patch of [
     { state: "applied" },
     { state: "applied_with_conflict" },
@@ -823,6 +835,8 @@ test("provider operation list is strict and its state matches its money", () => 
     { verified: true },
     { kind: "payment", parent_object_id: "pi_FAKEparent" },
     { kind: "refund", provider_object_id: "re_FAKErefund1" },
+    // K6b2: only a pending or not final operation can be stalled.
+    { stalled_since: instant },
   ])
     expect(
       providerOperationListSchema.safeParse(
@@ -960,6 +974,7 @@ const providerEvent = {
   deliveries: [
     {
       received_at: instant,
+      source: "webhook",
       digest: "0123456789ab",
       matches_original: true,
       differences: [],
@@ -977,6 +992,7 @@ test("provider operation detail is strict and a difference names its field and v
   expect(providerOperationDetailSchema.safeParse(value).success).toBe(true);
   const differing = {
     received_at: instant,
+    source: "provider_api",
     digest: "ba9876543210",
     matches_original: false,
     differences: [
@@ -1003,6 +1019,8 @@ test("provider operation detail is strict and a difference names its field and v
     { ...providerEvent.deliveries[0], differences: differing.differences },
     { ...differing, digest: "FAKE" },
     { ...differing, body: "{}" },
+    // K6b: only the two known sources, or none for an unattested delivery.
+    { ...differing, source: "email" },
   ])
     expect(
       providerOperationDetailSchema.safeParse({
