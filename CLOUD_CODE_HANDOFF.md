@@ -1,6 +1,14 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-21: K6b1 lost provider events reconciled from the Stripe API
+## Current checkpoint — 2026-10-21: K6b2 delivery source and stalled operations on the screen
+
+Code `0af2a46`, local branch `codex/package-k6b2-screen`, parent `9435e7f` (K6b1). Each delivery names
+how it arrived (signed webhook or fetched by reconciliation); an operation without a final event for
+over 24 hours is marked. Focused **676 passed**; full **2398 passed, 4 skipped**; npm audit NOT TESTED
+(registry timeout, no dependency changed). Next: K6c, the real sandbox run.
+[Validation](docs/plan/evidence/2026-10-21-k6b2-screen/VALIDATION.md).
+
+## Previous checkpoint — 2026-10-21: K6b1 lost provider events reconciled from the Stripe API
 
 Code `73f5c45`, local branch `codex/package-k6b-event-backfill`, parent `73570bd` (K6b detailed
 decisions). A reconciler of one platform namespace lists each admitted connection's events from the
