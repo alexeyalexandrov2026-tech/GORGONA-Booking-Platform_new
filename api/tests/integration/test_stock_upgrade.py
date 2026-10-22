@@ -59,6 +59,9 @@ K_TABLES = {
     "commission_plans",
     "commission_rules",
     "visit_commissions",
+    # L6 (0071): prepaid balances and their redemptions.
+    "prepaid_balances",
+    "prepaid_redemptions",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

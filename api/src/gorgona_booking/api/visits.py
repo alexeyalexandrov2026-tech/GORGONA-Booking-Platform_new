@@ -1,4 +1,4 @@
-"""L3, L4 and L5: recipes, completion, consumption, billing and commissions of a visit."""
+"""L3-L6: recipes, completion, consumption, billing, commissions and prepaid balances."""
 
 from uuid import UUID
 
@@ -8,7 +8,7 @@ from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import ROLE_PERMISSIONS, Permission
-from gorgona_booking.business import commissions, visit_billing
+from gorgona_booking.business import commissions, prepaid, visit_billing
 from gorgona_booking.business import visits as service
 from gorgona_booking.business.commissions import (
     CommissionInput,
@@ -16,6 +16,7 @@ from gorgona_booking.business.commissions import (
     PlanView,
     VisitCommissionView,
 )
+from gorgona_booking.business.prepaid import PrepaidView, RedeemInput, RedemptionView, SaleInput
 from gorgona_booking.business.visit_billing import VisitInvoiceInput, VisitInvoiceView
 from gorgona_booking.business.visits import (
     CompletionInput,
@@ -237,6 +238,64 @@ async def accrue_commission(
     ) as access:
         await assert_location_scope_ready(access.conn)
         return await commissions.accrue_commission(
+            access.conn,
+            salon_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/prepaid")
+async def sell_prepaid(
+    salon_id: UUID,
+    body: SaleInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> PrepaidView:
+    """L6 decision 34: a package or certificate sold by an invoice line on a liability."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.FINANCE_MANAGE,
+        request_id=get_request_id(request),
+        exclusive="ledger",
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        return await prepaid.sell(
+            access.conn,
+            salon_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/bookings/{booking_id}/redeem")
+async def redeem_prepaid(
+    salon_id: UUID,
+    booking_id: UUID,
+    body: RedeemInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> RedemptionView:
+    """L6 decisions 36-38: a credit note of the visit invoice, issued at once."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.FINANCE_MANAGE,
+        request_id=get_request_id(request),
+        exclusive="ledger",
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        return await prepaid.redeem(
             access.conn,
             salon_id,
             booking_id,

@@ -60,6 +60,9 @@ K_TABLES = {
     "commission_plans",
     "commission_rules",
     "visit_commissions",
+    # L6 (0071): prepaid balances and their redemptions.
+    "prepaid_balances",
+    "prepaid_redemptions",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
