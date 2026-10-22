@@ -1,6 +1,15 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-22: L5 commissions and tips, locally verified
+## Current checkpoint — 2026-10-22: L6 prepaid packages and gift certificates, locally verified
+
+L5 CI SUCCESS (run 39819887470). L6 designed ([design](PACKAGE_L6_DESIGN_2026-10-22.md), `7c7230a`) and
+built in `affdaf3` on `codex/package-l6-prepaid` (migration 0071): a package or certificate is sold by an
+invoice line on the prepayment liability and usable once paid; using it on a visit is a FIN-03 credit note
+of the visit invoice, so the prepayment becomes revenue when the service is delivered. Focused **427
+passed**; full **2510 passed, 4 skipped** ([validation](evidence/2026-10-22-l6-prepaid/VALIDATION.md)).
+Next: L7, the screens. Next migration **0072**.
+
+## Previous checkpoint — 2026-10-22: L5 commissions and tips, locally verified
 
 L4 CI SUCCESS (run 39812765674). L5 designed ([design](PACKAGE_L5_DESIGN_2026-10-22.md), `12b64c9`;
 decision 30 revised) and built in `7ff9249` on `codex/package-l5-commissions` (migration 0070): a commission
