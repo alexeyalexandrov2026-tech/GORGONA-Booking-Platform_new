@@ -88,18 +88,18 @@ services (spa, clinic, workshop, rental) books through the same occupancy.
 11. **A visit is an ordered list of service lines.** Each line is a variant with its own add-ons; the
     lines follow each other without a gap, in the order given. A request with one line (today's
     `variant_id` and `add_on_ids`) keeps exactly today's request, quote, snapshot and fingerprint;
-    `lines` is an alternative for two or more. `bookings.variant_id` keeps the first line's variant.
+    the optional `extra_lines` (each a variant with its add-ons) lists the services after the first. `bookings.variant_id` keeps the first line's variant.
 12. **Compatibility across the visit.** Every component provided by any line or add-on counts once (a
     second provider is a paid duplicate and is refused), an add-on's requirement may be met by any
     line, a conflict with any line refuses; one currency; a variant at most once per visit; at most
-    720 minutes in all (the quote engine's rules, widened from one variant to the visit).
+    five services and 720 minutes in all (the quote engine's rules, widened from one variant to the visit).
 13. **A visit always quotes stages.** A visit of two or more lines is a version 2 quote: a staged line
     contributes its stages (its add-ons join its last active stage), an unstaged line one active
     stage of its minutes with the specialist only. Occupancy, availability and holds then work
     exactly as for one staged variant (L2a, L2b).
 14. **One specialist per visit.** The artist must serve every line's service; different specialists
     per line are a later decision.
-15. **Where `lines` is accepted.** Staff booking, the hold API, guest availability and guest hold.
+15. **Where `extra_lines` is accepted.** Staff booking, the hold API, guest availability and guest hold.
     The stored quote's lines list each variant followed by its own add-ons, so billing (L4) can group
     them back into services.
 
