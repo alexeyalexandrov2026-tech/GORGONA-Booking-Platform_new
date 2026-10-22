@@ -82,3 +82,32 @@ services (spa, clinic, workshop, rental) books through the same occupancy.
 | L2-05 | Confirm, cancel and expiry move every interval of the booking; the shared table mirrors each one (mismatch count 0) |
 | L2-06 | An unstaged booking and every old booking behave exactly as before |
 | L2-07 | Reschedule moves every interval; the customer site refuses a staged variant until L2b |
+
+## L2c decisions (added after L2b, same delegation)
+
+11. **A visit is an ordered list of service lines.** Each line is a variant with its own add-ons; the
+    lines follow each other without a gap, in the order given. A request with one line (today's
+    `variant_id` and `add_on_ids`) keeps exactly today's request, quote, snapshot and fingerprint;
+    `lines` is an alternative for two or more. `bookings.variant_id` keeps the first line's variant.
+12. **Compatibility across the visit.** Every component provided by any line or add-on counts once (a
+    second provider is a paid duplicate and is refused), an add-on's requirement may be met by any
+    line, a conflict with any line refuses; one currency; a variant at most once per visit; at most
+    720 minutes in all (the quote engine's rules, widened from one variant to the visit).
+13. **A visit always quotes stages.** A visit of two or more lines is a version 2 quote: a staged line
+    contributes its stages (its add-ons join its last active stage), an unstaged line one active
+    stage of its minutes with the specialist only. Occupancy, availability and holds then work
+    exactly as for one staged variant (L2a, L2b).
+14. **One specialist per visit.** The artist must serve every line's service; different specialists
+    per line are a later decision.
+15. **Where `lines` is accepted.** Staff booking, the hold API, guest availability and guest hold.
+    The stored quote's lines list each variant followed by its own add-ons, so billing (L4) can group
+    them back into services.
+
+## Acceptance for L2c (NOT TESTED)
+
+| id | Requirement |
+|---|---|
+| L2-12 | A visit of two services quotes their lines in order, both prices and durations, as one version 2 quote with the stages of both |
+| L2-13 | A component provided twice across lines, a requirement met by no line, a conflict across lines, a variant twice, a second currency and over 720 minutes are refused |
+| L2-14 | Staff, the hold API and guests book a two-service visit; every stage holds its resources; the artist must serve both services |
+| L2-15 | A one-line request is byte-identical to today's (quote, snapshot, fingerprint) |
