@@ -14,8 +14,9 @@ concurrency:
 jobs:
   api:
     runs-on: ubuntu-24.04
-    # Recent runs took 1517-1563 s of the former 1800 s limit; the suite keeps growing.
-    timeout-minutes: 45
+    # Package L runs took 2562-2653 s of the former 2700 s limit and L3 (2487 tests) was
+    # cancelled at it; 75 minutes leaves room for the remaining slices.
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: api
