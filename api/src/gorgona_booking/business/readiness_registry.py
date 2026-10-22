@@ -183,22 +183,26 @@ SCENARIOS: tuple[ScenarioReadiness, ...] = (
     ScenarioReadiness(
         id="FIN-02",
         status=Readiness.TECHNICALLY_VERIFIED,
-        code_version="b4e69e82152961380d21761c9a100515ea1645d1",
-        schema_version=62,
+        code_version="2eb6cf723f719bde3753ba6bd800c44bc082602d",
+        schema_version=65,
         scope="Stripe Connect signed snapshot events in test mode, USD, one owner-admitted "
         "connection per company: receipts, attestations, worker decisions, payments and refunds "
         "applied into the H ledger with provenance, links of earlier manual payments, review, "
         "and a final suspension. Repeated and reordered events never repeat a payment, refund or "
-        "journal. Technical evidence: real Stripe sandbox events, the full suite, exact-SHA CI and "
-        "two independent reviews; K-05 and K-12 are partial (no provider retrieval, "
-        "reconciliation or dead-letter queue); no live mode, other currency, fees, payouts or "
-        "disputes, and no production approval.",
+        "journal. Events lost on the way are fetched back by a read-only reconciler with the same "
+        "facts, and every run is recorded; a failing event is retried and then parked until a "
+        "finance user releases it. Technical evidence: real Stripe sandbox events (including lost "
+        "webhooks fetched back), the full suite, exact-SHA CI and three independent reviews; no "
+        "live mode, other currency, fees, payouts or disputes, and no production approval.",
         evidence=(
             "docs/plan/evidence/2026-10-20-fin-02-acceptance/ACCEPTANCE.md",
             "docs/plan/evidence/2026-10-20-k0c-stripe-sandbox/VALIDATION.md",
             "docs/plan/evidence/2026-10-20-k5-final-review/REVIEW.md",
+            "docs/plan/evidence/2026-10-22-fin-02-k6-acceptance/ACCEPTANCE.md",
+            "docs/plan/evidence/2026-10-21-k6c-stripe-sandbox/VALIDATION.md",
+            "docs/plan/evidence/2026-10-22-k6-review/REVIEW.md",
         ),
-        verified_on=date(2026, 10, 20),
+        verified_on=date(2026, 10, 22),
     ),
     ScenarioReadiness(
         id="FIN-03",

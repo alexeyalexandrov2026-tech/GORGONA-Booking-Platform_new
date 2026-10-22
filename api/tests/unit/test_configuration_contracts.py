@@ -1,6 +1,7 @@
 """Configuration inputs, module registry and readiness records (ADR-0019)."""
 
 import re
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -158,17 +159,26 @@ def test_work_01_and_core_04_are_verified_and_workforce_follows_work_01() -> Non
 
 
 def test_fin_02_is_technically_verified_within_its_stated_limits() -> None:
-    # K5c (owner 2026-10-20: «делай, как ты считаешь нужным… я доверяю тебе»): the acceptance
-    # record and the K5r source; never a pilot or production approval.
+    # K5c (owner 2026-10-20: «делай, как ты считаешь нужным… я доверяю тебе»); K6s (owner
+    # 2026-10-21 «1» and the K6 plan: K-05 and K-12 closed by K6a-K6c and the reviewed K6r source).
+    # Never a pilot or production approval.
     fin = next(scenario for scenario in SCENARIOS if scenario.id == "FIN-02")
     assert (fin.status, fin.code_version, fin.schema_version) == (
         Readiness.TECHNICALLY_VERIFIED,
-        "b4e69e82152961380d21761c9a100515ea1645d1",
-        62,
+        "2eb6cf723f719bde3753ba6bd800c44bc082602d",
+        65,
     )
-    assert "docs/plan/evidence/2026-10-20-fin-02-acceptance/ACCEPTANCE.md" in fin.evidence
-    for limit in ("test mode", "USD", "no live", "no production approval"):
+    for path in (
+        "docs/plan/evidence/2026-10-20-fin-02-acceptance/ACCEPTANCE.md",
+        "docs/plan/evidence/2026-10-22-fin-02-k6-acceptance/ACCEPTANCE.md",
+        "docs/plan/evidence/2026-10-21-k6c-stripe-sandbox/VALIDATION.md",
+        "docs/plan/evidence/2026-10-22-k6-review/REVIEW.md",
+    ):
+        assert path in fin.evidence, path
+    for limit in ("test mode", "USD", "no live", "no production approval", "reconcil", "parked"):
         assert limit in fin.scope, limit
+    assert "partial" not in fin.scope
+    assert fin.verified_on == date(2026, 10, 22)
 
 
 def test_catalog_readiness_comes_from_the_registry() -> None:
