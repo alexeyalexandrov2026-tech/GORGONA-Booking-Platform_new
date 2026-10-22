@@ -10,7 +10,18 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-22: FIN-02 K-05 and K-12 PASS after K6
+## Current checkpoint — 2026-10-22: package L started; L1 service stages and equipment locally verified
+
+Package L (BEAUTY-01, build order of stage 3, not a separate launch) planned under the owner's full
+delegation ([plan](PACKAGE_L_PLAN_2026-10-22.md), `5eb534c`). L1 in `7ce60ef` on
+`codex/package-l1-stages` (migration 0066): a service variant may have ordered stages (active,
+processing, finish) with minutes and resource kinds; its duration is their sum (checked in SQL);
+`equipment` is a resource kind; a variant without stages quotes exactly as before. Booking still holds
+one resource per visit until L2. 21 new tests; focused **133 passed**; full **2439 passed, 4 skipped**
+([validation](evidence/2026-10-22-l1-service-stages/VALIDATION.md)). Next: L2, stage-by-stage
+occupancy. Next migration **0067**.
+
+## Previous checkpoint — 2026-10-22: FIN-02 K-05 and K-12 PASS after K6
 
 FIN-02 stays `technically_verified`; its record now names the reviewed K6r source `2eb6cf7`, schema
 65: events lost on the way are fetched back by a read-only reconciler with the same facts, every run is

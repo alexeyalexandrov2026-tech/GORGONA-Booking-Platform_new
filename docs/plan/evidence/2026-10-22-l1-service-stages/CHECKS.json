@@ -1,0 +1,1639 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-22T09:47:36.093019+00:00",
+  "source_base": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+  "branch": "codex/package-l1-stages",
+  "status": "PASS: L1 service stages and equipment (package L, BEAUTY-01 build order)",
+  "published": false,
+  "run_folder": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c",
+  "command": [
+    "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+    "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\write_record.py",
+    "2"
+  ],
+  "changed_sources": [
+    {
+      "path": "api/src/gorgona_booking/api/salons.py",
+      "sha256": "30687094a60dce3c17a9019661226efb0a20cc356dab19598b99c6b321988c45",
+      "git_blob_oid": "c1e253fcc1328a974374478fa462a978bbe9e495"
+    },
+    {
+      "path": "api/src/gorgona_booking/catalog/models.py",
+      "sha256": "8150861bde60224891daf0f021815d4eb37297749d5d6b99d91ef73add05350f",
+      "git_blob_oid": "3aecf1b8ada3ab7f6004566585d7e03317796842"
+    },
+    {
+      "path": "api/src/gorgona_booking/catalog/quote.py",
+      "sha256": "5f073f98c2978169874a04d5a5a19733b21e305792aab8eca1b83c3d009cc5cf",
+      "git_blob_oid": "83cab5f09cfe7460c7449b3c30669ec4831d42d9"
+    },
+    {
+      "path": "api/src/gorgona_booking/catalog/repository.py",
+      "sha256": "4f2e97979ead4d0f65903ff6cd8884f820270a4fcdfd4deb500cc1e5ce274bd9",
+      "git_blob_oid": "de075e519247754319ba4fd6cdf947e507082277"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/workforce_guard.py",
+      "sha256": "acc7e8d47fa8f60a64c2eedf6f9f84df6d8eaeb655426f2720f4b0f886fb6e35",
+      "git_blob_oid": "c1bdd09d1ebc9f5657aa264c693b80f82703af66"
+    },
+    {
+      "path": "api/src/gorgona_booking/db/migrations/0066_variant_stages.sql",
+      "sha256": "4a4709b3366a74c00077f9e68191d3bc62f967b4efae296d23c86b8a1043d768",
+      "git_blob_oid": "54eaae05550df3e464fc38093548ee36a02135fe"
+    },
+    {
+      "path": "api/tests/integration/test_h3_upgrade.py",
+      "sha256": "adce656d89dcb90db1ec4f38283c5b2c821ac1cffed75e75ef9d0cde67ae9d20",
+      "git_blob_oid": "0872e905b3aefdce652bf118e9a168d7ffaa3962"
+    },
+    {
+      "path": "api/tests/integration/test_inventory_upgrade.py",
+      "sha256": "172db1f72dd7fec9ef5f279c9f703c5bd87be3e0d4fb8272e5c2ff874c4ab031",
+      "git_blob_oid": "a2b3bc7d3c20ec783694524c976814f9743ec816"
+    },
+    {
+      "path": "api/tests/integration/test_stock_upgrade.py",
+      "sha256": "7aee17d0a8a726c8ac5c6f15c40689079f705dd784d6defee5a4fd59545276bc",
+      "git_blob_oid": "805f459746e53d5d1b1df7ed178bb8551a91aabb"
+    },
+    {
+      "path": "api/tests/integration/test_workforce_visibility_upgrade.py",
+      "sha256": "9b1f014d42a0ce1a47970802003e7ac70e9b0e1c78400fdcfc78ba88894c63f1",
+      "git_blob_oid": "7b40f01f9614b605316019d7d5315107e681631f"
+    },
+    {
+      "path": "api/tests/integration/test_l1_service_stages.py",
+      "sha256": "c2f6b656e02d0ee73122107dea16b250db5a656cf9939f18415cd1698a953404",
+      "git_blob_oid": "83a9b02175036bdb23360d0f41a8b1d810128a70"
+    },
+    {
+      "path": "api/tests/integration/test_l1_upgrade.py",
+      "sha256": "9fbc74211fd3d4017f05a8f43bb71efd0c85cdb20ddb98ca26f5226caf13745f",
+      "git_blob_oid": "3e394b7b136e7e6c1c67b055f01064f7c46db65e"
+    },
+    {
+      "path": "api/tests/unit/test_quote.py",
+      "sha256": "313f16297a9a0814a8ad875a540e65defc6c2d7d4a423d8f78219db38fa6cbfe",
+      "git_blob_oid": "a63e7730627213190892b6eab78f73fb8dd16ac5"
+    }
+  ],
+  "phases": {
+    "red-1": {
+      "base_sha": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+      "phase": "red-1",
+      "kind": "focused",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-1",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-22T08:19:27.844860+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-1\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-1\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.45,
+          "log_sha256": "c399227a2f7141c5ac6e8c155e190c8da4e40d4d004ee7dad8cf805b2330fefc"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-1\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-1\\server.log",
+            "-w",
+            "-o",
+            "-p 65521 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.44,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-1\\focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-1\\focused.xml",
+            "tests/integration/test_l1_service_stages.py",
+            "tests/integration/test_l1_upgrade.py",
+            "tests/unit/test_quote.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 2,
+          "required": true,
+          "seconds": 5.42,
+          "log_sha256": "9fa9ab94448c732596e99b64c9badb4abedda4997e0d4658a1f3fab7c21d2a1c"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-1\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-1",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.14,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 167,
+        "sha256": "f0507777ec1f824654dc297f37ff3ab346f42d723dba1680ab5cdb4550b4a7d4"
+      },
+      "postgres_port": 65521,
+      "error": "focused failed; inspect the redacted log",
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 167,
+        "sha256": "f0507777ec1f824654dc297f37ff3ab346f42d723dba1680ab5cdb4550b4a7d4"
+      },
+      "finished_utc": "2026-10-22T08:19:38.004424+00:00",
+      "results_sha256": "864d6adf6ccf8d848d014a3ef7bd470b6158d20e73ca6ef00bd8896af6c755a9",
+      "source_snapshot_file_count": 565
+    },
+    "red-2": {
+      "base_sha": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+      "phase": "red-2",
+      "kind": "focused",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-2",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-22T08:19:43.684689+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-2\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-2\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-2",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 2.9,
+          "log_sha256": "e706a0facd0005e8404e853bb4eea32de8d2e7245230a9e3fc13fe9edc3f9cec"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-2\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-2\\server.log",
+            "-w",
+            "-o",
+            "-p 49161 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-2",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.46,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-2\\focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-2\\focused.xml",
+            "tests/integration/test_l1_service_stages.py",
+            "tests/integration/test_l1_upgrade.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 1,
+          "required": true,
+          "seconds": 18.95,
+          "log_sha256": "6b37788b88490898f5f80fbc33fae84c0f4209c745717fa719bb9c270529059b"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-2\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\red-2",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.15,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 167,
+        "sha256": "f0507777ec1f824654dc297f37ff3ab346f42d723dba1680ab5cdb4550b4a7d4"
+      },
+      "postgres_port": 49161,
+      "error": "focused failed; inspect the redacted log",
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 167,
+        "sha256": "f0507777ec1f824654dc297f37ff3ab346f42d723dba1680ab5cdb4550b4a7d4"
+      },
+      "finished_utc": "2026-10-22T08:20:06.620429+00:00",
+      "results_sha256": "1a14ed0b819c6da8f637b8975b34f2b558d7b57a720a48adc817fcbbca332e77",
+      "source_snapshot_file_count": 565
+    },
+    "dev-1": {
+      "base_sha": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+      "phase": "dev-1",
+      "kind": "focused",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-1",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-22T08:25:26.907199+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-1\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-1\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.22,
+          "log_sha256": "e17d95307df61ae3b2820bdd0322973b1782c73e5ad3153ab4cdd56277f4be7c"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-1\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-1\\server.log",
+            "-w",
+            "-o",
+            "-p 51688 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.37,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-1\\focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-1\\focused.xml",
+            "tests/unit/test_quote.py",
+            "tests/integration/test_l1_service_stages.py",
+            "tests/integration/test_l1_upgrade.py",
+            "tests/integration/test_catalog.py",
+            "tests/integration/test_management_api.py",
+            "tests/integration/test_resource_kind_boundaries.py",
+            "tests/integration/test_workforce.py",
+            "tests/integration/test_workforce_guards.py",
+            "tests/integration/test_booking_rules.py",
+            "tests/integration/test_customer_api.py",
+            "tests/integration/test_h3_upgrade.py",
+            "tests/integration/test_inventory_upgrade.py",
+            "tests/integration/test_stock_upgrade.py",
+            "tests/integration/test_k6r_upgrade.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 1,
+          "required": true,
+          "seconds": 101.55,
+          "log_sha256": "9e61baa6c33a7735ca5f6539dce1c5a1651698e096e70bd4137ade3c65bd5278"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-1\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-1",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.16,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 167,
+        "sha256": "f0507777ec1f824654dc297f37ff3ab346f42d723dba1680ab5cdb4550b4a7d4"
+      },
+      "postgres_port": 51688,
+      "error": "focused failed; inspect the redacted log",
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 167,
+        "sha256": "f0507777ec1f824654dc297f37ff3ab346f42d723dba1680ab5cdb4550b4a7d4"
+      },
+      "finished_utc": "2026-10-22T08:27:13.191227+00:00",
+      "results_sha256": "4d8f29f8a37264715d32fb648d02f7c44a8a3d01f46b37e0bba828ea7be6e5ee",
+      "source_snapshot_file_count": 566
+    },
+    "dev-2": {
+      "base_sha": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+      "phase": "dev-2",
+      "kind": "focused",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-2",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-22T08:27:40.167258+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-2\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-2\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-2",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.0,
+          "log_sha256": "50a0f5d6da066029ddba98d5dac95b4d18a5cc44042c5f7d946ccee9a5a1f902"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-2\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-2\\server.log",
+            "-w",
+            "-o",
+            "-p 58051 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-2",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.43,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-2\\focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-2\\focused.xml",
+            "tests/unit/test_quote.py",
+            "tests/integration/test_l1_service_stages.py",
+            "tests/integration/test_l1_upgrade.py",
+            "tests/integration/test_h3_upgrade.py",
+            "tests/integration/test_inventory_upgrade.py",
+            "tests/integration/test_stock_upgrade.py",
+            "tests/integration/test_workforce_upgrade.py",
+            "tests/integration/test_location_access.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 56.96,
+          "log_sha256": "7840d8d448e1d40bf0cd0994dce1c2542aeb15657b0b39358a32541d04beeb40"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-2\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-2",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.16,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 167,
+        "sha256": "f0507777ec1f824654dc297f37ff3ab346f42d723dba1680ab5cdb4550b4a7d4"
+      },
+      "postgres_port": 58051,
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 167,
+        "sha256": "f0507777ec1f824654dc297f37ff3ab346f42d723dba1680ab5cdb4550b4a7d4"
+      },
+      "finished_utc": "2026-10-22T08:28:41.421073+00:00",
+      "results_sha256": "d3fcdfdde401329a6b4e029c96ea1dc74bd255b5facf7e5fe250234edac7744b",
+      "source_snapshot_file_count": 566
+    },
+    "static-1": {
+      "base_sha": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+      "phase": "static-1",
+      "kind": "static",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\static-1",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-22T08:29:52.384554+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "ruff",
+            "check",
+            "."
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.29,
+          "log_sha256": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0"
+        },
+        {
+          "name": "ruff-format",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "ruff",
+            "format",
+            "--check",
+            "."
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.21,
+          "log_sha256": "96beb46882cf0ae91ed615e69559cf524e64997efe2ec68356cd7a75f13c6c65"
+        },
+        {
+          "name": "mypy",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "mypy"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 2.87,
+          "log_sha256": "ef3184d649f3b486ecf39825cbdff2ea78d2fbb6be7077a75f28b88a6c762027"
+        },
+        {
+          "name": "web-typecheck",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "typecheck"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.78,
+          "log_sha256": "57eb61b8116e9717145f8a326096c13f75126fdd520df38125124402e222a24c"
+        },
+        {
+          "name": "web-lint",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "lint"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 19.92,
+          "log_sha256": "ce57886850d9496f41c2f2e77437461f5f112de7e9ab0107ceb3f2ce90dd738f"
+        },
+        {
+          "name": "web-format",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "format:check"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 4.16,
+          "log_sha256": "04e80414d063c197fc67cb7f1eef4ae379749f4f76147f4cf366016a2a6ff65f"
+        },
+        {
+          "name": "web-unit",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "test:unit"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 4.22,
+          "log_sha256": "e5783334e3d8c543a735140fbf35aa97c543a0ff5190ceaa4a202175e53efe39"
+        },
+        {
+          "name": "web-build",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "build"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 10.95,
+          "log_sha256": "aca0be95a177169ec78f4fb9142c7a7a6927fed98fb646090f657bc3aa1ebec3"
+        },
+        {
+          "name": "web-audit",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "audit",
+            "--omit=dev",
+            "--json"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 1.67,
+          "log_sha256": "a36800d2b171922176fbc60c027874263ea37d0fc24441b302727df481fca187"
+        },
+        {
+          "name": "web-audit-all",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "audit",
+            "--json"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 1,
+          "required": false,
+          "seconds": 1.21,
+          "log_sha256": "782f1844e2953ba85114ab3f7392cfa89e98cbaeed4549c1e46a9c0cfca942cc"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 167,
+        "sha256": "f0507777ec1f824654dc297f37ff3ab346f42d723dba1680ab5cdb4550b4a7d4"
+      },
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 167,
+        "sha256": "b8a7d8bcbc2e250ea9fdbc725ce0cb2d5df40bd03dce07a03f947234d6a21fdb"
+      },
+      "finished_utc": "2026-10-22T08:30:42.671613+00:00",
+      "results_sha256": "4236a8116972625165884a2d08ce9e4f7f62b7173d121b49c3aae16c03be42e9",
+      "source_snapshot_file_count": 566
+    },
+    "focused-1": {
+      "base_sha": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+      "phase": "focused-1",
+      "kind": "focused",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-1",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-22T08:30:43.063856+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-1\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-1\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.77,
+          "log_sha256": "6bc2c701df30ed5a76ab6a5394c2cb88a3e3bdce61fde0226f3a7eb2e5a96628"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-1\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-1\\server.log",
+            "-w",
+            "-o",
+            "-p 59507 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.46,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-1\\focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-1\\focused.xml",
+            "tests/unit/test_quote.py",
+            "tests/integration/test_l1_service_stages.py",
+            "tests/integration/test_l1_upgrade.py",
+            "tests/integration/test_catalog.py",
+            "tests/integration/test_management_api.py",
+            "tests/integration/test_resource_kind_boundaries.py",
+            "tests/integration/test_workforce_guards.py",
+            "tests/integration/test_booking_rules.py",
+            "tests/integration/test_h3_upgrade.py",
+            "tests/integration/test_location_access.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 69.84,
+          "log_sha256": "a52024681631eeb030b8a61e8784165f2fbe65cb4942bc49f35ee080d4eb0058"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-1\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-1",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.16,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 167,
+        "sha256": "b8a7d8bcbc2e250ea9fdbc725ce0cb2d5df40bd03dce07a03f947234d6a21fdb"
+      },
+      "postgres_port": 59507,
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 167,
+        "sha256": "b8a7d8bcbc2e250ea9fdbc725ce0cb2d5df40bd03dce07a03f947234d6a21fdb"
+      },
+      "finished_utc": "2026-10-22T08:31:57.866720+00:00",
+      "results_sha256": "d29221bd831beb6bafcd589159c318cb75dbb7033ee2a5c2817a57a49e58f85c",
+      "source_snapshot_file_count": 566
+    },
+    "full-1": {
+      "base_sha": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+      "phase": "full-1",
+      "kind": "full",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-1",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-22T08:31:58.124326+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-1\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-1\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.02,
+          "log_sha256": "69311dcbeeb6faa07db1e25c3730f31ffac5ab88097cd6f87e8b21781a839a2e"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-1\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-1\\server.log",
+            "-w",
+            "-o",
+            "-p 57996 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.35,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "pytest-full",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-1\\pytest-full-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-1\\pytest-full.xml"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 1,
+          "required": true,
+          "seconds": 2141.67,
+          "log_sha256": "d4203a8488bc59c3f8baf492a58c1077f8ad6a61ee019dd0d4db2c71c60d3462"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-1\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-1",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.15,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 167,
+        "sha256": "b8a7d8bcbc2e250ea9fdbc725ce0cb2d5df40bd03dce07a03f947234d6a21fdb"
+      },
+      "postgres_port": 57996,
+      "error": "pytest-full failed; inspect the redacted log",
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 167,
+        "sha256": "b8a7d8bcbc2e250ea9fdbc725ce0cb2d5df40bd03dce07a03f947234d6a21fdb"
+      },
+      "finished_utc": "2026-10-22T09:07:43.865506+00:00",
+      "results_sha256": "564cc7c55a1c8bd166a31df3b6fe7d5200dc637cd9f696899b3ca8c1d8ee2f01",
+      "source_snapshot_file_count": 566
+    },
+    "dev-3": {
+      "base_sha": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+      "phase": "dev-3",
+      "kind": "focused",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-3",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-22T09:08:39.220186+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-3\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-3\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-3",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.15,
+          "log_sha256": "7b047b80ab07419a550c7108812481269a0732e14c9229592f7caedcfb2a7248"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-3\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-3\\server.log",
+            "-w",
+            "-o",
+            "-p 54700 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-3",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.44,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-3\\focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-3\\focused.xml",
+            "tests/integration/test_workforce_visibility_upgrade.py",
+            "tests/integration/test_workforce_upgrade.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 13.09,
+          "log_sha256": "24b60c6dfbcb2862af88ce14b795216afa16fae750b365c47b17e1bf62b05cdd"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-3\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\dev-3",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.15,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 167,
+        "sha256": "b8a7d8bcbc2e250ea9fdbc725ce0cb2d5df40bd03dce07a03f947234d6a21fdb"
+      },
+      "postgres_port": 54700,
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 167,
+        "sha256": "b8a7d8bcbc2e250ea9fdbc725ce0cb2d5df40bd03dce07a03f947234d6a21fdb"
+      },
+      "finished_utc": "2026-10-22T09:08:56.804851+00:00",
+      "results_sha256": "63b05501b06129a8a8e5a886509050cf876f2375746d981723fd70eb6e5f2417",
+      "source_snapshot_file_count": 566
+    },
+    "static-2": {
+      "base_sha": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+      "phase": "static-2",
+      "kind": "static",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\static-2",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-22T09:09:02.394378+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "ruff",
+            "check",
+            "."
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.3,
+          "log_sha256": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0"
+        },
+        {
+          "name": "ruff-format",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "ruff",
+            "format",
+            "--check",
+            "."
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.2,
+          "log_sha256": "96beb46882cf0ae91ed615e69559cf524e64997efe2ec68356cd7a75f13c6c65"
+        },
+        {
+          "name": "mypy",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "mypy"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 2.65,
+          "log_sha256": "ef3184d649f3b486ecf39825cbdff2ea78d2fbb6be7077a75f28b88a6c762027"
+        },
+        {
+          "name": "web-typecheck",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "typecheck"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.15,
+          "log_sha256": "57eb61b8116e9717145f8a326096c13f75126fdd520df38125124402e222a24c"
+        },
+        {
+          "name": "web-lint",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "lint"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 13.12,
+          "log_sha256": "ce57886850d9496f41c2f2e77437461f5f112de7e9ab0107ceb3f2ce90dd738f"
+        },
+        {
+          "name": "web-format",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "format:check"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 4.22,
+          "log_sha256": "04e80414d063c197fc67cb7f1eef4ae379749f4f76147f4cf366016a2a6ff65f"
+        },
+        {
+          "name": "web-unit",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "test:unit"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.75,
+          "log_sha256": "6b735ab26222501498bf4035ca119fa86b7a03729547f628c8776c3c22c1c4ff"
+        },
+        {
+          "name": "web-build",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "run",
+            "build"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 7.39,
+          "log_sha256": "b4836956e6980f05afb24bb4adb5f9646aa0b9660a54351488070513cd6e6323"
+        },
+        {
+          "name": "web-audit",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "audit",
+            "--omit=dev",
+            "--json"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 1.15,
+          "log_sha256": "a36800d2b171922176fbc60c027874263ea37d0fc24441b302727df481fca187"
+        },
+        {
+          "name": "web-audit-all",
+          "command": [
+            "C:\\Program Files\\nodejs\\npm.cmd",
+            "audit",
+            "--json"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\web",
+          "exit_code": 1,
+          "required": false,
+          "seconds": 0.99,
+          "log_sha256": "782f1844e2953ba85114ab3f7392cfa89e98cbaeed4549c1e46a9c0cfca942cc"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 167,
+        "sha256": "b8a7d8bcbc2e250ea9fdbc725ce0cb2d5df40bd03dce07a03f947234d6a21fdb"
+      },
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 167,
+        "sha256": "1e8b92373a40d16f42a21e098c9f9d3616b5bf9ac72ac98e98c31ecf5ecbe57e"
+      },
+      "finished_utc": "2026-10-22T09:09:39.823805+00:00",
+      "results_sha256": "5859dda68ad32adbb4f07ff5adf93799a2cf2f552b9c88147c764b0bc11662c1",
+      "source_snapshot_file_count": 566
+    },
+    "focused-2": {
+      "base_sha": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+      "phase": "focused-2",
+      "kind": "focused",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-2",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-22T09:09:40.167624+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-2\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-2\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-2",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 1.85,
+          "log_sha256": "94f1d0267a3c40f2ca978dc8b7355081da4188a72ef6418cc46da6cacfa3910a"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-2\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-2\\server.log",
+            "-w",
+            "-o",
+            "-p 54825 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-2",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.33,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-2\\focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-2\\focused.xml",
+            "tests/unit/test_quote.py",
+            "tests/integration/test_l1_service_stages.py",
+            "tests/integration/test_l1_upgrade.py",
+            "tests/integration/test_catalog.py",
+            "tests/integration/test_management_api.py",
+            "tests/integration/test_resource_kind_boundaries.py",
+            "tests/integration/test_workforce_guards.py",
+            "tests/integration/test_booking_rules.py",
+            "tests/integration/test_h3_upgrade.py",
+            "tests/integration/test_location_access.py",
+            "tests/integration/test_workforce_visibility_upgrade.py"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 73.96,
+          "log_sha256": "616995b706b99cee3f353e6256326bb1e896da6aa3b6260dab865ae9d22edd28"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-2\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\focused-2",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.16,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 167,
+        "sha256": "1e8b92373a40d16f42a21e098c9f9d3616b5bf9ac72ac98e98c31ecf5ecbe57e"
+      },
+      "postgres_port": 54825,
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 167,
+        "sha256": "1e8b92373a40d16f42a21e098c9f9d3616b5bf9ac72ac98e98c31ecf5ecbe57e"
+      },
+      "finished_utc": "2026-10-22T09:10:56.807628+00:00",
+      "results_sha256": "48d81a0685a1d68d7558d1b4937728e22dbd72cc7329dc69448b8678948e9814",
+      "source_snapshot_file_count": 566
+    },
+    "full-2": {
+      "base_sha": "5eb534cb9bbeeac3f6c4674750207175367871d5",
+      "phase": "full-2",
+      "kind": "full",
+      "run_dir": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-2",
+      "python": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+      "started_utc": "2026-10-22T09:10:57.023710+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\initdb.exe",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-2\\data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-2\\init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-2",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 2.73,
+          "log_sha256": "dca5fde5a99adc9c31f676875fdd2fe76273353f205f793f47a838abb413c1c2"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "start",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-2\\data",
+            "-l",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-2\\server.log",
+            "-w",
+            "-o",
+            "-p 49727 -c max_connections=400 -c listen_addresses=127.0.0.1"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-2",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.44,
+          "log_sha256": "46038efb813fbca18a92272496901190638dea3f97b51f7af0daa1ca2eb13818"
+        },
+        {
+          "name": "pytest-full",
+          "command": [
+            "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api\\.venv\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-2\\pytest-full-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-2\\pytest-full.xml"
+          ],
+          "cwd": "C:\\Users\\alexa\\.codex\\worktrees\\package-j-review2-fixes\\Gorgona Booking\\api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 2178.32,
+          "log_sha256": "da2518cdf9ef95da93e8ded1051b29f16ead6eb37594105c5961b7703454d391"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "C:\\Users\\alexa\\AppData\\Local\\GorgonaBookingTests\\postgres-18.6\\pgsql\\bin\\pg_ctl.exe",
+            "stop",
+            "-D",
+            "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-2\\data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "C:\\Users\\alexa\\AppData\\Local\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Local\\GorgonaBookingTests\\package-l1-20261022-5eb534c\\full-2",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.16,
+          "log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.3.8",
+        "eslint-config-next": "16.3.8",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 167,
+        "sha256": "1e8b92373a40d16f42a21e098c9f9d3616b5bf9ac72ac98e98c31ecf5ecbe57e"
+      },
+      "postgres_port": 49727,
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 167,
+        "sha256": "1e8b92373a40d16f42a21e098c9f9d3616b5bf9ac72ac98e98c31ecf5ecbe57e"
+      },
+      "finished_utc": "2026-10-22T09:47:19.281651+00:00",
+      "results_sha256": "650af45c0ad54ea8a9ab9d5ebd2743fa4cff4cf98542cfe70094c53574b0099b",
+      "source_snapshot_file_count": 566
+    }
+  },
+  "full_summary": "2439 passed, 4 skipped in 2176.91s (0:36:16)",
+  "focused_summary": "133 passed in 72.49s (0:01:12)",
+  "new_tests": 21,
+  "required_tests": [
+    "tests.unit.test_quote.test_a_variant_without_stages_quotes_exactly_as_before",
+    "tests.unit.test_quote.test_stages_are_quoted_and_add_on_minutes_join_the_last_active_stage",
+    "tests.unit.test_quote.test_stages_that_disagree_with_the_duration_are_not_bookable"
+  ],
+  "regression_tests": 847,
+  "skips": [
+    {
+      "name": "tests.container.test_container_image.test_migration_job_is_explicit_and_idempotent",
+      "reason": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "name": "tests.container.test_container_image.test_image_runs_non_root_without_baked_secrets",
+      "reason": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "name": "tests.container.test_container_image.test_api_container_serves_health_web_and_a_real_booking",
+      "reason": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "name": "tests.integration.test_tenant_site_embedding.test_tenant_site_embeds_the_real_wizard",
+      "reason": "BLOCKED: tenant-site verification requires GBA_REQUIRE_TENANT_SITE=1"
+    }
+  ],
+  "runtime_npm_audit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "development_npm_audit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 5,
+    "critical": 0,
+    "total": 5
+  },
+  "harness_sha256": {
+    "runner.py": "69097bf7c50879f22c19d2e3c90cb61300bd891e476383dda80aaf390c59c968",
+    "run_gates.py": "f00faf9977ebd250a9a974d4e578eef40044e98c7ed3f6a07ba7118ea33125fc",
+    "write_record.py": "448f79fc6934bd72df9d211162587c66cd38eb573e8f803394aa34b7e09a23a7"
+  },
+  "immutable_prior_migrations": 65,
+  "added_migrations": [
+    "0066_variant_stages.sql"
+  ],
+  "next_migration": 67,
+  "architecture": {
+    "owner_decisions": "2026-10-22 full delegation (\u00ab\u0414\u0435\u043b\u0430\u0439 \u043a\u0430\u043a \u0441\u0447\u0438\u0442\u0430\u0435\u0448\u044c \u043d\u0443\u0436\u043d\u044b\u043c \u0438 \u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u044b\u043c! \u042f \u043f\u043e\u043b\u043d\u043e\u0441\u0442\u044c\u044e \u0434\u0430\u044e \u0442\u0435\u0431\u0435 \u043f\u0440\u0430\u0432\u043e \u0432\u044b\u0431\u043e\u0440\u0430\u00bb); package L plan decisions 1-2 (docs/plan/PACKAGE_L_PLAN_2026-10-22.md)",
+    "stages": "gba.variant_stages (0066): ordered stages per variant (active/processing/finish, 1..720 minutes, resource kinds specialist/chair/room/equipment); a deferred constraint trigger keeps the variant duration equal to the sum; a duration update of a staged variant is refused",
+    "equipment": "resources_kind_valid admits equipment; the management API creates it like a chair or a room",
+    "quote": "a variant without stages quotes exactly as before (snapshot version 1); a staged one adds its stages (version 2), add-on minutes join the last active stage; booking still holds one resource until L2"
+  },
+  "preserved_failures": {
+    "red_1": "unit+integration: collection error (StageSpec missing) - expected RED",
+    "red_2": "integration: 21 failed (stages route 404, equipment refused, upgrade target missing) - expected RED",
+    "dev_1": "focused: 4 failed in test_h3_upgrade - the new pre-0066 resources rule replaced the pre-0032 staff rule; fixed by one predicate that keeps both",
+    "full_1": "1 failed, 2438 passed - test_workforce_visibility_upgrade ran the packaged workforce guard on a schema stopped at 0035; the guard now approves the 0066 resources kinds; the test upgrades the same data to the head before the guard"
+  },
+  "remaining": {
+    "l2_occupancy": "each stage does not yet reserve its own resources; one resource holds the whole visit until L2",
+    "screens": "no catalog screen for stages yet (L7)",
+    "production": "no deployment or production migration; no pilot or production approval"
+  },
+  "readiness_unchanged": true,
+  "readiness_change": "none: BEAUTY-01 stays partial until L8"
+}
