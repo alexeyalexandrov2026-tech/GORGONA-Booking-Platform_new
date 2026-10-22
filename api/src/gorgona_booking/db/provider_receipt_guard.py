@@ -30,6 +30,8 @@ _SQL = "".join(
         "0063_provider_event_failures.sql",
         # K6b: retrieved events are attested as stripe_api_v1; reconciliation runs are recorded.
         "0064_provider_event_backfill.sql",
+        # K6r (review R3): the worker reads only the keys of a release.
+        "0065_provider_review_k6_fixes.sql",
     )
 )
 # A later `create or replace` (0048) supersedes the earlier body of the same function.
@@ -93,9 +95,10 @@ _READS = {
         *_DECISIONS,
         _ADMISSIONS,
         _FAILURES,
-        _RELEASES,
     },
 }
+# K6r (review R3, 0065): columns the worker reads of a table it cannot read whole.
+_WORKER_COLUMN_READS = {(_RELEASES, column) for column in ("tenant_id", "event_id", "round")}
 # Every K policy depends on these context functions (migrations 0001 and 0009).
 _TENANT_SOURCE = "select nullif(pg_catalog.current_setting('gba.tenant_id', true), '')::uuid"
 _LOCATION_SOURCE = "select nullif(pg_catalog.current_setting('gba.location_id', true), '')::uuid"
@@ -774,7 +777,8 @@ select
      has_column_privilege('gba_receipt_writer',c.oid,a.attnum,'INSERT'),
      has_column_privilege('gba_receipt_writer',c.oid,a.attnum,'UPDATE'),
      has_column_privilege('gba_receipt_worker',c.oid,a.attnum,'INSERT'),
-     has_column_privilege('gba_receipt_worker',c.oid,a.attnum,'UPDATE')))
+     has_column_privilege('gba_receipt_worker',c.oid,a.attnum,'UPDATE'),
+     has_column_privilege('gba_receipt_worker',c.oid,a.attnum,'SELECT')))
   from pg_attribute a join pg_class c on c.oid=a.attrelid
   join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='gba' and c.relname=any(%s) and a.attnum>0 and not a.attisdropped),
@@ -943,6 +947,7 @@ select
                         (table, column) in _UPDATES[other],
                     )
                 ),
+                table in _READS["gba_receipt_worker"] or (table, column) in _WORKER_COLUMN_READS,
             ]
             for table, column, *granted in privileges or []
         )

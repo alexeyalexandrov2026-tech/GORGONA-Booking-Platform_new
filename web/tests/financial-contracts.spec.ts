@@ -876,8 +876,28 @@ test("provider connections show the clearing account and nothing secret", () => 
     account_id: "acct_FAKEreceipt",
     revoked: false,
     clearing_account: null,
+    last_reconciliation: null,
   };
-  for (const value of [item, { ...item, clearing_account: clearing }])
+  const run = {
+    outcome: "completed",
+    error_class: null,
+    seen: 3,
+    recorded: 1,
+    finished_at: instant,
+  };
+  for (const value of [
+    item,
+    { ...item, clearing_account: clearing },
+    { ...item, last_reconciliation: run },
+    {
+      ...item,
+      last_reconciliation: {
+        ...run,
+        outcome: "failed",
+        error_class: "APIError",
+      },
+    },
+  ])
     expect(
       providerConnectionListSchema.safeParse(operationPage(value)).success,
     ).toBe(true);
@@ -886,6 +906,11 @@ test("provider connections show the clearing account and nothing secret", () => 
     { verification_config_id: entry },
     { account_id: "FAKE" },
     { clearing_account: { ...clearing, secret: "FAKE" } },
+    // K6r: a failed run names its class, a completed one none; counts add up.
+    { last_reconciliation: { ...run, outcome: "failed" } },
+    { last_reconciliation: { ...run, error_class: "APIError" } },
+    { last_reconciliation: { ...run, recorded: 4 } },
+    { last_reconciliation: { ...run, key: "FAKE" } },
   ])
     expect(
       providerConnectionListSchema.safeParse(

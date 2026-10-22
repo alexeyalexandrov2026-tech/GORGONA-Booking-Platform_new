@@ -24,12 +24,12 @@ from pydantic import SecretStr
 
 from gorgona_booking.business.contracts import Versioned
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction, unscoped_transaction
+from gorgona_booking.observability import record_provider_reconciliation
 from gorgona_booking.providers.authenticated_receipts import (
     ACTIVE_AUTHORITY,
     assert_safe_receipt_writer_role,
     receive_retrieved_event,
 )
-from gorgona_booking.providers.inbox import ReceiptBindingRejectedError
 from gorgona_booking.providers.stripe_events import (
     SUPPORTED_EVENT_TYPES,
     ProviderEventRejectedError,
@@ -39,7 +39,8 @@ from gorgona_booking.providers.stripe_events import (
 
 DEFAULT_DAYS = 3
 MAX_DAYS = 30
-MAX_PAGES = 100
+# K6r (review R5): the owner-approved bound of 10 pages of 100 events per connection and run.
+MAX_PAGES = 10
 PAGE_SIZE = 100
 RETRY_WAITS = (1.0, 2.0, 4.0)
 MAX_TIMEOUT_SECONDS = 60.0
@@ -197,12 +198,15 @@ async def _read_window(
         )
         counts.pages += 1
         for value in events:
-            counts.seen += 1
+            # K6r (review R1): an event counts as seen only together with its outcome, so a run
+            # stopped by a refused binding or a database error still adds up.
             try:
                 result = await receive_retrieved_event(pool, target.ingress_id, value)
             except ProviderEventRejectedError:
+                counts.seen += 1
                 counts.refused += 1
                 continue
+            counts.seen += 1
             if result.disposition == "recorded":
                 counts.recorded += 1
             elif result.disposition == "duplicate":
@@ -243,12 +247,10 @@ async def _reconcile_one(
             max_pages,
             retry_waits,
         )
-    except (
-        PageLimitExceededError,
-        ProviderPageRejectedError,
-        ReceiptBindingRejectedError,
-        stripe.StripeError,
-    ) as exc:
+    except Exception as exc:
+        # K6r (review R1): whatever stops this connection's run (a suspension or revocation,
+        # the provider, a page, a database error) is recorded as its failure by class only, and
+        # never stops the other connections.
         error = type(exc).__name__
     outcome: Literal["completed", "failed"] = "failed" if error else "completed"
     async with tenant_transaction(pool, target.tenant_id) as conn:
@@ -277,6 +279,7 @@ async def _reconcile_one(
         ).fetchone()
     if recorded is None:
         raise RuntimeError("The reconciliation run was not recorded")
+    record_provider_reconciliation(outcome, error, target.tenant_id)
     # Counts and the error class only: never a key, account, event ID or payload.
     logger.info(
         "provider reconciliation run",

@@ -49,6 +49,19 @@ _ALLOWED_FIELDS = (
     "code",
     "reason",
     "error_type",
+    # K6r (review R2): the receipt worker's and the reconciler's classes and counts.
+    "error",
+    "attempts",
+    "parked",
+    "outcome",
+    "pages",
+    "seen",
+    "recorded",
+    "duplicates",
+    "conflicts",
+    "refused",
+    "runs",
+    "decided",
 )
 _PROBE_PATHS = frozenset({"/health/live", "/health/ready"})
 
@@ -71,6 +84,10 @@ _provider_applications = _meter.create_counter(
 _provider_failures = _meter.create_counter(
     "gorgona.provider_receipt_failures",
     description="Failed provider receipt decisions, by error class, parking and company",
+)
+_provider_reconciliations = _meter.create_counter(
+    "gorgona.provider_reconciliation_runs",
+    description="Provider reconciliation runs, by outcome, error class and company",
 )
 _provider_releases = _meter.create_counter(
     "gorgona.provider_receipt_releases",
@@ -128,6 +145,12 @@ def record_provider_application(result: str, tenant_id: UUID) -> None:
 def record_provider_failure(error_class: str, parked: bool, tenant_id: UUID) -> None:
     _provider_failures.add(
         1, {"error_class": error_class, "parked": parked, "tenant_id": str(tenant_id)}
+    )
+
+
+def record_provider_reconciliation(outcome: str, error_class: str | None, tenant_id: UUID) -> None:
+    _provider_reconciliations.add(
+        1, {"outcome": outcome, "error_class": error_class or "", "tenant_id": str(tenant_id)}
     )
 
 

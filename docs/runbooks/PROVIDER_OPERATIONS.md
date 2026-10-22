@@ -125,15 +125,19 @@ Design: [K0a](../plan/PACKAGE_K0A_DESIGN_2026-10-20.md).
   last 3 days; `--once`, `--interval 60-3600`, `--days 1-30`, Stripe keeps events for 30 days) with
   `GBA_RECEIPT_WRITER_DATABASE_URL` (receipt writer login), `GBA_STRIPE_NAMESPACE` (the platform
   namespace of the key) and `GBA_STRIPE_API_KEY_REF` (for example `env:GBA_STRIPE_TEST_API_KEY`, a
-  read-only test key set in the same terminal). For each admitted connection of that namespace it
+  read-only test key set in the same terminal; any other key, live or publishable, is refused). For each admitted connection of that namespace it
   lists the connected account's events from the Stripe API and records them through the same inbox
   as webhooks: an event that already arrived is a duplicate, a lost one fills the gap, a different
   fact under the same ID is a visible conflict. Retrieved deliveries are attested as
   `stripe_api_v1`, webhooks as `stripe_snapshot_v1`. An event of another API version, account or
   live mode is refused and counted, never recorded. Timeouts, rate limits and server errors are
-  retried three times (1, 2, 4 s); then the run fails. Each run is recorded in
+  retried three times (1, 2, 4 s); then the run fails. One run reads at most 10 pages of 100 events per
+  connection; a fuller window fails visibly (`PageLimitExceededError`): shorten `--days`. A suspension or
+  revocation during a run ends that connection's run as failed and never stops the others. Each run is recorded in
   `gba.provider_reconciliation_runs` with its counts and outcome (`failed` names the error class); a
   failed run reports nothing as received that was not. Suspended connections are never asked.
+  **Provider connections** shows each connection's latest run: completed with how many events were new,
+  or failed with the error class (tell the operator).
 - Logs carry counts and outcomes only: no payload, key, account or ingress ID.
 - A `charge.refunded` event has no operation key and always appears under "needs attention"
   (`unkeyed_operation`); the refund itself is decided from its `refund.*` events. Acknowledge it.
@@ -144,13 +148,18 @@ Design: [K0a](../plan/PACKAGE_K0A_DESIGN_2026-10-20.md).
 
 ## Metrics (operators)
 
-With telemetry configured, the API and worker export four counters, each with the company
+With telemetry configured, the API, worker and reconciler export five counters, each with the company
 identifier and no payload values:
 
 - `gorgona.provider_receipt_decisions` — by `outcome` and `reason`;
 - `gorgona.provider_applications` — by `result` (`applied` or the refusal code); only requests that passed authorization for a real company are counted;
 - `gorgona.provider_receipt_failures` — failed decisions by `error_class` and `parked` (K6a);
-- `gorgona.provider_receipt_releases` — **Try again** releases of stopped events (K6a).
+- `gorgona.provider_receipt_releases` — **Try again** releases of stopped events (K6a);
+- `gorgona.provider_reconciliation_runs` — reconciliation runs by `outcome` and `error_class` (K6r).
+
+The JSON log lines carry the error class and counts of the worker and the reconciler (`error`,
+`attempts`, `parked`, `outcome`, `pages`, `seen`, `recorded`, `duplicates`, `conflicts`, `refused`)
+and never a payload, key, account or event ID.
 
 Refusals also appear in `gorgona.domain_errors` by code and route. A rising `needs_review` count
 or `PROVIDER_OPERATION_NOT_READY` results for one company points to a provider-side difference;

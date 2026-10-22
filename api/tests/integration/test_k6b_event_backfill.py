@@ -86,6 +86,8 @@ class FakeStripe:
                     "authorized": request.headers.get("authorization")
                     == "Bearer " + self.key.get_secret_value(),
                     "query": query,
+                    # K6r (review R6): every query item in order, to check the exact request.
+                    "items": list(request.query_params.multi_items()),
                 }
             )
             if self.delay:

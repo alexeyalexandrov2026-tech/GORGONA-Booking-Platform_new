@@ -176,6 +176,16 @@ class ProviderClearingAccountSummary(Strict):
     registered_at: AwareDatetime
 
 
+class ProviderReconciliationSummary(Strict):
+    """K6r (review R2): a connection's latest reconciliation run; counts and error class only."""
+
+    outcome: Literal["completed", "failed"]
+    error_class: str | None
+    seen: int
+    recorded: int
+    finished_at: AwareDatetime
+
+
 class ProviderConnectionSummary(Strict):
     """A provider connection of the book as the finance screen sees it; never a key or secret."""
 
@@ -183,6 +193,7 @@ class ProviderConnectionSummary(Strict):
     account_id: str
     revoked: bool
     clearing_account: ProviderClearingAccountSummary | None
+    last_reconciliation: ProviderReconciliationSummary | None = None
 
 
 class ProviderConnectionList(Versioned):

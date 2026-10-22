@@ -18,7 +18,7 @@ import pytest
 
 from gorgona_booking.db.pool import RuntimeConnection, RuntimePool, tenant_transaction
 from gorgona_booking.db.provider_receipt_guard import assert_provider_receipt_ready
-from gorgona_booking.db.provisioning import add_membership
+from gorgona_booking.db.provisioning import add_membership, owner_tenant_transaction
 from gorgona_booking.errors import DatabaseUnavailableError
 from gorgona_booking.providers import receipt_worker as worker
 from tests.integration import test_provider_payments as shared
@@ -326,7 +326,7 @@ async def release(
 
 
 async def test_a_parked_event_is_shown_and_a_release_lets_the_worker_try_again(
-    money: Money,
+    money: Money, owner_conn: psycopg.Connection
 ) -> None:
     tenant = money.routed.tenant_id
     bad, waiting = await decided.receive_all(
@@ -363,11 +363,10 @@ async def test_a_parked_event_is_shown_and_a_release_lets_the_worker_try_again(
     result = await worker.process_batch(money.worker, tenant_id=tenant)
     assert bad in {d.event_id for d in result}
     assert str(bad) not in await attention(money)
-    async with tenant_transaction(money.worker, tenant) as conn:
-        rows = await (
-            await conn.execute(
-                "select round,note from gba.provider_event_releases where event_id=%s", (bad,)
-            )
+    # K6r (review R3): the worker reads only the keys of a release; the owner reads the note.
+    with owner_tenant_transaction(owner_conn, tenant):
+        rows = owner_conn.execute(
+            "select round,note from gba.provider_event_releases where event_id=%s", (bad,)
         ).fetchall()
     assert [tuple(r) for r in rows] == [(1, NOTE)]
 

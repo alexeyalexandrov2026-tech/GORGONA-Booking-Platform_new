@@ -270,6 +270,21 @@ export function ProviderOperations({
               Connection {x.account_id} ·{" "}
               {x.revoked ? "revoked: no new money" : "active, test mode"}
             </p>
+            {x.last_reconciliation && (
+              <p
+                className={
+                  x.last_reconciliation.outcome === "failed"
+                    ? "provider-conflict"
+                    : undefined
+                }
+              >
+                Last reconciliation{" "}
+                {new Date(x.last_reconciliation.finished_at).toLocaleString()}:{" "}
+                {x.last_reconciliation.outcome === "failed"
+                  ? `failed (${x.last_reconciliation.error_class}). Tell the operator; events lost on the way are not being fetched.`
+                  : `completed, ${x.last_reconciliation.recorded} of ${x.last_reconciliation.seen} events were new.`}
+              </p>
+            )}
             {x.clearing_account ? (
               <p>
                 Clearing account {account(x.clearing_account.account_id)} ·

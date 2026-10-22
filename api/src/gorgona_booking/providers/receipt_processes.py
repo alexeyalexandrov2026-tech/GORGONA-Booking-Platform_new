@@ -165,10 +165,14 @@ def reconcile_settings(environ: Mapping[str, str], argv: Sequence[str]) -> Recon
     scheme, _, name = environ.get(API_KEY_REFERENCE, "").strip().partition(":")
     if scheme != "env" or not _NAME.fullmatch(name):
         raise ReceiptProcessError(f"{API_KEY_REFERENCE} must be env:NAME")
+    key = _required(environ, name)
+    # K6r (review R4): a test-mode secret or restricted key only; live Stripe is never asked.
+    if not key.get_secret_value().startswith(("sk_test_", "rk_test_")):
+        raise ReceiptProcessError(f"{name} must hold a test-mode secret or restricted key")
     return ReconcileSettings(
         database_url=_required(environ, WRITER_DATABASE),
         namespace=namespace,
-        key=_required(environ, name),
+        key=key,
         interval=interval,
         days=days,
         once=args.once,

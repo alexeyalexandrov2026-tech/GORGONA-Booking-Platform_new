@@ -471,6 +471,21 @@ const providerConnection = z.strictObject({
   account_id: z.string().regex(/^acct_[A-Za-z0-9]{1,100}$/),
   revoked: z.boolean(),
   clearing_account: z.strictObject(clearingAccount).nullable(),
+  // K6r (review R2): the latest reconciliation run; counts and error class only.
+  last_reconciliation: z
+    .strictObject({
+      outcome: z.enum(["completed", "failed"]),
+      error_class: z
+        .string()
+        .regex(/^[A-Za-z][A-Za-z0-9_]{0,63}$/)
+        .nullable(),
+      seen: z.number().int().min(0),
+      recorded: z.number().int().min(0),
+      finished_at: instant,
+    })
+    .refine((v) => (v.outcome === "failed") === (v.error_class !== null))
+    .refine((v) => v.recorded <= v.seen)
+    .nullable(),
 });
 export const providerConnectionListSchema = z
   .strictObject({

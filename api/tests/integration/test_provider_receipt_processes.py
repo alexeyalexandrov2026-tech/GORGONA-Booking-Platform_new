@@ -174,10 +174,12 @@ async def test_the_processes_receive_and_decide_a_signed_payment_once(
     settings = worker_settings(started.values, ["--once"])
     # The shared test database may hold other companies' undecided events, oldest first, more
     # than one batch of them; run batches until this company's event is decided (K6a).
+    total = 0
     for _ in range(20):
-        assert await run_worker(settings) >= 0
+        total += await run_worker(settings)
         if await decided.decisions(app_pool, keyed.tenant_id):
             break
+    assert total >= 1  # K6r: the worker really decided events, ours among them
     assert len(await decided.decisions(app_pool, keyed.tenant_id)) == 1
     await run_worker(settings)
     assert len(await decided.decisions(app_pool, keyed.tenant_id)) == 1

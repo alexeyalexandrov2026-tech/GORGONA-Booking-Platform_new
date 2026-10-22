@@ -457,10 +457,10 @@ async def release(
                 )
         except psycopg.errors.UniqueViolation:
             pass  # Another request released it first; compare its note below.
-        except psycopg.errors.CheckViolation as exc:
-            raise ProviderAttentionNotNeededError(
-                "This event takes no release; reload to see its state", reason="facts"
-            ) from exc
+        except psycopg.errors.CheckViolation:
+            # K6r (review R7): a release that committed first leaves this one nothing to
+            # release; the note comparison below repeats its answer or names the conflict.
+            pass
         else:
             record_provider_release(business_id)
         item = await _attention_item(conn, business_id, book_id, event_id)

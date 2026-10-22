@@ -165,6 +165,11 @@ def test_reconcile_settings_default_to_three_days_every_fifteen_minutes() -> Non
         ({}, ["--interval", "59"]),
         ({}, ["--interval", "3601"]),
         ({}, ["--everything"]),
+        # K6r (review R4): live and publishable keys are refused.
+        ({"GBA_STRIPE_TEST_API_KEY": "sk_live_FAKE" + "x" * 24}, []),
+        ({"GBA_STRIPE_TEST_API_KEY": "rk_live_FAKE" + "x" * 24}, []),
+        ({"GBA_STRIPE_TEST_API_KEY": "pk_test_FAKE" + "x" * 24}, []),
+        ({"GBA_STRIPE_TEST_API_KEY": "whsec_FAKE" + "x" * 24}, []),
     ],
 )
 def test_reconcile_settings_refuse_missing_or_unbounded_values(

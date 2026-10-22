@@ -50,7 +50,10 @@ class AuthenticatedReceiptResult(Versioned):
     verification_config_id: UUID
     delivery_sha256: Sha256
     disposition: Literal["recorded", "duplicate", "conflict"]
-    authority: Literal["signature_checked_not_admitted"] = "signature_checked_not_admitted"
+    # K6r (review R8): how the receipt was authenticated; neither admits money by itself.
+    authority: Literal["signature_checked_not_admitted", "retrieved_not_admitted"] = (
+        "signature_checked_not_admitted"
+    )
 
 
 Verifier = Literal["stripe_snapshot_v1", "stripe_api_v1"]
@@ -272,4 +275,7 @@ async def _receive(
         verification_config_id=authority.verification_config_id,
         delivery_sha256=event.delivery_sha256,
         disposition=result.disposition,
+        authority="retrieved_not_admitted"
+        if verifier == "stripe_api_v1"
+        else "signature_checked_not_admitted",
     )

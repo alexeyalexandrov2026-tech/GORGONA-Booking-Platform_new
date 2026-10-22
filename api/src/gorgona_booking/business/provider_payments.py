@@ -27,6 +27,7 @@ from gorgona_booking.business.settlement_contracts import (
     ProviderOperationList,
     ProviderOperationState,
     ProviderOperationSummary,
+    ProviderReconciliationSummary,
 )
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.db.provider_receipt_guard import assert_provider_receipt_ready
@@ -247,9 +248,14 @@ async def list_connections(
     await assert_provider_receipt_ready(conn)
     rows = await (
         await conn.execute(
-            "select c.id,c.account_id,c.revoked,a.account_id,a.created_by,a.created_at "
+            "select c.id,c.account_id,c.revoked,a.account_id,a.created_by,a.created_at,"
+            "r.outcome,r.error_class,r.seen,r.recorded,r.finished_at "
             "from gba.provider_receipt_connections c left join gba.provider_clearing_accounts a "
             "on a.tenant_id=c.tenant_id and a.connection_id=c.id and a.book_id=c.book_id "
+            # K6r (review R2): the connection's latest reconciliation run.
+            "left join lateral (select x.outcome,x.error_class,x.seen,x.recorded,x.finished_at "
+            "from gba.provider_reconciliation_runs x where x.tenant_id=c.tenant_id "
+            "and x.connection_id=c.id order by x.finished_at desc,x.id desc limit 1) r on true "
             "where c.tenant_id=%s and c.book_id=%s and (%s::uuid is null or c.id>%s) "
             "order by c.id limit %s",
             (business_id, book_id, after, after, limit + 1),
@@ -264,6 +270,15 @@ async def list_connections(
             if row[3] is None
             else ProviderClearingAccountSummary(
                 account_id=row[3], registered_by=row[4], registered_at=row[5]
+            ),
+            last_reconciliation=None
+            if row[6] is None
+            else ProviderReconciliationSummary(
+                outcome=row[6],
+                error_class=row[7],
+                seen=row[8],
+                recorded=row[9],
+                finished_at=row[10],
             ),
         )
         for row in rows[:limit]

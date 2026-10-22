@@ -138,7 +138,15 @@ async def test_connections_show_the_clearing_account_and_no_secret(
         None,
     )
     (item,) = body["items"]
-    assert set(item) == {"connection_id", "account_id", "revoked", "clearing_account"}
+    # K6r (review R2): the latest reconciliation run, none before the first.
+    assert set(item) == {
+        "connection_id",
+        "account_id",
+        "revoked",
+        "clearing_account",
+        "last_reconciliation",
+    }
+    assert item["last_reconciliation"] is None
     assert (item["connection_id"], item["revoked"], item["clearing_account"]) == (
         str(routed.connection_id),
         False,
