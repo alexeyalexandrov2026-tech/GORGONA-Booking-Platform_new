@@ -39,7 +39,7 @@ services (spa, clinic, workshop, rental) books through the same occupancy.
 6. **Reschedule keeps the plan.** Moving a staged booking moves every interval by the same offset on
    the same resources (a new specialist may be named; other kinds are found again if theirs is busy).
 7. **Customer site in L2b.** The guest availability and hold for staged variants (all stage
-   resources free) and multi-service visits come in L2b. Until then the customer site refuses a
+   resources free) come in L2b; multi-service visits in L2c. Until then the customer site refuses a
    staged variant clearly (`STAGED_SERVICE_NOT_ONLINE`) instead of booking it wrongly.
 
 ## Slices
@@ -47,7 +47,29 @@ services (spa, clinic, workshop, rental) books through the same occupancy.
 | Slice | Deliverable |
 |---|---|
 | L2a | 0067; stage plan (pure); hold API, staff create and reschedule with stage occupancy; primary resource in views; races with an observed `pg_locks` wait |
-| L2b | Customer availability and hold for staged variants; visits with several services |
+| L2b | Customer availability and hold for staged variants (every stage resource free); the web quote contract learns version 2 |
+| L2c | Visits with several services (one booking, several lines; compatibility across lines) |
+
+## L2b decisions (added after L2a, same delegation)
+
+8. **A guest slot needs every stage.** A start is offered for an artist when the artist is free in
+   their working stages and, for every other stage kind, at least one active resource of that kind
+   in the branch is free for all of that kind's intervals (bookings, unexpired holds, staff
+   reservations and blocks count as busy, exactly as for artists).
+9. **A guest hold finds the other resources.** The guest names only the artist; the hold locks the
+   artist and every candidate of the other kinds in id order, re-checks the slot, then places the
+   visit with the L2a planner. A visit that cannot be placed is a conflict, never a partial hold.
+10. **The quote contract.** The public quote is version 1 without stages or version 2 with them;
+    the web parser accepts both, strictly.
+
+## Acceptance for L2b (NOT TESTED)
+
+| id | Requirement |
+|---|---|
+| L2-08 | Guest availability offers a staged start only when the artist and a resource of every other stage kind are free; the artist may be busy during processing |
+| L2-09 | A guest hold of a staged service places every stage; confirm and expiry move every interval |
+| L2-10 | Two guests racing for the last chair: one hold, after an observed `pg_locks` wait |
+| L2-11 | The web quote parser accepts version 1 and version 2 and refuses mixed or unknown shapes |
 
 ## Acceptance for L2a (NOT TESTED)
 
