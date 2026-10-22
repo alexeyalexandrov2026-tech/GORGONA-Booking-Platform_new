@@ -46,12 +46,6 @@ class StageResourceError(DomainError):
     code = "STAGE_RESOURCE_INVALID"
 
 
-class StagedServiceNotOnlineError(DomainError):
-    """L2a: guests cannot book a staged service online until L2b."""
-
-    code = "STAGED_SERVICE_NOT_ONLINE"
-
-
 @dataclass(frozen=True, slots=True)
 class ReservationRequest:
     resource_id: UUID

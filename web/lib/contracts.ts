@@ -11,13 +11,28 @@ const line = z.strictObject({
   duration_minutes: money,
   revision: z.number().int().positive(),
 });
-export const quoteSchema = z.strictObject({
-  version: z.literal(1),
+const quoteFields = {
   currency: z.string().length(3),
   total_cents: money,
   booking_duration_minutes: z.number().int().positive(),
   lines: z.array(line),
+};
+// L2b (package L): a staged service quotes its stages (version 2); others stay version 1.
+const stage = z.strictObject({
+  kind: z.enum(["active", "processing", "finish"]),
+  minutes: z.number().int().min(1).max(720),
+  resources: z
+    .array(z.enum(["specialist", "chair", "room", "equipment"]))
+    .max(4),
 });
+export const quoteSchema = z.discriminatedUnion("version", [
+  z.strictObject({ version: z.literal(1), ...quoteFields }),
+  z.strictObject({
+    version: z.literal(2),
+    ...quoteFields,
+    stages: z.array(stage).min(1).max(10),
+  }),
+]);
 const location = z.strictObject({
   id,
   name: z.string(),

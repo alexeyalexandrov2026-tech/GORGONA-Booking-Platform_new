@@ -7,8 +7,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
-from gorgona_booking.booking.models import StagedServiceNotOnlineError
-from gorgona_booking.booking.stages import stage_spans
+from gorgona_booking.booking.stages import candidates, stage_spans
 from gorgona_booking.catalog.models import Quote
 from gorgona_booking.catalog.quote import build_quote
 from gorgona_booking.catalog.repository import load_add_ons, load_variant
@@ -198,6 +197,62 @@ async def location_zone(conn: RuntimeConnection, location_id: UUID) -> str:
     return str(row[0])
 
 
+async def _busy(
+    conn: RuntimeConnection,
+    resource_id: UUID,
+    window: tuple[datetime, datetime],
+    exclude_booking_id: UUID | None,
+) -> list[tuple[datetime, datetime]]:
+    """Intervals the resource is taken: bookings and unexpired holds, blocks, staff reservations."""
+    rows = await (
+        await conn.execute(
+            "select lower(a.during), upper(a.during) from gba.booking_allocations a "
+            "join gba.bookings b on b.tenant_id = a.tenant_id and b.id = a.booking_id "
+            "where a.resource_id = %s and (b.status = 'CONFIRMED' "
+            "or (b.status = 'HOLD' and b.hold_expires_at > clock_timestamp())) "
+            "and (%s::uuid is null or b.id <> %s) "
+            "and a.during && tstzrange(%s, %s, '[)') "
+            "union all select starts_at, ends_at from gba.resource_blocks "
+            "where resource_id = %s and starts_at < %s and ends_at > %s "
+            # Staff reservations take the resource in the shared occupancy (ADR-0022).
+            "union all select lower(r.during), upper(r.during) "
+            "from gba.resource_allocations r where r.resource_id = %s "
+            "and r.source_kind = 'reservation' and r.state = 'confirmed' "
+            "and r.during && tstzrange(%s, %s, '[)')",
+            (
+                resource_id,
+                exclude_booking_id,
+                exclude_booking_id,
+                window[0],
+                window[1],
+                resource_id,
+                window[1],
+                window[0],
+                resource_id,
+                window[0],
+                window[1],
+            ),
+        )
+    ).fetchall()
+    return [(r[0], r[1]) for r in rows]
+
+
+def _fits(
+    start: datetime,
+    spans: list[tuple[int, int]],
+    pools: list[list[tuple[datetime, datetime]]],
+) -> bool:
+    """L2b: some resource of a stage kind is free for every interval of that kind."""
+    needed = [(start + timedelta(minutes=a), start + timedelta(minutes=b)) for a, b in spans]
+    return any(
+        all(
+            not any(left < busy_end and right > busy_start for busy_start, busy_end in busy)
+            for left, right in needed
+        )
+        for busy in pools
+    )
+
+
 async def availability(
     conn: RuntimeConnection,
     query: AvailabilityQuery,
@@ -212,10 +267,10 @@ async def availability(
         await live_name(conn)
     rules, _ = await policies(conn)
     quote = preserved_quote or await quote_selection(conn, query)
-    if quote.stages and require_live:
-        # L2a: guests book a staged service from L2b on (every stage resource must be free).
-        raise StagedServiceNotOnlineError("This service cannot be booked online yet")
-    works = stage_spans(quote.stages)["specialist"] if quote.stages else None
+    # L2: a staged visit needs the artist only in their working stages, and a free resource of
+    # every other stage kind for that kind's intervals (design decision 8).
+    spans = stage_spans(quote.stages) if quote.stages else {}
+    works = spans.pop("specialist", None)
     zone = await location_zone(conn, query.location_id)
     now = datetime.now(UTC)
     today = now.astimezone(ZoneInfo(zone)).date()
@@ -236,6 +291,14 @@ async def availability(
     windows = wall_windows(query.day, zone, [(r[0], r[1]) for r in location_hours])
     slots: list[Slot] = []
     if windows:
+        day = (windows[0][0], windows[-1][1])
+        pools = {
+            kind: [
+                await _busy(conn, resource_id, day, exclude_booking_id)
+                for resource_id in await candidates(conn, query.location_id, kind)
+            ]
+            for kind in spans
+        }
         for artist in eligible:
             hours = await (
                 await conn.execute(
@@ -244,40 +307,11 @@ async def availability(
                     (artist.id, query.day.isoweekday()),
                 )
             ).fetchall()
-            busy = await (
-                await conn.execute(
-                    "select lower(a.during), upper(a.during) from gba.booking_allocations a "
-                    "join gba.bookings b on b.tenant_id = a.tenant_id and b.id = a.booking_id "
-                    "where a.resource_id = %s and (b.status = 'CONFIRMED' "
-                    "or (b.status = 'HOLD' and b.hold_expires_at > clock_timestamp())) "
-                    "and (%s::uuid is null or b.id <> %s) "
-                    "and a.during && tstzrange(%s, %s, '[)') "
-                    "union all select starts_at, ends_at from gba.resource_blocks "
-                    "where resource_id = %s and starts_at < %s and ends_at > %s "
-                    # Staff reservations take the resource in the shared occupancy (ADR-0022).
-                    "union all select lower(r.during), upper(r.during) "
-                    "from gba.resource_allocations r where r.resource_id = %s "
-                    "and r.source_kind = 'reservation' and r.state = 'confirmed' "
-                    "and r.during && tstzrange(%s, %s, '[)')",
-                    (
-                        artist.id,
-                        exclude_booking_id,
-                        exclude_booking_id,
-                        windows[0][0],
-                        windows[-1][1],
-                        artist.id,
-                        windows[-1][1],
-                        windows[0][0],
-                        artist.id,
-                        windows[0][0],
-                        windows[-1][1],
-                    ),
-                )
-            ).fetchall()
+            busy = await _busy(conn, artist.id, day, exclude_booking_id)
             starts = available_starts(
                 windows,
                 wall_windows(query.day, zone, [(r[0], r[1]) for r in hours]),
-                [(r[0], r[1]) for r in busy],
+                busy,
                 minutes=quote.booking_duration_minutes,
                 step=rules.slot_interval_minutes,
                 after=now + timedelta(minutes=rules.advance_notice_minutes),
@@ -290,6 +324,7 @@ async def availability(
                     end_at=start + timedelta(minutes=quote.booking_duration_minutes),
                 )
                 for start in starts
+                if all(_fits(start, spans[kind], pools[kind]) for kind in spans)
             )
     return AvailabilityView(
         timezone=zone,

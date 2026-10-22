@@ -1,7 +1,7 @@
-"""L2a over HTTP: staff booking, reschedule and holds of a staged service; the customer site
-refuses a staged service until L2b (FAKE data only)."""
+"""L2a over HTTP: staff booking, reschedule and holds of a staged service (FAKE data only).
 
-import secrets
+Guests book staged services from L2b on (test_l2b_guest_stages)."""
+
 from collections.abc import AsyncIterator
 from datetime import datetime, timedelta
 from typing import Any
@@ -156,37 +156,6 @@ async def guest(
         transport=httpx.ASGITransport(app=app), base_url=f"http://{world.a.host}"
     ) as http:
         yield http
-
-
-async def test_the_customer_site_refuses_a_staged_service_until_l2b(
-    guest: httpx.AsyncClient, world: BookingWorld, stage_kit: dict[str, UUID]
-) -> None:
-    query: dict[str, object] = {
-        "location_id": str(world.a.location_id),
-        "variant_id": str(world.catalog_a.gel_variant_id),
-        "add_on_ids": [],
-        "day": customer_day(),
-        "resource_id": None,
-    }
-    available = await guest.post("/v1/customer/availability", json=query)
-    assert available.status_code == 422, available.text
-    assert available.json()["error"]["code"] == "STAGED_SERVICE_NOT_ONLINE"
-    body = dict(query)
-    body.pop("day")
-    body.update({"resource_id": str(world.artist_a1), "start_at": local(11).isoformat()})
-    held = await guest.post(
-        "/v1/customer/holds",
-        json=body,
-        headers={"Booking-Token": secrets.token_urlsafe(32), "Idempotency-Key": "l2-guest-1"},
-    )
-    assert held.status_code == 422, held.text
-    assert held.json()["error"]["code"] == "STAGED_SERVICE_NOT_ONLINE"
-    # Unstaged services stay online.
-    plain = await guest.post(
-        "/v1/customer/availability",
-        json=query | {"variant_id": str(world.catalog_a.base_variant_id)},
-    )
-    assert plain.status_code == 200, plain.text
 
 
 async def test_the_hold_api_takes_stage_resources(

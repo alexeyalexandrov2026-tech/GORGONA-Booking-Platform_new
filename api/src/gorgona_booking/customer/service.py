@@ -1,13 +1,13 @@
 """Guest orchestration around M1's authoritative transaction/occupancy primitives."""
 
 import hashlib
-from datetime import UTC
+from datetime import UTC, datetime
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 import psycopg
 
-from gorgona_booking.booking import idempotency
+from gorgona_booking.booking import idempotency, stages
 from gorgona_booking.booking import repository as repo
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import (
@@ -79,7 +79,15 @@ class CustomerBookingService:
                 return BookingResult.from_json(stored.body, replayed=True)
             # Answer before any work; the database trigger stays the final arbiter.
             await require_booking_enabled(conn, tenant_id)
-            await repo.lock_resource_schedule(conn, tenant_id, body.resource_id)
+            quote = await queries.quote_selection(conn, body)
+            # L2b: a staged visit may take any free resource of its other stage kinds; the artist
+            # and every candidate are locked in id order before the slot is checked.
+            locked = {body.resource_id}
+            for kind in stages.stage_spans(quote.stages):
+                if kind != "specialist":
+                    locked.update(await stages.candidates(conn, body.location_id, kind))
+            for resource_id in sorted(locked):
+                await repo.lock_resource_schedule(conn, tenant_id, resource_id)
             zone = await queries.location_zone(conn, body.location_id)
             available = await queries.availability(
                 conn,
@@ -91,7 +99,6 @@ class CustomerBookingService:
             if not any(s.start_at == body.start_at.astimezone(UTC) for s in available.slots):
                 outcome = SlotConflictError("That time is no longer available")
             else:
-                quote = await queries.quote_selection(conn, body)
                 starts_at, ends_at = booking_interval(body.start_at, quote.booking_duration_minutes)
                 await repo.set_audit_context(
                     conn,
@@ -99,13 +106,32 @@ class CustomerBookingService:
                     reason="expired_on_contention",
                     request_id=request_id,
                 )
-                await repo.expire_stale_holds_overlapping(
-                    conn, body.resource_id, starts_at, ends_at
-                )
+                allocations: list[tuple[UUID, datetime, datetime]] | None = None
+                unplaced = False
+                if quote.stages:
+                    try:
+                        _, planned = await stages.plan(
+                            conn,
+                            tenant_id,
+                            specialist_id=body.resource_id,
+                            stages=quote.stages,
+                            starts_at=starts_at,
+                            named=(),
+                        )
+                    except SlotConflictError:
+                        unplaced = True  # checked under the same locks; kept as a 409 anyway
+                    else:
+                        allocations = [(a.resource_id, a.starts_at, a.ends_at) for a in planned]
+                else:
+                    await repo.expire_stale_holds_overlapping(
+                        conn, body.resource_id, starts_at, ends_at
+                    )
                 await repo.set_audit_context(
                     conn, actor=actor, reason="created_hold", request_id=request_id
                 )
                 try:
+                    if unplaced:
+                        raise SlotConflictError("That time is no longer available")
                     async with conn.transaction():
                         booking_id = await repo.insert_booking(
                             conn,
@@ -119,6 +145,7 @@ class CustomerBookingService:
                             hold_ttl_seconds=self.ttl,
                             quote=quote,
                             created_by=actor,
+                            allocations=allocations,
                         )
                         await conn.execute(
                             "insert into gba.booking_customers "
@@ -126,6 +153,8 @@ class CustomerBookingService:
                             (tenant_id, booking_id, digest),
                         )
                     outcome = await repo.load_booking(conn, booking_id)
+                except SlotConflictError as conflict:
+                    outcome = conflict
                 except psycopg.errors.ExclusionViolation as exc:
                     if not repo.is_slot_conflict(exc):
                         raise
