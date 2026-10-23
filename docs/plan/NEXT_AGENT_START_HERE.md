@@ -1,6 +1,15 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: review of J5 and J6 done; H1 fixed (part 1); not merged — 2026-10-14
+
+## Current: package L (BEAUTY-01) through L7b2b done; next L7c, then L8 — 2026-10-23
+
+Read the [handoff](NEXT_AGENT_PACKAGE_L7C_2026-10-23.md) first; the ready-to-paste prompt is
+[NEXT_AGENT_PACKAGE_L7C_PROMPT_2026-10-23.md](NEXT_AGENT_PACKAGE_L7C_PROMPT_2026-10-23.md). Slices L1–L7b2b
+are published for CI only and green (head `codex/package-l7b2b-prepaid-screens`); `main` is still
+`0591d3a`; migrations 0001–0071 are immutable, the next is 0072. Work in the worktree
+`.codex/worktrees/package-l7b2b`.
+
+## Previous: review of J5 and J6 done; H1 fixed (part 1); not merged — 2026-10-14
 
 Read the [handoff](NEXT_AGENT_PACKAGE_J_REVIEW2_FIXES_2026-10-14.md) first. H1 of the
 review of J5 and J6 is fixed by migration 0043: `f366afe` on `codex/package-j-review2-fixes` (complete local
