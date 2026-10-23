@@ -70,7 +70,7 @@ Gaps from the [acceptance record](evidence/2026-10-23-l8c-acceptance/ACCEPTANCE.
     longer blocks it either: the accrual follows the quote and the refund is reversed by decision 82 (the read
     shows the amount to reverse at once).
 
-| id | Requirement (L9b, NOT TESTED) |
+| id | Requirement (L9b, PASS locally in `00aadee`) |
 |---|---|
 | L9-07 | A full refund reverses the whole commission; a partial refund of one service reverses only its share |
 | L9-08 | Two refunds reverse cumulatively without drift; a refund of fees only records a zero reversal |

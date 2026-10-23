@@ -1,6 +1,15 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-23: L9a fee policy and no-shows locally verified (BEAUTY-01 gap L-06)
+## Current checkpoint — 2026-10-23: BEAUTY-01 gaps closed (L9a, L9b); owner decides readiness and main
+
+L9a CI SUCCESS (run 40023359035). L9b in `00aadee` on `codex/package-l9b-commission-reversal` (migration 0073):
+each refund reverses the commission's share of its service, cumulatively and once, with lineage; decision 85
+fixed a defect (a visit settled by a prepaid unit earned no commission). Focused **486 passed**; full **2563
+passed, 4 skipped** ([validation](evidence/2026-10-23-l9b-commission-reversal/VALIDATION.md)). The [acceptance record](evidence/2026-10-23-l8c-acceptance/ACCEPTANCE.md) now shows L-06 and L-07 PASS. Kept: the
+L9b record was written after its code commit; npm audit found a new high advisory in zod (fixed in its own
+commit). Readiness and `main` wait for the owner's word. Next migration **0074**.
+
+## Previous checkpoint — 2026-10-23: L9a fee policy and no-shows locally verified (BEAUTY-01 gap L-06)
 
 Owner's word 2026-10-23: close both BEAUTY-01 gaps, same process; readiness and `main` untouched. L8c CI
 SUCCESS (run 39999584445). L9a in `8a90567` on `codex/package-l9a-fee-policy` (migration 0072): a versioned
