@@ -86,3 +86,33 @@ the code before this design.
 | L8-14 | A plan naming an unknown payee or service is refused with 422; two racing first saves leave one plan and one 409 |
 | L8-15 | A package in another currency than its service is refused |
 | L8-16 | After a redemption the desk no longer offers that balance (browser) |
+
+
+## L8b2 decisions (added 2026-10-23, same delegation)
+
+Branch `codex/package-l8b2-acceptance-gaps` from the L8b1 head. Closes the acceptance gaps L-03, L-04 and
+L-10 named in the review and in the L-01..L-12 mapping.
+
+69. **Once under a race, observed (L-03).** Two concurrent consumptions of one visit, two concurrent accruals
+    of one visit's commission and two concurrent redemptions of a one-unit package (two visits) each leave
+    exactly one write; each race is proven with an observed `pg_locks` wait behind a barrier transaction that
+    holds the row the service locks.
+70. **The desk follows the modules (L-10).** The visit desk reads the business configuration once
+    (`effective_module_ids`) and shows each step only when its modules are on: materials with `inventory`,
+    billing and prepaid redemption with `finance_documents`, the commission with `workforce`. A missing
+    module shows one plain line ("Materials are turned off in this business's configuration") instead of
+    the form. If the configuration cannot be read, the desk shows the steps as before and the server's
+    refusal speaks.
+71. **Every step refuses without its module (L-10).** Billing, prepaid sale and redemption without
+    `finance_documents`, consumption without `inventory`, plan and accrual without `workforce` answer
+    `MODULE_DISABLED` (or the module's own refusal) and write nothing; completing a visit needs only booking.
+72. **A room is a stage resource (L-04).** A stage that needs a `room` holds a room in the shared occupancy;
+    a staff reservation of that room for an overlapping time is refused, and the specialist stays free during
+    processing.
+
+| id | Requirement (L8b2, NOT TESTED) |
+|---|---|
+| L8-17 | Consumption, accrual and redemption races each leave one write after an observed `pg_locks` wait |
+| L8-18 | With workforce off the desk shows no commission form; with inventory off no materials form; real browser desktop and mobile, keyboard, axe |
+| L8-19 | Each step without its module is refused and writes nothing |
+| L8-20 | A room stage holds the room; an overlapping staff reservation of it is refused |
