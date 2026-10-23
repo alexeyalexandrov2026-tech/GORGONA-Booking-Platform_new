@@ -24,7 +24,7 @@ from gorgona_booking.business.financial_contracts import (
     InvoiceDraftInput,
     InvoiceLineInput,
 )
-from gorgona_booking.business.visit_billing import load_visit_invoice
+from gorgona_booking.business.visit_billing import catalog_minor, load_visit_invoice
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import ConflictError, DomainError, InvalidReferenceError, NotFoundError
 
@@ -66,6 +66,10 @@ class VisitNotPaidError(ConflictError):
 
 class VisitInvoiceCreditedError(ConflictError):
     code = "VISIT_INVOICE_CREDITED"
+
+
+class VisitNotCommissionableError(ConflictError):
+    code = "VISIT_NOT_COMMISSIONABLE"
 
 
 class VisitAlreadyCommissionedError(ConflictError):
@@ -264,15 +268,20 @@ async def save_plan(
     return view
 
 
-def _groups(quote: dict[str, Any]) -> list[tuple[dict[str, Any], int]]:
-    """Each variant line of the quote with the price of its own add-ons (L2c order)."""
+def _groups(quote: dict[str, Any], units: int) -> list[tuple[dict[str, Any], int]]:
+    """Each variant line of the quote with the price of its own add-ons (L2c order).
+
+    Amounts are the currency's minor units, converted exactly from the catalog's hundredths
+    (L8 decision 55).
+    """
     groups: list[tuple[dict[str, Any], int]] = []
     for line in quote.get("lines") or []:
+        price = catalog_minor(int(line["price_cents"]), units)
         if line.get("kind") == "variant":
-            groups.append((line, int(line["price_cents"])))
+            groups.append((line, price))
         elif groups:
             variant, base = groups[-1]
-            groups[-1] = (variant, base + int(line["price_cents"]))
+            groups[-1] = (variant, base + price)
     return groups
 
 
@@ -294,7 +303,7 @@ async def _commission_lines(
         ).fetchall()
     }
     lines: list[InvoiceLineInput] = []
-    for variant, base in _groups(quote):
+    for variant, base in _groups(quote, units):
         service = await (
             await conn.execute(
                 "select service_id from gba.service_variants where id = %s", (variant["id"],)
@@ -346,10 +355,17 @@ async def accrue_commission(
             raise NotFoundError("Commission not found", booking_id=str(booking_id))
         return view
     booking = await (
-        await conn.execute("select quote from gba.bookings where id = %s for update", (booking_id,))
+        await conn.execute(
+            "select quote, status from gba.bookings where id = %s for update", (booking_id,)
+        )
     ).fetchone()
     if booking is None:
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
+    if booking[1] != "CONFIRMED":
+        # L8 decision 54: a cancelled visit's fee earns no commission.
+        raise VisitNotCommissionableError(
+            "Only a confirmed visit earns a commission", status=booking[1]
+        )
     if await load_commission(conn, tenant_id, booking_id) is not None:
         raise VisitAlreadyCommissionedError("This visit already has its commission")
     billed = await load_visit_invoice(conn, tenant_id, booking_id)

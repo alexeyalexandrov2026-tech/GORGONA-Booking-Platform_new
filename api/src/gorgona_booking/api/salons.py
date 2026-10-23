@@ -158,6 +158,10 @@ class ServiceRevisionConflictError(ConflictError):
     code = "SERVICE_REVISION_CONFLICT"
 
 
+class VisitAlreadyRecordedError(ConflictError):
+    code = "VISIT_ALREADY_RECORDED"
+
+
 class ServiceView(BaseModel):
     id: UUID
     service_id: UUID
@@ -712,6 +716,27 @@ async def _stage_kinds(conn: RuntimeConnection, booking_id: UUID) -> list[tuple[
     return [(kind, row[0]) for kind in sorted(kinds)]
 
 
+async def _refuse_recorded_visit(conn: RuntimeConnection, booking_id: UUID) -> None:
+    """L8 decision 60: a completed, invoiced, commissioned or redeemed visit stays put.
+
+    Moving or cancelling it would let the same visit be completed, written off, billed and
+    commissioned again; corrections go through the finance documents.
+    """
+    row = await (
+        await conn.execute(
+            "select exists (select 1 from gba.visit_completions where booking_id = %s)"
+            " or exists (select 1 from gba.visit_invoices where booking_id = %s)"
+            " or exists (select 1 from gba.visit_commissions where booking_id = %s)"
+            " or exists (select 1 from gba.prepaid_redemptions where booking_id = %s)",
+            (booking_id, booking_id, booking_id, booking_id),
+        )
+    ).fetchone()
+    if row and row[0]:
+        raise VisitAlreadyRecordedError(
+            "This visit is already completed or billed; it cannot be moved or cancelled"
+        )
+
+
 async def _plan_stages(
     conn: RuntimeConnection,
     salon_id: UUID,
@@ -1068,6 +1093,7 @@ async def reschedule_booking(
         status, _ = await repo.lock_booking(conn, booking_id)
         if status != "CONFIRMED":
             raise ConflictError("Only a confirmed booking can be rescheduled")
+        await _refuse_recorded_visit(conn, booking_id)
 
         old_row = await (
             await conn.execute(
@@ -1222,6 +1248,7 @@ async def cancel_booking(
         elif status not in ("HOLD", "CONFIRMED"):
             raise ConflictError(f"A {status.lower()} booking cannot be cancelled")
         else:
+            await _refuse_recorded_visit(conn, booking_id)
             await repo.set_audit_context(
                 conn, actor=principal.actor, reason=body.reason, request_id=get_request_id(request)
             )

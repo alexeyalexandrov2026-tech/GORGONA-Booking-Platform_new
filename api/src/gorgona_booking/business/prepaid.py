@@ -28,7 +28,7 @@ from gorgona_booking.business.financial_contracts import (
     InvoiceDraftInput,
     InvoiceLineInput,
 )
-from gorgona_booking.business.visit_billing import load_visit_invoice
+from gorgona_booking.business.visit_billing import load_visit_invoice, priced_lines
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import ConflictError, DomainError, InvalidReferenceError, NotFoundError
 
@@ -62,6 +62,10 @@ class PrepaidOtherCustomerError(ConflictError):
 
 class PrepaidCurrencyError(ConflictError):
     code = "PREPAID_CURRENCY_MISMATCH"
+
+
+class PrepaidUnitExceedsLineError(ConflictError):
+    code = "PREPAID_UNIT_EXCEEDS_LINE"
 
 
 class PrepaidNoMatchingServiceError(ConflictError):
@@ -373,7 +377,7 @@ async def load_redemption(
 
 
 def _credits(
-    row: Any, invoice: InvoiceDocumentView, quote: dict[str, Any], available: int
+    row: Any, invoice: InvoiceDocumentView, quote: dict[str, Any], status: str, available: int
 ) -> tuple[int, list[tuple[UUID, int]]]:
     """Units used and (invoice line, amount) pairs a redemption credits (decisions 35-36)."""
     units = invoice.minor_units
@@ -382,18 +386,32 @@ def _credits(
         left = int(row[4]) - int(row[10])
         if left <= 0 or remaining <= 0:
             raise PrepaidExhaustedError("This package has no unit left")
-        quoted = [
-            index
-            for index, line in enumerate(quote.get("lines") or [])
-            if line.get("kind") == "variant" and str(line.get("id")) == str(row[3])
-        ]
-        if not quoted or quoted[0] >= len(invoice.lines):
+        # L8 decision 57: the service's invoice line is its priced quote line (the invoice holds
+        # the priced quote lines in order, then the fees) and must still say what the quote says.
+        priced = priced_lines(quote, units) if status == "CONFIRMED" else []
+        index = next(
+            (
+                i
+                for i, (line, _) in enumerate(priced)
+                if line.get("kind") == "variant" and str(line.get("id")) == str(row[3])
+            ),
+            None,
+        )
+        if index is None or index >= len(invoice.lines):
             raise PrepaidNoMatchingServiceError("The visit has no service of this package")
-        line = invoice.lines[quoted[0]]
+        quoted, price = priced[index]
+        line = invoice.lines[index]
+        if line.description != str(quoted["name"]) or _minor(line.amount, units) != price:
+            raise PrepaidNoMatchingServiceError("The visit has no service of this package")
         # A unit is worth price / units; the last one takes the remainder.
         worth = remaining if left == 1 else int(row[5]) // int(row[4])
-        amount = min(worth, _minor(line.amount, units), available)
-        return 1, [(line.line_id, amount)]
+        if worth > price or worth > available:
+            # L8 decision 58: a unit is spent only for its whole worth; the liability ends at zero.
+            raise PrepaidUnitExceedsLineError(
+                "This unit is worth more than the visit's open line; settle it by hand",
+                worth=worth,
+            )
+        return 1, [(line.line_id, worth)]
     if remaining <= 0:
         raise PrepaidExhaustedError("This certificate has no value left")
     pairs: list[tuple[UUID, int]] = []
@@ -438,7 +456,9 @@ async def redeem(
     if balance is None or not balance.usable:
         raise PrepaidNotPaidError("The prepaid balance is not paid yet")
     quote = await (
-        await conn.execute("select quote from gba.bookings where id = %s for update", (booking_id,))
+        await conn.execute(
+            "select quote, status from gba.bookings where id = %s for update", (booking_id,)
+        )
     ).fetchone()
     if quote is None:
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
@@ -453,7 +473,7 @@ async def redeem(
     available = _minor(owed.available, invoice.minor_units)
     if available <= 0:
         raise VisitNothingUnpaidError("Nothing of the visit invoice is unpaid")
-    used_units, pairs = _credits(row, invoice, quote[0], available)
+    used_units, pairs = _credits(row, invoice, quote[0], quote[1], available)
     if not pairs:
         raise VisitNothingUnpaidError("Nothing of the visit invoice is left to credit")
     document = uuid7()

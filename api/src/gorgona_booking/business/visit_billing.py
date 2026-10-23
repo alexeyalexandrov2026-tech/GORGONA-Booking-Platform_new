@@ -24,7 +24,12 @@ from gorgona_booking.business.financial_contracts import (
 )
 from gorgona_booking.business.settlement_contracts import ObligationView
 from gorgona_booking.db.pool import RuntimeConnection
-from gorgona_booking.errors import ConflictError, InvalidReferenceError, NotFoundError
+from gorgona_booking.errors import (
+    ConflictError,
+    DomainError,
+    InvalidReferenceError,
+    NotFoundError,
+)
 
 _AMOUNT = r"^(0|[1-9][0-9]{0,17})(\.[0-9]{1,3})?$"
 
@@ -35,6 +40,35 @@ class VisitNotBillableError(ConflictError):
 
 class VisitAlreadyInvoicedError(ConflictError):
     code = "VISIT_ALREADY_INVOICED"
+
+
+class VisitPriceNotExactError(DomainError):
+    code = "VISIT_PRICE_NOT_EXACT"
+
+
+def catalog_minor(price_cents: int, units: int) -> int:
+    """A catalog price (hundredths of the main unit) in the currency's minor units, exactly.
+
+    L8 decision 55: never rounded; a price that is not exact in the currency is refused.
+    """
+    scaled: int = price_cents * pow(10, units)
+    if scaled % 100:
+        raise VisitPriceNotExactError(
+            "The price cannot be written exactly in this currency", price_cents=price_cents
+        )
+    return scaled // 100
+
+
+def priced_lines(quote: dict[str, Any], units: int) -> list[tuple[dict[str, Any], int]]:
+    """The quote lines a visit invoice bills, in quote order, with their minor amounts.
+
+    A free line gets no invoice line (L8 decision 56); prepaid maps a quote line to its invoice line
+    through this same list (decision 57).
+    """
+    pairs = [
+        (line, catalog_minor(int(line["price_cents"]), units)) for line in quote.get("lines") or []
+    ]
+    return [(line, minor) for line, minor in pairs if minor > 0]
 
 
 class _Strict(BaseModel):
@@ -121,9 +155,9 @@ async def _lines(
                 line_id=uuid7(),
                 counter_account_id=body.revenue_account_id,
                 description=str(line["name"]),
-                amount=_money(int(line["price_cents"]), units),
+                amount=_money(minor, units),
             )
-            for line in quote.get("lines") or []
+            for line, minor in priced_lines(quote, units)
         )
     elif status != "CANCELLED" or not body.fee_lines:
         raise VisitNotBillableError(

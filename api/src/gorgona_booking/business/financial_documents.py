@@ -88,6 +88,27 @@ class FinancialDocumentStateError(ConflictError):
     code = "FINANCIAL_STATE_INVALID"
 
 
+class FinancialDocumentLinkedError(ConflictError):
+    code = "FINANCIAL_DOCUMENT_LINKED"
+
+
+async def _linked_to_visit(conn: RuntimeConnection, book_id: UUID, document_id: UUID) -> bool:
+    """Package L (L8 decision 59): a visit invoice, commission accrual or prepaid sale is frozen.
+
+    Those drafts are built from the visit or the sale; their routes keep trusting what they wrote.
+    """
+    row = await (
+        await conn.execute(
+            "select exists (select 1 from gba.visit_invoices where book_id=%s and document_id=%s)"
+            " or exists (select 1 from gba.visit_commissions where book_id=%s and document_id=%s)"
+            " or exists (select 1 from gba.prepaid_balances where book_id=%s"
+            " and sale_document_id=%s)",
+            (book_id, document_id, book_id, document_id, book_id, document_id),
+        )
+    ).fetchone()
+    return bool(row and row[0])
+
+
 async def business_timezone(conn: RuntimeConnection, business: UUID) -> str:
     """The zone the H triggers use for this company's "today" (one zone of all its locations)."""
     row = await (await conn.execute("select gba.business_timezone(%s)", (business,))).fetchone()
@@ -433,6 +454,10 @@ async def save_draft(
         raise ConflictError(f"{spec.label} changed; reload before saving", revision=actual)
     if current is not None and current.state != "draft":
         raise FinancialDocumentStateError(f"An issued {spec.label.lower()} stays unchanged")
+    if current is not None and await _linked_to_visit(conn, book_id, document_id):
+        raise FinancialDocumentLinkedError(
+            f"This {spec.label.lower()} belongs to a visit or a prepaid sale and is not edited here"
+        )
     currency = await (
         await conn.execute("select minor_units from gba.currencies where code=%s", (body.currency,))
     ).fetchone()
