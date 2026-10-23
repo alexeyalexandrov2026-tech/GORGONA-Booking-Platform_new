@@ -1,6 +1,15 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-23: L7b2b prepaid screen and redemption, locally verified
+## Current checkpoint — 2026-10-23: L7c customer site, several services and stages, locally verified
+
+L7b2b CI SUCCESS (run 39886335939). L7c in `1b00d01` on `codex/package-l7c-customer-site`: on the customer
+site a guest books up to five services in one visit, each with its own add-ons, sees every line, the total,
+the duration and the stages of a staged visit, and is offered only specialists who serve every service; real
+browser desktop and mobile with the database read back. Focused **444 passed**; full **2521 passed, 4
+skipped** ([validation](docs/plan/evidence/2026-10-23-l7c-customer-site/VALIDATION.md)). Next: L8 (BEAUTY-01 acceptance; owner's consent for the review, owner's
+word for readiness and `main`). Next migration **0072**.
+
+## Previous checkpoint — 2026-10-23: L7b2b prepaid screen and redemption, locally verified
 
 L7b2a CI: the first run failed after UTC midnight (browser tests took today in UTC); fix `d2ac158` takes
 today in the branch or business zone, CI SUCCESS (run 39879172808). L7b2b in `3d2658a` on

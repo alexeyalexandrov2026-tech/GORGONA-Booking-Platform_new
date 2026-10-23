@@ -106,8 +106,9 @@ Branch `codex/package-l7c-customer-site` from the L7b2b head (`ee2b57b`). The gu
     or other chosen add-on, and it neither provides nor conflicts with anything already provided (the
     same rules as decision 12). Everything else (a service whose component is already in the visit, a
     visit over 720 minutes, a specialist who does not serve every service) is judged by the server; its
-    refusal is shown in its own plain words, with no "Retry" when a retry cannot help (only a network or
-    availability failure offers one).
+    refusal is shown in its own plain words. A refusal of the visit itself (`INCOMPATIBLE_SELECTION`,
+    `SERVICE_NOT_BOOKABLE`, `ADD_ON_NOT_BOOKABLE`) offers no "Retry", since the same request cannot
+    succeed; every other failure keeps "Retry availability" as before.
 50. **Only one specialist.** The specialist list on the Times step holds the specialists of the branch
     who serve **every** service of the visit (decision 14). Changing any line clears the chosen
     specialist, the time and the quote.
