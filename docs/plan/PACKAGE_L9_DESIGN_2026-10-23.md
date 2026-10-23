@@ -41,7 +41,7 @@ Gaps from the [acceptance record](evidence/2026-10-23-l8c-acceptance/ACCEPTANCE.
 80. **Screens.** Settings show the current fee policy and publish a new version; the visit desk offers "Mark as
     no-show" for a confirmed visit after its start with no completion, and then shows the fee that applies.
 
-| id | Requirement (L9a, NOT TESTED) |
+| id | Requirement (L9a, PASS locally in `8a90567`) |
 |---|---|
 | L9-01 | Versions are insert-only; a stale version is refused; another company sees none |
 | L9-02 | A visit uses the version in force when it was booked; a later version does not change it |

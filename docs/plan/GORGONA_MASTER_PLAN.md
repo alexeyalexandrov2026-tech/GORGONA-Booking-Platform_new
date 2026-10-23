@@ -10,7 +10,16 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-23: package L (BEAUTY-01) acceptance record written; owner decides readiness and main
+## Current checkpoint — 2026-10-23: L9a fee policy and no-shows locally verified (BEAUTY-01 gap L-06)
+
+Owner's word 2026-10-23: close both BEAUTY-01 gaps, same process; readiness and `main` untouched. L8c CI
+SUCCESS (run 39999584445). L9a in `8a90567` on `codex/package-l9a-fee-policy` (migration 0072): a versioned
+fee policy, the no-show fact, billing computes the late-cancellation and no-show fee from the version in force
+when the visit was booked; settings form and desk step. Focused **479 passed**; full **2556 passed, 4 skipped**
+([validation](evidence/2026-10-23-l9a-fee-policy/VALIDATION.md)). Next: L9b (commission reversal after a refund), then the acceptance record update. Next
+migration **0073**.
+
+## Previous checkpoint — 2026-10-23: package L (BEAUTY-01) acceptance record written; owner decides readiness and main
 
 L8c in `558b580` on `codex/package-l8c-acceptance` proves L-09 for the commission and prepaid tables (direct
 SQL refused, the use guard holds, another company sees nothing). Focused **473 passed**; full **2550 passed,
