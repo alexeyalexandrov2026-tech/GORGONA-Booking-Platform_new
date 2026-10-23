@@ -4,7 +4,7 @@ import {
   type Readiness,
 } from "./management-contracts";
 import { availabilitySchema, Availability } from "./contracts";
-import type { Invoice, Obligation } from "./financial-contracts";
+import type { Credit, Invoice, Obligation } from "./financial-contracts";
 import {
   legalEntityListSchema,
   legalEntitySchema,
@@ -1005,6 +1005,98 @@ export function accrueVisitCommission(
 ): Promise<VisitCommissionView> {
   return bookingMutation<VisitCommissionView>(
     `/v1/salons/${salonId}/bookings/${bookingId}/commission`,
+    body,
+  );
+}
+
+/** L6/L7b2b: a prepaid package (units of one service) or certificate (a value). */
+export type PrepaidView = {
+  prepaid_id: string;
+  kind: "package" | "certificate";
+  counterparty_id: string;
+  variant_id: string | null;
+  units: number | null;
+  remaining_units: number | null;
+  value: string;
+  remaining_value: string;
+  currency: string;
+  usable: boolean;
+  sale: Invoice;
+};
+export type PrepaidList = { items: PrepaidView[]; next_cursor: string | null };
+export type RedemptionView = {
+  booking_id: string;
+  prepaid_id: string;
+  units: 0 | 1;
+  amount: string;
+  credit: Credit;
+  prepaid: PrepaidView;
+};
+
+/** One page of the business's prepaid balances, in creation order. */
+export function fetchPrepaid(
+  salonId: string,
+  params?: { counterpartyId?: string; after?: string },
+): Promise<PrepaidList> {
+  const query = new URLSearchParams();
+  if (params?.counterpartyId)
+    query.set("counterparty_id", params.counterpartyId);
+  if (params?.after) query.set("after", params.after);
+  return managementFetch<PrepaidList>(
+    `/v1/salons/${salonId}/prepaid${query.size ? `?${query}` : ""}`,
+  );
+}
+
+/** Every prepaid balance (of one customer), paged to the end. */
+export async function fetchAllPrepaid(
+  salonId: string,
+  counterpartyId?: string,
+): Promise<PrepaidView[]> {
+  const items: PrepaidView[] = [];
+  const seen = new Set<string>();
+  let after: string | undefined;
+  for (;;) {
+    const page = await fetchPrepaid(salonId, { counterpartyId, after });
+    items.push(...page.items);
+    if (page.next_cursor === null) return items;
+    if (seen.has(page.next_cursor))
+      throw new ManagementApiError(
+        "INVALID_RESPONSE",
+        "Unable to load the complete list of balances safely.",
+      );
+    seen.add(page.next_cursor);
+    after = page.next_cursor;
+  }
+}
+
+/** L6: sell a package or certificate as a draft invoice line on a prepayment liability. */
+export function sellPrepaid(
+  salonId: string,
+  body: {
+    kind: "package" | "certificate";
+    counterparty_id: string;
+    variant_id?: string;
+    units?: number;
+    price: string;
+    currency: string;
+    book_id: string;
+    control_account_id: string;
+    prepayment_account_id: string;
+    invoice_date: string;
+    number: string;
+  },
+): Promise<PrepaidView> {
+  return bookingMutation<PrepaidView>(`/v1/salons/${salonId}/prepaid`, body);
+}
+
+/** L6: credit the visit invoice from a usable balance, once per visit. */
+export function redeemPrepaid(
+  salonId: string,
+  bookingId: string,
+  body: { prepaid_id: string; credit_date: string; number: string },
+): Promise<RedemptionView> {
+  return bookingMutation<RedemptionView>(
+    `/v1/salons/${salonId}/bookings/${bookingId}/redeem`,
     body,
   );
 }

@@ -857,6 +857,22 @@ footer {
 .commission-plan input {
   max-width: 100%;
 }
+/* L7b2b: the Prepaid screen. */
+.prepaid-screen form > label,
+.prepaid-screen .prepaid-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  max-width: 100%;
+}
+.prepaid-screen select,
+.prepaid-screen input {
+  max-width: 100%;
+}
+.prepaid-screen form {
+  margin-top: 24px;
+}
 @media (max-width: 600px) {
   .mgmt-modal-card {
     padding: 20px 16px;

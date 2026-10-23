@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ledgerResponseSchema } from "./ledger-contracts";
 import { inventoryResponseSchema } from "./inventory-contracts";
 import {
+  creditSchema,
   financialResponseSchema,
   invoiceSchema,
   obligationSchema,
@@ -156,6 +157,43 @@ const commissionPlan = z.strictObject({
         .refine((rule) => (rule.percent === null) !== (rule.amount === null)),
     )
     .max(50),
+});
+// L6/L7b2b: a prepaid balance — a package of one service's units or a certificate's value.
+const prepaid = z
+  .strictObject({
+    prepaid_id: id,
+    kind: z.enum(["package", "certificate"]),
+    counterparty_id: id,
+    variant_id: id.nullable(),
+    units: z.number().int().min(1).max(1000).nullable(),
+    remaining_units: z.number().int().min(0).max(1000).nullable(),
+    value: money,
+    remaining_value: money,
+    currency: z.string().regex(/^[A-Z]{3}$/),
+    usable: z.boolean(),
+    sale: invoiceSchema,
+  })
+  .refine(
+    (v) =>
+      (v.kind === "package") === (v.variant_id !== null && v.units !== null) &&
+      (v.units === null) === (v.remaining_units === null) &&
+      (v.units === null || (v.remaining_units ?? 0) <= v.units),
+  );
+const prepaidList = z
+  .strictObject({
+    items: z.array(prepaid).max(50),
+    next_cursor: id.nullable(),
+  })
+  .refine(
+    (v) => new Set(v.items.map((x) => x.prepaid_id)).size === v.items.length,
+  );
+const redemption = z.strictObject({
+  booking_id: id,
+  prepaid_id: id,
+  units: z.union([z.literal(0), z.literal(1)]),
+  amount: money,
+  credit: creditSchema,
+  prepaid,
 });
 // L3/L7a: the materials one service uses, in the material's own unit.
 const recipe = z.strictObject({
@@ -417,7 +455,9 @@ export function managementResponseSchema(
   if (/^\/bookings\/[0-9a-f-]{36}\/invoice$/i.test(suffix)) return visitInvoice;
   if (/^\/bookings\/[0-9a-f-]{36}\/commission$/i.test(suffix))
     return visitCommission;
+  if (/^\/bookings\/[0-9a-f-]{36}\/redeem$/i.test(suffix)) return redemption;
   if (/^\/bookings\//.test(suffix)) return booking;
+  if (suffix === "/prepaid") return method === "GET" ? prepaidList : prepaid;
   if (suffix === "/services")
     return method === "GET" ? z.array(service) : service;
   if (/^\/services\/[0-9a-f-]{36}\/materials$/i.test(suffix)) return recipe;

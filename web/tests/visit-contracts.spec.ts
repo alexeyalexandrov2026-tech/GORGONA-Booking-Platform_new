@@ -165,3 +165,106 @@ test("a commission plan has rules of a percentage or an amount", () => {
     ).toBe(false);
   }
 });
+
+// L7b2b: prepaid balances (list, sale) and a redemption from the desk.
+const prepaidId = "f6666666-6666-4666-8666-666666666666";
+const prepaid = {
+  prepaid_id: prepaidId,
+  kind: "package",
+  counterparty_id: party,
+  variant_id: account,
+  units: 2,
+  remaining_units: 1,
+  value: "100.00",
+  remaining_value: "50.00",
+  currency: "USD",
+  usable: true,
+  sale: document("invoice", "receivable"),
+};
+
+test("prepaid balances list in pages and a sale answers one balance", () => {
+  const list = { items: [prepaid], next_cursor: prepaidId };
+  const read = managementResponseSchema(`/v1/salons/${salon}/prepaid`, "GET");
+  expect(read.parse(list)).toEqual(list);
+  expect(read.parse({ items: [], next_cursor: null })).toBeTruthy();
+  expect(read.safeParse({ ...list, extra: 1 }).success).toBe(false);
+  const sold = managementResponseSchema(`/v1/salons/${salon}/prepaid`, "POST");
+  expect(sold.parse(prepaid)).toEqual(prepaid);
+  const certificate = {
+    ...prepaid,
+    kind: "certificate",
+    variant_id: null,
+    units: null,
+    remaining_units: null,
+  };
+  expect(sold.parse(certificate)).toEqual(certificate);
+  // A package names its service and units; a certificate neither.
+  expect(sold.safeParse({ ...prepaid, variant_id: null }).success).toBe(false);
+  expect(sold.safeParse({ ...certificate, units: 1 }).success).toBe(false);
+  expect(sold.safeParse({ ...prepaid, remaining_units: 3 }).success).toBe(
+    false,
+  );
+});
+
+test("a redemption is an issued credit note of the visit and the balance after it", () => {
+  const credit = {
+    schema_version: 1,
+    business_id: salon,
+    book_id: book,
+    document_id: doc,
+    revision: 2,
+    state: "issued",
+    credited_obligation_id: owed,
+    direction: "receivable",
+    counterparty_id: party,
+    counterparty_revision: 1,
+    currency: "USD",
+    minor_units: 2,
+    credit_date: "2026-10-22",
+    due_date: null,
+    control_account_id: account,
+    title: "Prepaid redemption",
+    number: "FAKE-R-1",
+    lines: [
+      {
+        line_id: owed,
+        credited_line_id: owed,
+        counter_account_id: account,
+        description: "Prepaid redemption",
+        amount: "50.00",
+        reason: "Prepaid redemption",
+        reference_entry_id: null,
+      },
+    ],
+    total: "50.00",
+    entry_id: owed,
+    issued_on: "2026-10-22",
+    attestation: "confirmed_account_treatment",
+    applied: "50.00",
+    refund: "0.00",
+    refund_control_account_id: null,
+    refund_obligation_id: null,
+    created_at: "2026-10-22T15:00:00Z",
+    void_entry_id: null,
+    voided_on: null,
+    void_reason: null,
+    void_evidence_source: null,
+  };
+  const view = {
+    booking_id: booking,
+    prepaid_id: prepaidId,
+    units: 1,
+    amount: "50.00",
+    credit,
+    prepaid,
+  };
+  const schema = managementResponseSchema(
+    `/v1/salons/${salon}/bookings/${booking}/redeem`,
+    "POST",
+  );
+  expect(schema.parse(view)).toEqual(view);
+  expect(schema.safeParse({ ...view, units: 2 }).success).toBe(false);
+  expect(
+    schema.safeParse({ ...view, credit: { ...credit, total: "1.00" } }).success,
+  ).toBe(false);
+});

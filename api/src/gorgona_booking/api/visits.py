@@ -1,8 +1,9 @@
 """L3-L6: recipes, completion, consumption, billing, commissions and prepaid balances."""
 
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 
 from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
@@ -16,7 +17,13 @@ from gorgona_booking.business.commissions import (
     PlanView,
     VisitCommissionView,
 )
-from gorgona_booking.business.prepaid import PrepaidView, RedeemInput, RedemptionView, SaleInput
+from gorgona_booking.business.prepaid import (
+    PrepaidList,
+    PrepaidView,
+    RedeemInput,
+    RedemptionView,
+    SaleInput,
+)
 from gorgona_booking.business.visit_billing import VisitInvoiceInput, VisitInvoiceView
 from gorgona_booking.business.visits import (
     CompletionInput,
@@ -343,6 +350,29 @@ async def accrue_commission(
             actor=principal.actor,
             key=idempotency_key,
             body=body,
+        )
+
+
+@router.get("/prepaid")
+async def list_prepaid(
+    salon_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    counterparty_id: UUID | None = None,
+    after: UUID | None = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 50,
+) -> PrepaidList:
+    """L7 decision 46: the business's prepaid balances, one page in creation order."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.FINANCE_READ,
+        request_id=get_request_id(request),
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        return await prepaid.list_prepaid(
+            access.conn, salon_id, counterparty_id=counterparty_id, after=after, limit=limit
         )
 
 

@@ -209,6 +209,39 @@ async def load_prepaid(
     )
 
 
+class PrepaidList(BaseModel):
+    items: list[PrepaidView]
+    next_cursor: UUID | None
+
+
+async def list_prepaid(
+    conn: RuntimeConnection,
+    tenant_id: UUID,
+    *,
+    counterparty_id: UUID | None,
+    after: UUID | None,
+    limit: int,
+) -> PrepaidList:
+    """L7 decision 46: balances in creation order (time-ordered ids), one page after a cursor."""
+    rows = await (
+        await conn.execute(
+            "select id from gba.prepaid_balances "
+            "where (%(party)s::uuid is null or counterparty_id = %(party)s::uuid) "
+            "and (%(after)s::uuid is null or id > %(after)s::uuid) "
+            "order by id limit %(limit)s",
+            {"party": counterparty_id, "after": after, "limit": limit + 1},
+        )
+    ).fetchall()
+    items: list[PrepaidView] = []
+    for (prepaid_id,) in rows[:limit]:
+        view = await load_prepaid(conn, tenant_id, prepaid_id)
+        if view is None:
+            raise NotFoundError("Prepaid balance not found", prepaid_id=str(prepaid_id))
+        items.append(view)
+    more = len(rows) > limit
+    return PrepaidList(items=items, next_cursor=items[-1].prepaid_id if more else None)
+
+
 def _fingerprint(subject: str, body: BaseModel) -> str:
     return hashlib.sha256(
         json.dumps(

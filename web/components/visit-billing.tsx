@@ -2,21 +2,31 @@
 
 // L7b2a (package L): bill a visit and accrue its specialist's commission from the visit desk.
 // Finance issues the invoice and records the payment on its own screens; the desk shows both.
+// L7b2b: an open, issued invoice can be credited from a usable prepaid balance of its customer.
 import React, { useEffect, useId, useState } from "react";
 import { fetchCounterparties } from "../lib/counterparty-api";
 import { fetchAccounts, fetchLedger } from "../lib/ledger-api";
 import {
   accrueVisitCommission,
   billVisit,
+  fetchAllPrepaid,
+  fetchServices,
   fetchVisitCommission,
   fetchVisitInvoice,
   ManagementApiError,
+  type PrepaidView,
+  redeemPrepaid,
   type VisitCommissionView,
   type VisitInvoiceView,
 } from "../lib/management-api";
 
-type Book = { book_id: string; legal_name: string };
-type Account = { account_id: string; code: string; name: string; type: string };
+export type Book = { book_id: string; legal_name: string };
+export type Account = {
+  account_id: string;
+  code: string;
+  name: string;
+  type: string;
+};
 export type Party = {
   counterparty_id: string;
   display_name: string;
@@ -28,6 +38,19 @@ function refusal(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/** What a balance holds, in words: shared by this screen and the visit desk. */
+export function prepaidLabel(
+  balance: PrepaidView,
+  services: { id: string; name: string }[],
+): string {
+  if (balance.kind === "certificate")
+    return `Certificate: ${balance.remaining_value} of ${balance.value} ${balance.currency} left`;
+  const service =
+    services.find((s) => s.id === balance.variant_id)?.name ??
+    balance.variant_id;
+  return `Package: ${service} · ${balance.remaining_units} of ${balance.units} left`;
+}
+
 function unsafe(): never {
   throw new ManagementApiError(
     "INVALID_RESPONSE",
@@ -35,7 +58,7 @@ function unsafe(): never {
   );
 }
 
-async function allBooks(business: string): Promise<Book[]> {
+export async function allBooks(business: string): Promise<Book[]> {
   const books: Book[] = [];
   const seen = new Set<string>();
   let after: string | undefined;
@@ -51,7 +74,10 @@ async function allBooks(business: string): Promise<Book[]> {
   }
 }
 
-async function allAccounts(business: string, book: string): Promise<Account[]> {
+export async function allAccounts(
+  business: string,
+  book: string,
+): Promise<Account[]> {
   const accounts: Account[] = [];
   const seen = new Set<string>();
   let after: string | undefined;
@@ -80,7 +106,7 @@ export async function allActiveParties(business: string): Promise<Party[]> {
   }
 }
 
-function AccountSelect({
+export function AccountSelect({
   label,
   accounts,
   types,
@@ -126,6 +152,7 @@ export function VisitBillingSection({
   const headingId = useId();
   const invoiceHeadingId = useId();
   const commissionHeadingId = useId();
+  const redeemHeadingId = useId();
   const [invoice, setInvoice] = useState<VisitInvoiceView | null>(null);
   const [commission, setCommission] = useState<VisitCommissionView | null>(
     null,
@@ -145,6 +172,13 @@ export function VisitBillingSection({
   const [payable, setPayable] = useState("");
   const [accrualNumber, setAccrualNumber] = useState("");
   const [accrualDate, setAccrualDate] = useState(today);
+  const [balances, setBalances] = useState<PrepaidView[]>([]);
+  const [serviceNames, setServiceNames] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [prepaidId, setPrepaidId] = useState("");
+  const [creditNumber, setCreditNumber] = useState("");
+  const [creditDate, setCreditDate] = useState(today);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -192,6 +226,59 @@ export function VisitBillingSection({
       live = false;
     };
   }, [salonId, activeBook]);
+
+  // The usable balances of the invoice's customer, while something of the invoice is open.
+  const open =
+    invoice?.obligation != null && Number(invoice.obligation.available) > 0;
+  const party = invoice?.invoice.counterparty_id ?? "";
+  const currencyCode = invoice?.invoice.currency ?? "";
+  useEffect(() => {
+    if (!open || !party) return;
+    let live = true;
+    Promise.all([fetchAllPrepaid(salonId, party), fetchServices(salonId)])
+      .then(([list, services]) => {
+        if (!live) return;
+        const usable = list.filter(
+          (b) =>
+            b.usable &&
+            b.currency === currencyCode &&
+            (b.kind === "package"
+              ? (b.remaining_units ?? 0) > 0
+              : Number(b.remaining_value) > 0),
+        );
+        setBalances(usable);
+        setServiceNames(services.map((s) => ({ id: s.id, name: s.name })));
+        setPrepaidId((current) => current || (usable[0]?.prepaid_id ?? ""));
+      })
+      .catch((failure: unknown) => {
+        if (live)
+          setError(`Prepaid balances could not be read: ${refusal(failure)}`);
+      });
+    return () => {
+      live = false;
+    };
+  }, [salonId, open, party, currencyCode]);
+
+  async function redeem(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const redeemed = await redeemPrepaid(salonId, bookingId, {
+        prepaid_id: prepaidId,
+        credit_date: creditDate,
+        number: creditNumber.trim(),
+      });
+      setInvoice(await fetchVisitInvoice(salonId, bookingId));
+      setPrepaidId("");
+      setNotice(`Redeemed ${redeemed.amount} from the prepaid balance.`);
+    } catch (failure) {
+      setError(`The balance was not redeemed: ${refusal(failure)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function bill(event: React.FormEvent) {
     event.preventDefault();
@@ -342,15 +429,68 @@ export function VisitBillingSection({
             Invoice {invoice.invoice.number}: {invoice.invoice.state}
           </p>
           {obligation ? (
-            <p className="muted">
-              Paid {obligation.paid} of {obligation.principal}
-            </p>
+            <>
+              <p className="muted">
+                Paid {obligation.paid} of {obligation.principal}
+              </p>
+              {Number(obligation.credited) > 0 && (
+                <p className="muted">Credited {obligation.credited}</p>
+              )}
+            </>
           ) : (
             <p className="muted">
               Finance issues the invoice; the commission follows its payment.
             </p>
           )}
         </>
+      )}
+      {open && balances.length > 0 && (
+        <form onSubmit={redeem} aria-labelledby={redeemHeadingId}>
+          <h4 id={redeemHeadingId}>Redeem a prepaid balance</h4>
+          <p className="muted">
+            Credits the open invoice at once from a paid balance of its
+            customer; a balance is used once per visit.
+          </p>
+          <label>
+            Prepaid balance
+            <select
+              aria-label="Prepaid balance"
+              value={prepaidId}
+              onChange={(e) => setPrepaidId(e.target.value)}
+              required
+            >
+              {balances.map((b) => (
+                <option key={b.prepaid_id} value={b.prepaid_id}>
+                  {prepaidLabel(b, serviceNames)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Number
+            <input
+              type="text"
+              value={creditNumber}
+              maxLength={64}
+              onChange={(e) => setCreditNumber(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Credit date
+            <input
+              type="date"
+              value={creditDate}
+              onChange={(e) => setCreditDate(e.target.value)}
+              required
+            />
+          </label>
+          <div className="mgmt-form-actions">
+            <button type="submit" disabled={busy || !prepaidId}>
+              {busy ? "Redeeming…" : "Redeem"}
+            </button>
+          </div>
+        </form>
       )}
       {commission !== null && (
         <p className="hold-note">

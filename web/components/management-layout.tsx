@@ -37,6 +37,7 @@ const NAV_ITEMS = [
   { href: "/documents/", label: "Documents" },
   { href: "/ledger/", label: "Ledger" },
   { href: "/finance/", label: "Financial documents" },
+  { href: "/prepaid/", label: "Prepaid" },
   { href: "/provider-admission/", label: "Provider admission" },
   { href: "/settings/", label: "Settings" },
 ];
