@@ -68,3 +68,25 @@ reads are added for the screens: `GET .../staff/{id}/commission` and `GET .../bo
 | L7-09 | A confirmed visit is billed from its desk as a draft invoice; after finance issues and settles it, the desk shows it paid in full |
 | L7-10 | The commission of the paid visit is accrued once from the desk; the database holds the accrual of the plan's amount |
 | L7-11 | Desktop and mobile, keyboard only, axe without violations, no horizontal scroll |
+
+## L7b2b decisions (added 2026-10-23, same delegation)
+
+45. **A Prepaid screen.** A new "Prepaid" screen lists the business's prepaid balances (customer, package
+    of a service or certificate, remaining units or value, usable or waiting for payment), filtered by
+    customer, and sells one: a package names a service and its units, a certificate only a value; the sale
+    is a draft invoice line on a prepayment liability (L6 decision 34). Finance issues and settles it on its
+    own screens; the balance becomes usable once its invoice is paid in full.
+46. **One list read.** `GET /v1/salons/{id}/prepaid` (`finance.read`, company-wide data like every FIN-03
+    read): balances in creation order, at most 50 a page with an `after` cursor, optionally of one
+    customer. A balance is shown with its sale invoice, as the L6 view already is.
+47. **Redemption on the desk.** When the visit invoice is issued and still open, the desk's Billing lists
+    the usable balances of the invoice's customer in its currency and redeems one with a credit number and
+    a date (L6 decisions 36-38: a credit note issued at once). The desk then shows what was credited. A
+    credited visit's commission stays a manual matter (L5).
+
+| id | Requirement (L7b2b, NOT TESTED) |
+|---|---|
+| L7-12 | The list read returns balances in creation order, pages with a cursor, filters by customer, needs finance read rights and never shows another business's balance |
+| L7-13 | A manager sells a package from the Prepaid screen; after finance issues and settles its invoice the screen shows it usable |
+| L7-14 | The package is redeemed from the desk of an issued visit invoice; the desk shows the credit; the database holds one redemption and one used unit |
+| L7-15 | Desktop and mobile, keyboard only, axe without violations, no horizontal scroll |
