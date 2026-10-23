@@ -64,6 +64,10 @@ class PrepaidCurrencyError(ConflictError):
     code = "PREPAID_CURRENCY_MISMATCH"
 
 
+class PrepaidCurrencyMismatchError(DomainError):
+    code = "PREPAID_CURRENCY_MISMATCH"
+
+
 class PrepaidUnitExceedsLineError(ConflictError):
     code = "PREPAID_UNIT_EXCEEDS_LINE"
 
@@ -287,11 +291,17 @@ async def sell(
     if body.variant_id is not None:
         variant = await (
             await conn.execute(
-                "select name from gba.service_variants where id = %s", (body.variant_id,)
+                "select name, currency from gba.service_variants where id = %s",
+                (body.variant_id,),
             )
         ).fetchone()
         if variant is None:
             raise InvalidReferenceError("Unknown service", field="variant_id")
+        if variant[1] != body.currency:
+            # L8 decision 67: a package in another currency could never be redeemed.
+            raise PrepaidCurrencyMismatchError(
+                "A package is sold in its service's currency", currency=variant[1]
+            )
         description = f"Prepaid package: {body.units} x {variant[0]}"
     document = uuid7()
     await financial_documents.save_draft(

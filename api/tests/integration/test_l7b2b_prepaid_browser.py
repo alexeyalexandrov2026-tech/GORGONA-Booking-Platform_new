@@ -206,6 +206,15 @@ def test_prepaid_sale_and_redemption_real_browser(
                     "revenue_account_id": codes["4100"],
                     "invoice_date": today,
                     "number": f"FAKE-V-{project}",
+                    # L8 decision 68: 10.00 stays open after the package's 50.00, so the desk
+                    # still offers redemption and must no longer offer the used balance.
+                    "fee_lines": [
+                        {
+                            "description": "FAKE products",
+                            "amount": "10.00",
+                            "account_id": codes["4100"],
+                        }
+                    ],
                 },
             ).json()
             issue(book, billed["document_id"])

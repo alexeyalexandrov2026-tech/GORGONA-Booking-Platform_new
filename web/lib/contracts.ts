@@ -30,7 +30,8 @@ export const quoteSchema = z.discriminatedUnion("version", [
   z.strictObject({
     version: z.literal(2),
     ...quoteFields,
-    stages: z.array(stage).min(1).max(10),
+    // L8 decision 62: a visit of five services has up to fifty stages.
+    stages: z.array(stage).min(1).max(50),
   }),
 ]);
 const location = z.strictObject({

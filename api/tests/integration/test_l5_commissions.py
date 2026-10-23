@@ -16,6 +16,7 @@ from gorgona_booking.db.pool import RuntimePool, tenant_transaction
 from gorgona_booking.db.provisioning import add_membership
 from tests.integration import test_l4_billing as shared
 from tests.integration.booking_support import BookingWorld
+from tests.integration.configuration_support import Config
 from tests.integration.seed import seed_user
 from tests.integration.test_counterparties import card
 from tests.integration.test_external_payments import PaymentWorld
@@ -39,8 +40,20 @@ class Kit:
     accounts: dict[str, UUID]
 
 
+MODULES = ["booking_resources", "finance", "counterparties", "finance_documents"]
+
+
 @pytest.fixture
-async def kit(payments: PaymentWorld, app_pool: RuntimePool) -> Kit:
+async def kit(payments: PaymentWorld, app_pool: RuntimePool, idp: FakeIdp) -> Kit:
+    made = await make_kit(payments, app_pool)
+    # L8 decision 64: commission plans and accruals need the workforce module.
+    world = payments.ledger
+    await Config(world.client, idp).publish(world.user, world.business, 2, [*MODULES, "workforce"])
+    return made
+
+
+async def make_kit(payments: PaymentWorld, app_pool: RuntimePool) -> Kit:
+    """A FAKE payee and the book's chart, without changing the business's modules."""
     world = payments.ledger
     payee = uuid7()
     saved = await world.client.put(

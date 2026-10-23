@@ -106,7 +106,7 @@ test("a prepaid package is sold and redeemed from the visit desk", async ({
   });
   const refused = desk.getByText(/^Billing is not available here/);
   if (await refused.count()) throw new Error(await refused.first().innerText());
-  await expect(desk.getByText("Paid 0.00 of 50.00")).toBeVisible();
+  await expect(desk.getByText("Paid 0.00 of 60.00")).toBeVisible();
   const redeem = desk.getByRole("form", { name: "Redeem a prepaid balance" });
   await redeem
     .getByLabel("Prepaid balance")
@@ -119,6 +119,12 @@ test("a prepaid package is sold and redeemed from the visit desk", async ({
       .filter({ hasText: "Redeemed 50.00 from the prepaid balance." }),
   ).toBeVisible();
   await expect(desk.getByText("Credited 50.00")).toBeVisible();
+  // L8 decision 68: 10.00 is still open, but the used balance is no longer offered; with no
+  // other usable balance the redemption form is gone.
+  await expect(
+    redeem.getByRole("option", { name: /FAKE FAKE_BASE/ }),
+  ).toHaveCount(0);
+  await expect(redeem).toHaveCount(0);
   await accessible(page, testInfo, ".visit-desk", "redeemed");
 
   // Keyboard only: close.

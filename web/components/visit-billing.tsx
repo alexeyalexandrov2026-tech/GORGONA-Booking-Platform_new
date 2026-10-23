@@ -173,6 +173,7 @@ export function VisitBillingSection({
   const [accrualNumber, setAccrualNumber] = useState("");
   const [accrualDate, setAccrualDate] = useState(today);
   const [balances, setBalances] = useState<PrepaidView[]>([]);
+  const [usedHere, setUsedHere] = useState<string[]>([]);
   const [serviceNames, setServiceNames] = useState<
     { id: string; name: string }[]
   >([]);
@@ -241,6 +242,8 @@ export function VisitBillingSection({
         const usable = list.filter(
           (b) =>
             b.usable &&
+            // L8 decision 68: a balance used on this visit is not offered again.
+            !usedHere.includes(b.prepaid_id) &&
             b.currency === currencyCode &&
             (b.kind === "package"
               ? (b.remaining_units ?? 0) > 0
@@ -257,7 +260,7 @@ export function VisitBillingSection({
     return () => {
       live = false;
     };
-  }, [salonId, open, party, currencyCode]);
+  }, [salonId, open, party, currencyCode, usedHere]);
 
   async function redeem(event: React.FormEvent) {
     event.preventDefault();
@@ -271,6 +274,8 @@ export function VisitBillingSection({
         number: creditNumber.trim(),
       });
       setInvoice(await fetchVisitInvoice(salonId, bookingId));
+      // Reloads the customer's balances without the one just used (decision 68).
+      setUsedHere((used) => [...used, redeemed.prepaid_id]);
       setPrepaidId("");
       setNotice(`Redeemed ${redeemed.amount} from the prepaid balance.`);
     } catch (failure) {

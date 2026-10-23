@@ -24,6 +24,7 @@ from gorgona_booking.business.financial_contracts import (
     InvoiceDraftInput,
     InvoiceLineInput,
 )
+from gorgona_booking.business.module_gate import require_module
 from gorgona_booking.business.visit_billing import catalog_minor, load_visit_invoice
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import ConflictError, DomainError, InvalidReferenceError, NotFoundError
@@ -217,6 +218,8 @@ async def save_plan(
     conn: RuntimeConnection, tenant_id: UUID, resource_id: UUID, user_id: UUID, body: PlanInput
 ) -> PlanView:
     """Replace a specialist's whole plan with the expected revision (decision 28)."""
+    # L8 decision 64: commission plans belong to the workforce module.
+    await require_module(conn, tenant_id, "workforce")
     artist = await (
         await conn.execute(
             "select 1 from gba.resources where id = %s and kind = 'artist'", (resource_id,)
@@ -244,12 +247,37 @@ async def save_plan(
         )
         for rule in body.rules
     ]
-    if current is None:
+    # L8 decision 66: references are refused in plain words before anything is written.
+    payee = await (
         await conn.execute(
-            "insert into gba.commission_plans (tenant_id, resource_id, counterparty_id, currency, "
-            "revision, updated_by) values (%s, %s, %s, %s, 1, %s)",
-            (tenant_id, resource_id, body.counterparty_id, body.currency, user_id),
+            "select 1 from gba.counterparties where id = %s", (body.counterparty_id,)
         )
+    ).fetchone()
+    if payee is None:
+        raise InvalidReferenceError("Unknown payee", field="counterparty_id")
+    named = sorted({str(rule.service_id) for rule in body.rules if rule.service_id is not None})
+    if named:
+        found = await (
+            await conn.execute(
+                "select count(*) from gba.services where id = any(%s::uuid[])", (named,)
+            )
+        ).fetchone()
+        if found is None or int(found[0]) != len(named):
+            raise InvalidReferenceError("Unknown service in a rule", field="rules")
+    if current is None:
+        # A first save racing another one waits on its row and then finds the plan taken.
+        created = await (
+            await conn.execute(
+                "insert into gba.commission_plans (tenant_id, resource_id, counterparty_id, "
+                "currency, revision, updated_by) values (%s, %s, %s, %s, 1, %s) "
+                "on conflict (tenant_id, resource_id) do nothing returning resource_id",
+                (tenant_id, resource_id, body.counterparty_id, body.currency, user_id),
+            )
+        ).fetchone()
+        if created is None:
+            raise CommissionPlanRevisionError(
+                "The plan changed since it was read; reload it", revision=1
+            )
     else:
         await conn.execute(
             "update gba.commission_plans set counterparty_id = %s, currency = %s, "
@@ -338,6 +366,8 @@ async def accrue_commission(
     body: CommissionInput,
 ) -> VisitCommissionView:
     """One payable accrual of a fully paid visit to its specialist's payee (decisions 29-31)."""
+    # L8 decision 64: accruing a commission needs the workforce module.
+    await require_module(conn, tenant_id, "workforce")
     scope = IdempotencyScope(tenant_id, actor, "visit.commission", key)
     fingerprint = hashlib.sha256(
         json.dumps(

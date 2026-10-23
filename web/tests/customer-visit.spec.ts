@@ -201,3 +201,35 @@ test("a two-service version 2 quote parses strictly", () => {
     false,
   );
 });
+
+// L8 decision 62 (review R9): five services of up to ten stages each.
+test("a visit quote of more than ten stages parses; more than fifty is refused", () => {
+  const stage = (kind: "active" | "processing") => ({
+    kind,
+    minutes: 10,
+    resources: kind === "active" ? ["specialist"] : ["chair"],
+  });
+  const quote = (count: number) => ({
+    version: 2,
+    currency: "USD",
+    total_cents: 1000,
+    booking_duration_minutes: 10 * count,
+    lines: [
+      {
+        kind: "variant",
+        id: ids.gel,
+        code: "FAKE_GEL",
+        name: "FAKE gel",
+        price_cents: 1000,
+        duration_minutes: 10 * count,
+        revision: 1,
+      },
+    ],
+    stages: Array.from({ length: count }, (_, i) =>
+      stage(i % 2 ? "processing" : "active"),
+    ),
+  });
+  expect(quoteSchema.safeParse(quote(11)).success).toBe(true);
+  expect(quoteSchema.safeParse(quote(50)).success).toBe(true);
+  expect(quoteSchema.safeParse(quote(51)).success).toBe(false);
+});

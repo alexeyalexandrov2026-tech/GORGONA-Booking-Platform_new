@@ -30,7 +30,8 @@ from tests.integration.test_l7b_visit_desk_browser import BUSINESS_ZONE, _starte
 from tests.integration.test_management_browser import _browser_env, _management_app, _provider
 from tests.support.fake_idp import FakeIdp
 
-MODULES = ["booking_resources", "finance", "counterparties", "finance_documents"]
+# L8 decision 64: the commission plan and accrual need the workforce module.
+MODULES = ["booking_resources", "finance", "counterparties", "finance_documents", "workforce"]
 
 
 def test_visit_billing_and_commission_real_browser(

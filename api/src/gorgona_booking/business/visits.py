@@ -17,6 +17,7 @@ from gorgona_booking.booking import idempotency
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import IdempotencyKeyReusedError
 from gorgona_booking.business import stock
+from gorgona_booking.business.module_gate import INVENTORY_MODULE, require_module
 from gorgona_booking.business.stock_contracts import (
     MAX_QUANTITY,
     DecimalText,
@@ -49,6 +50,10 @@ class VisitNotCompletableError(ConflictError):
 
 class VisitAlreadyCompletedError(ConflictError):
     code = "VISIT_ALREADY_COMPLETED"
+
+
+class VisitPlaceOtherBranchError(DomainError):
+    code = "VISIT_PLACE_OTHER_BRANCH"
 
 
 class VisitNotCompletedError(ConflictError):
@@ -353,6 +358,22 @@ async def post_consumption(
     assert view is not None  # noqa: S101 - locked above
     if locked[0] is not None:
         return view  # posted once; a repeat answers the same document
+    # L8 decision 64: posting needs the inventory module even when nothing is written off.
+    await require_module(conn, tenant_id, INVENTORY_MODULE)
+    # L8 decision 65: the materials leave a storage place of the visit's own branch.
+    branches = await (
+        await conn.execute(
+            "select p.location_id, b.location_id from gba.bookings b "
+            "left join gba.stock_places p on p.tenant_id = b.tenant_id and p.id = %s "
+            "where b.id = %s",
+            (body.place_id, booking_id),
+        )
+    ).fetchone()
+    if branches is not None and branches[0] is not None and branches[0] != branches[1]:
+        raise VisitPlaceOtherBranchError(
+            "Write the visit's materials off from a place of its own branch",
+            place_id=str(body.place_id),
+        )
     used = await (
         await conn.execute(
             "select u.item_id, u.actual, s.quantity_scale from gba.visit_material_uses u "

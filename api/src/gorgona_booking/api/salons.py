@@ -716,6 +716,23 @@ async def _stage_kinds(conn: RuntimeConnection, booking_id: UUID) -> list[tuple[
     return [(kind, row[0]) for kind in sorted(kinds)]
 
 
+def _further_services(quote: Quote) -> list[ExtraLine]:
+    """The services after the first of a stored visit quote, each with its own add-ons (L2c)."""
+    extra: list[ExtraLine] = []
+    seen_first = False
+    for line in quote.lines:
+        if line.kind == "variant":
+            if seen_first:
+                extra.append(ExtraLine(variant_id=line.id))
+            seen_first = True
+        elif extra:
+            last = extra[-1]
+            extra[-1] = ExtraLine(
+                variant_id=last.variant_id, add_on_ids=[*last.add_on_ids, line.id]
+            )
+    return extra
+
+
 async def _refuse_recorded_visit(conn: RuntimeConnection, booking_id: UUID) -> None:
     """L8 decision 60: a completed, invoiced, commissioned or redeemed visit stays put.
 
@@ -1121,7 +1138,11 @@ async def reschedule_booking(
         await _ensure_available(
             conn,
             Selection(
-                location_id=location_id, variant_id=variant_id, resource_id=target_resource_id
+                location_id=location_id,
+                variant_id=variant_id,
+                resource_id=target_resource_id,
+                # L8 decision 63: one specialist serves every service of the visit.
+                extra_lines=_further_services(quote),
             ),
             starts_at,
             quote,
@@ -1503,8 +1524,11 @@ async def replace_service_stages(
             )
         row = await (
             await conn.execute(
+                # L8 decision 61: touching the row bumps the revision even when the total is
+                # unchanged or the stages are cleared, so a stale save is always refused.
                 "update gba.service_variants set booking_duration_minutes="
-                "coalesce(%s,booking_duration_minutes) where id=%s returning "
+                "coalesce(%s,booking_duration_minutes), updated_at=clock_timestamp() "
+                "where id=%s returning "
                 "id, service_id, code, name, status, price_cents, currency, "
                 "booking_duration_minutes, is_bookable, revision",
                 (sum(s.minutes for s in body.stages) or None, variant_id),
