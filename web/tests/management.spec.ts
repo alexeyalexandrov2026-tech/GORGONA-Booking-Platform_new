@@ -51,9 +51,10 @@ test("business profile persists, retries uncertain saves and recovers from confl
   );
   await page.getByRole("button", { name: "Retry same save" }).click();
   const request = await saved;
-  await expect(page.getByRole("status")).toContainText(
-    "Business profile saved",
-  );
+  // Other sections may still show their own "Loading…" status; look only at the save's.
+  await expect(
+    page.getByRole("status").filter({ hasText: "Business profile saved" }),
+  ).toBeVisible();
   expect(attempts).toHaveLength(2);
   expect(attempts[0]).toBe(attempts[1]);
   await page.unroute("**/v1/businesses/*/profile");
@@ -118,9 +119,10 @@ test("business profile persists, retries uncertain saves and recovers from confl
   await page
     .getByRole("button", { name: "Save business profile", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText(
-    "Business profile saved",
-  );
+  // Other sections may still show their own "Loading…" status; look only at the save's.
+  await expect(
+    page.getByRole("status").filter({ hasText: "Business profile saved" }),
+  ).toBeVisible();
   expect(
     (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
       .violations,

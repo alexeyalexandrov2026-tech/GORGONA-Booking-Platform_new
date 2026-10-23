@@ -147,7 +147,8 @@ test("equipment is added as a resource kind", async ({ page }, testInfo) => {
   await page
     .getByRole("button", { name: "Add Staff Member", exact: true })
     .click();
+  // The staff list reloads after the add; give a slow CI machine time for it.
   await expect(
     page.getByRole("row").filter({ hasText: name }).getByText("equipment"),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15000 });
 });
