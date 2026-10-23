@@ -1,6 +1,16 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-23: L8b1 review fixes R8-R15 locally verified; L8a CI failed on two specs
+## Current checkpoint — 2026-10-23: L8b2 acceptance gaps locally verified; L8b1 CI green
+
+L8b1 CI SUCCESS (run 39981532055, includes the spec fix for the L8a CI failure). L8b2 in `1e4368a` on
+`codex/package-l8b2-acceptance-gaps`: the visit desk follows the business's modules (no write-off without
+inventory, no billing without invoices, no commission without workforce); races of consumption, accrual and
+redemption leave one write after an observed `pg_locks` wait; billing and prepaid refuse without invoices; a
+room stage holds the room against staff reservations. The API proofs passed at once on existing code (no API
+change). Focused **471 passed**; full **2548 passed, 4 skipped** ([validation](evidence/2026-10-23-l8b2-acceptance-gaps/VALIDATION.md)).
+Next: L8c (BEAUTY-01 acceptance record). Next migration **0072**.
+
+## Previous checkpoint — 2026-10-23: L8b1 review fixes R8-R15 locally verified; L8a CI failed on two specs
 
 L8b1 in `ee7fc1b` on `codex/package-l8b1-review-fixes` fixes the remaining review findings R8-R15 (stage
 revision, 50 stages on the site, reschedule checks every service, workforce and inventory gates on writes, plan

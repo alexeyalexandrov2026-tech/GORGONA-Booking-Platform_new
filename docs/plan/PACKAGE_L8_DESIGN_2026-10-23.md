@@ -110,7 +110,7 @@ L-10 named in the review and in the L-01..L-12 mapping.
     a staff reservation of that room for an overlapping time is refused, and the specialist stays free during
     processing.
 
-| id | Requirement (L8b2, NOT TESTED) |
+| id | Requirement (L8b2, PASS locally in `1e4368a`) |
 |---|---|
 | L8-17 | Consumption, accrual and redemption races each leave one write after an observed `pg_locks` wait |
 | L8-18 | With workforce off the desk shows no commission form; with inventory off no materials form; real browser desktop and mobile, keyboard, axe |
