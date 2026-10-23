@@ -54,22 +54,26 @@ BUSINESS_ZONE = "select gba.business_timezone(%s)"
 
 
 async def _started_visits(dsn: str, world: BookingWorld) -> dict[str, UUID]:
+    """Per project a visit to complete (3 hours ago) and, for L9a, one missed (5 hours ago)."""
     pool = create_runtime_pool(dsn, min_size=1, max_size=2)
     await pool.open()
     try:
-        start = datetime.now(UTC).replace(second=0, microsecond=0) - timedelta(hours=3)
+        now = datetime.now(UTC).replace(second=0, microsecond=0)
         service = BookingService(pool)
         visits: dict[str, UUID] = {}
         for project, artist in (("desktop", world.artist_a1), ("mobile", world.artist_a2)):
-            result = await service.create_confirmed_booking(
-                world.a.tenant_id,
-                ReservationRequest(
-                    resource_id=artist, variant_id=world.catalog_a.base_variant_id, starts_at=start
-                ),
-                actor="test:l7b",
-                idempotency_key=None,
-            )
-            visits[project] = result.booking_id
+            for name, hours in ((project, 3), (f"{project}-missed", 5)):
+                result = await service.create_confirmed_booking(
+                    world.a.tenant_id,
+                    ReservationRequest(
+                        resource_id=artist,
+                        variant_id=world.catalog_a.base_variant_id,
+                        starts_at=now - timedelta(hours=hours),
+                    ),
+                    actor="test:l7b",
+                    idempotency_key=None,
+                )
+                visits[name] = result.booking_id
         return visits
     finally:
         await pool.close()
@@ -216,6 +220,17 @@ def test_visit_desk_completion_and_consumption_real_browser(
             f"{salon}/services/{base}/materials",
             {"expected_revision": revision, "lines": [{"item_id": str(dye), "quantity": "2.5"}]},
         )
+        # L9a: fee policy version 1 before the visits are booked (no-show: half the visit).
+        request(
+            "POST",
+            f"{salon}/visit-fee-policy",
+            {
+                "expected_version": 0,
+                "free_cancellation_minutes": 1440,
+                "late_cancellation_fee": None,
+                "no_show_fee": {"percent": "50.00"},
+            },
+        )
         # psycopg's async mode needs the selector loop on Windows.
         visits = asyncio.run(
             _started_visits(test_database.app_dsn, world), loop_factory=asyncio.SelectorEventLoop
@@ -227,6 +242,8 @@ def test_visit_desk_completion_and_consumption_real_browser(
                 **env,
                 "GBA_L7B_DESKTOP_BOOKING": str(visits["desktop"]),
                 "GBA_L7B_MOBILE_BOOKING": str(visits["mobile"]),
+                "GBA_L9A_DESKTOP_NO_SHOW": str(visits["desktop-missed"]),
+                "GBA_L9A_MOBILE_NO_SHOW": str(visits["mobile-missed"]),
             },
             capture_output=True,
             text=True,
@@ -237,6 +254,16 @@ def test_visit_desk_completion_and_consumption_real_browser(
         print(result.stdout)  # noqa: T201 - actual browser evidence in pytest -s
 
     with owner_tenant_transaction(owner_conn, tenant):
+        # L9a: the missed visits are no-shows under version 1, never completed.
+        for project in ("desktop", "mobile"):
+            missed = visits.pop(f"{project}-missed")
+            assert owner_conn.execute(
+                "select policy_version from gba.visit_no_shows where booking_id = %s", (missed,)
+            ).fetchone() == (1,)
+            assert owner_conn.execute(
+                "select count(*) from gba.visit_completions where booking_id = %s", (missed,)
+            ).fetchone() == (0,)
+        assert owner_conn.execute("select count(*) from gba.visit_fee_policies").fetchone() == (3,)
         for booking in visits.values():
             completion = owner_conn.execute(
                 "select stock_document_id is not null, consumption_posted_at is not null "

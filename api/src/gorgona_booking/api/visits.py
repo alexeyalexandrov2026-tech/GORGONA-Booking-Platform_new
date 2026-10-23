@@ -9,7 +9,7 @@ from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import ROLE_PERMISSIONS, Permission
-from gorgona_booking.business import commissions, prepaid, visit_billing
+from gorgona_booking.business import commissions, fee_policies, prepaid, visit_billing
 from gorgona_booking.business import visits as service
 from gorgona_booking.business.commissions import (
     CommissionInput,
@@ -17,6 +17,7 @@ from gorgona_booking.business.commissions import (
     PlanView,
     VisitCommissionView,
 )
+from gorgona_booking.business.fee_policies import FeePolicyInput, FeePolicyList, FeePolicyView
 from gorgona_booking.business.prepaid import (
     PrepaidList,
     PrepaidView,
@@ -29,6 +30,7 @@ from gorgona_booking.business.visits import (
     CompletionInput,
     CompletionView,
     ConsumptionInput,
+    NoShowView,
     RecipeReplace,
     RecipeView,
 )
@@ -147,6 +149,86 @@ async def complete_visit(
             key=idempotency_key,
             body=body,
         )
+
+
+@router.get("/visit-fee-policy")
+async def get_fee_policy(
+    salon_id: UUID, request: Request, principal: CurrentPrincipal
+) -> FeePolicyList:
+    """L9 decision 76: the published versions, newest first; anyone who reads bookings."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        return await fee_policies.list_versions(access.conn)
+
+
+@router.post("/visit-fee-policy")
+async def publish_fee_policy(
+    salon_id: UUID, body: FeePolicyInput, request: Request, principal: CurrentPrincipal
+) -> FeePolicyView:
+    """L9 decision 76: a new version after the expected one; settings rights."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.SETTINGS_MANAGE,
+        request_id=get_request_id(request),
+    ) as access:
+        return await fee_policies.publish(access.conn, salon_id, principal.user_id, body)
+
+
+@router.post("/bookings/{booking_id}/no-show")
+async def record_no_show(
+    salon_id: UUID,
+    booking_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> NoShowView:
+    """L9 decision 78: booking rights like a completion, within the caller's branch."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_WRITE,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        return await service.record_no_show(
+            access.conn,
+            salon_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+        )
+
+
+@router.get("/bookings/{booking_id}/no-show")
+async def get_no_show(
+    salon_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> NoShowView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BOOKING_READ,
+        request_id=get_request_id(request),
+        allow_location_scope=True,
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        view = await service.load_no_show(access.conn, booking_id)
+        if view is None:
+            raise service.VisitNoShowNotFoundError(
+                "This visit is not recorded as a no-show", booking_id=str(booking_id)
+            )
+        return view
 
 
 @router.get("/bookings/{booking_id}/completion")

@@ -14,8 +14,11 @@ import {
   fetchCompletion,
   fetchConfiguration,
   fetchLegalEntities,
+  fetchNoShow,
   ManagementApiError,
+  type NoShowView,
   postConsumption,
+  recordNoShow,
   type RecipeLine,
 } from "../lib/management-api";
 import { VisitBillingSection } from "./visit-billing";
@@ -55,6 +58,8 @@ export function VisitDeskDialog({
   const titleId = useId();
   const [completion, setCompletion] = useState<CompletionView | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // L9a: a visit recorded as a no-show is not completed; it is billed its policy fee.
+  const [noShow, setNoShow] = useState<NoShowView | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [places, setPlaces] = useState<Place[]>([]);
   const [entities, setEntities] = useState<LegalEntity[]>([]);
@@ -74,10 +79,14 @@ export function VisitDeskDialog({
 
   useEffect(() => {
     let live = true;
-    fetchCompletion(salonId, booking.booking_id)
-      .then((found) => {
+    Promise.all([
+      fetchCompletion(salonId, booking.booking_id),
+      fetchNoShow(salonId, booking.booking_id),
+    ])
+      .then(([found, missed]) => {
         if (!live) return;
         setCompletion(found);
+        setNoShow(missed);
         setLoaded(true);
       })
       .catch((failure: unknown) => {
@@ -135,6 +144,20 @@ export function VisitDeskDialog({
     }
   }
 
+  async function markNoShow() {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      setNoShow(await recordNoShow(salonId, booking.booking_id));
+      setNotice("Recorded as a no-show.");
+    } catch (failure) {
+      setError(`The no-show was not recorded: ${refusal(failure)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function writeOff(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -174,7 +197,27 @@ export function VisitDeskDialog({
             Loading the visit…
           </p>
         )}
-        {loaded && completion === null && (
+        {noShow !== null && (
+          <p className="hold-note">
+            No-show
+            {noShow.fee !== null
+              ? `: fee under the policy ${noShow.fee}.`
+              : "; there is no fee under the policy."}
+          </p>
+        )}
+        {loaded && completion === null && noShow === null && (
+          <div className="mgmt-form-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={markNoShow}
+              disabled={busy}
+            >
+              Mark as no-show
+            </button>
+          </div>
+        )}
+        {loaded && completion === null && noShow === null && (
           <form onSubmit={complete} aria-labelledby="complete-heading">
             <h3 id="complete-heading">Complete the visit</h3>
             <p className="muted">

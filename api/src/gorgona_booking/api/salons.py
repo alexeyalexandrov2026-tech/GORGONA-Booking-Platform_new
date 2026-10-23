@@ -736,6 +736,8 @@ def _further_services(quote: Quote) -> list[ExtraLine]:
 async def _refuse_recorded_visit(conn: RuntimeConnection, booking_id: UUID) -> None:
     """L8 decision 60: a completed, invoiced, commissioned or redeemed visit stays put.
 
+    L9 decision 78: so does a visit recorded as a no-show.
+
     Moving or cancelling it would let the same visit be completed, written off, billed and
     commissioned again; corrections go through the finance documents.
     """
@@ -744,8 +746,9 @@ async def _refuse_recorded_visit(conn: RuntimeConnection, booking_id: UUID) -> N
             "select exists (select 1 from gba.visit_completions where booking_id = %s)"
             " or exists (select 1 from gba.visit_invoices where booking_id = %s)"
             " or exists (select 1 from gba.visit_commissions where booking_id = %s)"
-            " or exists (select 1 from gba.prepaid_redemptions where booking_id = %s)",
-            (booking_id, booking_id, booking_id, booking_id),
+            " or exists (select 1 from gba.prepaid_redemptions where booking_id = %s)"
+            " or exists (select 1 from gba.visit_no_shows where booking_id = %s)",
+            (booking_id, booking_id, booking_id, booking_id, booking_id),
         )
     ).fetchone()
     if row and row[0]:

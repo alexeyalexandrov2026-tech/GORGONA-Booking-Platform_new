@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from gorgona_booking.booking import idempotency
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import IdempotencyKeyReusedError
-from gorgona_booking.business import stock
+from gorgona_booking.business import fee_policies, stock, visit_billing
 from gorgona_booking.business.module_gate import INVENTORY_MODULE, require_module
 from gorgona_booking.business.stock_contracts import (
     MAX_QUANTITY,
@@ -58,6 +58,28 @@ class VisitPlaceOtherBranchError(DomainError):
 
 class VisitNotCompletedError(ConflictError):
     code = "VISIT_NOT_COMPLETED"
+
+
+class VisitNoShowError(ConflictError):
+    """L9 decision 78: a no-show visit is never completed."""
+
+    code = "VISIT_NO_SHOW"
+
+
+class VisitNotStartedError(ConflictError):
+    code = "VISIT_NOT_STARTED"
+
+
+class VisitNoShowNotFoundError(NotFoundError):
+    code = "VISIT_NO_SHOW_NOT_FOUND"
+
+
+class NoShowView(BaseModel):
+    booking_id: UUID
+    recorded_at: datetime
+    # The fee policy version in force when the visit was booked, and its no-show fee.
+    policy_version: int | None
+    fee: str | None
 
 
 class VisitCompletionNotFoundError(NotFoundError):
@@ -308,6 +330,8 @@ async def complete_visit(
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
     if await load_completion(conn, booking_id) is not None:
         raise VisitAlreadyCompletedError("This visit is already completed")
+    if await load_no_show(conn, booking_id) is not None:
+        raise VisitNoShowError("This visit is recorded as a no-show")
     if booking[0] != "CONFIRMED" or not booking[1]:
         raise VisitNotCompletableError(
             "Only a confirmed visit that has started can be completed", status=booking[0]
@@ -412,3 +436,70 @@ async def post_consumption(
     posted = await load_completion(conn, booking_id)
     assert posted is not None  # noqa: S101
     return posted
+
+
+async def load_no_show(conn: RuntimeConnection, booking_id: UUID) -> NoShowView | None:
+    row = await (
+        await conn.execute(
+            "select n.recorded_at, n.policy_version, b.quote from gba.visit_no_shows n "
+            "join gba.bookings b on b.id = n.booking_id where n.booking_id = %s",
+            (booking_id,),
+        )
+    ).fetchone()
+    if row is None:
+        return None
+    _, units = await visit_billing.currency_units(conn, row[2])
+    fee = await visit_billing.policy_fee(conn, booking_id, row[2], "no_show")
+    return NoShowView(
+        booking_id=booking_id,
+        recorded_at=row[0],
+        policy_version=row[1],
+        fee=None if fee is None else visit_billing.money(fee, units),
+    )
+
+
+async def record_no_show(
+    conn: RuntimeConnection,
+    tenant_id: UUID,
+    booking_id: UUID,
+    *,
+    user_id: UUID,
+    actor: str,
+    key: str,
+) -> NoShowView:
+    """L9 decision 78: once, for a started confirmed visit that was not completed."""
+    scope = IdempotencyScope(tenant_id, actor, "visit.no_show", key)
+    fingerprint = hashlib.sha256(str(booking_id).encode()).hexdigest()
+    stored = await idempotency.claim(conn, scope, fingerprint)
+    if stored is not None:
+        if stored.request_hash != fingerprint:
+            raise IdempotencyKeyReusedError("Key was used for another request")
+        return NoShowView.model_validate(stored.body)
+    booking = await (
+        await conn.execute(
+            "select status, starts_at <= now(), location_id from gba.bookings "
+            "where id = %s for update",
+            (booking_id,),
+        )
+    ).fetchone()
+    if booking is None:
+        raise NotFoundError("Booking not found", booking_id=str(booking_id))
+    recorded = await load_no_show(conn, booking_id)
+    if recorded is not None:
+        return recorded  # once; a repeat answers the same fact
+    if await load_completion(conn, booking_id) is not None:
+        raise VisitAlreadyCompletedError("This visit is already completed")
+    if booking[0] != "CONFIRMED":
+        raise VisitNotCompletableError("Only a confirmed visit can be a no-show", status=booking[0])
+    if not booking[1]:
+        raise VisitNotStartedError("This visit has not started yet")
+    policy = await fee_policies.policy_for_booking(conn, booking_id)
+    await conn.execute(
+        "insert into gba.visit_no_shows (tenant_id, booking_id, location_id, policy_version, "
+        "recorded_by) values (%s, %s, %s, %s, %s)",
+        (tenant_id, booking_id, booking[2], None if policy is None else policy.version, user_id),
+    )
+    view = await load_no_show(conn, booking_id)
+    assert view is not None  # noqa: S101 - inserted above
+    await idempotency.complete(conn, scope, 200, view.model_dump(mode="json"))
+    return view

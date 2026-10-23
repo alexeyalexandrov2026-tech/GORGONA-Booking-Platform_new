@@ -15,6 +15,7 @@ from gorgona_booking.db.pool import RuntimePool, tenant_transaction
 from gorgona_booking.db.provisioning import add_membership
 from tests.integration import test_external_payments as shared
 from tests.integration.booking_support import BookingWorld, at
+from tests.integration.fee_policy_support import publish_fee_policy, soon_visit
 from tests.integration.seed import seed_user
 from tests.integration.test_external_payments import PaymentWorld
 from tests.support.fake_idp import FakeIdp
@@ -121,15 +122,22 @@ async def test_a_visit_invoice_has_the_quote_lines_then_fees(
 async def test_a_cancelled_visit_is_billed_for_fees_only(
     payments: PaymentWorld, world: BookingWorld, app_pool: RuntimePool
 ) -> None:
-    booking = await visit(world, app_pool, cancel=True)
-    nothing = await post(payments, booking, bill(payments))
+    before = await visit(world, app_pool, cancel=True)
+    nothing = await post(payments, before, bill(payments))
     assert nothing.status_code == 409, nothing.text
     assert nothing.json()["error"]["code"] == "VISIT_NOT_BILLABLE"
-    saved = await post(payments, booking, bill(payments, fee_lines=[fee(payments, "15.00")]))
+    # L9 decision 79: the fee follows the policy in force when the visit was booked.
+    ledger = payments.ledger
+    published = await publish_fee_policy(
+        ledger.client, ledger.business, ledger.headers(), late={"amount": "15.00"}
+    )
+    assert published.status_code == 200, published.text
+    booking = await soon_visit(world, app_pool, hours=2, cancel=True)
+    saved = await post(payments, booking, bill(payments))
     assert saved.status_code == 200, saved.text
     invoice = saved.json()["invoice"]
     assert [(line["description"], line["amount"]) for line in invoice["lines"]] == [
-        ("FAKE late cancellation fee", "15.00")
+        ("Late cancellation fee", "15.00")
     ]
 
 

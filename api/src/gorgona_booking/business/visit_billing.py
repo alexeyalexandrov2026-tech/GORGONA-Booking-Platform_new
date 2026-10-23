@@ -8,7 +8,7 @@ it (a deposit and the rest) are FIN-03's own routes.
 import hashlib
 import json
 from datetime import date
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid7
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.booking import idempotency
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import IdempotencyKeyReusedError
-from gorgona_booking.business import financial_documents, settlements
+from gorgona_booking.business import fee_policies, financial_documents, settlements
 from gorgona_booking.business.financial_contracts import (
     InvoiceDocumentView,
     InvoiceDraftInput,
@@ -44,6 +44,12 @@ class VisitAlreadyInvoicedError(ConflictError):
 
 class VisitPriceNotExactError(DomainError):
     code = "VISIT_PRICE_NOT_EXACT"
+
+
+class VisitFeeFromPolicyError(DomainError):
+    """L9 decision 79: a cancelled or no-show visit is billed only its policy fee."""
+
+    code = "VISIT_FEE_FROM_POLICY"
 
 
 def catalog_minor(price_cents: int, units: int) -> int:
@@ -104,7 +110,7 @@ class VisitInvoiceView(BaseModel):
     obligation: ObligationView | None
 
 
-def _money(minor: int, units: int) -> str:
+def money(minor: int, units: int) -> str:
     whole, fraction = divmod(minor, 10**units)
     return str(whole) if units == 0 else f"{whole}.{fraction:0{units}d}"
 
@@ -137,31 +143,112 @@ async def load_visit_invoice(
     )
 
 
-async def _lines(
-    conn: RuntimeConnection, status: str, quote: dict[str, Any], body: VisitInvoiceInput
-) -> tuple[str, list[InvoiceLineInput]]:
-    """The quote lines of a confirmed visit, then the fee lines (decisions 22 and 24)."""
+async def currency_units(conn: RuntimeConnection, quote: dict[str, Any]) -> tuple[str, int]:
     currency = str(quote.get("currency", ""))
     row = await (
         await conn.execute("select minor_units from gba.currencies where code = %s", (currency,))
     ).fetchone()
     if row is None:
         raise InvalidReferenceError("Unknown currency of the visit", field="currency")
-    units = int(row[0])
+    return currency, int(row[0])
+
+
+FeeKind = Literal["late_cancellation", "no_show"]
+FEE_NAMES: dict[FeeKind, str] = {
+    "late_cancellation": "Late cancellation fee",
+    "no_show": "No-show fee",
+}
+
+
+async def policy_fee(
+    conn: RuntimeConnection, booking_id: UUID, quote: dict[str, Any], kind: FeeKind
+) -> int | None:
+    """The fee of the version in force when the visit was booked (L9 decisions 77 and 79).
+
+    A percentage of the priced total rounds half up; a fixed amount converts exactly.
+    """
+    policy = await fee_policies.policy_for_booking(conn, booking_id)
+    if policy is None:
+        return None
+    rule = policy.late_cancellation_fee if kind == "late_cancellation" else policy.no_show_fee
+    if rule is None:
+        return None
+    _, units = await currency_units(conn, quote)
+    if rule.basis_points is not None:
+        total = sum(minor for _, minor in priced_lines(quote, units))
+        return (2 * total * rule.basis_points + 10000) // 20000
+    assert rule.cents is not None  # noqa: S101 - one kind is set
+    return catalog_minor(rule.cents, units)
+
+
+async def _late_cancellation(conn: RuntimeConnection, booking_id: UUID) -> bool:
+    """Cancelled later than the free window of its version, and not by its own reschedule."""
+    policy = await fee_policies.policy_for_booking(conn, booking_id)
+    if policy is None:
+        return False
+    row = await (
+        await conn.execute(
+            "select e.occurred_at > b.starts_at - make_interval(mins => %s), e.reason "
+            "from gba.booking_events e join gba.bookings b on b.id = e.booking_id "
+            "where e.booking_id = %s and e.to_status = 'CANCELLED' "
+            "order by e.occurred_at limit 1",
+            (policy.free_cancellation_minutes, booking_id),
+        )
+    ).fetchone()
+    return row is not None and bool(row[0]) and row[1] != "rescheduled_to_new_booking"
+
+
+async def _lines(
+    conn: RuntimeConnection,
+    booking_id: UUID,
+    status: str,
+    quote: dict[str, Any],
+    body: VisitInvoiceInput,
+) -> tuple[str, list[InvoiceLineInput]]:
+    """The quote lines of an attended visit, then the fee lines (decisions 22 and 24).
+
+    A cancelled or no-show visit is billed only the fee of its policy (L9 decision 79).
+    """
+    currency, units = await currency_units(conn, quote)
     lines: list[InvoiceLineInput] = []
+    no_show = await (
+        await conn.execute("select 1 from gba.visit_no_shows where booking_id = %s", (booking_id,))
+    ).fetchone()
+    if status in ("CANCELLED", "CONFIRMED") and (status == "CANCELLED" or no_show is not None):
+        if body.fee_lines:
+            raise VisitFeeFromPolicyError(
+                "A cancelled or no-show visit is billed the fee of its published policy"
+            )
+        kind: FeeKind = "no_show" if no_show is not None else "late_cancellation"
+        late = kind == "no_show" or await _late_cancellation(conn, booking_id)
+        minor = await policy_fee(conn, booking_id, quote, kind) if late else None
+        if not minor:
+            raise VisitNotBillableError(
+                "There is no fee for this visit under its published policy", status=status
+            )
+        lines.append(
+            InvoiceLineInput(
+                line_id=uuid7(),
+                counter_account_id=body.revenue_account_id,
+                description=FEE_NAMES[kind],
+                amount=money(minor, units),
+            )
+        )
+        return currency, lines
     if status == "CONFIRMED":
         lines.extend(
             InvoiceLineInput(
                 line_id=uuid7(),
                 counter_account_id=body.revenue_account_id,
                 description=str(line["name"]),
-                amount=_money(minor, units),
+                amount=money(minor, units),
             )
             for line, minor in priced_lines(quote, units)
         )
-    elif status != "CANCELLED" or not body.fee_lines:
+    else:
         raise VisitNotBillableError(
-            "Only a confirmed visit, or a cancelled one with a fee, is billed", status=status
+            "Only a confirmed visit, or a cancelled or no-show one with a fee, is billed",
+            status=status,
         )
     lines.extend(
         InvoiceLineInput(
@@ -211,7 +298,7 @@ async def bill_visit(
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
     if await load_visit_invoice(conn, tenant_id, booking_id) is not None:
         raise VisitAlreadyInvoicedError("This visit already has its invoice")
-    currency, lines = await _lines(conn, str(booking[0]), booking[1], body)
+    currency, lines = await _lines(conn, booking_id, str(booking[0]), booking[1], body)
     party = await (
         await conn.execute(
             "select max(revision) from gba.counterparty_versions where counterparty_id = %s",

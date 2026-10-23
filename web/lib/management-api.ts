@@ -906,6 +906,84 @@ export function postConsumption(
   );
 }
 
+/** L9a: a fee of the published policy: a percentage of the visit or a fixed amount. */
+export type FeeRule = { percent: string } | { amount: string };
+
+export interface FeePolicyView {
+  version: number;
+  published_at: string;
+  free_cancellation_minutes: number;
+  late_cancellation_fee: FeeRule | null;
+  no_show_fee: FeeRule | null;
+}
+
+export interface FeePolicyInput {
+  expected_version: number;
+  free_cancellation_minutes: number;
+  late_cancellation_fee: FeeRule | null;
+  no_show_fee: FeeRule | null;
+}
+
+/** L9a: the published fee policy versions, newest first. */
+export async function fetchFeePolicy(
+  salonId: string,
+): Promise<FeePolicyView[]> {
+  const list = await managementFetch<{ versions: FeePolicyView[] }>(
+    `/v1/salons/${salonId}/visit-fee-policy`,
+  );
+  return list.versions;
+}
+
+/** L9a: publish the next version after the one the form was read from. */
+export function publishFeePolicy(
+  salonId: string,
+  body: FeePolicyInput,
+): Promise<FeePolicyView> {
+  return managementFetch<FeePolicyView>(
+    `/v1/salons/${salonId}/visit-fee-policy`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+/** L9a: a visit recorded as a no-show, with the fee of the policy it was booked under. */
+export interface NoShowView {
+  booking_id: string;
+  recorded_at: string;
+  policy_version: number | null;
+  fee: string | null;
+}
+
+export async function fetchNoShow(
+  salonId: string,
+  bookingId: string,
+): Promise<NoShowView | null> {
+  try {
+    return await managementFetch<NoShowView>(
+      `/v1/salons/${salonId}/bookings/${bookingId}/no-show`,
+    );
+  } catch (error) {
+    if (
+      error instanceof ManagementApiError &&
+      error.code === "VISIT_NO_SHOW_NOT_FOUND"
+    )
+      return null;
+    throw error;
+  }
+}
+
+export function recordNoShow(
+  salonId: string,
+  bookingId: string,
+): Promise<NoShowView> {
+  return bookingMutation<NoShowView>(
+    `/v1/salons/${salonId}/bookings/${bookingId}/no-show`,
+    {},
+  );
+}
+
 /** L4/L7b2a: a visit's invoice and, once issued, its open obligation. */
 export type VisitInvoiceView = {
   booking_id: string;

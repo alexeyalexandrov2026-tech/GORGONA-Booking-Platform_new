@@ -122,6 +122,30 @@ const completion = z.strictObject({
 });
 // L4/L5/L7b2a: the visit invoice, the visit commission and a specialist's plan.
 const money = z.string().regex(/^(0|[1-9][0-9]{0,17})(\.[0-9]{1,3})?$/);
+// L9a: the published fee policy versions and a visit's no-show with its policy fee.
+const feeRule = z
+  .union([
+    z.strictObject({
+      percent: z.string().regex(/^(0|[1-9][0-9]{0,2})\.[0-9]{2}$/),
+    }),
+    z.strictObject({
+      amount: z.string().regex(/^(0|[1-9][0-9]{0,9})\.[0-9]{2}$/),
+    }),
+  ])
+  .nullable();
+const feePolicy = z.strictObject({
+  version: z.number().int().positive(),
+  published_at: z.iso.datetime({ offset: true }),
+  free_cancellation_minutes: z.number().int().min(0).max(525600),
+  late_cancellation_fee: feeRule,
+  no_show_fee: feeRule,
+});
+const noShow = z.strictObject({
+  booking_id: id,
+  recorded_at: z.iso.datetime({ offset: true }),
+  policy_version: z.number().int().positive().nullable(),
+  fee: money.nullable(),
+});
 const visitInvoice = z.strictObject({
   booking_id: id,
   book_id: id,
@@ -456,6 +480,11 @@ export function managementResponseSchema(
   if (/^\/bookings\/[0-9a-f-]{36}\/commission$/i.test(suffix))
     return visitCommission;
   if (/^\/bookings\/[0-9a-f-]{36}\/redeem$/i.test(suffix)) return redemption;
+  if (/^\/bookings\/[0-9a-f-]{36}\/no-show$/i.test(suffix)) return noShow;
+  if (suffix === "/visit-fee-policy")
+    return method === "GET"
+      ? z.strictObject({ versions: z.array(feePolicy).max(100) })
+      : feePolicy;
   if (/^\/bookings\//.test(suffix)) return booking;
   if (suffix === "/prepaid") return method === "GET" ? prepaidList : prepaid;
   if (suffix === "/services")

@@ -14,8 +14,9 @@ from gorgona_booking.db.pool import RuntimePool, tenant_transaction
 from gorgona_booking.db.provisioning import owner_tenant_transaction
 from tests.integration import test_l6_prepaid as shared
 from tests.integration.booking_support import BookingWorld, at
+from tests.integration.fee_policy_support import publish_fee_policy, soon_visit
 from tests.integration.test_external_payments import PaymentWorld
-from tests.integration.test_l4_billing import bill, fee, post, visit
+from tests.integration.test_l4_billing import bill, post, visit
 from tests.integration.test_l5_commissions import Kit, accrue, commission_body, put_plan
 from tests.integration.test_l6_prepaid import billed_visit, code, pay, redeem, salon, sell
 
@@ -77,6 +78,15 @@ async def confirmed(
     return result.booking_id
 
 
+async def late_fee_policy(payments: PaymentWorld) -> None:
+    """L9 decision 79: a cancelled visit is billed the 15.00 fee of the policy in force."""
+    ledger = payments.ledger
+    published = await publish_fee_policy(
+        ledger.client, ledger.business, ledger.headers(), late={"amount": "15.00"}
+    )
+    assert published.status_code == 200, published.text
+
+
 async def issued_invoice(payments: PaymentWorld, booking: UUID, **changes: object) -> UUID:
     saved = await post(payments, booking, bill(payments, **changes))
     assert saved.status_code == 200, saved.text
@@ -93,8 +103,9 @@ async def test_a_cancelled_visits_fee_earns_no_commission(
 ) -> None:
     plan = await put_plan(payments, world, kit, [{"service_id": None, "percent": "40.00"}])
     assert plan.status_code == 200, plan.text
-    booking = await visit(world, app_pool, cancel=True)
-    obligation = await issued_invoice(payments, booking, fee_lines=[fee(payments, "15.00")])
+    await late_fee_policy(payments)
+    booking = await soon_visit(world, app_pool, hours=2, cancel=True)
+    obligation = await issued_invoice(payments, booking)
     await pay(payments, obligation, "15.00")
     refused = await accrue(payments, booking, commission_body(kit))
     assert code(refused) == (409, "VISIT_NOT_COMMISSIONABLE")
@@ -177,8 +188,9 @@ async def test_a_package_is_not_spent_on_a_cancelled_visits_fee(
         units=3,
         variant=world.catalog_a.base_variant_id,
     )
-    booking = await visit(world, app_pool, cancel=True)
-    await issued_invoice(payments, booking, fee_lines=[fee(payments, "15.00")])
+    await late_fee_policy(payments)
+    booking = await soon_visit(world, app_pool, hours=2, cancel=True)
+    await issued_invoice(payments, booking)
     refused = await redeem(payments, booking, package["prepaid_id"])
     assert code(refused) == (409, "PREPAID_NO_MATCHING_SERVICE")
 

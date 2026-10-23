@@ -62,6 +62,9 @@ K_TABLES = {
     # L6 (0071): prepaid balances and their redemptions.
     "prepaid_balances",
     "prepaid_redemptions",
+    # L9a (0072): the published fee policy versions and the no-show facts.
+    "visit_fee_policies",
+    "visit_no_shows",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

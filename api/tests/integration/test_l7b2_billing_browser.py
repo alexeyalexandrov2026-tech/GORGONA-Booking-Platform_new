@@ -204,7 +204,8 @@ def test_visit_billing_and_commission_real_browser(
         print(result.stdout)  # noqa: T201 - actual browser evidence in pytest -s
 
     with owner_tenant_transaction(owner_conn, tenant):
-        for booking in visits.values():
+        # The seeder also books L9a's missed visits; only these two are billed here.
+        for booking in (visits["desktop"], visits["mobile"]):
             billed = owner_conn.execute(
                 "select count(*) from gba.visit_invoices where booking_id = %s", (booking,)
             ).fetchone()

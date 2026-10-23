@@ -9,6 +9,11 @@ const BOOKING = {
   mobile: process.env.GBA_L7B_MOBILE_BOOKING ?? "",
 };
 
+// L9a: a second started visit per project, booked under fee policy version 1 (no-show 50 %).
+const MISSED = {
+  desktop: process.env.GBA_L9A_DESKTOP_NO_SHOW ?? "",
+  mobile: process.env.GBA_L9A_MOBILE_NO_SHOW ?? "",
+};
 const CONFIGURATION = "**/v1/businesses/*/configuration";
 
 // L8 decision 70: the desk follows the business's modules; switch some off in the answer.
@@ -123,4 +128,60 @@ test("a visit is completed and its materials are written off", async ({
     desk.getByRole("button", { name: "Complete visit" }),
   ).toHaveCount(0);
   await desk.getByRole("button", { name: "Close" }).click();
+});
+
+test("a missed visit is a no-show billed under the policy it was booked with", async ({
+  page,
+}, testInfo) => {
+  const booking = MISSED[testInfo.project.name as "desktop" | "mobile"];
+  expect(booking).not.toBe("");
+  await signIn(page);
+
+  // Settings: publish a newer version; it does not change visits booked before it.
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  const fees = page.getByRole("region", {
+    name: "Cancellation and no-show fees",
+  });
+  await expect(fees.getByText(/^Version \d+:/)).toBeVisible({ timeout: 15000 });
+  const form = fees.getByRole("form", { name: "Publish a fee policy" });
+  await form
+    .getByLabel("No-show fee kind")
+    .selectOption({ label: "Fixed amount" });
+  await form.getByLabel("No-show fee amount").fill("10.00");
+  await form.getByRole("button", { name: "Publish a new version" }).click();
+  await expect(
+    fees
+      .getByRole("status")
+      .filter({ hasText: /^Fee policy version \d+ published\.$/ }),
+  ).toBeVisible();
+  const axe = await new AxeBuilder({ page }).include(".fee-policy").analyze();
+  expect(axe.violations).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath("fee-policy.png"),
+    fullPage: true,
+  });
+
+  // The desk records the no-show once; the fee is the one of version 1 (50 % of 50.00).
+  const desk = await openDesk(page, booking);
+  await desk.getByRole("button", { name: "Mark as no-show" }).click();
+  await expect(
+    desk.getByRole("status").filter({ hasText: "Recorded as a no-show." }),
+  ).toBeVisible();
+  await expect(
+    desk.getByText("No-show: fee under the policy 25.00."),
+  ).toBeVisible();
+  await expect(
+    desk.getByRole("button", { name: "Complete visit" }),
+  ).toHaveCount(0);
+  await accessible(page, testInfo, "no-show");
+
+  // Keyboard only: close.
+  await desk.getByRole("button", { name: "Close" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(desk).toBeHidden();
 });
