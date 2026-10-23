@@ -1,6 +1,16 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-23: package L reviewed; L8a review fixes R1-R7 locally verified
+## Current checkpoint — 2026-10-23: L8b1 review fixes R8-R15 locally verified; L8a CI failed on two specs
+
+L8b1 in `ee7fc1b` on `codex/package-l8b1-review-fixes` fixes the remaining review findings R8-R15 (stage
+revision, 50 stages on the site, reschedule checks every service, workforce and inventory gates on writes, plan
+references and the first-save race, write-off place in the visit's branch, prepaid currency, the desk hides a
+used balance). Focused **466 passed**; full **2543 passed, 4 skipped** ([validation](docs/plan/evidence/2026-10-23-l8b1-review-fixes/VALIDATION.md)).
+**L8a CI run 39971712190 FAILED** on two browser specs L8a did not touch (`management.spec.ts` strict-mode
+status, `service-catalog.spec.ts` slow row); the spec fix is its own commit on the L8b1 branch.
+Next: L8b2 (races, module gates on the desk, room stage), then L8c (acceptance). Next migration **0072**.
+
+## Previous checkpoint — 2026-10-23: package L reviewed; L8a review fixes R1-R7 locally verified
 
 L7c CI SUCCESS (run 39901727848). One independent review of package L (owner's consent) found 15 defects
 ([review](docs/plan/evidence/2026-10-23-l8-review/REVIEW.md)); two high: a cancelled visit's paid fee accrued the full commission, and prices in 0- or

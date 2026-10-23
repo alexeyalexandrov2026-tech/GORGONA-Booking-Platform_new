@@ -14,14 +14,14 @@ by the implementing agent against the code; the column "Checked" says what that 
 | R5 | medium | `business/prepaid.py` `_credits` | The package's service is found by its quote position and used as an index into the invoice lines; on a cancelled visit's fee-only invoice the unit is spent on a fee | Confirmed | L8a `e3d45de` |
 | R6 | medium | `business/visit_billing.py` `_lines` | A zero-priced quote line (allowed by the catalog) makes the visit unbillable: invoice lines must be at least 1 minor unit | Confirmed: `amount_minor between 1 and ...` | L8a `e3d45de` |
 | R7 | medium | `api/financial_documents.py` draft save | A visit invoice, commission accrual or prepaid sale is an ordinary draft that any finance manager may rewrite before issue; package L keeps trusting its first content | Confirmed: `save_draft` has no link check | L8a `e3d45de` |
-| R8 | medium-low | `api/salons.py` stage replace | Replacing stages with the same total (or clearing them) changes no column, so the revision is not bumped and a stale save is not detected | Confirmed: `bump_revision` fires only on a real row change | L8b |
-| R9 | low | `web/lib/contracts.ts` | The site caps a quote at 10 stages; a visit may have up to 50 | Confirmed: `.max(10)` | L8b |
-| R10 | low | `api/salons.py` reschedule | Rescheduling a visit of several services checks the new specialist against the first service only | To verify in L8b | L8b |
-| R11 | low | commissions, `business/visits.py` | Commission plan and accrual never check the workforce module; a consumption with nothing to write off skips the inventory check | To verify in L8b | L8b |
-| R12 | low | `business/visits.py` | The write-off place may be in another branch | To verify in L8b | L8b |
-| R13 | low | `business/commissions.py` | An unknown service or payee in a plan, or two racing first saves, is a raw database error (500) | To verify in L8b | L8b |
-| R14 | low | `business/prepaid.py` | A package may be sold in a currency other than its service's and can then never be redeemed | To verify in L8b | L8b |
-| R15 | low | `web/components/visit-billing.tsx` | After a redemption the desk does not reload the balances | To verify in L8b | L8b |
+| R8 | medium-low | `api/salons.py` stage replace | Replacing stages with the same total (or clearing them) changes no column, so the revision is not bumped and a stale save is not detected | Confirmed: `bump_revision` fires only on a real row change | L8b1 `ee7fc1b` |
+| R9 | low | `web/lib/contracts.ts` | The site caps a quote at 10 stages; a visit may have up to 50 | Confirmed: `.max(10)` | L8b1 `ee7fc1b` |
+| R10 | low | `api/salons.py` reschedule | Rescheduling a visit of several services checks the new specialist against the first service only | To verify in L8b | L8b1 `ee7fc1b` |
+| R11 | low | commissions, `business/visits.py` | Commission plan and accrual never check the workforce module; a consumption with nothing to write off skips the inventory check | To verify in L8b | L8b1 `ee7fc1b` |
+| R12 | low | `business/visits.py` | The write-off place may be in another branch | To verify in L8b | L8b1 `ee7fc1b` |
+| R13 | low | `business/commissions.py` | An unknown service or payee in a plan, or two racing first saves, is a raw database error (500) | To verify in L8b | L8b1 `ee7fc1b` |
+| R14 | low | `business/prepaid.py` | A package may be sold in a currency other than its service's and can then never be redeemed | To verify in L8b | L8b1 `ee7fc1b` |
+| R15 | low | `web/components/visit-billing.tsx` | After a redemption the desk does not reload the balances | To verify in L8b | L8b1 `ee7fc1b` |
 
 ## Found sound by the reviewer
 
