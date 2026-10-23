@@ -1,6 +1,16 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-23: L7c customer site, several services and stages, locally verified
+## Current checkpoint — 2026-10-23: package L reviewed; L8a review fixes R1-R7 locally verified
+
+L7c CI SUCCESS (run 39901727848). One independent review of package L (owner's consent) found 15 defects
+([review](docs/plan/evidence/2026-10-23-l8-review/REVIEW.md)); two high: a cancelled visit's paid fee accrued the full commission, and prices in 0- or
+3-decimal currencies were billed at the wrong scale. L8a in `e3d45de` on `codex/package-l8a-review-fixes`
+fixes R1-R7 (commission only for a confirmed visit, exact price conversion, free lines not billed, prepaid
+units by matching line and whole worth, linked drafts frozen, recorded visits not moved or cancelled).
+Focused **458 passed**; full **2535 passed, 4 skipped** ([validation](docs/plan/evidence/2026-10-23-l8a-review-fixes/VALIDATION.md)). Next: L8b (R8-R15, races,
+module gates, room stage), then L8c (acceptance). Next migration **0072**.
+
+## Previous checkpoint — 2026-10-23: L7c customer site, several services and stages, locally verified
 
 L7b2b CI SUCCESS (run 39886335939). L7c in `1b00d01` on `codex/package-l7c-customer-site`: on the customer
 site a guest books up to five services in one visit, each with its own add-ons, sees every line, the total,
