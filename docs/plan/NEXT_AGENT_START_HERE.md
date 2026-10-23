@@ -1,6 +1,5 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-
 ## Current: package L (BEAUTY-01) through L7b2b done; next L7c, then L8 — 2026-10-23
 
 Read the [handoff](NEXT_AGENT_PACKAGE_L7C_2026-10-23.md) first; the ready-to-paste prompt is
