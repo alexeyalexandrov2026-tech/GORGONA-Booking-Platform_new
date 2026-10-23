@@ -1,6 +1,15 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-22: L7b2a visit billing and commission screens, locally verified
+## Current checkpoint — 2026-10-23: L7b2b prepaid screen and redemption, locally verified
+
+L7b2a CI: the first run failed after UTC midnight (browser tests took today in UTC); fix `d2ac158` takes
+today in the branch or business zone, CI SUCCESS (run 39879172808). L7b2b in `3d2658a` on
+`codex/package-l7b2b-prepaid-screens`: a Prepaid screen lists and sells packages and certificates, and the
+visit desk redeems a usable balance against an open visit invoice; real browser desktop and mobile with
+the database read back. Focused **442 passed**; full **2520 passed, 4 skipped** ([validation](docs/plan/evidence/2026-10-23-l7b2b-prepaid-screens/VALIDATION.md)). Next:
+L7c (customer site). Next migration **0072**.
+
+## Previous checkpoint — 2026-10-22: L7b2a visit billing and commission screens, locally verified
 
 L7b1 CI SUCCESS (run 39855981830). L7b2a in `56ab1ee` on `codex/package-l7b2a-billing-desk`: the visit desk
 bills a visit, shows it paid and accrues the specialist's commission once; the Staff screen edits the
