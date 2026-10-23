@@ -12,6 +12,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
 from uuid import UUID, uuid7
+from zoneinfo import ZoneInfo
 
 import httpx
 import psycopg
@@ -38,6 +39,18 @@ USED_WRITE_OFFS = (
     "join gba.stock_documents d on d.tenant_id = l.tenant_id and d.id = l.document_id "
     "where d.kind = 'write_off' and d.reason = 'used'"
 )
+
+
+def zone_today(owner_conn: psycopg.Connection, tenant: UUID, query: str, subject: UUID) -> str:
+    """Today in the zone the server checks against (a branch or the business), never UTC."""
+    with owner_tenant_transaction(owner_conn, tenant):
+        zone = owner_conn.execute(query, (subject,)).fetchone()
+    assert zone is not None
+    return datetime.now(ZoneInfo(str(zone[0]))).date().isoformat()
+
+
+BRANCH_ZONE = "select timezone from gba.locations where id = %s"
+BUSINESS_ZONE = "select gba.business_timezone(%s)"
 
 
 async def _started_visits(dsn: str, world: BookingWorld) -> dict[str, UUID]:
@@ -177,7 +190,8 @@ def test_visit_desk_completion_and_consumption_real_browser(
                 "name": "FAKE shelf",
             },
         )
-        today = datetime.now(UTC).date().isoformat()
+        # A stock document may not be dated in the future of its branch.
+        today = zone_today(owner_conn, tenant, BRANCH_ZONE, home)
         request(
             "PUT",
             f"{business}/inventory/documents/{uuid7()}",

@@ -9,7 +9,6 @@ import asyncio
 import os
 import shutil
 import subprocess
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 from uuid import UUID, uuid7
@@ -27,7 +26,7 @@ from tests.integration.live_server import free_port, live_server
 from tests.integration.seed import FakeUser, seed_user
 from tests.integration.test_counterparties import card
 from tests.integration.test_i4_browser import _SignedIn
-from tests.integration.test_l7b_visit_desk_browser import _started_visits
+from tests.integration.test_l7b_visit_desk_browser import BUSINESS_ZONE, _started_visits, zone_today
 from tests.integration.test_management_browser import _browser_env, _management_app, _provider
 from tests.support.fake_idp import FakeIdp
 
@@ -60,7 +59,8 @@ def test_visit_billing_and_commission_real_browser(
     headers = idp.bearer(owner.subject, email=owner.email, iss=issuer)
     business = f"/v1/businesses/{tenant}"
     salon = f"/v1/salons/{tenant}"
-    today = datetime.now(UTC).date().isoformat()
+    # Ledger dates may not be after today in the business time zone.
+    today = zone_today(owner_conn, tenant, BUSINESS_ZONE, tenant)
     state: dict[str, object] = {}
 
     def request(method: str, path: str, body: object = None) -> httpx.Response:

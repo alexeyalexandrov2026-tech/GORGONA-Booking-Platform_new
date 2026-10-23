@@ -47,3 +47,15 @@ passed**; **full-3** PASS, **2517 passed, 4 skipped** (48 minutes locally).
 
 L7b2b: selling a prepaid balance and redeeming it from the desk. L7c: the customer site. The next
 migration is **0072**.
+
+## CI follow-up (2026-10-23)
+
+CI run 39873748480 on `cdbc441` **failed**. It ran from 23:44 to 00:26 UTC, after the UTC date had passed
+the date in New York (the FAKE business zone). Two browser tests took "today" in UTC: the L7b1 desk test
+dated its stock receipt in the future of the branch (`STOCK_DATE_INVALID`), and the L7b2a payment fixture
+dated its ledger entries after today in the business zone (`LEDGER_DATE_INVALID`). Both were test bugs,
+reproduced locally at 00:28 UTC (red-1: 2 failed, same codes). The tests now take today in the branch
+zone (stock) or the business zone (ledger); dev-1 at 00:30 UTC: 2 passed. Static-1 PASS and a focused run
+of 44 tests (desk, billing, reads, catalog, H4 finance, write-offs, consumption, billing and commission
+services) PASS in run folder `GorgonaBookingTests/package-l7b2a-fix-20261023-cdbc441`; the full suite is
+left to CI. Other tests that use the UTC date add two days on purpose and are not affected.
