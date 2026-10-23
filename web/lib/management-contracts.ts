@@ -160,6 +160,17 @@ const visitCommission = z.strictObject({
   accrual: invoiceSchema,
   tips_account_id: id.nullable(),
   tips: money,
+  // L9b: the reversals after refunds and what is still to reverse.
+  reversals: z
+    .array(
+      z.strictObject({
+        refund_document_id: id,
+        reversal_document_id: id.nullable(),
+        amount: money,
+      }),
+    )
+    .max(100),
+  to_reverse: money,
 });
 const commissionPlan = z.strictObject({
   resource_id: id,
@@ -477,7 +488,7 @@ export function managementResponseSchema(
   )
     return completion;
   if (/^\/bookings\/[0-9a-f-]{36}\/invoice$/i.test(suffix)) return visitInvoice;
-  if (/^\/bookings\/[0-9a-f-]{36}\/commission$/i.test(suffix))
+  if (/^\/bookings\/[0-9a-f-]{36}\/commission(\/reversal)?$/i.test(suffix))
     return visitCommission;
   if (/^\/bookings\/[0-9a-f-]{36}\/redeem$/i.test(suffix)) return redemption;
   if (/^\/bookings\/[0-9a-f-]{36}\/no-show$/i.test(suffix)) return noShow;

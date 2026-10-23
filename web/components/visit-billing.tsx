@@ -8,6 +8,7 @@ import { fetchCounterparties } from "../lib/counterparty-api";
 import { fetchAccounts, fetchLedger } from "../lib/ledger-api";
 import {
   accrueVisitCommission,
+  reverseVisitCommission,
   billVisit,
   fetchAllPrepaid,
   fetchServices,
@@ -156,6 +157,7 @@ export function VisitBillingSection({
   const invoiceHeadingId = useId();
   const commissionHeadingId = useId();
   const redeemHeadingId = useId();
+  const reverseHeadingId = useId();
   const [invoice, setInvoice] = useState<VisitInvoiceView | null>(null);
   const [commission, setCommission] = useState<VisitCommissionView | null>(
     null,
@@ -183,6 +185,9 @@ export function VisitBillingSection({
   const [prepaidId, setPrepaidId] = useState("");
   const [creditNumber, setCreditNumber] = useState("");
   const [creditDate, setCreditDate] = useState(today);
+  const [reversalNumber, setReversalNumber] = useState("");
+  const [reversalDate, setReversalDate] = useState(today);
+  const [refundAccount, setRefundAccount] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -328,6 +333,28 @@ export function VisitBillingSection({
       setNotice(`Commission accrued: ${accrued.accrual.total}`);
     } catch (failure) {
       setError(`The commission was not accrued: ${refusal(failure)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // L9b: a refund of the visit reverses its share of the commission, computed by the server.
+  async function reverse(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const reversed = await reverseVisitCommission(salonId, bookingId, {
+        credit_date: reversalDate,
+        number: reversalNumber.trim(),
+        refund_control_account_id: refundAccount || null,
+      });
+      setCommission(reversed);
+      const last = reversed.reversals[reversed.reversals.length - 1];
+      setNotice(`Commission reversed: ${last?.amount ?? "0"}`);
+    } catch (failure) {
+      setError(`The commission was not reversed: ${refusal(failure)}`);
     } finally {
       setBusy(false);
     }
@@ -516,6 +543,63 @@ export function VisitBillingSection({
         <p className="hold-note">
           Commission {commission.accrual.number}: {commission.accrual.total}
         </p>
+      )}
+      {commission !== null && commission.reversals.length > 0 && (
+        <ul aria-label="Commission reversals">
+          {commission.reversals.map((row) => (
+            <li key={row.refund_document_id}>Refund reversed: {row.amount}</li>
+          ))}
+        </ul>
+      )}
+      {commission !== null && !/^0(\.0+)?$/.test(commission.to_reverse) && (
+        <form onSubmit={reverse} aria-labelledby={reverseHeadingId}>
+          <h4 id={reverseHeadingId}>Reverse commission</h4>
+          <p className="muted">
+            A refund of this visit: {commission.to_reverse} of the commission is
+            to be reversed.
+          </p>
+          <label>
+            Refund account
+            <select
+              aria-label="Refund account"
+              value={refundAccount}
+              onChange={(e) => setRefundAccount(e.target.value)}
+            >
+              <option value="">
+                Not needed: the commission is not paid yet
+              </option>
+              {accounts
+                .filter((a) => a.type === "asset")
+                .map((a) => (
+                  <option key={a.account_id} value={a.account_id}>
+                    {a.code} {a.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label>
+            Number
+            <input
+              value={reversalNumber}
+              onChange={(e) => setReversalNumber(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Date
+            <input
+              type="date"
+              value={reversalDate}
+              onChange={(e) => setReversalDate(e.target.value)}
+              required
+            />
+          </label>
+          <div className="mgmt-form-actions">
+            <button type="submit" disabled={busy}>
+              {busy ? "Reversing…" : "Reverse commission"}
+            </button>
+          </div>
+        </form>
       )}
       {invoice !== null &&
         obligation !== null &&

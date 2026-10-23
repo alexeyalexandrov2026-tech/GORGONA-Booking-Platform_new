@@ -134,6 +134,67 @@ def test_visit_billing_and_commission_real_browser(
         await asyncio.to_thread(settle)
         return {"paid": project}
 
+    @provider.post("/fixture/refund/{project}")
+    async def refund(project: str) -> dict[str, str]:
+        """L9b: finance issues the commission and refunds the visit's service in full."""
+        visits = cast(dict[str, UUID], state["visits"])
+        if project not in visits:
+            raise HTTPException(404, "Unknown FAKE project")
+
+        def credit() -> None:
+            booking = visits[project]
+            commission = request("GET", f"{salon}/bookings/{booking}/commission").json()
+            root = f"{business}/financial-documents/books/{commission['book_id']}"
+            request(
+                "POST",
+                f"{root}/accruals/{commission['document_id']}/issue",
+                {
+                    "schema_version": 1,
+                    "expected_revision": 1,
+                    "entry_date": today,
+                    "attestation": "confirmed_account_treatment",
+                },
+            )
+            billed = request("GET", f"{salon}/bookings/{booking}/invoice").json()
+            line = billed["invoice"]["lines"][0]
+            document = uuid7()
+            request(
+                "PUT",
+                f"{root}/credits/{document}",
+                {
+                    "schema_version": 1,
+                    "expected_revision": 0,
+                    "credited_obligation_id": billed["obligation"]["obligation_id"],
+                    "counterparty_revision": 1,
+                    "credit_date": today,
+                    "title": "FAKE refund",
+                    "number": f"FAKE-RF-{project}",
+                    "lines": [
+                        {
+                            "line_id": str(uuid7()),
+                            "credited_line_id": line["line_id"],
+                            "counter_account_id": line["counter_account_id"],
+                            "description": "FAKE refund",
+                            "amount": line["amount"],
+                        }
+                    ],
+                },
+            )
+            request(
+                "POST",
+                f"{root}/credits/{document}/issue",
+                {
+                    "schema_version": 1,
+                    "expected_revision": 1,
+                    "entry_date": today,
+                    "attestation": "confirmed_account_treatment",
+                    "refund_control_account_id": str(state["refund"]),
+                },
+            )
+
+        await asyncio.to_thread(credit)
+        return {"refunded": project}
+
     with live_server(provider, idp_port), live_server(app, app_port):
         request("PUT", f"{business}/profile", {"expected_revision": 0, "industry_ids": [1]})
         draft = request(
@@ -166,6 +227,7 @@ def test_visit_billing_and_commission_real_browser(
         )
         chart = request("GET", f"{business}/ledger/books/{book}/accounts").json()["items"]
         state["cash"] = next(a["account_id"] for a in chart if a["code"] == "1100")
+        state["refund"] = next(a["account_id"] for a in chart if a["code"] == "2100")
         parties = {
             "customer": "FAKE Customer",
             **{p: f"FAKE Specialist {p}" for p in ("desktop", "mobile")},
@@ -214,10 +276,17 @@ def test_visit_billing_and_commission_real_browser(
                 "select sum(l.amount_minor) from gba.visit_commissions c "
                 "join gba.financial_document_lines l on l.tenant_id = c.tenant_id "
                 "and l.book_id = c.book_id and l.document_id = c.document_id "
+                "and l.revision = 1 "
                 "where c.booking_id = %s",
                 (booking,),
             ).fetchone()
             assert accrued == (500,)
+            # L9b: the full refund of the service reversed the whole 5.00 once.
+            reversed_ = owner_conn.execute(
+                "select amount_minor from gba.visit_commission_reversals where booking_id = %s",
+                (booking,),
+            ).fetchall()
+            assert reversed_ == [(500,)]
         plans = owner_conn.execute(
             "select count(*) from gba.commission_rules "
             "where percent_bp = 1000 and service_id is null"

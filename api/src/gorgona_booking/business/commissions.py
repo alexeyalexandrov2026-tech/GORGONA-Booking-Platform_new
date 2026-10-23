@@ -18,8 +18,12 @@ from gorgona_booking.booking import idempotency
 from gorgona_booking.booking import repository as repo
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import IdempotencyKeyReusedError
-from gorgona_booking.business import financial_documents, ledger
+from gorgona_booking.business import credit_notes, financial_documents, ledger
+from gorgona_booking.business.commission_reversals import reversal_plan
 from gorgona_booking.business.financial_contracts import (
+    CreditDraftInput,
+    CreditIssueInput,
+    CreditLineInput,
     InvoiceDocumentView,
     InvoiceDraftInput,
     InvoiceLineInput,
@@ -67,6 +71,16 @@ class VisitNotPaidError(ConflictError):
 
 class VisitInvoiceCreditedError(ConflictError):
     code = "VISIT_INVOICE_CREDITED"
+
+
+class VisitCommissionNotIssuedError(ConflictError):
+    """L9 decision 82: the commission accrual is issued before it is reversed."""
+
+    code = "VISIT_COMMISSION_NOT_ISSUED"
+
+
+class VisitNothingToReverseError(ConflictError):
+    code = "VISIT_NOTHING_TO_REVERSE"
 
 
 class VisitNotCommissionableError(ConflictError):
@@ -143,6 +157,22 @@ class CommissionInput(_Strict):
     title: str = Field(default="Commission", min_length=1, max_length=200)
 
 
+class ReversalInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    credit_date: date
+    number: str = Field(min_length=1, max_length=64)
+    # Needed exactly when part of the commission was already paid to the payee.
+    refund_control_account_id: UUID | None = None
+
+
+class ReversalView(BaseModel):
+    refund_document_id: UUID
+    # None when the refund touched no service line.
+    reversal_document_id: UUID | None
+    amount: str
+
+
 class VisitCommissionView(BaseModel):
     booking_id: UUID
     book_id: UUID
@@ -151,6 +181,9 @@ class VisitCommissionView(BaseModel):
     # Decision 30: the tips held for the specialist on the named liability account.
     tips_account_id: UUID | None
     tips: str
+    # L9 decisions 82-83: the reversals after refunds and what is still to reverse.
+    reversals: list[ReversalView] = Field(default_factory=list)
+    to_reverse: str = "0"
 
 
 def _money(minor: int, units: int) -> str:
@@ -402,8 +435,7 @@ async def accrue_commission(
     obligation = billed.obligation if billed is not None else None
     if billed is None or obligation is None:
         raise VisitNotPaidError("The visit invoice is not issued yet")
-    if Decimal(obligation.credited) != 0:
-        raise VisitInvoiceCreditedError("A credited visit invoice is handled by hand")
+    # L9 decision 85: a prepaid redemption settles the visit; a refund is reversed afterwards.
     if Decimal(obligation.available) != 0 or Decimal(obligation.reserved) != 0:
         raise VisitNotPaidError(
             "The visit invoice is not fully paid", available=obligation.available
@@ -492,11 +524,154 @@ async def load_commission(
     )
     if accrual is None:
         raise NotFoundError("Accrual not found", document_id=str(link[1]))
+    units = accrual.minor_units
+    recorded = await (
+        await conn.execute(
+            "select refund_document_id, reversal_document_id, amount_minor "
+            "from gba.visit_commission_reversals where booking_id = %s "
+            "order by created_at, refund_document_id",
+            (booking_id,),
+        )
+    ).fetchall()
+    plan = await reversal_plan(conn, tenant_id, booking_id, link[0], accrual)
     return VisitCommissionView(
         booking_id=booking_id,
         book_id=link[0],
         document_id=link[1],
         accrual=accrual,
         tips_account_id=link[2],
-        tips=_money(int(link[3]), accrual.minor_units),
+        tips=_money(int(link[3]), units),
+        reversals=[
+            ReversalView(
+                refund_document_id=row[0],
+                reversal_document_id=row[1],
+                amount=_money(int(row[2]), units),
+            )
+            for row in recorded
+        ],
+        to_reverse=_money(sum(sum(deltas.values()) for _, deltas in plan), units),
     )
+
+
+async def reverse_commission(
+    conn: RuntimeConnection,
+    tenant_id: UUID,
+    booking_id: UUID,
+    *,
+    user_id: UUID,
+    actor: str,
+    key: str,
+    body: ReversalInput,
+) -> VisitCommissionView:
+    """One FIN-03 credit note of the accrual for the refunds not yet reversed (L9 decision 82)."""
+    await require_module(conn, tenant_id, "workforce")
+    scope = IdempotencyScope(tenant_id, actor, "visit.commission.reversal", key)
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            {"booking_id": str(booking_id), "body": body.model_dump(mode="json")},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    stored = await idempotency.claim(conn, scope, fingerprint)
+    if stored is not None:
+        if stored.request_hash != fingerprint:
+            raise IdempotencyKeyReusedError("Key was used for another request")
+        view = await load_commission(conn, tenant_id, booking_id)
+        if view is None:
+            raise NotFoundError("Commission not found", booking_id=str(booking_id))
+        return view
+    # Two reversals of one visit wait here; the second finds nothing left (decision 84).
+    locked = await (
+        await conn.execute("select 1 from gba.bookings where id = %s for update", (booking_id,))
+    ).fetchone()
+    if locked is None:
+        raise NotFoundError("Booking not found", booking_id=str(booking_id))
+    view = await load_commission(conn, tenant_id, booking_id)
+    if view is None:
+        raise VisitNotCommissionedError("This visit has no commission", booking_id=str(booking_id))
+    accrual = view.accrual
+    if accrual.obligation_id is None:
+        raise VisitCommissionNotIssuedError("Issue the commission accrual before reversing it")
+    plan = await reversal_plan(conn, tenant_id, booking_id, view.book_id, accrual)
+    if not plan:
+        raise VisitNothingToReverseError("No refund of this visit is left to reverse")
+    units = accrual.minor_units
+    totals: dict[UUID, int] = {}
+    for _, deltas in plan:
+        for line, delta in deltas.items():
+            totals[line] = totals.get(line, 0) + delta
+    reversal: UUID | None = None
+    if totals:
+        reversal = uuid7()
+        by_id = {line.line_id: line for line in accrual.lines}
+        party = await (
+            await conn.execute(
+                "select max(revision) from gba.counterparty_versions where counterparty_id = %s",
+                (accrual.counterparty_id,),
+            )
+        ).fetchone()
+        if party is None or party[0] is None:
+            raise InvalidReferenceError("Unknown payee", field="counterparty_id")
+        await credit_notes.save_draft(
+            conn,
+            business_id=tenant_id,
+            book_id=view.book_id,
+            document_id=reversal,
+            user_id=user_id,
+            actor=actor,
+            key=key,
+            body=CreditDraftInput(
+                expected_revision=0,
+                credited_obligation_id=accrual.obligation_id,
+                counterparty_revision=int(party[0]),
+                credit_date=body.credit_date,
+                title="Commission reversal",
+                number=body.number,
+                lines=tuple(
+                    CreditLineInput(
+                        line_id=uuid7(),
+                        credited_line_id=line,
+                        counter_account_id=by_id[line].counter_account_id,
+                        description=f"Reversal of {by_id[line].description}",
+                        amount=_money(amount, units),
+                    )
+                    for line, amount in totals.items()
+                ),
+            ),
+        )
+        await credit_notes.issue_credit(
+            conn,
+            business_id=tenant_id,
+            book_id=view.book_id,
+            document_id=reversal,
+            user_id=user_id,
+            actor=actor,
+            key=key,
+            body=CreditIssueInput(
+                expected_revision=1,
+                entry_date=body.credit_date,
+                attestation="confirmed_account_treatment",
+                refund_control_account_id=body.refund_control_account_id,
+            ),
+        )
+    for refund, deltas in plan:
+        amount = sum(deltas.values())
+        await conn.execute(
+            "insert into gba.visit_commission_reversals (tenant_id, book_id, "
+            "refund_document_id, booking_id, reversal_document_id, amount_minor, created_by) "
+            "values (%s, %s, %s, %s, %s, %s, %s)",
+            (
+                tenant_id,
+                view.book_id,
+                refund,
+                booking_id,
+                reversal if amount > 0 else None,
+                amount,
+                user_id,
+            ),
+        )
+    result = await load_commission(conn, tenant_id, booking_id)
+    assert result is not None  # noqa: S101 - read above
+    await idempotency.complete(conn, scope, 200, {"booking_id": str(booking_id)})
+    return result

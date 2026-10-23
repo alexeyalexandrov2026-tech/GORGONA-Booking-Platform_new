@@ -1000,6 +1000,13 @@ export type VisitCommissionView = {
   accrual: Invoice;
   tips_account_id: string | null;
   tips: string;
+  // L9b: the reversals after refunds and what is still to reverse.
+  reversals: {
+    refund_document_id: string;
+    reversal_document_id: string | null;
+    amount: string;
+  }[];
+  to_reverse: string;
 };
 export type CommissionRule = {
   service_id: string | null;
@@ -1067,6 +1074,22 @@ export function fetchVisitCommission(
       `/v1/salons/${salonId}/bookings/${bookingId}/commission`,
     ),
     ["VISIT_NOT_COMMISSIONED"],
+  );
+}
+
+/** L9b: reverse the commission's share of the refunds not yet reversed. */
+export function reverseVisitCommission(
+  salonId: string,
+  bookingId: string,
+  body: {
+    credit_date: string;
+    number: string;
+    refund_control_account_id: string | null;
+  },
+): Promise<VisitCommissionView> {
+  return bookingMutation<VisitCommissionView>(
+    `/v1/salons/${salonId}/bookings/${bookingId}/commission/reversal`,
+    body,
   );
 }
 

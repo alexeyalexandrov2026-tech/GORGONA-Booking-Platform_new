@@ -66,6 +66,8 @@ K_TABLES = {
     # L9a (0072): the published fee policy versions and the no-show facts.
     "visit_fee_policies",
     "visit_no_shows",
+    # L9b (0073): the reversal of a visit commission after a refund.
+    "visit_commission_reversals",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

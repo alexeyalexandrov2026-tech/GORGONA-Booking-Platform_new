@@ -176,6 +176,30 @@ test("a visit is billed and its commission accrued once paid", async ({
   ).toBeVisible();
   await accessible(page, testInfo, ".visit-desk", "commission");
 
+  // L9b: finance refunds the service; the desk reverses the commission's share.
+  const refunded = await page.request.post(
+    `${issuer}/fixture/refund/${project}`,
+  );
+  expect(refunded.ok()).toBe(true);
+  await page.reload();
+  await signIn(page);
+  desk = await openDesk(page, booking);
+  await expect(desk.getByText("Loading the billing…")).toBeHidden({
+    timeout: 15000,
+  });
+  const reversal = desk.getByRole("form", { name: "Reverse commission" });
+  await expect(reversal).toContainText("5.00 of the commission");
+  await reversal.getByLabel("Number").fill(`FAKE-CR-${project}`);
+  await reversal.getByRole("button", { name: "Reverse commission" }).click();
+  await expect(
+    desk.getByRole("status").filter({ hasText: "Commission reversed: 5.00" }),
+  ).toBeVisible();
+  await expect(
+    desk.getByRole("list", { name: "Commission reversals" }),
+  ).toContainText("Refund reversed: 5.00");
+  await expect(reversal).toHaveCount(0);
+  await accessible(page, testInfo, ".visit-desk", "reversed");
+
   // Keyboard only: close.
   await desk.getByRole("button", { name: "Close" }).focus();
   await page.keyboard.press("Enter");

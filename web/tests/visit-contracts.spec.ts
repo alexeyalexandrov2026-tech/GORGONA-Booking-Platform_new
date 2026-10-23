@@ -130,6 +130,11 @@ test("the visit commission is a payable accrual with the tips held", () => {
     accrual: document("manual_accrual", "payable"),
     tips_account_id: null,
     tips: "0.00",
+    // L9b: the reversals after refunds and what is still to reverse.
+    reversals: [
+      { refund_document_id: doc, reversal_document_id: null, amount: "0.00" },
+    ],
+    to_reverse: "7.00",
   };
   const schema = managementResponseSchema(
     `/v1/salons/${salon}/bookings/${booking}/commission`,
@@ -137,6 +142,14 @@ test("the visit commission is a payable accrual with the tips held", () => {
   );
   expect(schema.parse(view)).toEqual(view);
   expect(schema.safeParse({ ...view, tips: "x" }).success).toBe(false);
+  expect(schema.safeParse({ ...view, to_reverse: undefined }).success).toBe(
+    false,
+  );
+  const reversal = managementResponseSchema(
+    `/v1/salons/${salon}/bookings/${booking}/commission/reversal`,
+    "POST",
+  );
+  expect(reversal.parse(view)).toEqual(view);
 });
 
 test("a commission plan has rules of a percentage or an amount", () => {

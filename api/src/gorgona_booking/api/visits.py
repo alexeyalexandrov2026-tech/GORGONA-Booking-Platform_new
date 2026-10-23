@@ -15,6 +15,7 @@ from gorgona_booking.business.commissions import (
     CommissionInput,
     PlanInput,
     PlanView,
+    ReversalInput,
     VisitCommissionView,
 )
 from gorgona_booking.business.fee_policies import FeePolicyInput, FeePolicyList, FeePolicyView
@@ -425,6 +426,36 @@ async def accrue_commission(
     ) as access:
         await assert_location_scope_ready(access.conn)
         return await commissions.accrue_commission(
+            access.conn,
+            salon_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/bookings/{booking_id}/commission/reversal")
+async def reverse_commission(
+    salon_id: UUID,
+    booking_id: UUID,
+    body: ReversalInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> VisitCommissionView:
+    """L9 decisions 81-84: the refunds' share of the commission, once, under the ledger lock."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.FINANCE_MANAGE,
+        request_id=get_request_id(request),
+        exclusive="ledger",
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        return await commissions.reverse_commission(
             access.conn,
             salon_id,
             booking_id,
