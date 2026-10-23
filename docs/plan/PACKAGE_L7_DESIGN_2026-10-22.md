@@ -90,3 +90,43 @@ reads are added for the screens: `GET .../staff/{id}/commission` and `GET .../bo
 | L7-13 | A manager sells a package from the Prepaid screen; after finance issues and settles its invoice the screen shows it usable |
 | L7-14 | The package is redeemed from the desk of an issued visit invoice; the desk shows the credit; the database holds one redemption and one used unit |
 | L7-15 | Desktop and mobile, keyboard only, axe without violations, no horizontal scroll |
+
+## L7c decisions (added 2026-10-23, same delegation)
+
+Branch `codex/package-l7c-customer-site` from the L7b2b head (`ee2b57b`). The guest API is already done
+(L2b, L2c: decisions 8-15); this slice is the customer site only. No migration, no API change.
+
+48. **Several services in one visit.** On the Service step, "Add another service" adds a line, up to four
+    after the first (five in all, decision 12). Each line has its own service select (named by
+    `aria-label`, "Service 2" ... "Service 5"), its own optional add-ons and a "Remove service N"
+    button. A line offers only services not already chosen in the visit and in the first service's
+    currency. "Continue to times" waits until every added line has a service.
+49. **Compatibility shown, server decides.** An add-on is offered on a line when, across the whole visit,
+    it is in the visit's currency, chosen on no other line, its requirements are provided by some line
+    or other chosen add-on, and it neither provides nor conflicts with anything already provided (the
+    same rules as decision 12). Everything else (a service whose component is already in the visit, a
+    visit over 720 minutes, a specialist who does not serve every service) is judged by the server; its
+    refusal is shown in its own plain words, with no "Retry" when a retry cannot help (only a network or
+    availability failure offers one).
+50. **Only one specialist.** The specialist list on the Times step holds the specialists of the branch
+    who serve **every** service of the visit (decision 14). Changing any line clears the chosen
+    specialist, the time and the quote.
+51. **The summary is the server's quote.** The summary lists every quote line in order (each service
+    followed by its add-ons) with its price, then the visit total and duration. A version 2 quote also
+    lists its stages in order, in plain words and minutes: "With your specialist", "Processing — your
+    specialist is free meanwhile", "Finish". The review and the confirmation name the services of the
+    visit.
+52. **Requests unchanged for one service.** Availability and the hold send `extra_lines` only when the
+    visit has more than one service; a one-service request is byte-identical to today's (decision 11),
+    so its idempotency fingerprint is the same.
+53. **Contracts reused, never loosened.** The strict `quoteSchema` (version 1 or 2) parses every answer;
+    the pure helpers that build the request and judge add-ons live in `web/lib/visit.ts` with unit
+    tests.
+
+| id | Requirement (L7c, NOT TESTED) |
+|---|---|
+| L7-16 | The web helpers: a one-service request has no `extra_lines`; a visit sends them in order; add-on compatibility follows decision 49; a two-line version 2 quote parses strictly |
+| L7-17 | A guest chooses a staged service and a second service, sees both lines with prices, the visit total and duration and the stages in order; holds and confirms; the database holds one confirmed booking whose quote has both services and whose intervals hold the specialist, chair and equipment as planned |
+| L7-18 | A visit the server refuses (a component already in the visit) shows the server's plain reason and offers no retry |
+| L7-19 | Only specialists serving every service are offered |
+| L7-20 | Desktop and mobile, keyboard only, axe without violations, no horizontal scroll; the old one-service journey still passes |
