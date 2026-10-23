@@ -63,9 +63,10 @@ the code before this design.
 63. **Reschedule keeps one specialist for the whole visit (R10).** The further services of the stored quote
     (each variant line with its own add-ons) are passed to the availability check, so the new specialist must
     serve every service (L2 decision 14).
-64. **Module gates (R11).** Saving or reading a commission plan and accruing a commission need the workforce
-    module (plan decision 8); posting a consumption needs the inventory module even when nothing is written
-    off. A missing module answers `MODULE_DISABLED` and writes nothing.
+64. **Module gates (R11).** Saving a commission plan and accruing a commission need the workforce module
+    (plan decision 8); reads continue, as for every module that is turned off. Posting a consumption needs
+    the inventory module even when nothing is written off. A missing module answers `MODULE_DISABLED` and
+    writes nothing.
 65. **The write-off place is the visit's branch (R12).** The storage place of a consumption must belong to the
     branch of the completed visit (`VISIT_PLACE_OTHER_BRANCH`, 422).
 66. **Plan refusals are readable (R13).** An unknown payee or service in a plan is `INVALID_REFERENCE` (422);
@@ -80,7 +81,7 @@ the code before this design.
 | L8-09 | Replacing stages with the same total, or clearing them, bumps the revision; the old revision is refused |
 | L8-10 | The web quote contract parses an 11-stage version 2 quote and refuses 51 |
 | L8-11 | A two-service visit cannot be moved to a specialist who does not serve the second service |
-| L8-12 | With workforce off, plan and accrual answer `MODULE_DISABLED`; with inventory off, posting an empty consumption does too; nothing is written |
+| L8-12 | With workforce off, saving a plan and accruing answer `MODULE_DISABLED` while the plan read continues; with inventory off, posting an empty consumption answers `MODULE_DISABLED`; nothing is written |
 | L8-13 | A write-off place of another branch is refused |
 | L8-14 | A plan naming an unknown payee or service is refused with 422; two racing first saves leave one plan and one 409 |
 | L8-15 | A package in another currency than its service is refused |
