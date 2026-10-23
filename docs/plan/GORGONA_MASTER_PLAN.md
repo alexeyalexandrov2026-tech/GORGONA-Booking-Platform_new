@@ -10,7 +10,13 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-23: BEAUTY-01 gaps closed (L9a, L9b); owner decides readiness and main
+## Current checkpoint — 2026-10-23: BEAUTY-01 gaps closed; zod security update; owner decides readiness and main
+
+L9b CI SUCCESS (run 40034329906). A new high advisory (GHSA-mrhx-c7xc-m3w5, zod <4.6.6) found by the L9b
+audit is fixed in `609159f`: zod 4.6.7 pinned; npm audit 0; focused **486 passed**, full **2563 passed, 4
+skipped** ([validation](evidence/2026-10-23-l9-zod-security/VALIDATION.md)). Readiness and `main` wait for the owner's word. Next migration **0074**.
+
+## Previous checkpoint — 2026-10-23: BEAUTY-01 gaps closed (L9a, L9b); owner decides readiness and main
 
 L9a CI SUCCESS (run 40023359035). L9b in `00aadee` on `codex/package-l9b-commission-reversal` (migration 0073):
 each refund reverses the commission's share of its service, cumulatively and once, with lineage; decision 85
