@@ -10,7 +10,16 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-23: L8b2 acceptance gaps locally verified; L8b1 CI green
+## Current checkpoint — 2026-10-23: package L (BEAUTY-01) acceptance record written; owner decides readiness and main
+
+L8c in `558b580` on `codex/package-l8c-acceptance` proves L-09 for the commission and prepaid tables (direct
+SQL refused, the use guard holds, another company sees nothing). Focused **473 passed**; full **2550 passed,
+4 skipped** ([validation](evidence/2026-10-23-l8c-acceptance/VALIDATION.md)). The [acceptance record](evidence/2026-10-23-l8c-acceptance/ACCEPTANCE.md) maps L-01..L-12: ten PASS, two PASS with a named
+GAP — L-06 cancellation and no-show lines are not computed from a published policy; L-07 a refund does not
+reverse the commission automatically. Readiness and the fast-forward of `main` wait for the owner's word.
+Next migration **0072**.
+
+## Previous checkpoint — 2026-10-23: L8b2 acceptance gaps locally verified; L8b1 CI green
 
 L8b1 CI SUCCESS (run 39981532055, includes the spec fix for the L8a CI failure). L8b2 in `1e4368a` on
 `codex/package-l8b2-acceptance-gaps`: the visit desk follows the business's modules (no write-off without

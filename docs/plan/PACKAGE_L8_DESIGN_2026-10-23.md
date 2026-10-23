@@ -132,7 +132,7 @@ Branch `codex/package-l8c-acceptance` from the L8b2 head. The acceptance record 
 75. **Readiness and `main` stay with the owner.** The record recommends; it does not change the readiness
     registry or fast-forward `main`. Both wait for the owner's separate word.
 
-| id | Requirement (L8c, NOT TESTED) |
+| id | Requirement (L8c, PASS locally in `558b580`) |
 |---|---|
 | L8-21 | Direct SQL cannot change or delete commissions, rules, prepaid sales or redemptions, nor lower what is used; another company sees none of them |
 | L8-22 | The acceptance record maps L-01..L-12 to tests and commits and names every gap |
