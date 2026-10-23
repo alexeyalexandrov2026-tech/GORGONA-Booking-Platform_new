@@ -64,6 +64,11 @@ Gaps from the [acceptance record](evidence/2026-10-23-l8c-acceptance/ACCEPTANCE.
 83. **Read and screen.** The commission read shows the reversals and the amount still to reverse; the desk
     offers "Reverse commission" when a refund is not yet reversed.
 84. **Once under a race.** Two reversals of one visit leave one, after an observed `pg_locks` wait.
+85. **A redemption settles; a refund is reversed (found while writing the L9b tests).** L5 refused a commission
+    on any credited visit invoice ("handled by hand"), so a visit settled by a prepaid unit never earned its
+    specialist's commission. The accrual now counts prepaid redemption credits as settlement; a refund credit no
+    longer blocks it either: the accrual follows the quote and the refund is reversed by decision 82 (the read
+    shows the amount to reverse at once).
 
 | id | Requirement (L9b, NOT TESTED) |
 |---|---|
@@ -71,6 +76,7 @@ Gaps from the [acceptance record](evidence/2026-10-23-l8c-acceptance/ACCEPTANCE.
 | L9-08 | Two refunds reverse cumulatively without drift; a refund of fees only records a zero reversal |
 | L9-09 | A redemption credit is not a refund; a draft accrual is refused; a paid accrual needs the refund account |
 | L9-10 | Two racing reversals leave one after an observed wait; lineage rows are permanent and company scoped |
+| L9-12 | A visit settled by a prepaid unit and a payment earns its commission; a refund before the accrual is reversed after it |
 | L9-11 | Desk step in a real browser, desktop and mobile, keyboard, axe |
 
 ## Limits named now
