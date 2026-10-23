@@ -11,7 +11,8 @@ still need the owner's word.
 | Slice | Deliverable |
 |---|---|
 | L8a | Review fixes of money and visit lifecycle: R1-R7 (decisions 54-60) |
-| L8b | Review fixes R8-R15 and acceptance gaps: races with an observed `pg_locks` wait for consumption, accrual and redemption; module gates (L-10); a room stage (L-04) |
+| L8b1 | Review fixes R8-R15 (decisions 61-68) |
+| L8b2 | Acceptance gaps: races with an observed `pg_locks` wait for consumption, accrual and redemption; module gates (L-10); a room stage (L-04) |
 | L8c | BEAUTY-01 acceptance record: L-01..L-12 against the evidence, every gap named; readiness only on the owner's word |
 
 ## L8a decisions
@@ -48,3 +49,39 @@ still need the owner's word.
 | L8-06 | Saving a linked draft (visit invoice, commission, prepaid sale) is refused; unlinked drafts save as before |
 | L8-07 | Rescheduling or cancelling a completed, invoiced, commissioned or redeemed visit is refused; an untouched confirmed visit reschedules and cancels as before |
 | L8-08 | The full suite and the L1-L7c browser tests still pass |
+
+## L8b1 decisions (added 2026-10-23, same delegation)
+
+Branch `codex/package-l8b1-review-fixes` from the L8a head (`ef71142`). All of R8-R15 were confirmed against
+the code before this design.
+
+61. **A stage save always bumps the revision (R8).** Replacing a service's stages touches the variant row
+    (`updated_at = clock_timestamp()`), so the revision grows even when the total minutes stay the same or
+    the stages are cleared; a stale save is refused (`SERVICE_REVISION_CONFLICT`).
+62. **The customer site takes every visit's stages (R9).** The web quote contract accepts up to 50 stages
+    (five services of at most ten stages), still strict.
+63. **Reschedule keeps one specialist for the whole visit (R10).** The further services of the stored quote
+    (each variant line with its own add-ons) are passed to the availability check, so the new specialist must
+    serve every service (L2 decision 14).
+64. **Module gates (R11).** Saving or reading a commission plan and accruing a commission need the workforce
+    module (plan decision 8); posting a consumption needs the inventory module even when nothing is written
+    off. A missing module answers `MODULE_DISABLED` and writes nothing.
+65. **The write-off place is the visit's branch (R12).** The storage place of a consumption must belong to the
+    branch of the completed visit (`VISIT_PLACE_OTHER_BRANCH`, 422).
+66. **Plan refusals are readable (R13).** An unknown payee or service in a plan is `INVALID_REFERENCE` (422);
+    two first saves racing end with one plan and one `COMMISSION_PLAN_REVISION_CONFLICT` (409), never a 500.
+67. **A package is sold in its service's currency (R14).** Otherwise `PREPAID_CURRENCY_MISMATCH` (422).
+68. **The desk forgets a used balance (R15).** After a redemption the desk reloads the customer's balances and
+    no longer offers a balance already used on this visit; after a page reload the server's refusal
+    (`PREPAID_ALREADY_USED`) is shown in its own words.
+
+| id | Requirement (L8b1, NOT TESTED) |
+|---|---|
+| L8-09 | Replacing stages with the same total, or clearing them, bumps the revision; the old revision is refused |
+| L8-10 | The web quote contract parses an 11-stage version 2 quote and refuses 51 |
+| L8-11 | A two-service visit cannot be moved to a specialist who does not serve the second service |
+| L8-12 | With workforce off, plan and accrual answer `MODULE_DISABLED`; with inventory off, posting an empty consumption does too; nothing is written |
+| L8-13 | A write-off place of another branch is refused |
+| L8-14 | A plan naming an unknown payee or service is refused with 422; two racing first saves leave one plan and one 409 |
+| L8-15 | A package in another currency than its service is refused |
+| L8-16 | After a redemption the desk no longer offers that balance (browser) |
