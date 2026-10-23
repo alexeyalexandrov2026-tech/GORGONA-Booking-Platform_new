@@ -116,3 +116,23 @@ L-10 named in the review and in the L-01..L-12 mapping.
 | L8-18 | With workforce off the desk shows no commission form; with inventory off no materials form; real browser desktop and mobile, keyboard, axe |
 | L8-19 | Each step without its module is refused and writes nothing |
 | L8-20 | A room stage holds the room; an overlapping staff reservation of it is refused |
+
+## L8c decisions (added 2026-10-23, same delegation)
+
+Branch `codex/package-l8c-acceptance` from the L8b2 head. The acceptance record lives in
+`docs/plan/evidence/2026-10-23-l8c-acceptance/ACCEPTANCE.md`.
+
+73. **L-09 for the commission and prepaid tables.** L3 and L4 prove direct SQL refusals and company scope for
+    their tables; L5 and L6 did not. L8c adds the proof: the runtime role cannot update or delete a visit's
+    commission or a plan's rules, cannot rewrite a prepaid sale or delete a balance or redemption, cannot
+    lower what is used (the use guard), and another company sees none of these rows.
+74. **The record names every gap.** Each L-01..L-12 row is PASS, PASS with a named limit, or GAP, with the
+    test or commit that proves it. A GAP is not hidden behind a PASS: the cancellation and no-show policy
+    (L-06) and the reversal of a commission after a refund (L-07) are not built and are named as gaps.
+75. **Readiness and `main` stay with the owner.** The record recommends; it does not change the readiness
+    registry or fast-forward `main`. Both wait for the owner's separate word.
+
+| id | Requirement (L8c, NOT TESTED) |
+|---|---|
+| L8-21 | Direct SQL cannot change or delete commissions, rules, prepaid sales or redemptions, nor lower what is used; another company sees none of them |
+| L8-22 | The acceptance record maps L-01..L-12 to tests and commits and names every gap |
