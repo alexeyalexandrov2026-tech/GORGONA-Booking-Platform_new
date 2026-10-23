@@ -12,6 +12,7 @@ import {
   completeVisit,
   type CompletionView,
   fetchCompletion,
+  fetchConfiguration,
   fetchLegalEntities,
   ManagementApiError,
   postConsumption,
@@ -68,6 +69,8 @@ export function VisitDeskDialog({
     () => businessDateTime(new Date(), booking.location_timezone).date,
   );
   const [day, setDay] = useState(today);
+  // L8 decision 70: the enabled modules; null while unknown (the server still refuses).
+  const [modules, setModules] = useState<string[] | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -79,6 +82,13 @@ export function VisitDeskDialog({
       })
       .catch((failure: unknown) => {
         if (live) setError(`The visit could not be read: ${refusal(failure)}`);
+      });
+    fetchConfiguration(salonId)
+      .then((configuration) => {
+        if (live) setModules(configuration.effective_module_ids);
+      })
+      .catch(() => {
+        // Without the right to read the configuration every step stays shown.
       });
     Promise.all([
       fetchAllItems(salonId),
@@ -285,6 +295,10 @@ export function VisitDeskDialog({
                   ? "Materials written off."
                   : "Nothing was left to write off."}
               </p>
+            ) : modules !== null && !modules.includes("inventory") ? (
+              <p className="muted">
+                Materials are turned off in this business&apos;s configuration.
+              </p>
             ) : (
               <form onSubmit={writeOff} aria-labelledby="writeoff-heading">
                 <h3 id="writeoff-heading">Write off the materials</h3>
@@ -357,6 +371,7 @@ export function VisitDeskDialog({
           salonId={salonId}
           bookingId={booking.booking_id}
           today={today}
+          modules={modules}
         />
         <div className="mgmt-form-actions">
           <button type="button" className="secondary" onClick={onClose}>

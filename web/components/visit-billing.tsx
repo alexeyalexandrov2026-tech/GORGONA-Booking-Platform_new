@@ -144,10 +144,13 @@ export function VisitBillingSection({
   salonId,
   bookingId,
   today,
+  modules,
 }: {
   salonId: string;
   bookingId: string;
   today: string;
+  /** The business's enabled modules; null while unknown (L8 decision 70). */
+  modules: string[] | null;
 }) {
   const headingId = useId();
   const invoiceHeadingId = useId();
@@ -332,6 +335,18 @@ export function VisitBillingSection({
 
   const customers = parties.filter((p) => p.roles.includes("customer"));
   const obligation = invoice?.obligation ?? null;
+  const enabled = (id: string) => modules === null || modules.includes(id);
+
+  if (!enabled("finance_documents")) {
+    return (
+      <section aria-labelledby={headingId} className="visit-billing">
+        <h3 id={headingId}>Billing</h3>
+        <p className="muted">
+          Billing is turned off in this business&apos;s configuration.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section aria-labelledby={headingId} className="visit-billing">
@@ -502,53 +517,64 @@ export function VisitBillingSection({
           Commission {commission.accrual.number}: {commission.accrual.total}
         </p>
       )}
-      {invoice !== null && obligation !== null && commission === null && (
-        <form onSubmit={accrue} aria-labelledby={commissionHeadingId}>
-          <h4 id={commissionHeadingId}>Commission</h4>
+      {invoice !== null &&
+        obligation !== null &&
+        commission === null &&
+        !enabled("workforce") && (
           <p className="muted">
-            Accrued once, from the specialist&apos;s plan, after the visit is
-            paid in full.
+            Commissions are turned off in this business&apos;s configuration.
           </p>
-          <AccountSelect
-            label="Expense account"
-            accounts={accounts}
-            types={["expense", "asset"]}
-            value={expense}
-            onChange={setExpense}
-          />
-          <AccountSelect
-            label="Payable account"
-            accounts={accounts}
-            types={["liability"]}
-            value={payable}
-            onChange={setPayable}
-          />
-          <label>
-            Number
-            <input
-              type="text"
-              value={accrualNumber}
-              maxLength={64}
-              onChange={(e) => setAccrualNumber(e.target.value)}
-              required
+        )}
+      {invoice !== null &&
+        obligation !== null &&
+        commission === null &&
+        enabled("workforce") && (
+          <form onSubmit={accrue} aria-labelledby={commissionHeadingId}>
+            <h4 id={commissionHeadingId}>Commission</h4>
+            <p className="muted">
+              Accrued once, from the specialist&apos;s plan, after the visit is
+              paid in full.
+            </p>
+            <AccountSelect
+              label="Expense account"
+              accounts={accounts}
+              types={["expense", "asset"]}
+              value={expense}
+              onChange={setExpense}
             />
-          </label>
-          <label>
-            Accrual date
-            <input
-              type="date"
-              value={accrualDate}
-              onChange={(e) => setAccrualDate(e.target.value)}
-              required
+            <AccountSelect
+              label="Payable account"
+              accounts={accounts}
+              types={["liability"]}
+              value={payable}
+              onChange={setPayable}
             />
-          </label>
-          <div className="mgmt-form-actions">
-            <button type="submit" disabled={busy}>
-              {busy ? "Accruing…" : "Accrue commission"}
-            </button>
-          </div>
-        </form>
-      )}
+            <label>
+              Number
+              <input
+                type="text"
+                value={accrualNumber}
+                maxLength={64}
+                onChange={(e) => setAccrualNumber(e.target.value)}
+                required
+              />
+            </label>
+            <label>
+              Accrual date
+              <input
+                type="date"
+                value={accrualDate}
+                onChange={(e) => setAccrualDate(e.target.value)}
+                required
+              />
+            </label>
+            <div className="mgmt-form-actions">
+              <button type="submit" disabled={busy}>
+                {busy ? "Accruing…" : "Accrue commission"}
+              </button>
+            </div>
+          </form>
+        )}
       {error && (
         <p className="error" role="alert">
           {error}

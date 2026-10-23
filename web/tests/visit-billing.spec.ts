@@ -11,6 +11,20 @@ const BOOKING = {
 };
 const ARTIST = { desktop: "FAKE artist A1", mobile: "FAKE artist A2" };
 
+const CONFIGURATION = "**/v1/businesses/*/configuration";
+
+// L8 decision 70: the desk follows the business's modules; switch some off in the answer.
+async function withoutModules(page: Page, off: string[]) {
+  await page.route(CONFIGURATION, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { effective_module_ids: string[] };
+    body.effective_module_ids = body.effective_module_ids.filter(
+      (id) => !off.includes(id),
+    );
+    await route.fulfill({ response, json: body });
+  });
+}
+
 async function signIn(page: Page) {
   await page.goto("/overview/");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -82,8 +96,19 @@ test("a visit is billed and its commission accrued once paid", async ({
   await accessible(page, testInfo, ".commission-plan", "plan-saved");
   await plan.getByRole("button", { name: "Close" }).click();
 
-  // Bill the visit from its desk.
+  // With invoices off the desk shows no billing form, only a plain line.
+  await withoutModules(page, ["finance_documents"]);
   let desk = await openDesk(page, booking);
+  await expect(
+    desk.getByText("Billing is turned off in this business's configuration."),
+  ).toBeVisible();
+  await expect(desk.getByRole("form", { name: "Invoice" })).toHaveCount(0);
+  await accessible(page, testInfo, ".visit-desk", "billing-off");
+  await desk.getByRole("button", { name: "Close" }).click();
+  await page.unroute(CONFIGURATION);
+
+  // Bill the visit from its desk.
+  desk = await openDesk(page, booking);
   const billing = desk.getByRole("form", { name: "Invoice" });
   await billing.getByLabel("Book").selectOption({ label: "FAKE Billing LLC" });
   await billing.getByLabel("Customer").selectOption({ label: "FAKE Customer" });
@@ -119,6 +144,24 @@ test("a visit is billed and its commission accrued once paid", async ({
   const refused = desk.getByText(/^Billing is not available here/);
   if (await refused.count()) throw new Error(await refused.first().innerText());
   await expect(desk.getByText("Paid 50.00 of 50.00")).toBeVisible();
+
+  // With workforce off the paid visit shows no commission form.
+  await desk.getByRole("button", { name: "Close" }).click();
+  await withoutModules(page, ["workforce"]);
+  desk = await openDesk(page, booking);
+  await expect(
+    desk.getByText(
+      "Commissions are turned off in this business's configuration.",
+    ),
+  ).toBeVisible();
+  await expect(desk.getByRole("form", { name: "Commission" })).toHaveCount(0);
+  await accessible(page, testInfo, ".visit-desk", "commission-off");
+  await desk.getByRole("button", { name: "Close" }).click();
+  await page.unroute(CONFIGURATION);
+  desk = await openDesk(page, booking);
+  await expect(desk.getByText("Loading the billing…")).toBeHidden({
+    timeout: 15000,
+  });
   const commission = desk.getByRole("form", { name: "Commission" });
   await commission
     .getByLabel("Expense account")

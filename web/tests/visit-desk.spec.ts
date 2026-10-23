@@ -9,6 +9,20 @@ const BOOKING = {
   mobile: process.env.GBA_L7B_MOBILE_BOOKING ?? "",
 };
 
+const CONFIGURATION = "**/v1/businesses/*/configuration";
+
+// L8 decision 70: the desk follows the business's modules; switch some off in the answer.
+async function withoutModules(page: Page, off: string[]) {
+  await page.route(CONFIGURATION, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { effective_module_ids: string[] };
+    body.effective_module_ids = body.effective_module_ids.filter(
+      (id) => !off.includes(id),
+    );
+    await route.fulfill({ response, json: body });
+  });
+}
+
 async function signIn(page: Page) {
   await page.goto("/overview/");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -65,6 +79,23 @@ test("a visit is completed and its materials are written off", async ({
     "3.0",
   );
   await accessible(page, testInfo, "completed");
+
+  // With inventory off the desk shows no write-off form, only a plain line.
+  await desk.getByRole("button", { name: "Close" }).click();
+  await withoutModules(page, ["inventory"]);
+  desk = await openDesk(page, booking);
+  await expect(
+    desk.getByText(
+      "Materials are turned off in this business's configuration.",
+    ),
+  ).toBeVisible();
+  await expect(
+    desk.getByRole("button", { name: "Write off materials" }),
+  ).toHaveCount(0);
+  await accessible(page, testInfo, "materials-off");
+  await desk.getByRole("button", { name: "Close" }).click();
+  await page.unroute(CONFIGURATION);
+  desk = await openDesk(page, booking);
 
   // Write the actual quantities off from the branch's shelf.
   await desk.getByLabel("Owner").selectOption({ label: "FAKE Visit Desk LLC" });
