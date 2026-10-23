@@ -8,9 +8,16 @@ import {
   type Bootstrap,
   type Details,
   type Quote,
-  type Selection,
   type Slot,
 } from "../lib/contracts";
+import {
+  addOnOffered,
+  MAX_EXTRA_LINES,
+  selectionOf,
+  servicesOffered,
+  servingAll,
+  type Line,
+} from "../lib/visit";
 import {
   Summary,
   Times,
@@ -24,8 +31,10 @@ const steps: Step[] = ["service", "time", "details", "review"];
 export function Journey({ salon }: { salon: Bootstrap }) {
   const [step, setStep] = useState<Step>("service");
   const [locationId, setLocationId] = useState(salon.locations[0]!.id);
-  const [variantId, setVariantId] = useState("");
-  const [addons, setAddons] = useState<string[]>([]);
+  // L7c: the visit's services in order, each with its own add-ons (decision 48).
+  const [lines, setLines] = useState<Line[]>([
+    { variant_id: "", add_on_ids: [] },
+  ]);
   const [artistId, setArtistId] = useState("");
   const [day, setDay] = useState(salon.locations[0]!.today);
   const [slot, setSlot] = useState<Slot | null>(null);
@@ -44,17 +53,99 @@ export function Journey({ salon }: { salon: Bootstrap }) {
     null,
   );
   const heading = useRef<HTMLHeadingElement>(null);
+  const focusLine = useRef<number | null>(null);
   const location = salon.locations.find((l) => l.id === locationId)!;
-  const variant = salon.variants.find((v) => v.id === variantId);
-  const selection: Selection = {
-    location_id: locationId,
-    variant_id: variantId,
-    add_on_ids: addons,
-    resource_id: artistId || null,
-  };
+  const variant = salon.variants.find((v) => v.id === lines[0]!.variant_id);
+  const complete = lines.every((line) => line.variant_id);
+  const serviceIds = Array.from(
+    new Set(
+      lines.flatMap((line) =>
+        salon.variants
+          .filter((v) => v.id === line.variant_id)
+          .map((v) => v.service_id),
+      ),
+    ),
+  );
+  const selection = selectionOf(locationId, lines, artistId || null);
   useEffect(() => {
     heading.current?.focus();
   }, [step]);
+  useEffect(() => {
+    // Keyboard users land on the service select a line change concerns.
+    if (focusLine.current === null) return;
+    document.getElementById(`visit-line-${focusLine.current}`)?.focus();
+    focusLine.current = null;
+  }, [lines]);
+  // Any change of the visit invalidates its quote; a change of services also the specialist.
+  function changeLines(next: Line[], services: boolean) {
+    setLines(next);
+    setQuote(null);
+    setSlot(null);
+    if (services) setArtistId("");
+  }
+  function serviceOptions(index: number) {
+    const offered = servicesOffered(salon, lines, index);
+    return Array.from(new Set(offered.map((v) => v.service_name))).map(
+      (name) => (
+        <optgroup key={name} label={name}>
+          {offered
+            .filter((v) => v.service_name === name)
+            .map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name} · {v.duration_minutes} min
+              </option>
+            ))}
+        </optgroup>
+      ),
+    );
+  }
+  function addOns(index: number) {
+    const line = lines[index]!;
+    return (
+      <fieldset className="addons">
+        <legend>
+          {index === 0 ? "Make it yours" : `Add-ons for service ${index + 1}`}{" "}
+          <span>Optional add-ons</span>
+        </legend>
+        {salon.add_ons.map((a) => {
+          const checked = line.add_on_ids.includes(a.id);
+          const offered = addOnOffered(salon, lines, index, a.id);
+          return (
+            <label key={a.id} className="check">
+              <input
+                type="checkbox"
+                disabled={!offered && !checked}
+                checked={checked}
+                onChange={(e) =>
+                  changeLines(
+                    lines.map((l, i) =>
+                      i !== index
+                        ? l
+                        : {
+                            ...l,
+                            add_on_ids: e.target.checked
+                              ? [...l.add_on_ids, a.id]
+                              : l.add_on_ids.filter((id) => id !== a.id),
+                          },
+                    ),
+                    false,
+                  )
+                }
+              />
+              <span>
+                {a.name}
+                <small>
+                  {offered
+                    ? `${money(a.price_cents, a.currency)} · +${a.duration_minutes} min`
+                    : "Not available with this visit"}
+                </small>
+              </span>
+            </label>
+          );
+        })}
+      </fieldset>
+    );
+  }
   useEffect(() => {
     if (!booking?.hold_expires_at || booking.status !== "HOLD") return;
     const expiry = booking.hold_expires_at;
@@ -218,6 +309,7 @@ export function Journey({ salon }: { salon: Bootstrap }) {
                 <label>
                   Location
                   <select
+                    aria-label="Location"
                     value={locationId}
                     onChange={(e) => {
                       setLocationId(e.target.value);
@@ -238,28 +330,22 @@ export function Journey({ salon }: { salon: Bootstrap }) {
                 <label>
                   Service and variant
                   <select
-                    value={variantId}
-                    onChange={(e) => {
-                      setVariantId(e.target.value);
-                      setAddons([]);
-                      setArtistId("");
-                      setQuote(null);
-                    }}
+                    id="visit-line-0"
+                    aria-label="Service and variant"
+                    value={lines[0]!.variant_id}
+                    onChange={(e) =>
+                      changeLines(
+                        lines.map((l, i) =>
+                          i === 0
+                            ? { variant_id: e.target.value, add_on_ids: [] }
+                            : l,
+                        ),
+                        true,
+                      )
+                    }
                   >
                     <option value="">Choose a service</option>
-                    {Array.from(
-                      new Set(salon.variants.map((v) => v.service_name)),
-                    ).map((name) => (
-                      <optgroup key={name} label={name}>
-                        {salon.variants
-                          .filter((v) => v.service_name === name)
-                          .map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {v.name} · {v.duration_minutes} min
-                            </option>
-                          ))}
-                      </optgroup>
-                    ))}
+                    {serviceOptions(0)}
                   </select>
                 </label>
                 {variant && (
@@ -268,54 +354,77 @@ export function Journey({ salon }: { salon: Bootstrap }) {
                       {money(variant.price_cents, variant.currency)}{" "}
                       <span> / {variant.duration_minutes} min</span>
                     </p>
-                    <fieldset className="addons">
-                      <legend>
-                        Make it yours <span>Optional add-ons</span>
-                      </legend>
-                      {salon.add_ons.map((a) => {
-                        const provided = new Set([
-                          ...variant.provides,
-                          ...salon.add_ons
-                            .filter(
-                              (other) =>
-                                other.id !== a.id && addons.includes(other.id),
-                            )
-                            .flatMap((other) => other.provides),
-                        ]);
-                        const compatible =
-                          a.currency === variant.currency &&
-                          a.requires.every((c) => provided.has(c)) &&
-                          !a.provides.some((c) => provided.has(c)) &&
-                          !a.conflicts_with.some((c) => provided.has(c));
-                        return (
-                          <label key={a.id} className="check">
-                            <input
-                              type="checkbox"
-                              disabled={!compatible && !addons.includes(a.id)}
-                              checked={addons.includes(a.id)}
-                              onChange={(e) =>
-                                setAddons(
-                                  e.target.checked
-                                    ? [...addons, a.id]
-                                    : addons.filter((id) => id !== a.id),
-                                )
-                              }
-                            />
-                            <span>
-                              {a.name}
-                              <small>
-                                {compatible
-                                  ? `${money(a.price_cents, a.currency)} · +${a.duration_minutes} min`
-                                  : "Not available with this variant"}
-                              </small>
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </fieldset>
+                    {addOns(0)}
                   </>
                 )}
-                <button disabled={!variant} onClick={() => move("time")}>
+                {lines.slice(1).map((line, k) => {
+                  const index = k + 1;
+                  const name = `Service ${index + 1}`;
+                  return (
+                    <div className="visit-line" key={index}>
+                      <label>
+                        {name}
+                        <select
+                          id={`visit-line-${index}`}
+                          aria-label={name}
+                          value={line.variant_id}
+                          onChange={(e) =>
+                            changeLines(
+                              lines.map((l, i) =>
+                                i === index
+                                  ? {
+                                      variant_id: e.target.value,
+                                      add_on_ids: [],
+                                    }
+                                  : l,
+                              ),
+                              true,
+                            )
+                          }
+                        >
+                          <option value="">Choose a service</option>
+                          {serviceOptions(index)}
+                        </select>
+                      </label>
+                      {line.variant_id && addOns(index)}
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => {
+                          focusLine.current = index - 1;
+                          changeLines(
+                            lines.filter((_, i) => i !== index),
+                            true,
+                          );
+                        }}
+                      >
+                        Remove service {index + 1}
+                      </button>
+                    </div>
+                  );
+                })}
+                {variant && lines.length <= MAX_EXTRA_LINES && (
+                  <p>
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={!complete}
+                      onClick={() => {
+                        focusLine.current = lines.length;
+                        changeLines(
+                          [...lines, { variant_id: "", add_on_ids: [] }],
+                          true,
+                        );
+                      }}
+                    >
+                      Add another service
+                    </button>
+                  </p>
+                )}
+                <button
+                  disabled={!variant || !complete}
+                  onClick={() => move("time")}
+                >
                   Continue to times
                 </button>
               </>
@@ -331,6 +440,7 @@ export function Journey({ salon }: { salon: Bootstrap }) {
                 <label>
                   Artist
                   <select
+                    aria-label="Artist"
                     value={artistId}
                     disabled={busy}
                     onChange={(e) => {
@@ -339,17 +449,14 @@ export function Journey({ salon }: { salon: Bootstrap }) {
                     }}
                   >
                     <option value="">Any available artist</option>
-                    {salon.artists
-                      .filter(
-                        (a) =>
-                          a.location_id === locationId &&
-                          a.service_ids.includes(variant?.service_id ?? ""),
-                      )
-                      .map((a) => (
+                    {/* L7c: one specialist serves every service of the visit. */}
+                    {servingAll(salon.artists, locationId, serviceIds).map(
+                      (a) => (
                         <option key={a.id} value={a.id}>
                           {a.name}
                         </option>
-                      ))}
+                      ),
+                    )}
                   </select>
                 </label>
                 <label>

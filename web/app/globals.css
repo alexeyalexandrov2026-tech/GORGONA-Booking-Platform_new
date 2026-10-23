@@ -306,6 +306,23 @@ button:disabled {
   font-size: 0.82rem;
   margin-top: 18px;
 }
+/* L7c: the stages of a visit, and the services after the first. */
+.summary .stages {
+  list-style: decimal;
+  padding-left: 20px;
+  margin: 14px 0 0;
+  font-size: 0.82rem;
+}
+.summary .stages li {
+  display: list-item;
+  margin-bottom: 6px;
+  overflow-wrap: anywhere;
+}
+.visit-line {
+  border-top: 1px solid var(--line);
+  padding-top: 22px;
+  margin-bottom: 22px;
+}
 .muted {
   color: var(--muted);
 }

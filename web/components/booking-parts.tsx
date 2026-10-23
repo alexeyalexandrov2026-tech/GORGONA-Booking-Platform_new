@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
-import { api, appointmentTime, errorMessage, money } from "../lib/api";
+import {
+  api,
+  ApiError,
+  appointmentTime,
+  errorMessage,
+  money,
+} from "../lib/api";
+import { REFUSALS, stageText } from "../lib/visit";
 import {
   availabilitySchema,
   type Availability,
@@ -21,7 +28,7 @@ export function Summary({ quote }: { quote: Quote | null }) {
         <>
           <ul>
             {quote.lines.map((line) => (
-              <li key={line.id}>
+              <li key={`${line.kind}:${line.id}`}>
                 <span>{line.name}</span>
                 <span>{money(line.price_cents, quote.currency)}</span>
               </li>
@@ -32,6 +39,16 @@ export function Summary({ quote }: { quote: Quote | null }) {
             <strong>{money(quote.total_cents, quote.currency)}</strong>
           </div>
           <p>{quote.booking_duration_minutes} minutes</p>
+          {quote.version === 2 && (
+            // L7c: the stages of the visit in order, in plain words (decision 51).
+            <ol className="stages" aria-label="Stages">
+              {quote.stages.map((stage, i) => (
+                <li key={i}>
+                  {stageText(stage.kind)} · {stage.minutes} min
+                </li>
+              ))}
+            </ol>
+          )}
         </>
       ) : (
         <p>Choose a service to see your studio’s price and duration.</p>
@@ -66,7 +83,8 @@ export function Times({
     key: string;
     value: Availability | null;
     error: string;
-  }>({ key: "", value: null, error: "" });
+    retry: boolean;
+  }>({ key: "", value: null, error: "", retry: false });
   const [attempt, setAttempt] = useState(0);
   const key = JSON.stringify({ ...selection, day });
   useEffect(() => {
@@ -81,13 +99,19 @@ export function Times({
     )
       .then((value) => {
         if (!controller.signal.aborted) {
-          setResponse({ key, value, error: "" });
+          setResponse({ key, value, error: "", retry: false });
           onQuote(value.quote);
         }
       })
       .catch((e: unknown) => {
         if (!controller.signal.aborted)
-          setResponse({ key, value: null, error: errorMessage(e) });
+          setResponse({
+            key,
+            value: null,
+            error: errorMessage(e),
+            // L7c: a refusal of the visit itself is shown in the server's words, no retry.
+            retry: !(e instanceof ApiError && REFUSALS.includes(e.code)),
+          });
       });
     return () => controller.abort();
   }, [key, attempt, refresh, day, onQuote]);
@@ -104,9 +128,14 @@ export function Times({
         <p role="alert" className="error">
           {response.error}
         </p>
-        <button className="secondary" onClick={() => setAttempt((x) => x + 1)}>
-          Retry availability
-        </button>
+        {response.retry && (
+          <button
+            className="secondary"
+            onClick={() => setAttempt((x) => x + 1)}
+          >
+            Retry availability
+          </button>
+        )}
       </div>
     );
   if (!response.value) return null;
@@ -178,6 +207,12 @@ export function Appointment({
         }).format(new Date(booking.start_at))}
       </p>
       <strong>{appointmentTime(booking.start_at, timezone)}</strong>
+      <p data-testid="visit-services">
+        {booking.quote.lines
+          .filter((line) => line.kind === "variant")
+          .map((line) => line.name)
+          .join(", ")}
+      </p>
       <p>
         With {salon.artists.find((a) => a.id === booking.resource_id)?.name}
       </p>

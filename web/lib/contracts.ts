@@ -129,4 +129,6 @@ export type Selection = {
   variant_id: string;
   add_on_ids: string[];
   resource_id: string | null;
+  // L7c: the further services of a visit, in order; absent for one service.
+  extra_lines?: { variant_id: string; add_on_ids: string[] }[];
 };
