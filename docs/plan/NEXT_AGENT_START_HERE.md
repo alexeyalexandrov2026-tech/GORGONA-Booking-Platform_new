@@ -1,6 +1,13 @@
 # GORGONA — начните здесь (актуальное продолжение, 2026-10-13)
 
-## Current: package L (BEAUTY-01) through L7b2b done; next L7c, then L8 — 2026-10-23
+## Current: package L (BEAUTY-01) complete; next stage 3 TMS-01..03 — 2026-10-23
+
+Read the [handoff](NEXT_AGENT_AFTER_PACKAGE_L_2026-10-23.md) first; the ready-to-paste prompt is
+[NEXT_AGENT_AFTER_PACKAGE_L_PROMPT_2026-10-23.md](NEXT_AGENT_AFTER_PACKAGE_L_PROMPT_2026-10-23.md). Package L
+(L1-L9b) is published for CI only and green (head `codex/package-l9b-commission-reversal` `8b6b37d`);
+the acceptance record shows L-01..L-12 PASS; BEAUTY-01 readiness and `main` wait for the owner's word.
+
+## Previous: package L (BEAUTY-01) through L7b2b done; next L7c, then L8 — 2026-10-23
 
 Read the [handoff](NEXT_AGENT_PACKAGE_L7C_2026-10-23.md) first; the ready-to-paste prompt is
 [NEXT_AGENT_PACKAGE_L7C_PROMPT_2026-10-23.md](NEXT_AGENT_PACKAGE_L7C_PROMPT_2026-10-23.md). Slices L1–L7b2b
