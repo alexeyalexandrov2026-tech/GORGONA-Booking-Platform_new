@@ -10,7 +10,16 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-24: package M started; M1 transport planning locally verified
+## Current checkpoint — 2026-10-24: M2 transport assignments locally verified
+
+M2 in `31bb854` on `codex/package-m2-assignments` ([ADR-0029](../adr/0029-transport-assignments-occupancy.md)): drivers, trucks and trailers have their own
+lanes in the shared occupancy; an assignment holds its period, a replacement ends one period and starts the next
+all or none, a busy truck changes nothing, an open assignment freezes the trip's span (migration 0075). Focused
+**653 passed**; full **2580 passed, 4 skipped** ([validation](evidence/2026-10-24-m2-transport-assignments/VALIDATION.md)). M1 CI green (40065762379). A record slip was
+found and is stated there: earlier records carried a stale `next_migration` 72. BEAUTY-01 readiness and `main`
+still wait for the owner. Next migration **0076**.
+
+## Previous checkpoint — 2026-10-24: package M started; M1 transport planning locally verified
 
 Owner's word 2026-10-23: add the transport module, not enableable until acceptance, and start package M
 ([plan](PACKAGE_M_PLAN_2026-10-23.md)). M1 in `32bb8a4` on `codex/package-m1-planning`: the module `transport` (implemented, not

@@ -39,7 +39,7 @@ Branch `codex/package-m2-assignments` from `f056f6f` (M1 docs). Same process as 
 7. A booking or reservation naming a transport resource is refused as unavailable before the database; the
    database guard refuses it too.
 
-## Acceptance of M2 (NOT TESTED)
+## Acceptance of M2 (PASS locally in `31bb854`)
 
 | id | Requirement |
 |---|---|
