@@ -12,6 +12,7 @@ from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import transport as service
 from gorgona_booking.business import transport_assignments as fleet
+from gorgona_booking.business import transport_events as events
 from gorgona_booking.business.transport import (
     OrderInput,
     OrderList,
@@ -30,6 +31,7 @@ from gorgona_booking.business.transport_assignments import (
     VehicleList,
     VehicleView,
 )
+from gorgona_booking.business.transport_events import EventInput
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
 from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenant
@@ -259,6 +261,28 @@ async def end_assignment(
             business_id,
             trip_id,
             assignment_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/trips/{trip_id}/events")
+async def post_event(
+    business_id: UUID,
+    trip_id: UUID,
+    body: EventInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> TripView:
+    """ADR-0030: a stop event as an idempotent fact; partial delivery per leg."""
+    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+        return await events.record_event(
+            access.conn,
+            business_id,
+            trip_id,
             user_id=principal.user_id,
             actor=principal.actor,
             key=idempotency_key,

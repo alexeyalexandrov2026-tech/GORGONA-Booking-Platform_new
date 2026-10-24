@@ -56,6 +56,10 @@ class TransportTripAssignedError(ConflictError):
     code = "TRANSPORT_TRIP_ASSIGNED"
 
 
+class TransportTripStartedError(ConflictError):
+    code = "TRANSPORT_TRIP_STARTED"
+
+
 class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -153,6 +157,11 @@ class LegView(BaseModel):
     quantity: int
     pickup_stop: int
     delivery_stop: int
+    # ADR-0030: what the leg's events recorded; loaded and not yet resolved stays open.
+    loaded: int = 0
+    delivered: int = 0
+    refused: int = 0
+    damaged: int = 0
 
 
 class AssignmentView(BaseModel):
@@ -166,6 +175,24 @@ class AssignmentView(BaseModel):
     replaces: UUID | None
 
 
+class QuantityView(BaseModel):
+    leg_position: int
+    quantity: int
+
+
+class EventView(BaseModel):
+    """A stop event: an insert-only fact with its source and the source's event id."""
+
+    event_id: UUID
+    stop_position: int
+    kind: str
+    occurred_at: datetime
+    source: str
+    source_event_id: str
+    note: str | None
+    quantities: list[QuantityView]
+
+
 class TripView(BaseModel):
     trip_id: UUID
     location_id: UUID
@@ -175,6 +202,7 @@ class TripView(BaseModel):
     stops: list[StopView]
     legs: list[LegView]
     assignments: list[AssignmentView]
+    events: list[EventView]
 
 
 class TripList(BaseModel):
@@ -438,6 +466,35 @@ async def load_trip(conn: RuntimeConnection, trip_id: UUID) -> TripView | None:
             (trip_id,),
         )
     ).fetchall()
+    done: dict[int, dict[str, int]] = {}
+    for position, kind, total in await (
+        await conn.execute(
+            "select q.leg_position, e.kind, sum(q.quantity) from gba.transport_event_quantities q "
+            "join gba.transport_stop_events e on e.tenant_id = q.tenant_id and e.id = q.event_id "
+            "where q.trip_id = %s group by q.leg_position, e.kind",
+            (trip_id,),
+        )
+    ).fetchall():
+        done.setdefault(int(position), {})[kind] = int(total)
+    quantities: dict[UUID, list[QuantityView]] = {}
+    for event_id, position, quantity in await (
+        await conn.execute(
+            "select event_id, leg_position, quantity from gba.transport_event_quantities "
+            "where trip_id = %s order by event_id, leg_position",
+            (trip_id,),
+        )
+    ).fetchall():
+        quantities.setdefault(event_id, []).append(
+            QuantityView(leg_position=position, quantity=quantity)
+        )
+    events = await (
+        await conn.execute(
+            "select id, stop_position, kind, occurred_at, source, source_event_id, note "
+            "from gba.transport_stop_events where trip_id = %s "
+            "order by occurred_at, recorded_at, id",
+            (trip_id,),
+        )
+    ).fetchall()
     return TripView(
         trip_id=trip_id,
         location_id=head[0],
@@ -462,6 +519,10 @@ async def load_trip(conn: RuntimeConnection, trip_id: UUID) -> TripView | None:
                 quantity=row[2],
                 pickup_stop=row[3],
                 delivery_stop=row[4],
+                **{
+                    kind: done.get(row[0], {}).get(kind, 0)
+                    for kind in ("loaded", "delivered", "refused", "damaged")
+                },
             )
             for row in legs
         ],
@@ -475,6 +536,19 @@ async def load_trip(conn: RuntimeConnection, trip_id: UUID) -> TripView | None:
                 replaces=row[5],
             )
             for row in periods
+        ],
+        events=[
+            EventView(
+                event_id=row[0],
+                stop_position=row[1],
+                kind=row[2],
+                occurred_at=_utc(row[3]),
+                source=row[4],
+                source_event_id=row[5],
+                note=row[6],
+                quantities=quantities.get(row[0], []),
+            )
+            for row in events
         ],
     )
 
@@ -563,6 +637,8 @@ async def save_trip(
         raise TransportRevisionConflictError(
             "The trip changed since it was read; reload it", revision=found
         )
+    if current is not None and current[1] != "planned":
+        raise TransportTripStartedError("A started trip keeps its plan")
     if current is not None and await has_open_assignment(conn, trip_id):
         span = (
             min(stop.window_start for stop in body.stops),

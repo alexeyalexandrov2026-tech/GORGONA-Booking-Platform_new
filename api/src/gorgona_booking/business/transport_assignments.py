@@ -348,8 +348,8 @@ async def assign(
             raise IdempotencyKeyReusedError("Key was used for another request")
         return await _view(conn, trip_id)
     location, status = await _lock_trip(conn, trip_id)
-    if status != "planned":
-        raise TransportAssignmentInvalidError("Only a planned trip is assigned")
+    if status not in ("planned", "in_transit"):
+        raise TransportAssignmentInvalidError("Only a planned or running trip is assigned")
     used = await (
         await conn.execute(
             "select 1 from gba.transport_assignments where id = %s", (assignment_id,)

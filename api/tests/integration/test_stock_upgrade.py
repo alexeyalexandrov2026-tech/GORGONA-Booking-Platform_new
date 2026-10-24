@@ -78,6 +78,9 @@ K_TABLES = {
     "transport_vehicles",
     "transport_assignments",
     "transport_assignment_ends",
+    # M3 (0076): stop events and their quantities per leg.
+    "transport_stop_events",
+    "transport_event_quantities",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

@@ -237,6 +237,18 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                 query = sql.SQL(
                     "select {} from ({}) t where t.source_kind <> 'trip_assignment'"
                 ).format(names, query)
+            # M3: a trip in transit cannot be represented before migration 0076; it is the
+            # planned trip it was there (its events start at 0076).
+            if target_version[0] < 76 and table == "transport_trips":
+                query = sql.SQL("select {} from ({}) t").format(
+                    sql.SQL(",").join(
+                        sql.SQL("'planned'::text as status")
+                        if column == "status"
+                        else sql.Identifier(column)
+                        for column in columns
+                    ),
+                    query,
+                )
             cursor = before.execute(query)
             assert cursor.description is not None
             json_columns = {

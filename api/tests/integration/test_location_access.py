@@ -414,6 +414,8 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (74, "-- Transport branch scope:"),
                 # M2: drivers, vehicles, assignment periods and their ends.
                 (75, "-- Transport assignment branch scope:"),
+                # M3: stop events and their quantities.
+                (76, "-- Transport event branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker
