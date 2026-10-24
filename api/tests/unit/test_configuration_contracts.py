@@ -72,7 +72,7 @@ def test_commands_need_a_real_revision() -> None:
 
 def test_module_registry_is_consistent() -> None:
     ids = [module.id for module in MODULES]
-    assert len(ids) == len(set(ids)) == 19
+    assert len(ids) == len(set(ids)) == 20
     assert CORE_MODULE_IDS == ("organization", "users_access")
     for module in MODULES:
         assert set(module.depends_on) <= MODULES_BY_ID.keys(), module.id

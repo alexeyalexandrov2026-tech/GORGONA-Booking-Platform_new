@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[3] = 3
+MODULE_REGISTRY_VERSION: Literal[4] = 4
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -209,6 +209,19 @@ MODULES: tuple[PlatformModule, ...] = (
     _module("support", "Support", _OPTIONAL, ("counterparties",)),
     _module("analytics", "Analytics", _OPTIONAL, ("organization",)),
     _module("automation_ai", "Automation and AI", _OPTIONAL, ("users_access",)),
+    # ADR-0028 (package M, owner's word 2026-10-23): implemented, not enableable until acceptance.
+    _module(
+        "transport",
+        "Transport and logistics",
+        _OPTIONAL,
+        ("counterparties",),
+        Readiness.IMPLEMENTED,
+        "Planning only (ADR-0028): shipment orders with loads, trips with stops in their own time "
+        "zones and legs that place load quantities on trips; nothing is over-planned. No "
+        "assignments, stop events, dispatcher grants, clearance, screens or money yet; it cannot "
+        "be enabled until package M is accepted.",
+        "New shipment orders and trips. Reads continue.",
+    ),
     _module(
         "storefronts", "Storefronts and marketplaces", _OPTIONAL, ("products_services", "sales")
     ),

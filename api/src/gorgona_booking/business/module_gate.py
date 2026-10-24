@@ -20,6 +20,7 @@ COUNTERPARTIES_MODULE = "counterparties"
 DOCUMENTS_MODULE = "documents"
 FINANCE_MODULE = "finance"
 INVENTORY_MODULE = "inventory"
+TRANSPORT_MODULE = "transport"
 
 
 def _disabled(module_id: str) -> ModuleDisabledError:

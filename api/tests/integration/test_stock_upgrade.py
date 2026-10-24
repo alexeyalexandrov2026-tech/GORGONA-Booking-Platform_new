@@ -67,6 +67,12 @@ K_TABLES = {
     "visit_no_shows",
     # L9b (0073): the reversal of a visit commission after a refund.
     "visit_commission_reversals",
+    # M1 (0074): transport orders, loads, trips, stops and legs.
+    "transport_orders",
+    "transport_loads",
+    "transport_trips",
+    "transport_stops",
+    "transport_legs",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

@@ -407,6 +407,11 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (70, "-- Commission branch scope:"),
                 # L6: prepaid redemptions.
                 (71, "-- Prepaid branch scope:"),
+                # L9a, L9b: no-shows and commission reversals (added with M1; missed in L9).
+                (72, "-- Visit branch scope:"),
+                (73, "-- Visit branch scope:"),
+                # M1: transport trips, stops and legs.
+                (74, "-- Transport branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker

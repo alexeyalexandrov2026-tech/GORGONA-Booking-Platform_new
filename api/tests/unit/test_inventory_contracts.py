@@ -32,7 +32,7 @@ PLACE: dict[str, object] = {
 
 
 def test_inventory_rights_belong_to_admins_and_are_never_delegated() -> None:
-    assert PERMISSIONS_VERSION == 7
+    assert PERMISSIONS_VERSION == 8
     rights = {Permission.INVENTORY_READ, Permission.INVENTORY_MANAGE}
     for role in ("owner", "manager"):
         assert rights <= ROLE_PERMISSIONS[role]
@@ -45,7 +45,7 @@ def test_inventory_rights_belong_to_admins_and_are_never_delegated() -> None:
 def test_inventory_module_depends_on_finance_and_follows_stock_01() -> None:
     module = modules.MODULES_BY_ID["inventory"]
     scenario = next(s for s in SCENARIOS if s.id == "STOCK-01")
-    assert modules.MODULE_REGISTRY_VERSION == 3
+    assert modules.MODULE_REGISTRY_VERSION == 4
     assert module.kind is modules.ModuleKind.OPTIONAL
     assert module.depends_on == ("finance",)
     assert module.readiness is scenario.status
