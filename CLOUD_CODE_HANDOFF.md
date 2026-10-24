@@ -1,6 +1,15 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-24: M3 stop events and partial delivery locally verified
+## Current checkpoint — 2026-10-24: M4 dispatcher scope on carrier grants locally verified
+
+M4 in `4b6cd75` on `codex/package-m4-dispatcher-grants` ([ADR-0031](docs/adr/0031-transport-dispatcher-grants.md)): a carrier grants an independent
+dispatcher transport work by action (read, plan, assign, events) through the ADR-0017 grants; fleet registration
+is never delegated; revocation, delegate removal and expiry block the next command; earlier facts keep their
+executor; permissions version 9, migration 0077. Focused **676 passed**; full **2593 passed, 4 skipped**
+([validation](docs/plan/evidence/2026-10-24-m4-dispatcher-grants/VALIDATION.md)). M3 CI green (40081070256). BEAUTY-01 readiness and `main` still wait for the owner. Next
+migration **0078**.
+
+## Previous checkpoint — 2026-10-24: M3 stop events and partial delivery locally verified
 
 M3 in `f6ac5f1` on `codex/package-m3-stop-events` ([ADR-0030](docs/adr/0030-transport-stop-events.md)): stop events are insert-only facts with a
 source event id (a repeat changes nothing); partial delivery per leg, never beyond the plan or the load; the first

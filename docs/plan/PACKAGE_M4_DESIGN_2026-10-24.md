@@ -14,7 +14,7 @@ the same way." Plan: [PACKAGE_M_PLAN_2026-10-23.md](PACKAGE_M_PLAN_2026-10-23.md
   driver and vehicle registration.
 - No screens (M6).
 
-## Acceptance of M4 (NOT TESTED)
+## Acceptance of M4 (PASS locally in `4b6cd75`)
 
 | id | Requirement |
 |---|---|
