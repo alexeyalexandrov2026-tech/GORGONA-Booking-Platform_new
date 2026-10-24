@@ -8,7 +8,12 @@ import pytest
 from pydantic import ValidationError
 
 from gorgona_booking.api import salons
-from gorgona_booking.auth.permissions import DELEGABLE_PERMISSIONS, ROLE_PERMISSIONS, Permission
+from gorgona_booking.auth.permissions import (
+    BOOKING_DELEGABLE,
+    DELEGABLE_PERMISSIONS,
+    ROLE_PERMISSIONS,
+    Permission,
+)
 from gorgona_booking.business.delegation_contracts import DelegateSelection, DelegationIssue
 from gorgona_booking.tenancy.authorization import authorized_tenant
 
@@ -76,12 +81,17 @@ def test_duplicate_delegates_are_rejected() -> None:
         )
 
 
-def test_only_booking_work_is_delegable() -> None:
+def test_only_booking_and_dispatch_work_is_delegable() -> None:
+    # ADR-0031: a carrier's dispatcher works by transport action; fleet registration never.
     assert {
         Permission.BOOKING_READ,
         Permission.BOOKING_WRITE,
         Permission.CATALOG_READ,
         Permission.STAFF_READ,
+        Permission.TRANSPORT_READ,
+        Permission.TRANSPORT_PLAN,
+        Permission.TRANSPORT_ASSIGN,
+        Permission.TRANSPORT_EVENTS,
     } == DELEGABLE_PERMISSIONS
     for never in (
         Permission.BUSINESS_READ,
@@ -92,10 +102,12 @@ def test_only_booking_work_is_delegable() -> None:
         Permission.MEMBERS_MANAGE_ADMINS,
         Permission.SETTINGS_MANAGE,
         Permission.READINESS_READ,
+        Permission.TRANSPORT_MANAGE,
     ):
         assert never not in DELEGABLE_PERMISSIONS
     # Every delegable permission is one a servicer role can hold; the role still limits it.
-    assert ROLE_PERMISSIONS["front_desk"] >= DELEGABLE_PERMISSIONS
+    assert ROLE_PERMISSIONS["front_desk"] >= BOOKING_DELEGABLE
+    assert ROLE_PERMISSIONS["manager"] >= DELEGABLE_PERMISSIONS
     assert Permission.BOOKING_WRITE not in ROLE_PERMISSIONS["artist"]
 
 

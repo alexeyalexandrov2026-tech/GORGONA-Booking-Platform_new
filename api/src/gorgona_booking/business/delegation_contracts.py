@@ -7,7 +7,16 @@ from pydantic import AwareDatetime, Field, StrictInt, field_validator
 
 from gorgona_booking.business.contracts import Strict
 
-DelegablePermission = Literal["booking.read", "booking.write", "catalog.read", "staff.read"]
+DelegablePermission = Literal[
+    "booking.read",
+    "booking.write",
+    "catalog.read",
+    "staff.read",
+    "transport.read",
+    "transport.plan",
+    "transport.assign",
+    "transport.events",
+]
 GrantStatus = Literal["pending", "active", "declined", "revoked"]
 
 
@@ -26,7 +35,7 @@ class DelegationIssue(_Versioned):
     """Owner terms. They never change after issue; new terms need a new grant."""
 
     servicer_business_id: UUID
-    permissions: tuple[DelegablePermission, ...] = Field(min_length=1, max_length=4)
+    permissions: tuple[DelegablePermission, ...] = Field(min_length=1, max_length=8)
     location_id: UUID | None
     expires_at: AwareDatetime
 

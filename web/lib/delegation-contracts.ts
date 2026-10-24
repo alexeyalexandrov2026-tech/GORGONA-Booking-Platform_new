@@ -6,6 +6,11 @@ export const delegablePermissionSchema = z.enum([
   "booking.write",
   "catalog.read",
   "staff.read",
+  // ADR-0031: a carrier's dispatcher works by transport action.
+  "transport.read",
+  "transport.plan",
+  "transport.assign",
+  "transport.events",
 ]);
 export const delegationSchema = z
   .strictObject({
@@ -15,7 +20,7 @@ export const delegationSchema = z
     owner_name: z.string().min(1),
     servicer_business_id: z.uuid(),
     servicer_name: z.string().min(1).nullable(),
-    permissions: z.array(delegablePermissionSchema).min(1).max(4),
+    permissions: z.array(delegablePermissionSchema).min(1).max(8),
     location_id: z.uuid().nullable(),
     expires_at: instant,
     status: z.enum(["pending", "active", "declined", "revoked"]),
@@ -61,7 +66,7 @@ export const delegatedBusinessSchema = z.strictObject({
   grant_id: z.uuid(),
   servicer_business_id: z.uuid(),
   servicer_name: z.string().nullable(),
-  permissions: z.array(delegablePermissionSchema).min(1).max(4),
+  permissions: z.array(delegablePermissionSchema).min(1).max(8),
   location_id: z.uuid().nullable(),
   expires_at: instant,
 });

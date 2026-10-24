@@ -5,7 +5,7 @@ Roles come from server-side memberships and platform roles, never from token cla
 
 from enum import StrEnum
 
-PERMISSIONS_VERSION = 8
+PERMISSIONS_VERSION = 9
 
 
 class Permission(StrEnum):
@@ -30,6 +30,10 @@ class Permission(StrEnum):
     INVENTORY_READ = "inventory.read"
     INVENTORY_MANAGE = "inventory.manage"
     TRANSPORT_READ = "transport.read"
+    TRANSPORT_PLAN = "transport.plan"
+    TRANSPORT_ASSIGN = "transport.assign"
+    TRANSPORT_EVENTS = "transport.events"
+    # ADR-0031: registering drivers and vehicles only; never delegated.
     TRANSPORT_MANAGE = "transport.manage"
     MEMBERS_MANAGE = "members.manage"
     MEMBERS_MANAGE_ADMINS = "members.manage_admins"
@@ -66,6 +70,9 @@ _MANAGER = _FRONT_DESK | {
     Permission.INVENTORY_READ,
     Permission.INVENTORY_MANAGE,
     Permission.TRANSPORT_READ,
+    Permission.TRANSPORT_PLAN,
+    Permission.TRANSPORT_ASSIGN,
+    Permission.TRANSPORT_EVENTS,
     Permission.TRANSPORT_MANAGE,
     Permission.MEMBERS_MANAGE,
     Permission.SETTINGS_MANAGE,
@@ -82,9 +89,10 @@ ROLE_PERMISSIONS: dict[str, frozenset[Permission]] = {
 
 ADMIN_ROLES = frozenset({"owner", "manager"})
 
-# What an owner business may delegate to a servicing business (ADR-0017): booking work
-# only. Settings, members, structure and organization records are never delegated.
-DELEGABLE_PERMISSIONS = frozenset(
+# What an owner business may delegate to a servicing business (ADR-0017): booking work and,
+# for a carrier's dispatcher, transport work by action (ADR-0031). Settings, members,
+# structure, organization records and fleet registration are never delegated.
+BOOKING_DELEGABLE = frozenset(
     {
         Permission.BOOKING_READ,
         Permission.BOOKING_WRITE,
@@ -92,6 +100,15 @@ DELEGABLE_PERMISSIONS = frozenset(
         Permission.STAFF_READ,
     }
 )
+TRANSPORT_DELEGABLE = frozenset(
+    {
+        Permission.TRANSPORT_READ,
+        Permission.TRANSPORT_PLAN,
+        Permission.TRANSPORT_ASSIGN,
+        Permission.TRANSPORT_EVENTS,
+    }
+)
+DELEGABLE_PERMISSIONS = BOOKING_DELEGABLE | TRANSPORT_DELEGABLE
 
 # What a platform admin may do inside a salon it is not a member of: read-only support.
 PLATFORM_SUPPORT_PERMISSIONS = frozenset(

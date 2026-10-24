@@ -1,4 +1,4 @@
-"""Transport planning (ADR-0028) and assignment (ADR-0029) API; never delegated before M4."""
+"""Transport API (ADR-0028..0030); a carrier's dispatcher acts within its grant (ADR-0031)."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -45,13 +45,17 @@ async def _access(
     principal: CurrentPrincipal,
     business_id: UUID,
     permission: Permission = Permission.TRANSPORT_READ,
+    *,
+    allow_delegation: bool = True,
 ) -> AsyncIterator[TenantAccess]:
+    # ADR-0031: a carrier's dispatcher acts through its grant; fleet registration never does.
     async with authorized_tenant(
         runtime_pool(request),
         principal,
         business_id,
         permission,
         allow_location_scope=True,
+        allow_delegation=allow_delegation,
         request_id=get_request_id(request),
     ) as access:
         await assert_location_scope_ready(access.conn)
@@ -85,7 +89,7 @@ async def put_order(
     idempotency_key: MutationKey,
 ) -> OrderView:
     """ADR-0028 decision 3: the whole order and its loads, with the expected revision."""
-    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+    async with _access(request, principal, business_id, Permission.TRANSPORT_PLAN) as access:
         return await service.save_order(
             access.conn,
             business_id,
@@ -124,7 +128,7 @@ async def put_trip(
     idempotency_key: MutationKey,
 ) -> TripView:
     """ADR-0028 decision 4: the whole planned trip, its stops and legs, with its revision."""
-    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+    async with _access(request, principal, business_id, Permission.TRANSPORT_PLAN) as access:
         return await service.save_trip(
             access.conn,
             business_id,
@@ -165,7 +169,9 @@ async def put_driver(
     idempotency_key: MutationKey,
 ) -> DriverView:
     """ADR-0029 decision 1: a driver with its own lane in its branch."""
-    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+    async with _access(
+        request, principal, business_id, Permission.TRANSPORT_MANAGE, allow_delegation=False
+    ) as access:
         access.require_location(body.location_id)
         return await fleet.save_driver(
             access.conn,
@@ -207,7 +213,9 @@ async def put_vehicle(
     idempotency_key: MutationKey,
 ) -> VehicleView:
     """ADR-0029 decision 1: a truck or trailer with its own lane in its branch."""
-    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+    async with _access(
+        request, principal, business_id, Permission.TRANSPORT_MANAGE, allow_delegation=False
+    ) as access:
         access.require_location(body.location_id)
         return await fleet.save_vehicle(
             access.conn,
@@ -231,7 +239,7 @@ async def put_assignment(
     idempotency_key: MutationKey,
 ) -> TripView:
     """ADR-0029 decisions 3-5: assign, or replace the open period of a role, all or none."""
-    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+    async with _access(request, principal, business_id, Permission.TRANSPORT_ASSIGN) as access:
         return await fleet.assign(
             access.conn,
             business_id,
@@ -255,7 +263,7 @@ async def end_assignment(
     idempotency_key: MutationKey,
 ) -> TripView:
     """ADR-0029 decision 4: end an open period; the rest of its hold is released."""
-    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+    async with _access(request, principal, business_id, Permission.TRANSPORT_ASSIGN) as access:
         return await fleet.end_assignment(
             access.conn,
             business_id,
@@ -278,7 +286,7 @@ async def post_event(
     idempotency_key: MutationKey,
 ) -> TripView:
     """ADR-0030: a stop event as an idempotent fact; partial delivery per leg."""
-    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+    async with _access(request, principal, business_id, Permission.TRANSPORT_EVENTS) as access:
         return await events.record_event(
             access.conn,
             business_id,

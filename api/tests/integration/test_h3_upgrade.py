@@ -249,6 +249,20 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                     ),
                     query,
                 )
+            # M4: a grant naming transport rights cannot be represented before migration 0077;
+            # it and its delegates are left out there.
+            transport_rights = "array['transport.read','transport.plan','transport.assign',"
+            transport_rights += "'transport.events']"
+            if target_version[0] < 77 and table == "delegation_grants":
+                query = sql.SQL(
+                    "select {} from ({}) t where not (t.permissions && " + transport_rights + ")"
+                ).format(names, query)
+            if target_version[0] < 77 and table == "delegation_grant_members":
+                query = sql.SQL(
+                    "select {} from ({}) t where not exists (select 1 from gba.delegation_grants g "
+                    "where g.owner_tenant_id = t.owner_tenant_id and g.id = t.grant_id "
+                    "and g.permissions && " + transport_rights + ")"
+                ).format(names, query)
             cursor = before.execute(query)
             assert cursor.description is not None
             json_columns = {
