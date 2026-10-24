@@ -1,6 +1,14 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-24: M2 transport assignments locally verified
+## Current checkpoint — 2026-10-24: M3 stop events and partial delivery locally verified
+
+M3 in `f6ac5f1` on `codex/package-m3-stop-events` ([ADR-0030](docs/adr/0030-transport-stop-events.md)): stop events are insert-only facts with a
+source event id (a repeat changes nothing); partial delivery per leg, never beyond the plan or the load; the first
+event starts the trip and freezes its plan; trucks can be replaced in transit (migration 0076). Focused
+**660 passed**; full **2587 passed, 4 skipped** ([validation](docs/plan/evidence/2026-10-24-m3-transport-events/VALIDATION.md)). M2 CI green (40072696483). BEAUTY-01
+readiness and `main` still wait for the owner. Next migration **0077**.
+
+## Previous checkpoint — 2026-10-24: M2 transport assignments locally verified
 
 M2 in `31bb854` on `codex/package-m2-assignments` ([ADR-0029](docs/adr/0029-transport-assignments-occupancy.md)): drivers, trucks and trailers have their own
 lanes in the shared occupancy; an assignment holds its period, a replacement ends one period and starts the next

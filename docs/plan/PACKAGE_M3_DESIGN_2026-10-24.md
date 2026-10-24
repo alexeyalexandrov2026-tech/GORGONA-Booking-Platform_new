@@ -25,7 +25,7 @@ Owner's word 2026-10-23: «Да, добавь модуль «Транспорт 
 3. Over-loading or over-resolving a leg is `TRANSPORT_QUANTITY_EXCEEDED` (409) and writes nothing.
 4. Replacing a started trip's plan is `TRANSPORT_TRIP_STARTED` (409); an assignment replacement in transit works.
 
-## Acceptance of M3 (NOT TESTED)
+## Acceptance of M3 (PASS locally in `f6ac5f1`)
 
 | id | Requirement |
 |---|---|
