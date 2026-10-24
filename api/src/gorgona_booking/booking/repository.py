@@ -53,7 +53,7 @@ async def active_resource_location(conn: RuntimeConnection, resource_id: UUID) -
     ).fetchone()
     if row is None:
         raise NotFoundError("Resource not found", resource_id=str(resource_id))
-    if not row[1] or row[2] == "staff":
+    if not row[1] or row[2] in ("staff", "driver", "truck", "trailer"):
         raise ResourceUnavailableError("Resource is not available", resource_id=str(resource_id))
     return UUID(str(row[0]))
 

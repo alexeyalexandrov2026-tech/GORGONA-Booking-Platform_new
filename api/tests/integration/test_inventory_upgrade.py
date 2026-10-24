@@ -74,6 +74,11 @@ K_TABLES = {
     "transport_trips",
     "transport_stops",
     "transport_legs",
+    # M2 (0075): drivers, vehicles, assignment periods and their ends.
+    "transport_drivers",
+    "transport_vehicles",
+    "transport_assignments",
+    "transport_assignment_ends",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

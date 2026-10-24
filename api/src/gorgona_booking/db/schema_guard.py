@@ -147,6 +147,41 @@ begin
                 message='a shift allocation is released by a new version';
         end if;
     end if;
+    if exists (select 1 from gba.resources r where r.tenant_id = new.tenant_id
+        and r.id = new.resource_id
+        and (r.kind in ('driver', 'truck', 'trailer'))
+            <> (new.source_kind = 'trip_assignment')) then
+        raise exception using errcode = '23514',
+            message = 'transport occupancy is only for trip assignments';
+    end if;
+    if new.source_kind = 'trip_assignment' then
+        if tg_op = 'INSERT' and not exists (
+            select 1 from gba.transport_assignments a
+             where a.tenant_id = new.tenant_id and a.id = new.source_id
+               and a.resource_id = new.resource_id and new.state = 'confirmed'
+               and (
+                   (a.creation_xid = pg_current_xact_id()
+                    and new.during = tstzrange(
+                        a.starts_at, upper(gba.transport_trip_span(a.tenant_id, a.trip_id)), '[)'))
+                   or exists (
+                       select 1 from gba.transport_assignment_ends e
+                        where e.tenant_id = a.tenant_id and e.assignment_id = a.id
+                          and e.creation_xid = pg_current_xact_id()
+                          and new.during = tstzrange(a.starts_at, e.ends_at, '[)'))
+               )
+        ) then
+            raise exception using errcode = '23514',
+                message = 'a trip allocation follows its exact assignment';
+        end if;
+        if tg_op = 'UPDATE' and new.state = 'released' and not exists (
+            select 1 from gba.transport_assignment_ends e
+             where e.tenant_id = new.tenant_id and e.assignment_id = new.source_id
+               and e.creation_xid = pg_current_xact_id()
+        ) then
+            raise exception using errcode = '23514',
+                message = 'a trip allocation is released by its end';
+        end if;
+    end if;
     return new;
 end;
 """

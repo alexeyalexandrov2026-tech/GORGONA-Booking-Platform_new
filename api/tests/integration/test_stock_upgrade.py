@@ -73,6 +73,11 @@ K_TABLES = {
     "transport_trips",
     "transport_stops",
     "transport_legs",
+    # M2 (0075): drivers, vehicles, assignment periods and their ends.
+    "transport_drivers",
+    "transport_vehicles",
+    "transport_assignments",
+    "transport_assignment_ends",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

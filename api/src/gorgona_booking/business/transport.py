@@ -52,6 +52,10 @@ class TransportLoadPlannedError(ConflictError):
     code = "TRANSPORT_LOAD_PLANNED"
 
 
+class TransportTripAssignedError(ConflictError):
+    code = "TRANSPORT_TRIP_ASSIGNED"
+
+
 class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -151,6 +155,17 @@ class LegView(BaseModel):
     delivery_stop: int
 
 
+class AssignmentView(BaseModel):
+    """A period of a driver, truck or trailer on the trip; `ends_at` is null while it is open."""
+
+    assignment_id: UUID
+    role: str
+    resource_id: UUID
+    starts_at: datetime
+    ends_at: datetime | None
+    replaces: UUID | None
+
+
 class TripView(BaseModel):
     trip_id: UUID
     location_id: UUID
@@ -159,6 +174,7 @@ class TripView(BaseModel):
     revision: int
     stops: list[StopView]
     legs: list[LegView]
+    assignments: list[AssignmentView]
 
 
 class TripList(BaseModel):
@@ -176,7 +192,7 @@ async def require_transport(conn: RuntimeConnection, business: UUID) -> None:
             await require_module(conn, business, dependency)
 
 
-def _fingerprint(subject: UUID, body: BaseModel) -> str:
+def _fingerprint(subject: UUID | str, body: BaseModel) -> str:
     return hashlib.sha256(
         json.dumps(
             {"subject": str(subject), "body": body.model_dump(mode="json")},
@@ -364,6 +380,31 @@ def _utc(value: datetime) -> datetime:
     return value.astimezone(UTC)
 
 
+async def trip_span(conn: RuntimeConnection, trip_id: UUID) -> tuple[datetime, datetime] | None:
+    """[earliest window start, latest window end) of a trip's stops (ADR-0029 decision 4)."""
+    row = await (
+        await conn.execute(
+            "select min(window_start), max(window_end) from gba.transport_stops where trip_id = %s",
+            (trip_id,),
+        )
+    ).fetchone()
+    if row is None or row[0] is None:
+        return None
+    return row[0], row[1]
+
+
+async def has_open_assignment(conn: RuntimeConnection, trip_id: UUID) -> bool:
+    row = await (
+        await conn.execute(
+            "select 1 from gba.transport_assignments a where a.trip_id = %s and not exists ("
+            "select 1 from gba.transport_assignment_ends e "
+            "where e.tenant_id = a.tenant_id and e.assignment_id = a.id) limit 1",
+            (trip_id,),
+        )
+    ).fetchone()
+    return row is not None
+
+
 async def load_trip(conn: RuntimeConnection, trip_id: UUID) -> TripView | None:
     head = await (
         await conn.execute(
@@ -385,6 +426,15 @@ async def load_trip(conn: RuntimeConnection, trip_id: UUID) -> TripView | None:
         await conn.execute(
             "select position, load_id, quantity, pickup_stop, delivery_stop "
             "from gba.transport_legs where trip_id = %s order by position",
+            (trip_id,),
+        )
+    ).fetchall()
+    periods = await (
+        await conn.execute(
+            "select a.id, a.role, a.resource_id, a.starts_at, e.ends_at, a.replaces "
+            "from gba.transport_assignments a left join gba.transport_assignment_ends e "
+            "on e.tenant_id = a.tenant_id and e.assignment_id = a.id "
+            "where a.trip_id = %s order by a.starts_at, a.created_at, a.id",
             (trip_id,),
         )
     ).fetchall()
@@ -414,6 +464,17 @@ async def load_trip(conn: RuntimeConnection, trip_id: UUID) -> TripView | None:
                 delivery_stop=row[4],
             )
             for row in legs
+        ],
+        assignments=[
+            AssignmentView(
+                assignment_id=row[0],
+                role=row[1],
+                resource_id=row[2],
+                starts_at=_utc(row[3]),
+                ends_at=None if row[4] is None else _utc(row[4]),
+                replaces=row[5],
+            )
+            for row in periods
         ],
     )
 
@@ -502,6 +563,15 @@ async def save_trip(
         raise TransportRevisionConflictError(
             "The trip changed since it was read; reload it", revision=found
         )
+    if current is not None and await has_open_assignment(conn, trip_id):
+        span = (
+            min(stop.window_start for stop in body.stops),
+            max(stop.window_end for stop in body.stops),
+        )
+        if await trip_span(conn, trip_id) != span:
+            raise TransportTripAssignedError(
+                "An assigned trip keeps its span; end its assignments first"
+            )
     elsewhere = {
         row[0]: int(row[1])
         for row in await (

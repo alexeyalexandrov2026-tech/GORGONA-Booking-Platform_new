@@ -227,6 +227,16 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                 query = sql.SQL("select {} from ({}) t where t.tenant_id <> all ({})").format(
                     names, query, sql.SQL("{}::uuid[]").format(sql.Literal(provider_companies))
                 )
+            # M2: transport lanes and their trip holds cannot be represented before migration
+            # 0075; nothing else refers to them there.
+            if target_version[0] < 75 and table == "resources":
+                query = sql.SQL(
+                    "select {} from ({}) t where t.kind not in ('driver', 'truck', 'trailer')"
+                ).format(names, query)
+            if target_version[0] < 75 and table == "resource_allocations":
+                query = sql.SQL(
+                    "select {} from ({}) t where t.source_kind <> 'trip_assignment'"
+                ).format(names, query)
             cursor = before.execute(query)
             assert cursor.description is not None
             json_columns = {

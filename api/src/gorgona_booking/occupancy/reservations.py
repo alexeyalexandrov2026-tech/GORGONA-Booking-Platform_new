@@ -116,6 +116,8 @@ async def _check_resources(
         raise ResourceUnavailableError("An inactive resource cannot be reserved")
     if any(row[3] == "staff" for row in rows):
         raise ResourceUnavailableError("Workforce resources are reserved only by shifts")
+    if any(row[3] in ("driver", "truck", "trailer") for row in rows):
+        raise ResourceUnavailableError("Transport resources are held only by trip assignments")
 
 
 async def create_reservation(

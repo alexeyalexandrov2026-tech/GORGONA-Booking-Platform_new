@@ -1,4 +1,4 @@
-"""M1 transport planning API (ADR-0028); never delegated in M1."""
+"""Transport planning (ADR-0028) and assignment (ADR-0029) API; never delegated before M4."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -11,6 +11,7 @@ from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import transport as service
+from gorgona_booking.business import transport_assignments as fleet
 from gorgona_booking.business.transport import (
     OrderInput,
     OrderList,
@@ -18,6 +19,16 @@ from gorgona_booking.business.transport import (
     TripInput,
     TripList,
     TripView,
+)
+from gorgona_booking.business.transport_assignments import (
+    AssignmentInput,
+    DriverInput,
+    DriverList,
+    DriverView,
+    EndInput,
+    VehicleInput,
+    VehicleList,
+    VehicleView,
 )
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
@@ -116,6 +127,138 @@ async def put_trip(
             access.conn,
             business_id,
             trip_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/drivers")
+async def get_drivers(
+    business_id: UUID, request: Request, principal: CurrentPrincipal
+) -> DriverList:
+    async with _access(request, principal, business_id) as access:
+        return await fleet.list_drivers(access.conn)
+
+
+@router.get("/drivers/{driver_id}")
+async def get_driver(
+    business_id: UUID, driver_id: UUID, request: Request, principal: CurrentPrincipal
+) -> DriverView:
+    async with _access(request, principal, business_id) as access:
+        view = await fleet.load_driver(access.conn, driver_id)
+        if view is None:
+            raise NotFoundError("Driver not found", driver_id=str(driver_id))
+        return view
+
+
+@router.put("/drivers/{driver_id}")
+async def put_driver(
+    business_id: UUID,
+    driver_id: UUID,
+    body: DriverInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> DriverView:
+    """ADR-0029 decision 1: a driver with its own lane in its branch."""
+    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+        access.require_location(body.location_id)
+        return await fleet.save_driver(
+            access.conn,
+            business_id,
+            driver_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/vehicles")
+async def get_vehicles(
+    business_id: UUID, request: Request, principal: CurrentPrincipal
+) -> VehicleList:
+    async with _access(request, principal, business_id) as access:
+        return await fleet.list_vehicles(access.conn)
+
+
+@router.get("/vehicles/{vehicle_id}")
+async def get_vehicle(
+    business_id: UUID, vehicle_id: UUID, request: Request, principal: CurrentPrincipal
+) -> VehicleView:
+    async with _access(request, principal, business_id) as access:
+        view = await fleet.load_vehicle(access.conn, vehicle_id)
+        if view is None:
+            raise NotFoundError("Vehicle not found", vehicle_id=str(vehicle_id))
+        return view
+
+
+@router.put("/vehicles/{vehicle_id}")
+async def put_vehicle(
+    business_id: UUID,
+    vehicle_id: UUID,
+    body: VehicleInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> VehicleView:
+    """ADR-0029 decision 1: a truck or trailer with its own lane in its branch."""
+    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+        access.require_location(body.location_id)
+        return await fleet.save_vehicle(
+            access.conn,
+            business_id,
+            vehicle_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.put("/trips/{trip_id}/assignments/{assignment_id}")
+async def put_assignment(
+    business_id: UUID,
+    trip_id: UUID,
+    assignment_id: UUID,
+    body: AssignmentInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> TripView:
+    """ADR-0029 decisions 3-5: assign, or replace the open period of a role, all or none."""
+    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+        return await fleet.assign(
+            access.conn,
+            business_id,
+            trip_id,
+            assignment_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/trips/{trip_id}/assignments/{assignment_id}/end")
+async def end_assignment(
+    business_id: UUID,
+    trip_id: UUID,
+    assignment_id: UUID,
+    body: EndInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> TripView:
+    """ADR-0029 decision 4: end an open period; the rest of its hold is released."""
+    async with _access(request, principal, business_id, Permission.TRANSPORT_MANAGE) as access:
+        return await fleet.end_assignment(
+            access.conn,
+            business_id,
+            trip_id,
+            assignment_id,
             user_id=principal.user_id,
             actor=principal.actor,
             key=idempotency_key,

@@ -20,12 +20,23 @@ _SQL = "\n".join(
 )
 _BLOCKS = dict(re.findall(r"create table gba\.(\w+)\s*\((.*?)\n\);", _SQL, re.DOTALL))
 WORKFORCE_TABLES = tuple(_BLOCKS)
+_FUNCTION_PATTERN = r"create (?:or replace )?function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;"
 _FUNCTIONS = dict(
     re.findall(
-        r"create (?:or replace )?function gba\.(\w+)\([^;]*?as \$\$(.*?)\$\$;",
+        _FUNCTION_PATTERN,
         (_MIGRATIONS / "0015_counterparties.sql").read_text(encoding="utf-8") + _SQL,
         re.DOTALL,
     )
+)
+# M2 (0075) replaces the shared occupancy guard again (trip assignments); approve that text.
+_FUNCTIONS.update(
+    (name, body)
+    for name, body in re.findall(
+        _FUNCTION_PATTERN,
+        (_MIGRATIONS / "0075_transport_assignments.sql").read_text(encoding="utf-8"),
+        re.DOTALL,
+    )
+    if name == "guard_resource_allocation"
 )
 _TRIGGERS = tuple(
     re.findall(
@@ -343,11 +354,13 @@ _SHARED_CHECKS = {
         "resources",
         "resources_kind_valid",
     ): "((kind = ANY (ARRAY['artist'::text, 'chair'::text, 'room'::text, 'staff'::text, "
-    "'equipment'::text])))",  # L1 (0066): equipment is a resource kind
+    "'equipment'::text, 'driver'::text, 'truck'::text, 'trailer'::text])))",
+    # L1 (0066): equipment is a resource kind; M2 (0075): drivers, trucks and trailers too.
     (
         "resource_allocations",
         "resource_allocations_source_kind",
-    ): "((source_kind = ANY (ARRAY['booking'::text, 'reservation'::text, 'shift'::text])))",
+    ): "((source_kind = ANY (ARRAY['booking'::text, 'reservation'::text, 'shift'::text, "
+    "'trip_assignment'::text])))",  # M2 (0075): trip assignments hold transport lanes
 }
 
 

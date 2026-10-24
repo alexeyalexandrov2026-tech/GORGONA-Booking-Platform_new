@@ -298,7 +298,7 @@ _FINGERPRINT_QUERIES = (
     "select id, name, timezone from gba.locations",
     "select location_id, weekday, opens_minute, closes_minute from gba.business_hours",
     "select id, location_id, kind, display_name, is_active from "
-    "gba.resources where kind <> 'staff'",
+    "gba.resources where kind not in ('staff', 'driver', 'truck', 'trailer')",
     "select id, code, name from gba.services",
     "select id, code, name, status, price_cents, currency, booking_duration_minutes, "
     "display_duration_min_minutes, display_duration_max_minutes, is_bookable "
