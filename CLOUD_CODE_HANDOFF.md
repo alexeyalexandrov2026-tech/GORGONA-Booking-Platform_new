@@ -1,6 +1,14 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-23: BEAUTY-01 gaps closed; zod security update; owner decides readiness and main
+## Current checkpoint — 2026-10-24: package M started; M1 transport planning locally verified
+
+Owner's word 2026-10-23: add the transport module, not enableable until acceptance, and start package M
+([plan](docs/plan/PACKAGE_M_PLAN_2026-10-23.md)). M1 in `32bb8a4` on `codex/package-m1-planning`: the module `transport` (implemented, not
+enableable; registry version 4, permissions version 8), migration 0074 with shipment orders, loads, trips, stops
+in their own time zones and legs; a load is never over-planned. Focused **494 passed**; full **2571 passed, 4
+skipped** ([validation](docs/plan/evidence/2026-10-23-m1-transport-planning/VALIDATION.md)). BEAUTY-01 readiness and `main` still wait for the owner. Next migration **0075**.
+
+## Previous checkpoint — 2026-10-23: BEAUTY-01 gaps closed; zod security update; owner decides readiness and main
 
 L9b CI SUCCESS (run 40034329906). A new high advisory (GHSA-mrhx-c7xc-m3w5, zod <4.6.6) found by the L9b
 audit is fixed in `609159f`: zod 4.6.7 pinned; npm audit 0; focused **486 passed**, full **2563 passed, 4

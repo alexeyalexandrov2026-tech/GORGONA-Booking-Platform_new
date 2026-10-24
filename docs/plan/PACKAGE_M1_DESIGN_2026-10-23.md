@@ -28,7 +28,7 @@ Branch `codex/package-m1-planning` from `06d5a24`. Same process as package L.
 5. Windows: `window_start <= window_end`, both with an offset; the stop's time zone must be known.
 6. Without the module enabled every write answers `MODULE_DISABLED` and writes nothing; reads continue.
 
-## Acceptance of M1 (NOT TESTED)
+## Acceptance of M1 (PASS locally in `32bb8a4`)
 
 | id | Requirement |
 |---|---|
