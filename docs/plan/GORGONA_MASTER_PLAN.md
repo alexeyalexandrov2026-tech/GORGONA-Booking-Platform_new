@@ -10,7 +10,20 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-24: BEAUTY-01 technically verified (owner's word)
+## Current checkpoint — 2026-10-25: M6a dispatch board and trip page, locally verified
+
+`main` fast-forwarded to `ad21888` on the owner's word (CI SUCCESS, run 40165514386). M6a in `76519b8` on
+`codex/package-m6a-transport-screens`: the Transport screen (owner or manager) lists every trip with status,
+first and last window in the stop's own time zone and the current crew; the trip page shows stops, legs with
+loaded, delivered, refused, damaged and open, assignments with periods and the event log, assigns or replaces
+a crew member from a moment, records stop events with leg quantities (a retry after a lost answer records the
+event once) and checks clearance. Trips, drivers and vehicles are paged by cursor and read to the end. Real
+browser desktop and mobile with the database read back. Focused **721 passed**; full **2603 passed, 4 skipped**
+([validation](evidence/2026-10-25-m6a-transport-screens/VALIDATION.md)). full-1 failed on two existing tests (a time-of-day-dependent workforce browser test
+and a 401 on an expired test token); both recorded, not hidden. Next: M6b (order and trip forms, fleet,
+transport rights in the grant screen, dispatcher navigation), then M7 and M8. Next migration **0079**.
+
+## Previous checkpoint — 2026-10-24: BEAUTY-01 technically verified (owner's word)
 
 Owner's word 2026-10-24: «BEAUTY-01 accept». In `84fb150` on `codex/beauty-01-readiness` the readiness registry
 records BEAUTY-01 as `technically_verified` for code `8b6b37d` and schema 73 (exact-head CI 40040514685), citing

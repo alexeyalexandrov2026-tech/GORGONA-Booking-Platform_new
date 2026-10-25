@@ -25,7 +25,7 @@ from `ad21888` (= main).
   clearance** now, with each role's status and reasons in words.
 - No new migration (next stays **0079**).
 
-## Acceptance of M6a (NOT TESTED)
+## Acceptance of M6a (PASS locally in `76519b8`)
 
 | id | Requirement |
 |---|---|
