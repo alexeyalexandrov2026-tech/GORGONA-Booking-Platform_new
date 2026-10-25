@@ -1,6 +1,14 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-24: M4 dispatcher scope on carrier grants locally verified
+## Current checkpoint — 2026-10-24: M5 hours-of-service and telematics clearance locally verified
+
+M5 in `1180d41` on `codex/package-m5-clearance` ([ADR-0032](docs/adr/0032-transport-clearance.md)): versioned hours-of-service profiles; duty
+records and telematics pings as insert-only facts with source ids; clearance computed for a moment and never
+positive on stale or unknown data (TMS-03); migration 0078. Focused **683 passed**; full **2600 passed, 4
+skipped** ([validation](docs/plan/evidence/2026-10-24-m5-clearance/VALIDATION.md)). M4 CI green (40116278936). BEAUTY-01 readiness and `main` still wait for the
+owner. Next migration **0079**; next slice M6 (screens).
+
+## Previous checkpoint — 2026-10-24: M4 dispatcher scope on carrier grants locally verified
 
 M4 in `4b6cd75` on `codex/package-m4-dispatcher-grants` ([ADR-0031](docs/adr/0031-transport-dispatcher-grants.md)): a carrier grants an independent
 dispatcher transport work by action (read, plan, assign, events) through the ADR-0017 grants; fleet registration

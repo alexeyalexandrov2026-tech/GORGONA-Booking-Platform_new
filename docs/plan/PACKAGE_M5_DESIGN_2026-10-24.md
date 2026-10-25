@@ -14,7 +14,7 @@ Owner's word 2026-10-23: «Да, добавь модуль «Транспорт 
   `GET trips/{id}/clearance?at=`.
 - No real ELD or telematics connection; FAKE sources only.
 
-## Acceptance of M5 (NOT TESTED)
+## Acceptance of M5 (PASS locally in `1180d41`)
 
 | id | Requirement |
 |---|---|
