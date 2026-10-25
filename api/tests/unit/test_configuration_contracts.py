@@ -185,3 +185,26 @@ def test_catalog_readiness_comes_from_the_registry() -> None:
     by_id = {profile.industry_id: profile.status for profile in PROFILES}
     assert {i.id: i.workflow_readiness for i in CATALOG.industries} == by_id
     assert all(status == Readiness.PLANNED for status in by_id.values())
+
+
+def test_beauty_01_is_technically_verified_within_its_stated_limits() -> None:
+    # Owner 2026-10-24: «BEAUTY-01 accept» after the package L acceptance record (L-01..L-12 PASS).
+    # Never a pilot or production approval; no module becomes enableable through it.
+    beauty = next(scenario for scenario in SCENARIOS if scenario.id == "BEAUTY-01")
+    assert (beauty.status, beauty.code_version, beauty.schema_version) == (
+        Readiness.TECHNICALLY_VERIFIED,
+        "8b6b37d799a3f9b95fbaaae0ce8bc49440475e6e",
+        73,
+    )
+    for path in (
+        "docs/plan/evidence/2026-10-23-l8c-acceptance/ACCEPTANCE.md",
+        "docs/plan/evidence/2026-10-23-l8-review/REVIEW.md",
+        "docs/plan/evidence/2026-10-23-l9a-fee-policy/VALIDATION.md",
+        "docs/plan/evidence/2026-10-23-l9b-commission-reversal/VALIDATION.md",
+        "docs/plan/evidence/2026-10-24-beauty-01-readiness/RECORD.md",
+    ):
+        assert path in beauty.evidence, path
+    assert "no production approval" in beauty.scope
+    salon = next(profile for profile in PROFILES if profile.industry_id == 1)
+    assert salon.status is Readiness.PLANNED
+    assert "not implemented" not in salon.limitations

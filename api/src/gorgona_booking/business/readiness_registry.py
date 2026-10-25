@@ -258,10 +258,31 @@ SCENARIOS: tuple[ScenarioReadiness, ...] = (
         ),
         verified_on=date(2026, 10, 12),
     ),
-    _planned(
-        "BEAUTY-01",
-        "Partial: booking, prices and compatible add-ons work; service stages, multi-resource "
-        "release, packages, materials, payments and commissions are not implemented.",
+    ScenarioReadiness(
+        id="BEAUTY-01",
+        status=Readiness.TECHNICALLY_VERIFIED,
+        # Owner 2026-10-24: «BEAUTY-01 accept» after the package L acceptance record.
+        code_version="8b6b37d799a3f9b95fbaaae0ce8bc49440475e6e",
+        schema_version=73,
+        scope="The beauty-salon cycle: services with stages whose processing time frees the "
+        "specialist, several services in one visit, the specialist, chair, room and equipment "
+        "held all or none, materials consumed once at the moving-average cost, the visit billed "
+        "through FIN-03 with deposits, a versioned cancellation and no-show fee policy, "
+        "commissions and tips that are owed only when paid and reversed after refunds, prepaid "
+        "packages and gift certificates, with the desk, settings and customer screens. "
+        "Technical evidence: L-01-L-12 acceptance with exact-commit CI, one independent review "
+        "with all 15 findings fixed, and the L9 slices that closed the two named gaps. The "
+        "acceptance limits stay (the cancellation time is the booking's status event; a refund "
+        "voided after its reversal is not re-reversed automatically); no pilot and no "
+        "production approval.",
+        evidence=(
+            "docs/plan/evidence/2026-10-23-l8c-acceptance/ACCEPTANCE.md",
+            "docs/plan/evidence/2026-10-23-l8-review/REVIEW.md",
+            "docs/plan/evidence/2026-10-23-l9a-fee-policy/VALIDATION.md",
+            "docs/plan/evidence/2026-10-23-l9b-commission-reversal/VALIDATION.md",
+            "docs/plan/evidence/2026-10-24-beauty-01-readiness/RECORD.md",
+        ),
+        verified_on=date(2026, 10, 24),
     ),
     _planned("TMS-01", _NOT_BUILT),
     _planned(
@@ -293,8 +314,8 @@ SCENARIOS: tuple[ScenarioReadiness, ...] = (
 )
 
 _PROFILE_LIMITS = {
-    1: "Booking, prices and add-ons run through the booking module; the full beauty cycle "
-    "(BEAUTY-01) is not implemented.",
+    1: "The beauty-salon cycle (BEAUTY-01) is technically verified; the industry profile is "
+    "not piloted or approved for production.",
     14: "Clinical workflows need a separately accepted qualified module.",
     24: "Transport orders, trips, dispatcher operations and settlements are not implemented.",
 }
