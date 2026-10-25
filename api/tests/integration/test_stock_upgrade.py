@@ -85,6 +85,11 @@ K_TABLES = {
     "transport_hos_profiles",
     "transport_duty_records",
     "transport_telematics_pings",
+    # M7a (0079): order rates and invoices, pay components and their accruals.
+    "transport_order_rates",
+    "transport_order_invoices",
+    "transport_pay_components",
+    "transport_pay_accruals",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

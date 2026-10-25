@@ -17,6 +17,7 @@ from gorgona_booking.business import transport as service
 from gorgona_booking.business import transport_assignments as fleet
 from gorgona_booking.business import transport_clearance as clearance
 from gorgona_booking.business import transport_events as events
+from gorgona_booking.business import transport_money as money
 from gorgona_booking.business.transport import (
     OrderInput,
     OrderList,
@@ -45,6 +46,16 @@ from gorgona_booking.business.transport_clearance import (
     ProfileView,
 )
 from gorgona_booking.business.transport_events import EventInput
+from gorgona_booking.business.transport_money import (
+    AccrueInput,
+    ComponentInput,
+    ComponentView,
+    OrderInvoiceInput,
+    OrderInvoiceView,
+    PayView,
+    RateInput,
+    RateView,
+)
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
 from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenant
@@ -403,3 +414,157 @@ async def get_clearance(
     """ADR-0032 decisions 3-4: computed for a moment; never cleared on stale or unknown data."""
     async with _access(request, principal, business_id) as access:
         return await clearance.clearance(access.conn, trip_id, at or datetime.now(UTC))
+
+
+# M7a (ADR-0033): money is a company-wide finance task, never a delegate's; invoice and accrual
+# take the ledger lock like L4 and L5.
+
+
+@asynccontextmanager
+async def _finance(
+    request: Request,
+    principal: CurrentPrincipal,
+    business_id: UUID,
+    permission: Permission,
+    *,
+    ledger: bool = False,
+) -> AsyncIterator[TenantAccess]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        permission,
+        request_id=get_request_id(request),
+        exclusive="ledger" if ledger else None,
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        yield access
+
+
+@router.get("/orders/{order_id}/rate")
+async def get_rate(
+    business_id: UUID, order_id: UUID, request: Request, principal: CurrentPrincipal
+) -> RateView:
+    async with _finance(request, principal, business_id, Permission.FINANCE_READ) as access:
+        view = await money.load_rate(access.conn, order_id)
+        if view is None:
+            raise NotFoundError("Order not found", order_id=str(order_id))
+        return view
+
+
+@router.put("/orders/{order_id}/rate")
+async def put_rate(
+    business_id: UUID,
+    order_id: UUID,
+    body: RateInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> RateView:
+    """ADR-0033 decision 1: a new version of the agreed rate, frozen once invoiced."""
+    async with _finance(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await money.save_rate(
+            access.conn,
+            business_id,
+            order_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/orders/{order_id}/invoice")
+async def get_order_invoice(
+    business_id: UUID, order_id: UUID, request: Request, principal: CurrentPrincipal
+) -> OrderInvoiceView:
+    async with _finance(request, principal, business_id, Permission.FINANCE_READ) as access:
+        view = await money.load_order_invoice(access.conn, business_id, order_id)
+        if view is None:
+            raise NotFoundError("Invoice not found", order_id=str(order_id))
+        return view
+
+
+@router.post("/orders/{order_id}/invoice")
+async def post_order_invoice(
+    business_id: UUID,
+    order_id: UUID,
+    body: OrderInvoiceInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> OrderInvoiceView:
+    """ADR-0033 decision 2: the order's one FIN-03 receivable draft, once nothing is open."""
+    async with _finance(
+        request, principal, business_id, Permission.FINANCE_MANAGE, ledger=True
+    ) as access:
+        return await money.invoice_order(
+            access.conn,
+            business_id,
+            order_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/trips/{trip_id}/pay")
+async def get_pay(
+    business_id: UUID, trip_id: UUID, request: Request, principal: CurrentPrincipal
+) -> PayView:
+    async with _finance(request, principal, business_id, Permission.FINANCE_READ) as access:
+        view = await money.load_pay(access.conn, business_id, trip_id)
+        if view is None:
+            raise NotFoundError("Trip not found", trip_id=str(trip_id))
+        return view
+
+
+@router.put("/trips/{trip_id}/pay/{component_id}")
+async def put_pay_component(
+    business_id: UUID,
+    trip_id: UUID,
+    component_id: UUID,
+    body: ComponentInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ComponentView:
+    """ADR-0033 decision 3: a stable source of one obligation, registered once."""
+    async with _finance(request, principal, business_id, Permission.FINANCE_MANAGE) as access:
+        return await money.save_component(
+            access.conn,
+            business_id,
+            trip_id,
+            component_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/trips/{trip_id}/pay/{component_id}/accrue")
+async def post_pay_accrual(
+    business_id: UUID,
+    trip_id: UUID,
+    component_id: UUID,
+    body: AccrueInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ComponentView:
+    """ADR-0033 decision 4: the component's one FIN-03 payable accrual on a closed trip."""
+    async with _finance(
+        request, principal, business_id, Permission.FINANCE_MANAGE, ledger=True
+    ) as access:
+        return await money.accrue_component(
+            access.conn,
+            business_id,
+            trip_id,
+            component_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
