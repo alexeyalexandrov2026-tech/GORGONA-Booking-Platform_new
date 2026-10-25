@@ -3,22 +3,37 @@
 // M6a (package M): the dispatch board and the trip page. Every time is shown in its stop's own time
 // zone; a replacement moment is entered in the first stop's zone. A stop event keeps its source event
 // id until it is recorded, so retrying after a lost answer records it once (ADR-0030).
+// M6b: owners and managers also plan and register the fleet; a carrier's dispatcher sees only the
+// forms its grant allows (ADR-0031).
 import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { businessDateTime, businessTimeToInstant } from "../lib/business-time";
-import { ManagementApiError } from "../lib/management-api";
+import { fetchCounterparties } from "../lib/counterparty-api";
+import {
+  ManagementApiError,
+  fetchWorkspace,
+  type LocationItem,
+} from "../lib/management-api";
 import {
   assign,
   fetchAllDrivers,
+  fetchAllOrders,
   fetchAllTrips,
   fetchAllVehicles,
   fetchClearance,
   fetchTrip,
   recordEvent,
 } from "../lib/transport-api";
+import {
+  FleetPanel,
+  OrdersPanel,
+  TripForm,
+  type Customer,
+} from "./transport-forms";
 import type {
   Assignment,
   Clearance,
   Driver,
+  Order,
   Stop,
   Trip,
   Vehicle,
@@ -87,8 +102,46 @@ function stopLabel(stop: Stop): string {
 const current = (trip: Trip, role: Role) =>
   trip.assignments.find((a) => a.role === role && a.ends_at === null);
 
-export function TransportScreen({ businessId }: { businessId: string }) {
+/** What the signed-in person may do: everything for an owner or manager, the granted actions for a delegate. */
+export type TransportRights = {
+  plan: boolean;
+  assign: boolean;
+  events: boolean;
+  fleet: boolean;
+};
+
+async function allCustomers(businessId: string): Promise<Customer[]> {
+  const customers: Customer[] = [];
+  let after: string | undefined;
+  for (;;) {
+    const page = await fetchCounterparties(businessId, "", "active", after);
+    for (const c of page.items)
+      if (c.roles.includes("customer"))
+        customers.push({ id: c.counterparty_id, name: c.display_name });
+    if (!page.next_cursor) return customers;
+    after = page.next_cursor;
+  }
+}
+
+function upsert<T>(list: T[], item: T, same: (x: T) => boolean): T[] {
+  return list.some(same)
+    ? list.map((x) => (same(x) ? item : x))
+    : [...list, item];
+}
+
+export function TransportScreen({
+  businessId,
+  rights,
+}: {
+  businessId: string;
+  rights: TransportRights;
+}) {
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [locations, setLocations] = useState<LocationItem[]>([]);
+  const [editing, setEditing] = useState<Trip | null>(null);
+  const [notice, setNotice] = useState("");
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -97,25 +150,39 @@ export function TransportScreen({ businessId }: { businessId: string }) {
 
   useEffect(() => {
     let live = true;
+    const owner = rights.plan || rights.fleet;
     Promise.all([
       fetchAllTrips(businessId),
       fetchAllDrivers(businessId),
       fetchAllVehicles(businessId),
+      rights.plan ? fetchAllOrders(businessId) : Promise.resolve([]),
+      // Without the counterparties module there is no customer to choose; the board still works.
+      rights.plan
+        ? allCustomers(businessId).catch(() => [] as Customer[])
+        : Promise.resolve([]),
+      owner
+        ? fetchWorkspace(businessId).then((w) => w.locations)
+        : Promise.resolve([]),
     ])
-      .then(([tripList, driverList, vehicleList]) => {
-        if (!live) return;
-        setTrips(tripList);
-        setDrivers(driverList);
-        setVehicles(vehicleList);
-        setLoaded(true);
-      })
+      .then(
+        ([tripList, driverList, vehicleList, orderList, people, places]) => {
+          if (!live) return;
+          setTrips(tripList);
+          setDrivers(driverList);
+          setVehicles(vehicleList);
+          setOrders(orderList);
+          setCustomers(people);
+          setLocations(places);
+          setLoaded(true);
+        },
+      )
       .catch((failure: unknown) => {
         if (live) setError(`The trips could not be read: ${refusal(failure)}`);
       });
     return () => {
       live = false;
     };
-  }, [businessId]);
+  }, [businessId, rights.plan, rights.fleet]);
 
   const names = useMemo(() => {
     const map = new Map<string, string>();
@@ -131,10 +198,21 @@ export function TransportScreen({ businessId }: { businessId: string }) {
 
   const changed = useCallback((trip: Trip) => {
     setSelected(trip);
-    setTrips((list) =>
-      list.map((item) => (item.trip_id === trip.trip_id ? trip : item)),
-    );
+    setTrips((list) => upsert(list, trip, (x) => x.trip_id === trip.trip_id));
   }, []);
+  const notify = useCallback((text: string) => setNotice(text), []);
+  const planned = useCallback(
+    (trip: Trip) => {
+      changed(trip);
+      // A saved trip changes how much of each load is planned.
+      fetchAllOrders(businessId)
+        .then(setOrders)
+        .catch((failure: unknown) =>
+          setError(`The orders could not be read: ${refusal(failure)}`),
+        );
+    },
+    [businessId, changed],
+  );
 
   async function open(trip: Trip) {
     setError(null);
@@ -151,6 +229,9 @@ export function TransportScreen({ businessId }: { businessId: string }) {
       <p className="muted">
         Every trip with its stops in their own time zones, its crew and what
         happened at each stop.
+      </p>
+      <p className="transport-status" role="status">
+        {notice}
       </p>
       {!loaded && !error && (
         <p className="muted" role="status">
@@ -225,6 +306,54 @@ export function TransportScreen({ businessId }: { businessId: string }) {
           vehicles={vehicles}
           nameOf={nameOf}
           onChange={changed}
+          rights={rights}
+          onEdit={rights.plan ? setEditing : undefined}
+        />
+      )}
+      {loaded && rights.plan && (
+        <>
+          <OrdersPanel
+            businessId={businessId}
+            orders={orders}
+            customers={customers}
+            onSaved={(order) =>
+              setOrders((list) =>
+                upsert(list, order, (x) => x.order_id === order.order_id),
+              )
+            }
+            notify={notify}
+          />
+          <TripForm
+            key={
+              editing ? `edit-${editing.trip_id}-${editing.revision}` : "new"
+            }
+            businessId={businessId}
+            orders={orders}
+            locations={locations}
+            editing={editing}
+            onSaved={planned}
+            onDone={() => setEditing(null)}
+            notify={notify}
+          />
+        </>
+      )}
+      {loaded && rights.fleet && (
+        <FleetPanel
+          businessId={businessId}
+          drivers={drivers}
+          vehicles={vehicles}
+          locations={locations}
+          onDriver={(driver) =>
+            setDrivers((list) =>
+              upsert(list, driver, (x) => x.driver_id === driver.driver_id),
+            )
+          }
+          onVehicle={(vehicle) =>
+            setVehicles((list) =>
+              upsert(list, vehicle, (x) => x.vehicle_id === vehicle.vehicle_id),
+            )
+          }
+          notify={notify}
         />
       )}
     </div>
@@ -238,6 +367,8 @@ function TripPage({
   vehicles,
   nameOf,
   onChange,
+  rights,
+  onEdit,
 }: {
   businessId: string;
   trip: Trip;
@@ -245,6 +376,8 @@ function TripPage({
   vehicles: Vehicle[];
   nameOf: (resource: string | undefined) => string;
   onChange: (trip: Trip) => void;
+  rights: TransportRights;
+  onEdit?: (trip: Trip) => void;
 }) {
   const headingId = useId();
   const assignId = useId();
@@ -373,6 +506,11 @@ function TripPage({
     <section className="transport-trip" aria-labelledby={headingId}>
       <h2 id={headingId}>Trip {trip.reference}</h2>
       <p>Status: {STATUS_LABEL[trip.status]}</p>
+      {onEdit && trip.status === "planned" && trip.assignments.length === 0 && (
+        <button type="button" onClick={() => onEdit(trip)}>
+          Edit trip
+        </button>
+      )}
       <div
         className="mgmt-table-container"
         role="region"
@@ -472,148 +610,152 @@ function TripPage({
         </table>
       </div>
 
-      <form onSubmit={submitAssignment} aria-labelledby={assignId}>
-        <h3 id={assignId}>Assign or replace</h3>
-        <label>
-          Role
-          <select
-            value={role}
-            onChange={(e) => {
-              setRole(e.target.value as Role);
-              setAssignee("");
-            }}
-          >
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {ROLE_LABEL[r]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Assignee
-          <select
-            value={assignee}
-            onChange={(e) => setAssignee(e.target.value)}
-            required
-          >
-            <option value="">Choose</option>
-            {choices.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          From date
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-          />
-        </label>
-        <label>
-          From time
-          <input
-            type="time"
-            value={fromTime}
-            onChange={(e) => setFromTime(e.target.value)}
-          />
-        </label>
-        <p className="muted">
-          Times are in {zone}. Leave them empty to assign from the trip&apos;s
-          start; a replacement needs the moment it takes over.
-        </p>
-        <div className="mgmt-form-actions">
-          <button type="submit" disabled={busy}>
-            Assign
-          </button>
-        </div>
-      </form>
-
-      <form onSubmit={submitEvent} aria-labelledby={eventId}>
-        <h3 id={eventId}>Record a stop event</h3>
-        <label>
-          Stop
-          <select
-            value={stopPosition}
-            onChange={(e) => {
-              setStopPosition(Number(e.target.value));
-              setQuantities({});
-            }}
-          >
-            {trip.stops.map((s) => (
-              <option key={s.position} value={s.position}>
-                {stopLabel(s)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Event
-          <select
-            value={kind}
-            onChange={(e) => {
-              setKind(e.target.value as (typeof EVENTS)[number][0]);
-              setQuantities({});
-            }}
-          >
-            {EVENTS.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {legs.map((l) => (
-          <label key={l.position}>
-            Leg {l.position} quantity
+      {rights.assign && (
+        <form onSubmit={submitAssignment} aria-labelledby={assignId}>
+          <h3 id={assignId}>Assign or replace</h3>
+          <label>
+            Role
+            <select
+              value={role}
+              onChange={(e) => {
+                setRole(e.target.value as Role);
+                setAssignee("");
+              }}
+            >
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABEL[r]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Assignee
+            <select
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+              required
+            >
+              <option value="">Choose</option>
+              {choices.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            From date
             <input
-              type="number"
-              min={0}
-              max={l.quantity}
-              value={quantities[l.position] ?? ""}
-              onChange={(e) =>
-                setQuantities((q) => ({ ...q, [l.position]: e.target.value }))
-              }
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
             />
           </label>
-        ))}
-        <label>
-          Date
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Time
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            required
-          />
-        </label>
-        <p className="muted">Times are in {stop?.time_zone ?? zone}.</p>
-        <label>
-          Note
-          <input
-            type="text"
-            maxLength={500}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </label>
-        <div className="mgmt-form-actions">
-          <button type="submit" disabled={busy}>
-            Record
-          </button>
-        </div>
-      </form>
+          <label>
+            From time
+            <input
+              type="time"
+              value={fromTime}
+              onChange={(e) => setFromTime(e.target.value)}
+            />
+          </label>
+          <p className="muted">
+            Times are in {zone}. Leave them empty to assign from the trip&apos;s
+            start; a replacement needs the moment it takes over.
+          </p>
+          <div className="mgmt-form-actions">
+            <button type="submit" disabled={busy}>
+              Assign
+            </button>
+          </div>
+        </form>
+      )}
+
+      {rights.events && (
+        <form onSubmit={submitEvent} aria-labelledby={eventId}>
+          <h3 id={eventId}>Record a stop event</h3>
+          <label>
+            Stop
+            <select
+              value={stopPosition}
+              onChange={(e) => {
+                setStopPosition(Number(e.target.value));
+                setQuantities({});
+              }}
+            >
+              {trip.stops.map((s) => (
+                <option key={s.position} value={s.position}>
+                  {stopLabel(s)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Event
+            <select
+              value={kind}
+              onChange={(e) => {
+                setKind(e.target.value as (typeof EVENTS)[number][0]);
+                setQuantities({});
+              }}
+            >
+              {EVENTS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {legs.map((l) => (
+            <label key={l.position}>
+              Leg {l.position} quantity
+              <input
+                type="number"
+                min={0}
+                max={l.quantity}
+                value={quantities[l.position] ?? ""}
+                onChange={(e) =>
+                  setQuantities((q) => ({ ...q, [l.position]: e.target.value }))
+                }
+              />
+            </label>
+          ))}
+          <label>
+            Date
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Time
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              required
+            />
+          </label>
+          <p className="muted">Times are in {stop?.time_zone ?? zone}.</p>
+          <label>
+            Note
+            <input
+              type="text"
+              maxLength={500}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </label>
+          <div className="mgmt-form-actions">
+            <button type="submit" disabled={busy}>
+              Record
+            </button>
+          </div>
+        </form>
+      )}
 
       <div
         className="mgmt-table-container"

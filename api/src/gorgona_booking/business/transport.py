@@ -140,6 +140,7 @@ class OrderView(BaseModel):
 
 class OrderList(BaseModel):
     items: list[OrderView]
+    next_cursor: UUID | None = None
 
 
 class StopView(BaseModel):
@@ -285,12 +286,17 @@ async def load_order(conn: RuntimeConnection, order_id: UUID) -> OrderView | Non
     )
 
 
-async def list_orders(conn: RuntimeConnection) -> OrderList:
+async def list_orders(conn: RuntimeConnection, after: UUID | None = None) -> OrderList:
+    """M6b: complete pagination in id order, 50 a page (it stopped at 100 before)."""
+    clause, params = page_after(after)
     rows = await (
-        await conn.execute("select id from gba.transport_orders order by id limit 100")
+        # The clause is one of two fixed strings from page_after; the cursor is a parameter.
+        await conn.execute("select id from gba.transport_orders " + clause, params)  # noqa: S608
     ).fetchall()
-    items = [await load_order(conn, row[0]) for row in rows]
-    return OrderList(items=[item for item in items if item is not None])
+    items = [await load_order(conn, row[0]) for row in rows[:PAGE]]
+    views = [item for item in items if item is not None]
+    more = len(rows) > PAGE and bool(views)
+    return OrderList(items=views, next_cursor=views[-1].order_id if more else None)
 
 
 async def save_order(

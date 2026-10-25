@@ -6,6 +6,8 @@ import type {
   Clearance,
   Driver,
   DriverList,
+  Order,
+  OrderList,
   Trip,
   TripList,
   Vehicle,
@@ -42,6 +44,10 @@ export const fetchAllDrivers = (business: string): Promise<Driver[]> =>
 export const fetchAllVehicles = (business: string): Promise<Vehicle[]> =>
   everyPage((cursor) =>
     managementFetch<VehicleList>(`${base(business)}/vehicles${after(cursor)}`),
+  );
+export const fetchAllOrders = (business: string): Promise<Order[]> =>
+  everyPage((cursor) =>
+    managementFetch<OrderList>(`${base(business)}/orders${after(cursor)}`),
   );
 export const fetchTrip = (business: string, trip: string): Promise<Trip> =>
   managementFetch<Trip>(`${base(business)}/trips/${trip}`);
@@ -108,3 +114,68 @@ export const recordEvent = (
   body: EventBody,
 ): Promise<Trip> =>
   command<Trip>(`${base(business)}/trips/${trip}/events`, "POST", body);
+
+// M6b: planning and fleet forms. Each form keeps its record id until the save succeeds.
+export type LoadBody = {
+  load_id: string;
+  description: string;
+  quantity: number;
+  unit: string;
+};
+export type OrderBody = {
+  schema_version: 1;
+  expected_revision: number;
+  customer_id: string;
+  reference: string;
+  loads: LoadBody[];
+};
+export const saveOrder = (
+  business: string,
+  order: string,
+  body: OrderBody,
+): Promise<Order> =>
+  command<Order>(`${base(business)}/orders/${order}`, "PUT", body);
+
+export type TripBody = {
+  schema_version: 1;
+  expected_revision: number;
+  location_id: string;
+  reference: string;
+  stops: {
+    kind: "pickup" | "delivery";
+    place: string;
+    time_zone: string;
+    window_start: string;
+    window_end: string;
+  }[];
+  legs: {
+    load_id: string;
+    quantity: number;
+    pickup_stop: number;
+    delivery_stop: number;
+  }[];
+};
+export const saveTrip = (
+  business: string,
+  trip: string,
+  body: TripBody,
+): Promise<Trip> =>
+  command<Trip>(`${base(business)}/trips/${trip}`, "PUT", body);
+
+export const saveDriver = (
+  business: string,
+  driver: string,
+  body: { schema_version: 1; location_id: string; display_name: string },
+): Promise<Driver> =>
+  command<Driver>(`${base(business)}/drivers/${driver}`, "PUT", body);
+export const saveVehicle = (
+  business: string,
+  vehicle: string,
+  body: {
+    schema_version: 1;
+    location_id: string;
+    kind: "truck" | "trailer";
+    unit_number: string;
+  },
+): Promise<Vehicle> =>
+  command<Vehicle>(`${base(business)}/vehicles/${vehicle}`, "PUT", body);

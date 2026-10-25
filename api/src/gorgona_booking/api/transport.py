@@ -76,9 +76,11 @@ async def _access(
 
 
 @router.get("/orders")
-async def get_orders(business_id: UUID, request: Request, principal: CurrentPrincipal) -> OrderList:
+async def get_orders(
+    business_id: UUID, request: Request, principal: CurrentPrincipal, after: UUID | None = None
+) -> OrderList:
     async with _access(request, principal, business_id) as access:
-        return await service.list_orders(access.conn)
+        return await service.list_orders(access.conn, after)
 
 
 @router.get("/orders/{order_id}")

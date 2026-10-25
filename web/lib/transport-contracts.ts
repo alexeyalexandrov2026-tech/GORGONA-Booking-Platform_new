@@ -92,6 +92,28 @@ export const vehicleSchema = z.strictObject({
 export const vehicleListSchema = z
   .strictObject({ items: z.array(vehicleSchema).max(50), next_cursor: cursor })
   .refine((v) => unique(v.items, (x) => x.vehicle_id));
+// M6b: orders with their loads and how much of each is already planned on trips.
+export const loadSchema = z.strictObject({
+  load_id: id,
+  position: z.number().int().min(1).max(50),
+  description: z.string().min(1).max(500),
+  quantity: z.number().int().min(1).max(1_000_000),
+  unit: z.string().min(1).max(32),
+  weight_grams: z.number().int().min(0).nullable(),
+  shipper_id: id.nullable(),
+  consignee_id: id.nullable(),
+  planned: count,
+});
+export const orderSchema = z.strictObject({
+  order_id: id,
+  revision: z.number().int().positive(),
+  customer_id: id,
+  reference: z.string().min(1).max(64),
+  loads: z.array(loadSchema).min(1).max(50),
+});
+export const orderListSchema = z
+  .strictObject({ items: z.array(orderSchema).max(50), next_cursor: cursor })
+  .refine((v) => unique(v.items, (x) => x.order_id));
 const outcome = z.enum(["cleared", "not_cleared", "unknown"]);
 export const clearanceSchema = z.strictObject({
   trip_id: id,
@@ -121,6 +143,9 @@ export type DriverList = z.infer<typeof driverListSchema>;
 export type Vehicle = z.infer<typeof vehicleSchema>;
 export type VehicleList = z.infer<typeof vehicleListSchema>;
 export type Clearance = z.infer<typeof clearanceSchema>;
+export type Load = z.infer<typeof loadSchema>;
+export type Order = z.infer<typeof orderSchema>;
+export type OrderList = z.infer<typeof orderListSchema>;
 
 const trip = /^\/transport\/trips\/[0-9a-f-]{36}$/i;
 const assignment =
@@ -132,7 +157,25 @@ export function transportResponseSchema(
   method: string,
 ): z.ZodType | null {
   if (suffix === "/transport/trips" && method === "GET") return tripListSchema;
-  if (trip.test(suffix) && method === "GET") return tripSchema;
+  if (trip.test(suffix) && (method === "GET" || method === "PUT"))
+    return tripSchema;
+  if (suffix === "/transport/orders" && method === "GET")
+    return orderListSchema;
+  if (
+    /^\/transport\/orders\/[0-9a-f-]{36}$/i.test(suffix) &&
+    (method === "GET" || method === "PUT")
+  )
+    return orderSchema;
+  if (
+    /^\/transport\/drivers\/[0-9a-f-]{36}$/i.test(suffix) &&
+    (method === "GET" || method === "PUT")
+  )
+    return driverSchema;
+  if (
+    /^\/transport\/vehicles\/[0-9a-f-]{36}$/i.test(suffix) &&
+    (method === "GET" || method === "PUT")
+  )
+    return vehicleSchema;
   if (
     /^\/transport\/trips\/[0-9a-f-]{36}\/events$/i.test(suffix) &&
     method === "POST"

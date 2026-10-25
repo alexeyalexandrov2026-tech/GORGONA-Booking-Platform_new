@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 
 import {
   ACCESS_LEVELS,
+  TRANSPORT_ACTIONS,
+  describeAccess,
+  type DelegablePermission,
   type Delegation,
   type DelegationDecision,
   type DelegationIssue,
@@ -46,12 +49,7 @@ interface Location {
 }
 
 function accessLabel(grant: Delegation): string {
-  const permissions = [...grant.permissions].sort().join(",");
-  if (permissions === [...ACCESS_LEVELS.manage].sort().join(","))
-    return "Manage bookings";
-  if (permissions === [...ACCESS_LEVELS.view].sort().join(","))
-    return "View bookings";
-  return grant.permissions.join(", ");
+  return describeAccess(grant.permissions);
 }
 
 function statusLabel(grant: Delegation): string {
@@ -91,7 +89,9 @@ export function Delegations({
   const [complete, setComplete] = useState(true);
   const [choices, setChoices] = useState<Record<string, string[]>>({});
   const [servicer, setServicer] = useState("");
-  const [level, setLevel] = useState<"manage" | "view">("manage");
+  const [level, setLevel] = useState<"manage" | "view" | "none">("manage");
+  // M6b: transport actions a carrier's dispatcher may take; reading comes with any of them.
+  const [transport, setTransport] = useState<DelegablePermission[]>([]);
   const [locationId, setLocationId] = useState("");
   const [endsOn, setEndsOn] = useState("");
   const [pending, setPending] = useState<Command | null>(null);
@@ -202,6 +202,16 @@ export function Delegations({
       setError("Enter the serving business ID and the last day of access.");
       return;
     }
+    const permissions: DelegablePermission[] = [
+      ...(level === "none" ? [] : ACCESS_LEVELS[level]),
+      ...(transport.length
+        ? (["transport.read", ...transport] as DelegablePermission[])
+        : []),
+    ];
+    if (!permissions.length) {
+      setError("Choose booking access or at least one transport action.");
+      return;
+    }
     void run({
       kind: "issue",
       grantId: crypto.randomUUID(),
@@ -209,7 +219,7 @@ export function Delegations({
       body: {
         schema_version: 1,
         servicer_business_id: servicer.trim().toLowerCase(),
-        permissions: ACCESS_LEVELS[level],
+        permissions,
         location_id: locationId || null,
         expires_at: ends.toISOString(),
       },
@@ -444,12 +454,37 @@ export function Delegations({
                   id="delegation-level"
                   value={level}
                   onChange={(event) =>
-                    setLevel(event.target.value as "manage" | "view")
+                    setLevel(event.target.value as "manage" | "view" | "none")
                   }
                 >
                   <option value="manage">Manage bookings</option>
                   <option value="view">View bookings</option>
+                  <option value="none">No bookings</option>
                 </select>
+                <fieldset>
+                  <legend>Transport actions</legend>
+                  {TRANSPORT_ACTIONS.map(([permission, label]) => (
+                    <label key={permission}>
+                      <input
+                        type="checkbox"
+                        checked={transport.includes(permission)}
+                        onChange={(event) =>
+                          setTransport((chosen) =>
+                            event.target.checked
+                              ? [...chosen, permission]
+                              : chosen.filter((p) => p !== permission),
+                          )
+                        }
+                      />{" "}
+                      {label}
+                    </label>
+                  ))}
+                  <p className="muted">
+                    A carrier&apos;s dispatcher sees the trips and acts only as
+                    chosen here; registering drivers and vehicles stays with
+                    you.
+                  </p>
+                </fieldset>
                 <label htmlFor="delegation-location">Location</label>
                 <select
                   id="delegation-location"

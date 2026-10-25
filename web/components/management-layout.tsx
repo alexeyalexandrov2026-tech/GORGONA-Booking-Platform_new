@@ -55,7 +55,10 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
   const membership = me?.memberships.find((item) => item.salon_id === salonId);
   const locationLimited = membership?.location_id != null;
   const delegation = membership?.delegation;
-  // Delegated work is limited to bookings; company areas stay with the owner business.
+  const granted = (right: string) =>
+    delegation?.permissions.some((p) => p === right) ?? false;
+  // Delegated work is limited to what the grant names (bookings, transport since M6b);
+  // company areas stay with the owner business.
   const permittedNav = NAV_ITEMS.filter(
     (item) =>
       (![
@@ -77,11 +80,17 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         "/stock-documents/",
         "/transport/",
       ].includes(item.href) ||
-        (!delegation && ["owner", "manager"].includes(membership?.role ?? ""))),
+        (!delegation &&
+          ["owner", "manager"].includes(membership?.role ?? "")) ||
+        (item.href === "/transport/" && granted("transport.read"))),
   );
   const navItems = delegation
-    ? permittedNav.filter((item) =>
-        ["/overview/", "/calendar/", "/bookings/"].includes(item.href),
+    ? permittedNav.filter(
+        (item) =>
+          item.href === "/overview/" ||
+          (["/calendar/", "/bookings/"].includes(item.href) &&
+            granted("booking.read")) ||
+          (item.href === "/transport/" && granted("transport.read")),
       )
     : locationLimited
       ? permittedNav.filter(

@@ -90,3 +90,39 @@ export const ACCESS_LEVELS: Record<"manage" | "view", DelegablePermission[]> = {
   manage: ["booking.read", "booking.write", "catalog.read", "staff.read"],
   view: ["booking.read", "catalog.read", "staff.read"],
 };
+// M6b (ADR-0031): a carrier's dispatcher is granted transport actions; reading comes with any of them.
+export const TRANSPORT_ACTIONS: [DelegablePermission, string][] = [
+  ["transport.plan", "Plan trips"],
+  ["transport.assign", "Assign crews"],
+  ["transport.events", "Record stop events"],
+];
+const TRANSPORT_WORDS: Record<string, string> = {
+  "transport.read": "view",
+  "transport.plan": "plan trips",
+  "transport.assign": "assign crews",
+  "transport.events": "record stop events",
+};
+
+/** The granted rights in words, booking access first, then transport actions. */
+export function describeAccess(permissions: DelegablePermission[]): string {
+  const booking = permissions.filter((p) => !p.startsWith("transport.")).sort();
+  const same = (level: DelegablePermission[]) =>
+    booking.join(",") === [...level].sort().join(",");
+  const parts: string[] = [];
+  if (booking.length)
+    parts.push(
+      same(ACCESS_LEVELS.manage)
+        ? "Manage bookings"
+        : same(ACCESS_LEVELS.view)
+          ? "View bookings"
+          : booking.join(", "),
+    );
+  const transport = Object.keys(TRANSPORT_WORDS).filter((p) =>
+    permissions.includes(p as DelegablePermission),
+  );
+  if (transport.length)
+    parts.push(
+      `Transport: ${transport.map((p) => TRANSPORT_WORDS[p]).join(", ")}`,
+    );
+  return parts.join("; ");
+}

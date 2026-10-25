@@ -6,7 +6,10 @@ import {
   tripListSchema,
   tripSchema,
   vehicleListSchema,
+  orderListSchema,
+  orderSchema,
 } from "../lib/transport-contracts";
+import { describeAccess } from "../lib/delegation-contracts";
 
 // M6a (package M): strict response contracts of the transport routes the board and trip page read.
 const uuid = (n: number) =>
@@ -164,4 +167,83 @@ test("transport routes have response contracts", () => {
   expect(route(`/trips/${uuid(2)}/clearance?at=x`)).toBe(clearanceSchema);
   expect(route("/drivers?after=x")).toBe(driverListSchema);
   expect(route("/vehicles")).toBe(vehicleListSchema);
+});
+
+// M6b: orders are paged like trips; the grant list states rights in words.
+const order = {
+  order_id: uuid(20),
+  revision: 2,
+  customer_id: uuid(21),
+  reference: "FAKE-SO-1",
+  loads: [
+    {
+      load_id: uuid(22),
+      position: 1,
+      description: "FAKE pallets",
+      quantity: 10,
+      unit: "pallet",
+      weight_grams: null,
+      shipper_id: null,
+      consignee_id: null,
+      planned: 10,
+    },
+  ],
+};
+
+test("orders are strict and paged with a cursor", () => {
+  expect(orderSchema.parse(order)).toEqual(order);
+  expect(() => orderSchema.parse({ ...order, extra: 1 })).toThrow();
+  const page = { items: [order], next_cursor: uuid(20) };
+  expect(orderListSchema.parse(page)).toEqual(page);
+  expect(() => orderListSchema.parse({ items: [order] })).toThrow();
+  expect(() =>
+    orderListSchema.parse({ items: [order, order], next_cursor: null }),
+  ).toThrow();
+  expect(
+    managementResponseSchema(
+      `/v1/businesses/${business}/transport/orders`,
+      "GET",
+    ),
+  ).toBe(orderListSchema);
+  for (const method of ["GET", "PUT"])
+    expect(
+      managementResponseSchema(
+        `/v1/businesses/${business}/transport/orders/${uuid(20)}`,
+        method,
+      ),
+    ).toBe(orderSchema);
+  for (const suffix of [
+    `trips/${uuid(2)}`,
+    `drivers/${uuid(5)}`,
+    `vehicles/${uuid(6)}`,
+  ])
+    expect(
+      managementResponseSchema(
+        `/v1/businesses/${business}/transport/${suffix}`,
+        "PUT",
+      ),
+    ).not.toBeNull();
+});
+
+test("grant rights are stated in words", () => {
+  expect(
+    describeAccess([
+      "booking.read",
+      "booking.write",
+      "catalog.read",
+      "staff.read",
+    ]),
+  ).toBe("Manage bookings");
+  expect(
+    describeAccess(["transport.read", "transport.assign", "transport.events"]),
+  ).toBe("Transport: view, assign crews, record stop events");
+  expect(
+    describeAccess([
+      "booking.read",
+      "catalog.read",
+      "staff.read",
+      "transport.read",
+      "transport.plan",
+    ]),
+  ).toBe("View bookings; Transport: view, plan trips");
 });

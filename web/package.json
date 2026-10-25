@@ -36,6 +36,7 @@
     "test:management:billing": "playwright test tests/visit-billing.spec.ts --max-failures=1",
     "test:management:prepaid": "playwright test tests/prepaid.spec.ts --max-failures=1",
     "test:management:transport": "playwright test tests/transport.spec.ts --max-failures=1",
+    "test:management:transport-forms": "playwright test tests/transport-forms.spec.ts --max-failures=1",
     "test:management:stock-documents": "playwright test tests/stock-documents.spec.ts --max-failures=1"
   },
   "dependencies": {
