@@ -1,6 +1,15 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-24: M5 hours-of-service and telematics clearance locally verified
+## Current checkpoint — 2026-10-24: BEAUTY-01 technically verified (owner's word)
+
+Owner's word 2026-10-24: «BEAUTY-01 accept». In `84fb150` on `codex/beauty-01-readiness` the readiness registry
+records BEAUTY-01 as `technically_verified` for code `8b6b37d` and schema 73 (exact-head CI 40040514685), citing
+the package L acceptance (L-01..L-12 PASS), the L8 review, L9a, L9b and the [readiness record](evidence/2026-10-24-beauty-01-readiness/RECORD.md). Not a pilot
+and not a production approval; no module becomes enableable; the salon profile stays `planned`. Focused **719
+passed**; full **2601 passed, 4 skipped**. M5 CI green (40152895317). `main` still waits for the owner. Next:
+package M slice M6 (screens); next migration **0079**.
+
+## Previous checkpoint — 2026-10-24: M5 hours-of-service and telematics clearance locally verified
 
 M5 in `1180d41` on `codex/package-m5-clearance` ([ADR-0032](../adr/0032-transport-clearance.md)): versioned hours-of-service profiles; duty
 records and telematics pings as insert-only facts with source ids; clearance computed for a moment and never
