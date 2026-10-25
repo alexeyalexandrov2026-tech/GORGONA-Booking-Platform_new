@@ -207,6 +207,10 @@ class TripView(BaseModel):
 
 class TripList(BaseModel):
     items: list[TripView]
+    next_cursor: UUID | None = None
+
+
+PAGE = 50
 
 
 async def require_transport(conn: RuntimeConnection, business: UUID) -> None:
@@ -553,12 +557,23 @@ async def load_trip(conn: RuntimeConnection, trip_id: UUID) -> TripView | None:
     )
 
 
-async def list_trips(conn: RuntimeConnection) -> TripList:
+def page_after(after: UUID | None) -> tuple[str, tuple[object, ...]]:
+    """M6a: a page of up to 50 rows in id order after the cursor, plus one to see if more follow."""
+    if after is None:
+        return "order by id limit %s", (PAGE + 1,)
+    return "where id > %s order by id limit %s", (after, PAGE + 1)
+
+
+async def list_trips(conn: RuntimeConnection, after: UUID | None = None) -> TripList:
+    clause, params = page_after(after)
     rows = await (
-        await conn.execute("select id from gba.transport_trips order by id limit 100")
+        # The clause is one of two fixed strings from page_after; the cursor is a parameter.
+        await conn.execute("select id from gba.transport_trips " + clause, params)  # noqa: S608
     ).fetchall()
-    items = [await load_trip(conn, row[0]) for row in rows]
-    return TripList(items=[item for item in items if item is not None])
+    items = [await load_trip(conn, row[0]) for row in rows[:PAGE]]
+    views = [item for item in items if item is not None]
+    more = len(rows) > PAGE and bool(views)
+    return TripList(items=views, next_cursor=views[-1].trip_id if more else None)
 
 
 def _check_legs(body: TripInput) -> None:

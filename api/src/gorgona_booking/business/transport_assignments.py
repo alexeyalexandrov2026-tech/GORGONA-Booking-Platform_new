@@ -20,11 +20,13 @@ from gorgona_booking.booking.models import IdempotencyKeyReusedError
 from gorgona_booking.booking.repository import lock_resource_schedule
 from gorgona_booking.business.module_gate import TRANSPORT_MODULE, module_writes
 from gorgona_booking.business.transport import (
+    PAGE,
     TransportReferenceTakenError,
     TripView,
     _fingerprint,
     _Strict,
     load_trip,
+    page_after,
     require_transport,
     trip_span,
 )
@@ -94,6 +96,7 @@ class DriverView(BaseModel):
 
 class DriverList(BaseModel):
     items: list[DriverView]
+    next_cursor: UUID | None = None
 
 
 class VehicleView(BaseModel):
@@ -106,6 +109,7 @@ class VehicleView(BaseModel):
 
 class VehicleList(BaseModel):
     items: list[VehicleView]
+    next_cursor: UUID | None = None
 
 
 _DRIVER = "select id, location_id, display_name, resource_id from gba.transport_drivers "
@@ -131,9 +135,13 @@ async def load_driver(conn: RuntimeConnection, driver_id: UUID) -> DriverView | 
     return None if row is None else _driver(row)
 
 
-async def list_drivers(conn: RuntimeConnection) -> DriverList:
-    rows = await (await conn.execute(_DRIVER + "order by display_name, id limit 100")).fetchall()
-    return DriverList(items=[_driver(row) for row in rows])
+async def list_drivers(conn: RuntimeConnection, after: UUID | None = None) -> DriverList:
+    """M6a: complete pagination in id order, 50 a page."""
+    clause, params = page_after(after)
+    rows = await (await conn.execute(_DRIVER + clause, params)).fetchall()
+    items = [_driver(row) for row in rows[:PAGE]]
+    more = len(rows) > PAGE
+    return DriverList(items=items, next_cursor=items[-1].driver_id if more else None)
 
 
 async def load_vehicle(conn: RuntimeConnection, vehicle_id: UUID) -> VehicleView | None:
@@ -141,9 +149,13 @@ async def load_vehicle(conn: RuntimeConnection, vehicle_id: UUID) -> VehicleView
     return None if row is None else _vehicle(row)
 
 
-async def list_vehicles(conn: RuntimeConnection) -> VehicleList:
-    rows = await (await conn.execute(_VEHICLE + "order by unit_number, id limit 100")).fetchall()
-    return VehicleList(items=[_vehicle(row) for row in rows])
+async def list_vehicles(conn: RuntimeConnection, after: UUID | None = None) -> VehicleList:
+    """M6a: complete pagination in id order, 50 a page."""
+    clause, params = page_after(after)
+    rows = await (await conn.execute(_VEHICLE + clause, params)).fetchall()
+    items = [_vehicle(row) for row in rows[:PAGE]]
+    more = len(rows) > PAGE
+    return VehicleList(items=items, next_cursor=items[-1].vehicle_id if more else None)
 
 
 async def _resource(

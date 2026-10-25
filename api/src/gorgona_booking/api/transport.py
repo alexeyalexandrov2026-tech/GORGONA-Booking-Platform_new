@@ -115,9 +115,11 @@ async def put_order(
 
 
 @router.get("/trips")
-async def get_trips(business_id: UUID, request: Request, principal: CurrentPrincipal) -> TripList:
+async def get_trips(
+    business_id: UUID, request: Request, principal: CurrentPrincipal, after: UUID | None = None
+) -> TripList:
     async with _access(request, principal, business_id) as access:
-        return await service.list_trips(access.conn)
+        return await service.list_trips(access.conn, after)
 
 
 @router.get("/trips/{trip_id}")
@@ -155,10 +157,10 @@ async def put_trip(
 
 @router.get("/drivers")
 async def get_drivers(
-    business_id: UUID, request: Request, principal: CurrentPrincipal
+    business_id: UUID, request: Request, principal: CurrentPrincipal, after: UUID | None = None
 ) -> DriverList:
     async with _access(request, principal, business_id) as access:
-        return await fleet.list_drivers(access.conn)
+        return await fleet.list_drivers(access.conn, after)
 
 
 @router.get("/drivers/{driver_id}")
@@ -199,10 +201,10 @@ async def put_driver(
 
 @router.get("/vehicles")
 async def get_vehicles(
-    business_id: UUID, request: Request, principal: CurrentPrincipal
+    business_id: UUID, request: Request, principal: CurrentPrincipal, after: UUID | None = None
 ) -> VehicleList:
     async with _access(request, principal, business_id) as access:
-        return await fleet.list_vehicles(access.conn)
+        return await fleet.list_vehicles(access.conn, after)
 
 
 @router.get("/vehicles/{vehicle_id}")

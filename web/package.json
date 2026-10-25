@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "test:e2e": "playwright test tests/booking.spec.ts",
     "test:visit": "playwright test tests/visit-booking.spec.ts --max-failures=1",
-    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts tests/counterparty-contracts.spec.ts tests/document-contracts.spec.ts tests/agreement-contracts.spec.ts tests/reservation-contracts.spec.ts tests/ledger-contracts.spec.ts --project=desktop tests/financial-contracts.spec.ts tests/admission-contracts.spec.ts tests/workforce-contracts.spec.ts tests/inventory-contracts.spec.ts tests/stock-document-contracts.spec.ts tests/booking-contracts.spec.ts tests/catalog-contracts.spec.ts tests/visit-contracts.spec.ts tests/customer-visit.spec.ts",
+    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts tests/counterparty-contracts.spec.ts tests/document-contracts.spec.ts tests/agreement-contracts.spec.ts tests/reservation-contracts.spec.ts tests/ledger-contracts.spec.ts --project=desktop tests/financial-contracts.spec.ts tests/admission-contracts.spec.ts tests/workforce-contracts.spec.ts tests/inventory-contracts.spec.ts tests/stock-document-contracts.spec.ts tests/booking-contracts.spec.ts tests/catalog-contracts.spec.ts tests/visit-contracts.spec.ts tests/customer-visit.spec.ts tests/transport-contracts.spec.ts",
     "test:management": "playwright test tests/management.spec.ts",
     "test:management:location": "playwright test tests/location-access.spec.ts",
     "test:management:delegation": "playwright test tests/delegation.spec.ts",
@@ -35,6 +35,7 @@
     "test:management:visit": "playwright test tests/visit-desk.spec.ts --max-failures=1",
     "test:management:billing": "playwright test tests/visit-billing.spec.ts --max-failures=1",
     "test:management:prepaid": "playwright test tests/prepaid.spec.ts --max-failures=1",
+    "test:management:transport": "playwright test tests/transport.spec.ts --max-failures=1",
     "test:management:stock-documents": "playwright test tests/stock-documents.spec.ts --max-failures=1"
   },
   "dependencies": {
