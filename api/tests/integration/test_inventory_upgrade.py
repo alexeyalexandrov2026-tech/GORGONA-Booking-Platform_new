@@ -82,6 +82,10 @@ K_TABLES = {
     # M3 (0076): stop events and their quantities per leg.
     "transport_stop_events",
     "transport_event_quantities",
+    # M5 (0078): hours-of-service profiles, duty records and telematics pings.
+    "transport_hos_profiles",
+    "transport_duty_records",
+    "transport_telematics_pings",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

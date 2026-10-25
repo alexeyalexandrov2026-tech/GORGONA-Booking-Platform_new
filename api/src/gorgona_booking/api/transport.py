@@ -2,9 +2,12 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
+from pydantic import AwareDatetime
 
 from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
@@ -12,6 +15,7 @@ from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import transport as service
 from gorgona_booking.business import transport_assignments as fleet
+from gorgona_booking.business import transport_clearance as clearance
 from gorgona_booking.business import transport_events as events
 from gorgona_booking.business.transport import (
     OrderInput,
@@ -30,6 +34,15 @@ from gorgona_booking.business.transport_assignments import (
     VehicleInput,
     VehicleList,
     VehicleView,
+)
+from gorgona_booking.business.transport_clearance import (
+    ClearanceView,
+    DutyInput,
+    DutyView,
+    PingInput,
+    PingView,
+    ProfileInput,
+    ProfileView,
 )
 from gorgona_booking.business.transport_events import EventInput
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
@@ -296,3 +309,93 @@ async def post_event(
             key=idempotency_key,
             body=body,
         )
+
+
+@router.get("/hos-profile")
+async def get_hos_profile(
+    business_id: UUID, request: Request, principal: CurrentPrincipal
+) -> ProfileView:
+    async with _access(request, principal, business_id) as access:
+        view = await clearance.load_profile(access.conn)
+        if view is None:
+            raise NotFoundError("No hours-of-service profile")
+        return view
+
+
+@router.put("/hos-profile")
+async def put_hos_profile(
+    business_id: UUID,
+    body: ProfileInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ProfileView:
+    """ADR-0032 decision 1: the business's rule profile, replaced with its revision."""
+    async with _access(
+        request, principal, business_id, Permission.TRANSPORT_MANAGE, allow_delegation=False
+    ) as access:
+        return await clearance.save_profile(
+            access.conn,
+            business_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/drivers/{driver_id}/duty-records")
+async def post_duty_record(
+    business_id: UUID,
+    driver_id: UUID,
+    body: DutyInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> DutyView:
+    """ADR-0032 decision 2: a driver's duty status over an interval, as an idempotent fact."""
+    async with _access(request, principal, business_id, Permission.TRANSPORT_EVENTS) as access:
+        return await clearance.record_duty(
+            access.conn,
+            business_id,
+            driver_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/vehicles/{vehicle_id}/pings")
+async def post_ping(
+    business_id: UUID,
+    vehicle_id: UUID,
+    body: PingInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> PingView:
+    """ADR-0032 decision 2: a vehicle's telematics observation, as an idempotent fact."""
+    async with _access(request, principal, business_id, Permission.TRANSPORT_EVENTS) as access:
+        return await clearance.record_ping(
+            access.conn,
+            business_id,
+            vehicle_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/trips/{trip_id}/clearance")
+async def get_clearance(
+    business_id: UUID,
+    trip_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    at: Annotated[AwareDatetime | None, Query()] = None,
+) -> ClearanceView:
+    """ADR-0032 decisions 3-4: computed for a moment; never cleared on stale or unknown data."""
+    async with _access(request, principal, business_id) as access:
+        return await clearance.clearance(access.conn, trip_id, at or datetime.now(UTC))
