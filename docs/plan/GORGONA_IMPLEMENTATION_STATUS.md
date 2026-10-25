@@ -1,6 +1,15 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-25: M6a dispatch board and trip page, locally verified
+## Current checkpoint — 2026-10-25: M6b planning forms, fleet and carrier grants, locally verified
+
+M6a CI SUCCESS (run 40177073619). M6b in `ba9cb64` on `codex/package-m6b-transport-forms`: owners and
+managers enter and correct orders, plan and correct trips with stops in their own time zones and register
+drivers and vehicles; the grant form offers a carrier transport actions with or without bookings, and the
+carrier's dispatcher sees Transport only through such a grant, with only the granted forms. Orders are paged by
+cursor. Real browser desktop and mobile with the database read back. Focused **723 passed**; full **2605
+passed, 4 skipped** ([validation](evidence/2026-10-25-m6b-transport-forms/VALIDATION.md)). Next: M7 (money), then M8 (acceptance). Next migration **0079**.
+
+## Previous checkpoint — 2026-10-25: M6a dispatch board and trip page, locally verified
 
 `main` fast-forwarded to `ad21888` on the owner's word (CI SUCCESS, run 40165514386). M6a in `76519b8` on
 `codex/package-m6a-transport-screens`: the Transport screen (owner or manager) lists every trip with status,

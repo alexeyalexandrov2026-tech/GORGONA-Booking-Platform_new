@@ -11,7 +11,9 @@ Plan: [PACKAGE_M_PLAN_2026-10-23.md](PACKAGE_M_PLAN_2026-10-23.md), slice M6 sec
 - **Complete order pagination:** `GET orders` returns up to 50 orders in id order with `next_cursor`, continued
   with `?after=`; today it stops silently at 100.
 - **Fleet (owner or manager only, never a delegate — ADR-0031):** register a driver (name, location) or a truck
-  or trailer (unit number, location) and correct a name or unit number (`PUT` with the same id).
+  or trailer (unit number, location). Registration is once per id with fixed details (ADR-0029 decision 1);
+  correcting a name or unit number needs its own decision and stays out of M6b (found in dev-1: the first
+  version of this design assumed `PUT` corrects them, which the server refuses).
 - **Orders (owner or manager):** create an order for an active customer (counterparties with the customer role,
   read to the end) with up to 50 loads (description, quantity, unit), and edit it with its expected revision;
   each load shows how much is already planned on trips.
@@ -29,12 +31,12 @@ Plan: [PACKAGE_M_PLAN_2026-10-23.md](PACKAGE_M_PLAN_2026-10-23.md), slice M6 sec
   fleet forms never appear for a delegate.
 - No new migration (next stays **0079**).
 
-## Acceptance of M6b (NOT TESTED)
+## Acceptance of M6b (PASS locally in `ba9cb64`)
 
 | id | Requirement |
 |---|---|
 | M6b-01 | Orders are listed completely in pages of 50 with a cursor; a malformed cursor is refused |
-| M6b-02 | An owner registers a driver and a truck and corrects a driver's name; a delegate never sees fleet forms |
+| M6b-02 | An owner registers a driver and a truck; a delegate never sees fleet forms |
 | M6b-03 | An owner creates an order for an active customer with several loads and edits it with its revision |
 | M6b-04 | An owner plans a trip with stops in their own time zones and legs from the order's loads; an overplanned leg is refused in words and the corrected form saves |
 | M6b-05 | The grant form offers transport actions with or without bookings; the list states the rights in words |
