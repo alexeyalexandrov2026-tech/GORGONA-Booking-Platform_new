@@ -15,7 +15,7 @@ Decision: [ADR-0033](../adr/0033-transport-money.md). Branch `codex/package-m7-t
   Writes `finance.manage` (never delegated), reads `finance.read`; invoice and accrual under the ledger lock.
 - Next migration after this slice: **0080**.
 
-## Acceptance of M7a (NOT TESTED)
+## Acceptance of M7a (PASS locally in `b2998d5`)
 
 | id | Requirement |
 |---|---|

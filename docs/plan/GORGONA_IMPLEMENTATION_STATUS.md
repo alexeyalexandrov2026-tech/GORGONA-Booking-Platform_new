@@ -1,6 +1,16 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-25: M6b planning forms, fleet and carrier grants, locally verified
+## Current checkpoint — 2026-10-25: M7a transport money through FIN-03, locally verified
+
+M6b CI SUCCESS (run 40227240451). M7a in `b2998d5` on `codex/package-m7-transport-money` (ADR-0033): an
+order's agreed rate is kept as versions and frozen by its one FIN-03 customer invoice (freight per mile or fixed
+plus named extras, only when nothing is open); a trip's pay components (driver, owner-operator, dispatch fee)
+are registered once and each accrues once as its own FIN-03 payable obligation on a closed trip; FIN-03 keeps
+payments within the open balance. Finance rights only, never a delegate. Focused **730 passed**; full **2612
+passed, 4 skipped** ([validation](evidence/2026-10-25-m7a-transport-money/VALIDATION.md)); full-1 lost a Chromium session in an unrelated browser test,
+recorded. Next: M7b (money on the screens), then M8. Next migration **0080**.
+
+## Previous checkpoint — 2026-10-25: M6b planning forms, fleet and carrier grants, locally verified
 
 M6a CI SUCCESS (run 40177073619). M6b in `ba9cb64` on `codex/package-m6b-transport-forms`: owners and
 managers enter and correct orders, plan and correct trips with stops in their own time zones and register
