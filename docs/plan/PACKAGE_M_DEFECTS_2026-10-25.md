@@ -27,7 +27,7 @@ nothing. **Cause:** one error state served both commands and list loading; after
 list and the successful reload cleared the command's error. Fix: command refusals and loading problems are kept
 apart, so a reload never clears a refusal.
 
-## Acceptance (NOT TESTED)
+## Acceptance (PASS locally in `099bc84`)
 
 | id | Requirement |
 |---|---|

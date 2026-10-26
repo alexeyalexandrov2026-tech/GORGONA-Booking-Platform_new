@@ -1,6 +1,10 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-25: M7a transport money through FIN-03, locally verified
+## Current checkpoint — 2026-10-25: package M defects D-01 and D-02 fixed, locally verified
+
+M7a CI SUCCESS (run 40245557506). The two open defects are fixed in `099bc84` on `codex/package-m-defects`: the "night-time" workforce browser failure was the live test server's loop dying with WinError 10055 (socket buffers exhausted), so the harness now fails a test with the server's own error; a refused grant offer now stays visible after the list reloads. Focused **733 passed**; full **2614 passed, 4 skipped** ([validation](evidence/2026-10-25-m-defects/VALIDATION.md)). Next: M7b (money on the screens), then M8. Next migration **0080**.
+
+## Previous checkpoint — 2026-10-25: M7a transport money through FIN-03, locally verified
 
 M6b CI SUCCESS (run 40227240451). M7a in `b2998d5` on `codex/package-m7-transport-money` (ADR-0033): an
 order's agreed rate is kept as versions and frozen by its one FIN-03 customer invoice (freight per mile or fixed
