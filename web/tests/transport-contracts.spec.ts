@@ -7,6 +7,9 @@ import {
   tripSchema,
   vehicleListSchema,
   orderListSchema,
+  orderInvoiceSchema,
+  paySchema,
+  rateSchema,
   orderSchema,
 } from "../lib/transport-contracts";
 import { describeAccess } from "../lib/delegation-contracts";
@@ -246,4 +249,71 @@ test("grant rights are stated in words", () => {
       "transport.plan",
     ]),
   ).toBe("View bookings; Transport: view, plan trips");
+});
+
+// M7b: the money routes of M7a.
+test("transport money responses are strict and routed", () => {
+  const rate = {
+    order_id: uuid(30),
+    current: {
+      revision: 1,
+      currency: "USD",
+      basis: "per_mile",
+      amount: "2.35",
+      created_at: "2026-10-25T12:00:00Z",
+    },
+    versions: [
+      {
+        revision: 1,
+        currency: "USD",
+        basis: "per_mile",
+        amount: "2.35",
+        created_at: "2026-10-25T12:00:00Z",
+      },
+    ],
+  };
+  expect(rateSchema.parse(rate)).toEqual(rate);
+  expect(() => rateSchema.parse({ ...rate, extra: 1 })).toThrow();
+  const pay = {
+    trip_id: uuid(2),
+    components: [
+      {
+        component_id: uuid(31),
+        trip_id: uuid(2),
+        counterparty_id: uuid(32),
+        role: "dispatch_fee",
+        currency: "USD",
+        basis: "percent",
+        amount: null,
+        rate: null,
+        percent: "7.5",
+        base: "1250.00",
+        accrual: null,
+      },
+    ],
+  };
+  expect(paySchema.parse(pay)).toEqual(pay);
+  expect(() =>
+    paySchema.parse({
+      ...pay,
+      components: [{ ...pay.components[0], role: "captain" }],
+    }),
+  ).toThrow();
+  const base = `/v1/businesses/${business}/transport`;
+  for (const method of ["GET", "PUT"])
+    expect(
+      managementResponseSchema(`${base}/orders/${uuid(30)}/rate`, method),
+    ).toBe(rateSchema);
+  for (const method of ["GET", "POST"])
+    expect(
+      managementResponseSchema(`${base}/orders/${uuid(30)}/invoice`, method),
+    ).toBe(orderInvoiceSchema);
+  expect(managementResponseSchema(`${base}/trips/${uuid(2)}/pay`, "GET")).toBe(
+    paySchema,
+  );
+  for (const [suffix, method] of [
+    [`/trips/${uuid(2)}/pay/${uuid(31)}`, "PUT"],
+    [`/trips/${uuid(2)}/pay/${uuid(31)}/accrue`, "POST"],
+  ] as const)
+    expect(managementResponseSchema(base + suffix, method)).not.toBeNull();
 });

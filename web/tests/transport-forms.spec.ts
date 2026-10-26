@@ -249,8 +249,13 @@ test("an owner plans with the forms and a carrier's dispatcher works through the
   await openTransport(page);
   for (const name of ["Driver", "Vehicle", "Order", "Trip"])
     await expect(page.getByRole("form", { name, exact: true })).toHaveCount(0);
+  // M7b-04: money is a finance task; a delegate never sees its panels.
+  await expect(page.getByRole("button", { name: /^Money for / })).toHaveCount(
+    0,
+  );
   await board.getByRole("button", { name: `FAKE-TR-${p}` }).click();
   await expect(page.getByRole("button", { name: "Edit trip" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Trip pay" })).toHaveCount(0);
   const assign = page.getByRole("form", { name: "Assign or replace" });
   for (const [role, assignee] of [
     ["Driver", `FAKE Driver ${p}`],

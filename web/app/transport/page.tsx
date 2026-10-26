@@ -21,12 +21,20 @@ export default function TransportPage() {
             businessId={salonId}
             rights={
               staff
-                ? { plan: true, assign: true, events: true, fleet: true }
+                ? {
+                    plan: true,
+                    assign: true,
+                    events: true,
+                    fleet: true,
+                    // Money routes refuse a branch-limited member (company-wide finance).
+                    money: !member?.location_id,
+                  }
                 : {
                     plan: false,
                     assign: granted("transport.assign"),
                     events: granted("transport.events"),
                     fleet: false,
+                    money: false,
                   }
             }
           />

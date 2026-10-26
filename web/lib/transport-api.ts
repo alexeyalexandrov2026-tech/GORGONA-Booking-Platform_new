@@ -1,13 +1,17 @@
 // M6a (package M): the transport routes the dispatch board and the trip page use. Lists are read to
 // their end through the server's cursor; a command keeps its Idempotency-Key until it succeeds, so a
 // retry after a lost answer is the same request.
-import { managementFetch } from "./management-api";
+import { ManagementApiError, managementFetch } from "./management-api";
 import type {
   Clearance,
   Driver,
   DriverList,
+  Component,
   Order,
+  OrderInvoice,
   OrderList,
+  Pay,
+  Rate,
   Trip,
   TripList,
   Vehicle,
@@ -179,3 +183,100 @@ export const saveVehicle = (
   },
 ): Promise<Vehicle> =>
   command<Vehicle>(`${base(business)}/vehicles/${vehicle}`, "PUT", body);
+
+// M7b: transport money (ADR-0033); a finance member's commands, each with its record id and key.
+export const fetchRate = (business: string, order: string): Promise<Rate> =>
+  managementFetch<Rate>(`${base(business)}/orders/${order}/rate`);
+export const saveRate = (
+  business: string,
+  order: string,
+  body: {
+    schema_version: 1;
+    expected_revision: number;
+    currency: string;
+    basis: "fixed" | "per_mile";
+    amount: string;
+  },
+): Promise<Rate> =>
+  command<Rate>(`${base(business)}/orders/${order}/rate`, "PUT", body);
+
+/** The order's invoice, or null while it has none. */
+export async function fetchOrderInvoice(
+  business: string,
+  order: string,
+): Promise<OrderInvoice | null> {
+  try {
+    return await managementFetch<OrderInvoice>(
+      `${base(business)}/orders/${order}/invoice`,
+    );
+  } catch (error) {
+    if (error instanceof ManagementApiError && error.code === "NOT_FOUND")
+      return null;
+    throw error;
+  }
+}
+export type OrderInvoiceBody = {
+  schema_version: 1;
+  book_id: string;
+  control_account_id: string;
+  revenue_account_id: string;
+  invoice_date: string;
+  number: string;
+  miles: string | null;
+  extra_lines: { description: string; amount: string; account_id: string }[];
+};
+export const createOrderInvoice = (
+  business: string,
+  order: string,
+  body: OrderInvoiceBody,
+): Promise<OrderInvoice> =>
+  command<OrderInvoice>(
+    `${base(business)}/orders/${order}/invoice`,
+    "POST",
+    body,
+  );
+
+export const fetchPay = (business: string, trip: string): Promise<Pay> =>
+  managementFetch<Pay>(`${base(business)}/trips/${trip}/pay`);
+export type ComponentBody = {
+  schema_version: 1;
+  counterparty_id: string;
+  role: Component["role"];
+  currency: string;
+  basis: Component["basis"];
+  amount: string | null;
+  rate: string | null;
+  percent: string | null;
+  base: string | null;
+};
+export const saveComponent = (
+  business: string,
+  trip: string,
+  component: string,
+  body: ComponentBody,
+): Promise<Component> =>
+  command<Component>(
+    `${base(business)}/trips/${trip}/pay/${component}`,
+    "PUT",
+    body,
+  );
+export type AccrueBody = {
+  schema_version: 1;
+  book_id: string;
+  expense_account_id: string;
+  payable_account_id: string;
+  accrual_date: string;
+  number: string;
+  miles: string | null;
+};
+export const accrueComponent = (
+  business: string,
+  trip: string,
+  component: string,
+  body: AccrueBody,
+): Promise<Component> =>
+  command<Component>(
+    `${base(business)}/trips/${trip}/pay/${component}/accrue`,
+    "POST",
+    body,
+  );

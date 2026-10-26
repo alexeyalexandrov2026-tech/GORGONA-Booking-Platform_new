@@ -23,6 +23,7 @@ import {
   fetchTrip,
   recordEvent,
 } from "../lib/transport-api";
+import { OrderMoney, TripPay } from "./transport-money";
 import {
   FleetPanel,
   OrdersPanel,
@@ -108,6 +109,8 @@ export type TransportRights = {
   assign: boolean;
   events: boolean;
   fleet: boolean;
+  // M7b: rates, invoices and trip pay; a company-wide finance member only.
+  money: boolean;
 };
 
 async function allCustomers(businessId: string): Promise<Customer[]> {
@@ -142,6 +145,7 @@ export function TransportScreen({
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [editing, setEditing] = useState<Trip | null>(null);
   const [notice, setNotice] = useState("");
+  const [moneyOrder, setMoneyOrder] = useState<Order | null>(null);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -308,6 +312,7 @@ export function TransportScreen({
           onChange={changed}
           rights={rights}
           onEdit={rights.plan ? setEditing : undefined}
+          notify={notify}
         />
       )}
       {loaded && rights.plan && (
@@ -322,7 +327,16 @@ export function TransportScreen({
               )
             }
             notify={notify}
+            onMoney={rights.money ? setMoneyOrder : undefined}
           />
+          {rights.money && moneyOrder && (
+            <OrderMoney
+              key={moneyOrder.order_id}
+              businessId={businessId}
+              order={moneyOrder}
+              notify={notify}
+            />
+          )}
           <TripForm
             key={
               editing ? `edit-${editing.trip_id}-${editing.revision}` : "new"
@@ -369,6 +383,7 @@ function TripPage({
   onChange,
   rights,
   onEdit,
+  notify,
 }: {
   businessId: string;
   trip: Trip;
@@ -378,6 +393,7 @@ function TripPage({
   onChange: (trip: Trip) => void;
   rights: TransportRights;
   onEdit?: (trip: Trip) => void;
+  notify: (text: string) => void;
 }) {
   const headingId = useId();
   const assignId = useId();
@@ -822,6 +838,14 @@ function TripPage({
         <p className="error" role="alert">
           {error}
         </p>
+      )}
+      {rights.money && (
+        <TripPay
+          key={trip.trip_id}
+          businessId={businessId}
+          trip={trip}
+          notify={notify}
+        />
       )}
     </section>
   );

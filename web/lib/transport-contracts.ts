@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { invoiceSchema, obligationSchema } from "./financial-contracts";
 
 // M6a (package M): strict response contracts of the transport routes the dispatch board and the trip
 // page read. Times arrive in UTC; each stop names its own time zone for display.
@@ -114,6 +115,62 @@ export const orderSchema = z.strictObject({
 export const orderListSchema = z
   .strictObject({ items: z.array(orderSchema).max(50), next_cursor: cursor })
   .refine((v) => unique(v.items, (x) => x.order_id));
+// M7b: the money of ADR-0033 (M7a routes).
+const decimal = z.string().regex(/^(0|[1-9][0-9]*)(\.[0-9]{1,3})?$/);
+const rateVersion = z.strictObject({
+  revision: z.number().int().positive(),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  basis: z.enum(["fixed", "per_mile"]),
+  amount: decimal,
+  created_at: instant,
+});
+export const rateSchema = z.strictObject({
+  order_id: id,
+  current: rateVersion.nullable(),
+  versions: z.array(rateVersion),
+});
+export const orderInvoiceSchema = z.strictObject({
+  order_id: id,
+  book_id: id,
+  document_id: id,
+  rate_revision: z.number().int().positive(),
+  miles: z
+    .string()
+    .regex(/^[0-9]+\.[0-9]$/)
+    .nullable(),
+  invoice: invoiceSchema,
+  obligation: obligationSchema.nullable(),
+});
+export const componentSchema = z.strictObject({
+  component_id: id,
+  trip_id: id,
+  counterparty_id: id,
+  role: z.enum(["driver", "owner_operator", "dispatch_fee", "other"]),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  basis: z.enum(["fixed", "per_mile", "percent"]),
+  amount: decimal.nullable(),
+  rate: decimal.nullable(),
+  percent: z
+    .string()
+    .regex(/^[0-9]{1,3}(\.[0-9]{1,2})?$/)
+    .nullable(),
+  base: decimal.nullable(),
+  accrual: z
+    .strictObject({
+      book_id: id,
+      document_id: id,
+      miles: z
+        .string()
+        .regex(/^[0-9]+\.[0-9]$/)
+        .nullable(),
+      accrual: invoiceSchema,
+      obligation: obligationSchema.nullable(),
+    })
+    .nullable(),
+});
+export const paySchema = z
+  .strictObject({ trip_id: id, components: z.array(componentSchema).max(200) })
+  .refine((v) => unique(v.components, (x) => x.component_id));
 const outcome = z.enum(["cleared", "not_cleared", "unknown"]);
 export const clearanceSchema = z.strictObject({
   trip_id: id,
@@ -143,6 +200,10 @@ export type DriverList = z.infer<typeof driverListSchema>;
 export type Vehicle = z.infer<typeof vehicleSchema>;
 export type VehicleList = z.infer<typeof vehicleListSchema>;
 export type Clearance = z.infer<typeof clearanceSchema>;
+export type Rate = z.infer<typeof rateSchema>;
+export type OrderInvoice = z.infer<typeof orderInvoiceSchema>;
+export type Component = z.infer<typeof componentSchema>;
+export type Pay = z.infer<typeof paySchema>;
 export type Load = z.infer<typeof loadSchema>;
 export type Order = z.infer<typeof orderSchema>;
 export type OrderList = z.infer<typeof orderListSchema>;
@@ -159,6 +220,30 @@ export function transportResponseSchema(
   if (suffix === "/transport/trips" && method === "GET") return tripListSchema;
   if (trip.test(suffix) && (method === "GET" || method === "PUT"))
     return tripSchema;
+  if (
+    /^\/transport\/orders\/[0-9a-f-]{36}\/rate$/i.test(suffix) &&
+    (method === "GET" || method === "PUT")
+  )
+    return rateSchema;
+  if (
+    /^\/transport\/orders\/[0-9a-f-]{36}\/invoice$/i.test(suffix) &&
+    (method === "GET" || method === "POST")
+  )
+    return orderInvoiceSchema;
+  if (
+    /^\/transport\/trips\/[0-9a-f-]{36}\/pay$/i.test(suffix) &&
+    method === "GET"
+  )
+    return paySchema;
+  if (
+    (/^\/transport\/trips\/[0-9a-f-]{36}\/pay\/[0-9a-f-]{36}$/i.test(suffix) &&
+      method === "PUT") ||
+    (/^\/transport\/trips\/[0-9a-f-]{36}\/pay\/[0-9a-f-]{36}\/accrue$/i.test(
+      suffix,
+    ) &&
+      method === "POST")
+  )
+    return componentSchema;
   if (suffix === "/transport/orders" && method === "GET")
     return orderListSchema;
   if (

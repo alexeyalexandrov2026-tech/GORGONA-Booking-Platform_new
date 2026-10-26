@@ -42,12 +42,14 @@ export function OrdersPanel({
   customers,
   onSaved,
   notify,
+  onMoney,
 }: {
   businessId: string;
   orders: Order[];
   customers: Customer[];
   onSaved: (order: Order) => void;
   notify: Notify;
+  onMoney?: (order: Order) => void;
 }) {
   const headingId = useId();
   const [orderId, setOrderId] = useState(() => crypto.randomUUID());
@@ -158,6 +160,15 @@ export function OrdersPanel({
                     >
                       Edit
                     </button>
+                    {onMoney && (
+                      <button
+                        type="button"
+                        aria-label={`Money for ${order.reference}`}
+                        onClick={() => onMoney(order)}
+                      >
+                        Money
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
