@@ -42,3 +42,10 @@ visit invoice (L4) and the commission accrual (L5).
 
 Advances, deductions, fuel surcharges as formulas, factoring and quick pay stay later (their own decisions);
 extras are named lines today. Pay and invoices appear on the screens in M7b.
+
+## Amendment 2026-10-26 (package M review, R-01, R-03)
+
+An order invoice or pay accrual draft belongs to transport and is never edited through the generic FIN-03
+draft routes (`FINANCIAL_DOCUMENT_LINKED`). Once an order is invoiced, its loads cannot be added, enlarged or
+restored and no new leg carries them (`TRANSPORT_ORDER_INVOICED`). See
+[the review fixes](../plan/PACKAGE_M_REVIEW_FIXES_2026-10-26.md).

@@ -34,3 +34,9 @@ partial delivery records the delivered quantity per load and leaves the rest ope
 
 Closing a trip, proof of delivery documents and invoices (M7) build on these facts; dispatcher grants (M4)
 decide who may record them; telematics freshness (M5) reads the same source codes.
+
+## Amendment 2026-10-26 (package M review, R-02)
+
+Loading is final once the trip has departed the leg's pickup stop. Before that, a leg's open quantity is
+planned less resolved; from then on it is loaded less resolved, so a leg loaded short closes when what was
+loaded is resolved. See [the review fixes](../plan/PACKAGE_M_REVIEW_FIXES_2026-10-26.md).
