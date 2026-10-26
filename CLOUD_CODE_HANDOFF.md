@@ -1,6 +1,10 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-26: M7b transport money on the screens, locally verified
+## Current checkpoint — 2026-10-26: package M technically accepted locally, independent review open
+
+M7b CI SUCCESS (run 40272483262). M8 on `codex/package-m8-acceptance`: TMS-01..03 PASS locally ([acceptance record](docs/plan/evidence/2026-10-26-m8-acceptance/ACCEPTANCE.md)), with a new end-to-end TMS-01 test in `6d5c86c` (one trip, two orders' loads, three stops in three zones, the truck replaced after loading, a partial delivery with refusals and damage, all history kept). Focused **735 passed**; full **2616 passed, 4 skipped**. The owner deferred the independent review (2026-10-26); it stays open. Readiness of the transport module and `main` wait for the owner's word; the module stays not enableable. Next migration **0080**.
+
+## Previous checkpoint — 2026-10-26: M7b transport money on the screens, locally verified
 
 Defect fixes CI SUCCESS (run 40261326556). M7b in `f44db22` on `codex/package-m7b-money-screens`: a company-wide owner or manager sets an order's rate, creates its FIN-03 customer invoice with extras and sees what is paid and open; on the trip page registers pay components (driver, dispatch fee, …) and accrues them; a branch-limited member and a delegate never see money. Focused **734 passed**; full **2615 passed, 4 skipped** ([validation](docs/plan/evidence/2026-10-25-m7b-money-screens/VALIDATION.md)). Next: M8 (package M acceptance; the independent review needs the owner's consent for an extra agent). Next migration **0080**.
 
