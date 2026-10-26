@@ -5,7 +5,7 @@ Roles come from server-side memberships and platform roles, never from token cla
 
 from enum import StrEnum
 
-PERMISSIONS_VERSION = 9
+PERMISSIONS_VERSION = 10
 
 
 class Permission(StrEnum):
@@ -35,6 +35,8 @@ class Permission(StrEnum):
     TRANSPORT_EVENTS = "transport.events"
     # ADR-0031: registering drivers and vehicles only; never delegated.
     TRANSPORT_MANAGE = "transport.manage"
+    # ADR-0034: broker authority and carrier profiles; owners and managers, not delegated (N1).
+    TRANSPORT_BROKER = "transport.broker"
     MEMBERS_MANAGE = "members.manage"
     MEMBERS_MANAGE_ADMINS = "members.manage_admins"
     SETTINGS_MANAGE = "settings.manage"
@@ -74,6 +76,7 @@ _MANAGER = _FRONT_DESK | {
     Permission.TRANSPORT_ASSIGN,
     Permission.TRANSPORT_EVENTS,
     Permission.TRANSPORT_MANAGE,
+    Permission.TRANSPORT_BROKER,
     Permission.MEMBERS_MANAGE,
     Permission.SETTINGS_MANAGE,
     Permission.READINESS_READ,

@@ -90,6 +90,9 @@ K_TABLES = {
     "transport_order_invoices",
     "transport_pay_components",
     "transport_pay_accruals",
+    # N1 (0080): broker authority and carrier profiles.
+    "transport_broker_authorities",
+    "transport_carrier_profiles",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

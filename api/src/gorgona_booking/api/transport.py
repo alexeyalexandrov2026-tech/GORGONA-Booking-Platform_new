@@ -2,7 +2,7 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -15,6 +15,7 @@ from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import transport as service
 from gorgona_booking.business import transport_assignments as fleet
+from gorgona_booking.business import transport_brokerage as brokerage
 from gorgona_booking.business import transport_clearance as clearance
 from gorgona_booking.business import transport_events as events
 from gorgona_booking.business import transport_money as money
@@ -35,6 +36,13 @@ from gorgona_booking.business.transport_assignments import (
     VehicleInput,
     VehicleList,
     VehicleView,
+)
+from gorgona_booking.business.transport_brokerage import (
+    AuthorityInput,
+    AuthorityView,
+    CarrierProfileInput,
+    CarrierProfileView,
+    EligibilityView,
 )
 from gorgona_booking.business.transport_clearance import (
     ClearanceView,
@@ -568,3 +576,115 @@ async def post_pay_accrual(
             key=idempotency_key,
             body=body,
         )
+
+
+# N1 (ADR-0034): broker authority and carrier profiles; owners and managers with transport.broker,
+# company-wide, never a delegate.
+
+
+@asynccontextmanager
+async def _broker(
+    request: Request, principal: CurrentPrincipal, business_id: UUID
+) -> AsyncIterator[TenantAccess]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.TRANSPORT_BROKER,
+        request_id=get_request_id(request),
+    ) as access:
+        await assert_location_scope_ready(access.conn)
+        yield access
+
+
+@router.get("/broker-authority")
+async def get_broker_authority(
+    business_id: UUID, request: Request, principal: CurrentPrincipal
+) -> AuthorityView:
+    async with _broker(request, principal, business_id) as access:
+        return await brokerage.load_authority(access.conn)
+
+
+@router.put("/broker-authority")
+async def put_broker_authority(
+    business_id: UUID,
+    body: AuthorityInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> AuthorityView:
+    """ADR-0034 decision 1: a new version of the business's broker authority."""
+    async with _broker(request, principal, business_id) as access:
+        return await brokerage.save_authority(
+            access.conn,
+            business_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/broker-authority/eligibility")
+async def get_broker_eligibility(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    on: Annotated[date, Query()],
+) -> EligibilityView:
+    """ADR-0034 decision 3: computed for a date, never stored."""
+    async with _broker(request, principal, business_id) as access:
+        view = await brokerage.load_authority(access.conn)
+        return brokerage.authority_eligibility(view, on)
+
+
+@router.get("/carriers/{counterparty_id}/profile")
+async def get_carrier_profile(
+    business_id: UUID, counterparty_id: UUID, request: Request, principal: CurrentPrincipal
+) -> CarrierProfileView:
+    async with _broker(request, principal, business_id) as access:
+        view = await brokerage.load_profile(access.conn, counterparty_id)
+        if view is None:
+            raise NotFoundError("Carrier not found", counterparty_id=str(counterparty_id))
+        return view
+
+
+@router.put("/carriers/{counterparty_id}/profile")
+async def put_carrier_profile(
+    business_id: UUID,
+    counterparty_id: UUID,
+    body: CarrierProfileInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> CarrierProfileView:
+    """ADR-0034 decision 2: a new version of a carrier's profile."""
+    async with _broker(request, principal, business_id) as access:
+        view = await brokerage.save_profile(
+            access.conn,
+            business_id,
+            counterparty_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+        if view is None:
+            raise NotFoundError("Carrier not found", counterparty_id=str(counterparty_id))
+        return view
+
+
+@router.get("/carriers/{counterparty_id}/eligibility")
+async def get_carrier_eligibility(
+    business_id: UUID,
+    counterparty_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    on: Annotated[date, Query()],
+) -> EligibilityView:
+    """ADR-0034 decision 3: computed for a date; every failing condition is named."""
+    async with _broker(request, principal, business_id) as access:
+        view = await brokerage.load_profile(access.conn, counterparty_id)
+        if view is None:
+            raise NotFoundError("Carrier not found", counterparty_id=str(counterparty_id))
+        return brokerage.carrier_eligibility(view, on)

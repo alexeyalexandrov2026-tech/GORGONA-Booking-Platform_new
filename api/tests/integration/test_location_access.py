@@ -418,6 +418,10 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (76, "-- Transport event branch scope:"),
                 # M5: duty records and telematics pings.
                 (78, "-- Transport clearance branch scope:"),
+                # M7a: pay components and their accruals (restored since N1; M7a missed it).
+                (79, "-- Transport money branch scope:"),
+                # N1: broker authority and carrier profiles (company-wide).
+                (80, "-- Broker branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker

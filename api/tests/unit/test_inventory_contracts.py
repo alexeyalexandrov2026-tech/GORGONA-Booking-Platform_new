@@ -32,7 +32,7 @@ PLACE: dict[str, object] = {
 
 
 def test_inventory_rights_belong_to_admins_and_are_never_delegated() -> None:
-    assert PERMISSIONS_VERSION == 9
+    assert PERMISSIONS_VERSION == 10
     rights = {Permission.INVENTORY_READ, Permission.INVENTORY_MANAGE}
     for role in ("owner", "manager"):
         assert rights <= ROLE_PERMISSIONS[role]
