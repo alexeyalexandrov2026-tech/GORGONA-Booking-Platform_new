@@ -184,17 +184,6 @@ test("an owner plans with the forms and a carrier's dispatcher works through the
     .getByRole("link", { name: "Business profile", exact: true })
     .click();
   const access = page.getByRole("region", { name: "Delegated access" });
-  if (p === "mobile") {
-    // One open delegation per pair of businesses: the desktop run's grant is revoked first.
-    await access
-      .getByRole("listitem")
-      .filter({ hasText: "Active" })
-      .getByRole("button", { name: /^Revoke access for / })
-      .click();
-    await expect(access.getByRole("status")).toHaveText(
-      "Access revoked. It stops at the next action.",
-    );
-  }
   await access.getByLabel("Serving business ID").fill(carrier);
   await access.getByLabel("Access", { exact: true }).selectOption("none");
   await access.getByRole("checkbox", { name: "Assign crews" }).check();
@@ -203,6 +192,24 @@ test("an owner plans with the forms and a carrier's dispatcher works through the
     .toISOString()
     .slice(0, 10);
   await access.getByLabel("Last day of access").fill(lastDay);
+  if (p === "mobile") {
+    // One open delegation per pair of businesses: the offer is refused in words (D-02), the message
+    // survives the reload that follows, and the desktop run's grant is revoked before offering again.
+    await access.getByRole("button", { name: "Offer access" }).click();
+    const refused = access.getByRole("alert");
+    await expect(refused).toContainText("already has an open delegation");
+    await expect(access.getByText("Loading access…")).toBeHidden();
+    await expect(refused).toContainText("already has an open delegation");
+    await access
+      .getByRole("listitem")
+      .filter({ hasText: "Active" })
+      .getByRole("button", { name: /^Revoke access for / })
+      .click();
+    await expect(access.getByRole("status")).toHaveText(
+      "Access revoked. It stops at the next action.",
+    );
+    await expect(refused).toHaveCount(0);
+  }
   await access.getByRole("button", { name: "Offer access" }).click();
   await expect(access.getByRole("status")).toHaveText(
     "Access offered. It starts after the other business accepts.",

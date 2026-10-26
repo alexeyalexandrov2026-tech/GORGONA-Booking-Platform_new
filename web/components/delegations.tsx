@@ -98,6 +98,8 @@ export function Delegations({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // D-02: a list reload clears only its own problem, never a refused command's message.
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
 
@@ -126,11 +128,11 @@ export function Delegations({
             (person) => person.status === "active" && !person.location_id,
           ),
         );
-        setError(null);
+        setLoadError(null);
       })
       .catch((err: unknown) => {
         if (active)
-          setError(
+          setLoadError(
             err instanceof Error ? err.message : "Unable to load access.",
           );
       })
@@ -322,9 +324,10 @@ export function Delegations({
         Another independent business can work on your bookings only with access
         you offer and it accepts. Each company keeps its own records.
       </p>
-      {error && (
+      {(error || loadError) && (
         <div className="mgmt-error-banner" role="alert">
-          <p>{error}</p>
+          {error && <p>{error}</p>}
+          {loadError && <p>{loadError}</p>}
         </div>
       )}
       {message && <p role="status">{message}</p>}
