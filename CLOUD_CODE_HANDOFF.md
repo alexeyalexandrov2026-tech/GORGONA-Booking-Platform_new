@@ -1,6 +1,10 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-26: package M technically accepted locally, independent review open
+## Current checkpoint — 2026-10-26: N1 broker authority and carrier profiles, locally verified
+
+N1 on `codex/package-n1-broker-carriers` (code `a3d85d3`, [validation record](docs/plan/evidence/2026-10-26-n1-broker-carriers/VALIDATION.md)): migration **0080** keeps a business's broker authority and each carrier's profile as insert-only dated versions; eligibility for a date names every failing reason; right `transport.broker` (permissions version 10) for owners and managers, not delegable. gates-1 failed once on an unrelated catalog browser test (kept in the record); gates-2: focused **800 passed**, full **2621 passed, 4 skipped**. The owner approved one independent review of package M (2026-10-26); it found nine issues, two high (transport drafts editable through FIN-03; a short-loaded leg never closes); fixes come next, before N2. Readiness and `main` wait for the owner's word; transport stays not enableable. Next migration **0081**.
+
+## Previous checkpoint — 2026-10-26: package M technically accepted locally, independent review open
 
 M7b CI SUCCESS (run 40272483262). M8 on `codex/package-m8-acceptance`: TMS-01..03 PASS locally ([acceptance record](docs/plan/evidence/2026-10-26-m8-acceptance/ACCEPTANCE.md)), with a new end-to-end TMS-01 test in `6d5c86c` (one trip, two orders' loads, three stops in three zones, the truck replaced after loading, a partial delivery with refusals and damage, all history kept). Focused **735 passed**; full **2616 passed, 4 skipped**. The owner deferred the independent review (2026-10-26); it stays open. Readiness of the transport module and `main` wait for the owner's word; the module stays not enableable. Next migration **0080**.
 

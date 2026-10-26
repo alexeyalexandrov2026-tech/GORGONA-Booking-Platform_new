@@ -15,7 +15,7 @@ decision [ADR-0034](../adr/0034-broker-authority-and-carrier-profiles.md). Branc
 - Change to the plan: `transport.broker` is not delegable in N1 (ADR-0034 decision 4).
 - Next migration after this slice: **0081**.
 
-## Acceptance of N1 (NOT TESTED)
+## Acceptance of N1 (PASS, 2026-10-26)
 
 | id | Requirement |
 |---|---|
