@@ -1,6 +1,10 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-25: package M defects D-01 and D-02 fixed, locally verified
+## Current checkpoint — 2026-10-26: M7b transport money on the screens, locally verified
+
+Defect fixes CI SUCCESS (run 40261326556). M7b in `f44db22` on `codex/package-m7b-money-screens`: a company-wide owner or manager sets an order's rate, creates its FIN-03 customer invoice with extras and sees what is paid and open; on the trip page registers pay components (driver, dispatch fee, …) and accrues them; a branch-limited member and a delegate never see money. Focused **734 passed**; full **2615 passed, 4 skipped** ([validation](evidence/2026-10-25-m7b-money-screens/VALIDATION.md)). Next: M8 (package M acceptance; the independent review needs the owner's consent for an extra agent). Next migration **0080**.
+
+## Previous checkpoint — 2026-10-25: package M defects D-01 and D-02 fixed, locally verified
 
 M7a CI SUCCESS (run 40245557506). The two open defects are fixed in `099bc84` on `codex/package-m-defects`: the "night-time" workforce browser failure was the live test server's loop dying with WinError 10055 (socket buffers exhausted), so the harness now fails a test with the server's own error; a refused grant offer now stays visible after the list reloads. Focused **733 passed**; full **2614 passed, 4 skipped** ([validation](evidence/2026-10-25-m-defects/VALIDATION.md)). Next: M7b (money on the screens), then M8. Next migration **0080**.
 

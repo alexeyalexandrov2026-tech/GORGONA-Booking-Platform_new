@@ -22,7 +22,7 @@ test, silent refused grant offer), then M7b." Builds on [M7a](PACKAGE_M7A_DESIGN
 - Refusals (no rate, still open, invoiced, already accrued, missing miles) are shown in words; a form keeps
   its record id and key until the save succeeds. No migration (next stays **0080**).
 
-## Acceptance of M7b (NOT TESTED)
+## Acceptance of M7b (PASS locally in `f44db22`)
 
 | id | Requirement |
 |---|---|
