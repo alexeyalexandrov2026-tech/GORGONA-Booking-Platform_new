@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Path, Query, Request
 from pydantic import AwareDatetime
 
 from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
@@ -19,6 +19,7 @@ from gorgona_booking.business import transport_brokerage as brokerage
 from gorgona_booking.business import transport_clearance as clearance
 from gorgona_booking.business import transport_events as events
 from gorgona_booking.business import transport_money as money
+from gorgona_booking.business import transport_rate_confirmations as confirmations
 from gorgona_booking.business import transport_tenders as tenders
 from gorgona_booking.business.transport import (
     OrderInput,
@@ -760,4 +761,70 @@ async def post_tender_answer(
         )
         if view is None:
             raise NotFoundError("Tender not found", tender_id=str(tender_id))
+        return view
+
+
+# N3: rate confirmations of accepted tenders; transport.broker, company-wide.
+
+
+@router.get("/tenders/{tender_id}/rate-confirmation")
+async def get_rate_confirmation(
+    business_id: UUID, tender_id: UUID, request: Request, principal: CurrentPrincipal
+) -> confirmations.RateConfirmationView:
+    async with _broker(request, principal, business_id) as access:
+        view = await confirmations.load_confirmation(access.conn, tender_id)
+        if view is None:
+            raise NotFoundError("Rate confirmation not found", tender_id=str(tender_id))
+        return view
+
+
+@router.put("/tenders/{tender_id}/rate-confirmation")
+async def put_rate_confirmation(
+    business_id: UUID,
+    tender_id: UUID,
+    body: confirmations.ProposalInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> confirmations.RateConfirmationView:
+    """N3: propose a new version; it is in force once the carrier agrees."""
+    async with _broker(request, principal, business_id) as access:
+        view = await confirmations.propose(
+            access.conn,
+            business_id,
+            tender_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+        if view is None:
+            raise NotFoundError("Tender not found", tender_id=str(tender_id))
+        return view
+
+
+@router.post("/tenders/{tender_id}/rate-confirmation/{revision}/answers")
+async def post_rate_confirmation_answer(
+    business_id: UUID,
+    tender_id: UUID,
+    revision: Annotated[int, Path(ge=1, le=2_147_483_647)],
+    body: confirmations.ConfirmationAnswerInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> confirmations.RateConfirmationView:
+    """N3: the carrier agrees to or declines one version, with its source."""
+    async with _broker(request, principal, business_id) as access:
+        view = await confirmations.answer(
+            access.conn,
+            business_id,
+            tender_id,
+            revision,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+        if view is None:
+            raise NotFoundError("Rate confirmation not found", revision=revision)
         return view

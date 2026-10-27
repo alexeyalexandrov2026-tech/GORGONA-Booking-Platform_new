@@ -96,6 +96,9 @@ K_TABLES = {
     # N2 (0082): tenders and their answers.
     "transport_tenders",
     "transport_tender_answers",
+    # N3 (0083): rate confirmations and their answers.
+    "transport_rate_confirmations",
+    "transport_rate_confirmation_answers",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

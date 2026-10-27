@@ -359,6 +359,21 @@ async def answer_tender(
                     "source, occurred_at, created_by) values (%s, %s, %s, %s, %s, %s)",
                     (business, tender, body.kind, body.source, body.occurred_at, user_id),
                 )
+                if body.kind == "accepted":
+                    # N3: the acceptance agrees version 1 of the rate confirmation.
+                    await conn.execute(
+                        "insert into gba.transport_rate_confirmations (tenant_id, tender_id, "
+                        "revision, basis, amount, terms, proposed_at, created_by) "
+                        "select tenant_id, id, 1, basis, amount, terms, %s, %s "
+                        "from gba.transport_tenders where id = %s",
+                        (body.occurred_at, user_id, tender),
+                    )
+                    await conn.execute(
+                        "insert into gba.transport_rate_confirmation_answers (tenant_id, "
+                        "tender_id, revision, kind, source, occurred_at, created_by) "
+                        "values (%s, %s, 1, 'agreed', %s, %s, %s)",
+                        (business, tender, body.source, body.occurred_at, user_id),
+                    )
     except CheckViolation as exc:
         error = _ANSWER_ERRORS.get(exc.diag.constraint_name or "")
         if error is None:
