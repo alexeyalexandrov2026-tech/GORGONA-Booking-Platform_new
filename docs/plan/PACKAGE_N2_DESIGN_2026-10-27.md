@@ -31,7 +31,7 @@ Owner 2026-10-27: «Делай как считаешь нужным я дове�
   records every answer with its source. Cross-company answering is decided with N4 (tracking by the carrier).
 - Next migration after this slice: **0083**.
 
-## Acceptance of N2 (NOT TESTED)
+## Acceptance of N2 (PASS, 2026-10-27)
 
 | id | Requirement |
 |---|---|

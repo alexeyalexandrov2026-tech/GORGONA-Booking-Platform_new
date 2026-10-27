@@ -1,6 +1,10 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-26: package M review fixes, locally verified
+## Current checkpoint — 2026-10-27: N2 tenders, locally verified
+
+`main` was fast-forwarded to `590a8f3` on the owner's word (2026-10-27): package M with its review fixes, the package N plan and N1. N2 on `codex/package-n2-tenders` (code `80183b5`, [validation record](evidence/2026-10-27-n2-tenders/VALIDATION.md)): migration **0082** keeps tenders of trip legs to other carriers and their answers as insert-only facts with a source; the state is derived; offering and accepting need an eligible broker and carrier on the local date; a leg has at most one accepted tender. gates-1 failed once (two upgrade tests lacked the new tables; kept in the record); gates-2: focused **814 passed**, full **2635 passed, 4 skipped**. Readiness and enabling transport wait for the owner's word. Next migration **0083**.
+
+## Previous checkpoint — 2026-10-26: package M review fixes, locally verified
 
 Review fixes on `codex/package-m-review-fixes` (code `44b8505`, [validation record](evidence/2026-10-26-m-review-fixes/VALIDATION.md)): all nine findings of the independent package M review are fixed. FIN-03 freezes transport drafts; a leg loaded short closes once its pickup is departed; migration **0081** keeps the loads of an invoiced order; money lines are bounded and exact (422); a concurrent pay component on the same id is compared; stop windows carry an end date; module text and grant label corrected. gates-1: focused **807 passed**, full **2628 passed, 4 skipped**. The `main` fast-forward (M6a..M8, the N plan, N1 and these fixes) is proposed to the owner and waits for their word, as do readiness and enabling transport. Next migration **0082**.
 
