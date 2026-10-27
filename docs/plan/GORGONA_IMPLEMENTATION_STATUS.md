@@ -1,6 +1,10 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-26: N1 broker authority and carrier profiles, locally verified
+## Current checkpoint — 2026-10-26: package M review fixes, locally verified
+
+Review fixes on `codex/package-m-review-fixes` (code `44b8505`, [validation record](evidence/2026-10-26-m-review-fixes/VALIDATION.md)): all nine findings of the independent package M review are fixed. FIN-03 freezes transport drafts; a leg loaded short closes once its pickup is departed; migration **0081** keeps the loads of an invoiced order; money lines are bounded and exact (422); a concurrent pay component on the same id is compared; stop windows carry an end date; module text and grant label corrected. gates-1: focused **807 passed**, full **2628 passed, 4 skipped**. The `main` fast-forward (M6a..M8, the N plan, N1 and these fixes) is proposed to the owner and waits for their word, as do readiness and enabling transport. Next migration **0082**.
+
+## Previous checkpoint — 2026-10-26: N1 broker authority and carrier profiles, locally verified
 
 N1 on `codex/package-n1-broker-carriers` (code `a3d85d3`, [validation record](evidence/2026-10-26-n1-broker-carriers/VALIDATION.md)): migration **0080** keeps a business's broker authority and each carrier's profile as insert-only dated versions; eligibility for a date names every failing reason; right `transport.broker` (permissions version 10) for owners and managers, not delegable. gates-1 failed once on an unrelated catalog browser test (kept in the record); gates-2: focused **800 passed**, full **2621 passed, 4 skipped**. The owner approved one independent review of package M (2026-10-26); it found nine issues, two high (transport drafts editable through FIN-03; a short-loaded leg never closes); fixes come next, before N2. Readiness and `main` wait for the owner's word; transport stays not enableable. Next migration **0081**.
 

@@ -24,5 +24,5 @@ Decision: [ADR-0033](../adr/0033-transport-money.md). Branch `codex/package-m7-t
 | M7a-03 | The invoice is issued and paid through FIN-03; paying beyond the open balance is refused |
 | M7a-04 | Pay components are registered once per id; one recipient has one component per role on a trip |
 | M7a-05 | Each component accrues once, only on a closed trip, as its own payable obligation (per mile, percent of base, fixed); a repeat answers the same accrual and nothing is paid twice |
-| M7a-06 | Without finance rights, as a carrier's dispatcher, with a module off or in another company nothing is written or read |
+| M7a-06 | Without finance rights, as a carrier's dispatcher or in another company nothing is written or read; with the module off nothing is written and reads continue (corrected 2026-10-26, package M review R-08) |
 | M7a-07 | Upgrade 0078 → 0079 keeps every row; the full suite stays green |

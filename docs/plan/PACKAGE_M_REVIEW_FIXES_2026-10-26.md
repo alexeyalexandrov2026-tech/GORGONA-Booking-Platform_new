@@ -19,7 +19,7 @@ depends on them). Each finding below was checked against the code before it was 
 | R-08 | low | Docs contradict code: M7a-06 says nothing is read with the module off, but reads continue (the module registry's rule); the module description still says "no … money yet". | Correct M7a-06 in the M7a record (reads continue, writes refused, as for every module) and the module description. No behaviour change. |
 | R-09 | low | The grant form offers "Plan trips" although a delegate cannot plan on the screen. | The option is labelled "Plan trips (API only)". |
 
-## Acceptance (NOT TESTED)
+## Acceptance (PASS, 2026-10-26)
 
 | id | Requirement |
 |---|---|
