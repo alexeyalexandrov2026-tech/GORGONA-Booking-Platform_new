@@ -26,7 +26,7 @@ Owner 2026-10-27: "continue" after N2 (full delegation: «Делай как сч
   N3); here the broker records the carrier's answer with its source.
 - Next migration after this slice: **0084**.
 
-## Acceptance of N3 (NOT TESTED)
+## Acceptance of N3 (PASS, 2026-10-27)
 
 | id | Requirement |
 |---|---|

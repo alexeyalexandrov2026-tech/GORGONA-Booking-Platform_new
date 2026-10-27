@@ -10,7 +10,11 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-10-27: N2 tenders, locally verified
+## Current checkpoint — 2026-10-27: N3 rate confirmations, locally verified
+
+N3 on `codex/package-n3-rate-confirmations` (code `526189e`, [validation record](evidence/2026-10-27-n3-rate-confirmations/VALIDATION.md)): migration **0083** keeps rate confirmation versions of accepted tenders and the carrier's answers as insert-only facts; accepting a tender writes version 1, agreed; a change is in force only once the carrier agrees. gates-1 failed once (4 tests outside transport under load, passed alone; kept in the record); gates-2: focused **820 passed**, full **2641 passed, 4 skipped**. Not tested: a signed copy that is the business's own document; the backfill on accepted tenders. Readiness and enabling transport wait for the owner's word. Next migration **0084**.
+
+## Previous checkpoint — 2026-10-27: N2 tenders, locally verified
 
 `main` was fast-forwarded to `590a8f3` on the owner's word (2026-10-27): package M with its review fixes, the package N plan and N1. N2 on `codex/package-n2-tenders` (code `80183b5`, [validation record](evidence/2026-10-27-n2-tenders/VALIDATION.md)): migration **0082** keeps tenders of trip legs to other carriers and their answers as insert-only facts with a source; the state is derived; offering and accepting need an eligible broker and carrier on the local date; a leg has at most one accepted tender. gates-1 failed once (two upgrade tests lacked the new tables; kept in the record); gates-2: focused **814 passed**, full **2635 passed, 4 skipped**. Readiness and enabling transport wait for the owner's word. Next migration **0083**.
 
