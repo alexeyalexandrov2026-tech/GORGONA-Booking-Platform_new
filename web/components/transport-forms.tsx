@@ -4,7 +4,7 @@
 // record id until the save succeeds; stop windows are entered in each stop's own time zone, and every
 // refusal from the server is shown in words with the form left as entered.
 import React, { useId, useState } from "react";
-import { businessDateTime, businessTimeToInstant } from "../lib/business-time";
+import { stopWindowFields, stopWindowInstants } from "../lib/transport-rules";
 import { ManagementApiError, type LocationItem } from "../lib/management-api";
 import {
   saveDriver,
@@ -280,6 +280,7 @@ type StopRow = {
   zone: string;
   date: string;
   from: string;
+  endDate: string;
   to: string;
 };
 type LegRow = {
@@ -296,6 +297,7 @@ const blankStop = (kind: StopRow["kind"]): StopRow => ({
   zone: "",
   date: "",
   from: "",
+  endDate: "",
   to: "",
 });
 const blankLeg = (): LegRow => ({
@@ -332,19 +334,13 @@ export function TripForm({
   const [reference, setReference] = useState(editing?.reference ?? "");
   const [stops, setStops] = useState<StopRow[]>(() =>
     editing
-      ? editing.stops.map((s) => {
-          const start = businessDateTime(s.window_start, s.time_zone);
-          const end = businessDateTime(s.window_end, s.time_zone);
-          return {
-            key: crypto.randomUUID(),
-            kind: s.kind,
-            place: s.place,
-            zone: s.time_zone,
-            date: start.date,
-            from: start.time,
-            to: end.time,
-          };
-        })
+      ? editing.stops.map((s) => ({
+          key: crypto.randomUUID(),
+          kind: s.kind,
+          place: s.place,
+          zone: s.time_zone,
+          ...stopWindowFields(s.window_start, s.window_end, s.time_zone),
+        }))
       : [blankStop("pickup"), blankStop("delivery")],
   );
   const [legs, setLegs] = useState<LegRow[]>(() =>
@@ -387,11 +383,14 @@ export function TripForm({
         reference: reference.trim(),
         stops: stops.map((s) => {
           const zone = s.zone.trim();
-          const start = businessTimeToInstant(s.date, s.from, zone);
-          let end = businessTimeToInstant(s.date, s.to, zone);
-          // A window that ends before it starts closes on the next day.
-          if (end <= start)
-            end = new Date(Date.parse(end) + 86_400_000).toISOString();
+          // Review R-04: an explicit end date keeps long, empty and DST-crossing windows exact.
+          const { start, end } = stopWindowInstants(
+            s.date,
+            s.from,
+            s.endDate,
+            s.to,
+            zone,
+          );
           return {
             kind: s.kind,
             place: s.place.trim(),
@@ -513,6 +512,14 @@ export function TripForm({
                 value={stop.from}
                 onChange={(e) => stopChange(index, { from: e.target.value })}
                 required
+              />
+            </label>
+            <label>
+              Ends on (if another day)
+              <input
+                type="date"
+                value={stop.endDate}
+                onChange={(e) => stopChange(index, { endDate: e.target.value })}
               />
             </label>
             <label>

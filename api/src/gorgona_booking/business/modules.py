@@ -216,10 +216,10 @@ MODULES: tuple[PlatformModule, ...] = (
         _OPTIONAL,
         ("counterparties",),
         Readiness.IMPLEMENTED,
-        "Planning only (ADR-0028): shipment orders with loads, trips with stops in their own time "
-        "zones and legs that place load quantities on trips; nothing is over-planned. No "
-        "assignments, stop events, dispatcher grants, clearance, screens or money yet; it cannot "
-        "be enabled until package M is accepted.",
+        "Package M (ADR-0028..0033): shipment orders with loads, trips with stops in their own "
+        "time zones and legs; crews and fleet assignments, stop events with partial delivery, "
+        "carrier dispatcher grants, clearance, screens and money (order rates, customer invoices "
+        "and trip pay through FIN-03). It cannot be enabled until the owner's word.",
         "New shipment orders and trips. Reads continue.",
     ),
     _module(

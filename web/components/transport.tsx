@@ -24,6 +24,7 @@ import {
   recordEvent,
 } from "../lib/transport-api";
 import { OrderMoney, TripPay } from "./transport-money";
+import { legOpen } from "../lib/transport-rules";
 import {
   FleetPanel,
   OrdersPanel,
@@ -586,7 +587,7 @@ function TripPage({
                 <td>{l.delivered}</td>
                 <td>{l.refused}</td>
                 <td>{l.damaged}</td>
-                <td>{l.quantity - l.delivered - l.refused - l.damaged}</td>
+                <td>{legOpen(l, trip.events)}</td>
               </tr>
             ))}
           </tbody>

@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Literal, Self
 from uuid import UUID
 
-from psycopg.errors import ForeignKeyViolation, UniqueViolation
+from psycopg.errors import CheckViolation, ForeignKeyViolation, UniqueViolation
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from gorgona_booking.booking import idempotency
@@ -34,6 +34,10 @@ class TransportRevisionConflictError(ConflictError):
 
 class TransportReferenceTakenError(ConflictError):
     code = "TRANSPORT_REFERENCE_TAKEN"
+
+
+class TransportOrderInvoicedError(ConflictError):
+    code = "TRANSPORT_ORDER_INVOICED"
 
 
 class TransportLegInvalidError(DomainError):
@@ -346,6 +350,11 @@ async def save_order(
                     (body.customer_id, body.reference, order_id),
                 )
             await _save_loads(conn, business, order_id, body)
+    except CheckViolation as exc:
+        # Review R-03 (migration 0081): an invoiced order keeps its loads.
+        if exc.diag.constraint_name != "transport_loads_invoiced_check":
+            raise
+        raise TransportOrderInvoicedError("An invoiced order keeps its loads") from exc
     except UniqueViolation as exc:
         raise TransportReferenceTakenError("Another order has this reference") from exc
     except ForeignKeyViolation as exc:

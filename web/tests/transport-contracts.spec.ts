@@ -12,7 +12,12 @@ import {
   rateSchema,
   orderSchema,
 } from "../lib/transport-contracts";
-import { describeAccess } from "../lib/delegation-contracts";
+import { describeAccess, TRANSPORT_ACTIONS } from "../lib/delegation-contracts";
+import {
+  legOpen,
+  stopWindowFields,
+  stopWindowInstants,
+} from "../lib/transport-rules";
 
 // M6a (package M): strict response contracts of the transport routes the board and trip page read.
 const uuid = (n: number) =>
@@ -316,4 +321,63 @@ test("transport money responses are strict and routed", () => {
     [`/trips/${uuid(2)}/pay/${uuid(31)}/accrue`, "POST"],
   ] as const)
     expect(managementResponseSchema(base + suffix, method)).not.toBeNull();
+});
+
+// Package M review fixes R-02 and R-04 (docs/plan/PACKAGE_M_REVIEW_FIXES_2026-10-26.md).
+test("a leg loaded short is closed once its pickup is departed", () => {
+  const short = {
+    quantity: 10,
+    loaded: 8,
+    delivered: 8,
+    refused: 0,
+    damaged: 0,
+    pickup_stop: 1,
+  };
+  expect(legOpen(short, [{ kind: "loaded", stop_position: 1 }])).toBe(2);
+  expect(
+    legOpen(short, [
+      { kind: "loaded", stop_position: 1 },
+      { kind: "departed", stop_position: 2 },
+    ]),
+  ).toBe(2);
+  expect(legOpen(short, [{ kind: "departed", stop_position: 1 }])).toBe(0);
+  expect(
+    legOpen({ ...short, delivered: 5 }, [
+      { kind: "departed", stop_position: 1 },
+    ]),
+  ).toBe(3);
+});
+
+test("a stop window survives editing exactly", () => {
+  const zone = "America/Chicago";
+  for (const [start, end] of [
+    // Monday 08:00 to Wednesday 17:00.
+    ["2026-10-26T13:00:00.000Z", "2026-10-28T22:00:00.000Z"],
+    // A zero-length window.
+    ["2026-10-26T13:00:00.000Z", "2026-10-26T13:00:00.000Z"],
+    // 22:00 CDT to 06:00 CST across the 2026-11-01 change.
+    ["2026-11-01T03:00:00.000Z", "2026-11-01T12:00:00.000Z"],
+  ] as const) {
+    const fields = stopWindowFields(start, end, zone);
+    expect(
+      stopWindowInstants(
+        fields.date,
+        fields.from,
+        fields.endDate,
+        fields.to,
+        zone,
+      ),
+    ).toEqual({ start, end });
+  }
+  // A new overnight window without an end date closes on the next local day.
+  expect(stopWindowInstants("2026-10-31", "22:00", "", "06:00", zone)).toEqual({
+    start: "2026-11-01T03:00:00.000Z",
+    end: "2026-11-01T12:00:00.000Z",
+  });
+});
+
+test("a grant says planning is API only while the screen cannot plan", () => {
+  expect(new Map(TRANSPORT_ACTIONS).get("transport.plan")).toBe(
+    "Plan trips (API only)",
+  );
 });

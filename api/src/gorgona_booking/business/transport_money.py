@@ -28,7 +28,11 @@ from gorgona_booking.business.financial_contracts import (
 )
 from gorgona_booking.business.module_gate import TRANSPORT_MODULE, module_writes
 from gorgona_booking.business.settlement_contracts import ObligationView
-from gorgona_booking.business.transport import TransportRevisionConflictError, require_transport
+from gorgona_booking.business.transport import (
+    TransportOrderInvoicedError,
+    TransportRevisionConflictError,
+    require_transport,
+)
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import (
     ConflictError,
@@ -43,8 +47,12 @@ _PERCENT = r"^(0|[1-9][0-9]{0,2})(\.[0-9]{1,2})?$"
 _CLOSING = ("delivered", "refused", "damaged")
 
 
-class TransportOrderInvoicedError(ConflictError):
-    code = "TRANSPORT_ORDER_INVOICED"
+class TransportAmountTooLargeError(DomainError):
+    code = "TRANSPORT_AMOUNT_TOO_LARGE"
+
+
+class TransportAmountPrecisionError(DomainError):
+    code = "TRANSPORT_AMOUNT_PRECISION"
 
 
 class TransportOrderRateMissingError(ConflictError):
@@ -249,6 +257,25 @@ def _minor(value: Decimal, units: int) -> int:
     return int((value * 10**units).quantize(Decimal(1), rounding=ROUND_HALF_UP))
 
 
+# Review R-05: one line stays far below FIN-03's 18 whole digits, even summed over 21 lines.
+_LINE_LIMIT = 10**15
+
+
+def _bounded(minor: int, units: int) -> int:
+    if minor >= _LINE_LIMIT * 10**units:
+        raise TransportAmountTooLargeError("An amount is too large for one line")
+    return minor
+
+
+def _exact(value: str, units: int) -> None:
+    """Review R-06: a fixed amount is never rounded silently to the currency."""
+    exponent = Decimal(value).as_tuple().exponent
+    if isinstance(exponent, int) and -exponent > units:
+        raise TransportAmountPrecisionError(
+            f"An amount has more than {units} decimals for its currency"
+        )
+
+
 def _money(minor: int, units: int) -> str:
     whole, fraction = divmod(minor, 10**units)
     return str(whole) if units == 0 else f"{whole}.{fraction:0{units}d}"
@@ -285,14 +312,19 @@ async def _party_revision(conn: RuntimeConnection, counterparty: UUID) -> int:
     return int(row[0])
 
 
+# Review R-02 (ADR-0030 amendment): loading is final once the trip has departed the leg's pickup.
 _OPEN = (
-    "select l.quantity - coalesce(sum(q.quantity) filter (where e.kind = any(%s)), 0) "
+    "select case when exists (select 1 from gba.transport_stop_events d "
+    "where d.tenant_id = l.tenant_id and d.trip_id = l.trip_id "
+    "and d.stop_position = l.pickup_stop and d.kind = 'departed') "
+    "then coalesce(sum(q.quantity) filter (where e.kind = 'loaded'), 0) else l.quantity end "
+    "- coalesce(sum(q.quantity) filter (where e.kind = any(%s)), 0) "
     "from gba.transport_legs l "
     "left join gba.transport_event_quantities q on q.tenant_id = l.tenant_id "
     "and q.trip_id = l.trip_id and q.leg_position = l.position "
     "left join gba.transport_stop_events e on e.tenant_id = q.tenant_id and e.id = q.event_id "
 )
-_GROUP = " group by l.trip_id, l.position, l.quantity"
+_GROUP = " group by l.tenant_id, l.trip_id, l.position, l.quantity, l.pickup_stop"
 OPEN_BY_ORDER = (
     _OPEN + "where l.load_id in (select x.id from gba.transport_loads x "  # noqa: S608 - constants
     "where x.order_id = %s and not x.removed)" + _GROUP
@@ -301,7 +333,7 @@ OPEN_BY_TRIP = _OPEN + "where l.trip_id = %s" + _GROUP
 
 
 async def _open_legs(conn: RuntimeConnection, query: str, value: object) -> list[int]:
-    """Per leg, what is still open: planned less delivered, refused and damaged."""
+    """Per leg, what is still open: planned (loaded, once departed) less what is resolved."""
     rows = await (await conn.execute(query, (list(_CLOSING), value))).fetchall()
     return [int(row[0]) for row in rows]
 
@@ -373,6 +405,8 @@ async def save_rate(
         raise NotFoundError("Order not found", order_id=str(order_id))
     if await _invoiced(conn, order_id):
         raise TransportOrderInvoicedError("An invoiced order keeps its rate")
+    if body.basis == "fixed":
+        _exact(body.amount, await _units(conn, body.currency))
     current = view.current.revision if view.current else 0
     if body.expected_revision != current:
         raise TransportRevisionConflictError(
@@ -500,11 +534,13 @@ async def invoice_order(
     if current.basis == "per_mile":
         if body.miles is None:
             raise TransportMilesRequiredError("A per-mile rate needs the billed miles")
-        freight = _minor(Decimal(current.amount) * Decimal(body.miles), units)
+        freight = _bounded(_minor(Decimal(current.amount) * Decimal(body.miles), units), units)
         description = f"Freight {order[1]} ({body.miles} mi at {current.amount})"
     else:
-        freight = _minor(Decimal(current.amount), units)
+        freight = _bounded(_minor(Decimal(current.amount), units), units)
         description = f"Freight {order[1]}"
+    for extra in body.extra_lines:
+        _exact(extra.amount, units)
     lines = [
         InvoiceLineInput(
             line_id=uuid7(),
@@ -517,7 +553,7 @@ async def invoice_order(
                 line_id=uuid7(),
                 counter_account_id=extra.account_id,
                 description=extra.description,
-                amount=_money(_minor(Decimal(extra.amount), units), units),
+                amount=_money(_bounded(_minor(Decimal(extra.amount), units), units), units),
             )
             for extra in body.extra_lines
         ),
@@ -681,7 +717,9 @@ async def save_component(
         ).fetchone()
         if trip is None:
             raise NotFoundError("Trip not found", trip_id=str(trip_id))
-        await _units(conn, body.currency)
+        units = await _units(conn, body.currency)
+        if body.basis == "fixed" and body.amount is not None:
+            _exact(body.amount, units)
         try:
             async with module_writes(TRANSPORT_MODULE), conn.transaction():
                 await conn.execute(
@@ -706,11 +744,13 @@ async def save_component(
         except ForeignKeyViolation as exc:
             raise InvalidReferenceError("Unknown recipient", field="counterparty_id") from exc
         except UniqueViolation as exc:
-            raise TransportPayComponentConflictError(
-                "This recipient already has this component on the trip"
-            ) from exc
+            # Review R-07: a concurrent request on the same id is compared, not refused.
+            if exc.diag.constraint_name != "transport_pay_components_pkey":
+                raise TransportPayComponentConflictError(
+                    "This recipient already has this component on the trip"
+                ) from exc
         view = await load_component(conn, business, component_id)
-        assert view is not None  # noqa: S101 - written above
+        assert view is not None  # noqa: S101 - written above or by the concurrent request
     if not _same(view, trip_id, body):
         raise TransportPayComponentConflictError(
             "This component id is registered with other details"
@@ -761,13 +801,13 @@ async def accrue_component(
     if view.basis == "per_mile":
         if body.miles is None or view.rate is None:
             raise TransportMilesRequiredError("A per-mile component needs the miles")
-        amount = _minor(Decimal(view.rate) * Decimal(body.miles), units)
+        amount = _bounded(_minor(Decimal(view.rate) * Decimal(body.miles), units), units)
         name += f" ({body.miles} mi at {view.rate})"
     elif view.basis == "percent" and view.percent is not None and view.base is not None:
-        amount = _minor(Decimal(view.percent) * Decimal(view.base) / 100, units)
+        amount = _bounded(_minor(Decimal(view.percent) * Decimal(view.base) / 100, units), units)
         name += f" ({view.percent}% of {view.base})"
     else:
-        amount = _minor(Decimal(view.amount or "0"), units)
+        amount = _bounded(_minor(Decimal(view.amount or "0"), units), units)
     document = uuid7()
     await financial_documents.save_draft(
         conn,

@@ -96,14 +96,19 @@ async def _linked_to_visit(conn: RuntimeConnection, book_id: UUID, document_id: 
     """Package L (L8 decision 59): a visit invoice, commission accrual or prepaid sale is frozen.
 
     Those drafts are built from the visit or the sale; their routes keep trusting what they wrote.
+    Package M review R-01: so are a transport order invoice and a trip pay accrual.
     """
     row = await (
         await conn.execute(
             "select exists (select 1 from gba.visit_invoices where book_id=%s and document_id=%s)"
             " or exists (select 1 from gba.visit_commissions where book_id=%s and document_id=%s)"
             " or exists (select 1 from gba.prepaid_balances where book_id=%s"
-            " and sale_document_id=%s)",
-            (book_id, document_id, book_id, document_id, book_id, document_id),
+            " and sale_document_id=%s)"
+            " or exists (select 1 from gba.transport_order_invoices where book_id=%s"
+            " and document_id=%s)"
+            " or exists (select 1 from gba.transport_pay_accruals where book_id=%s"
+            " and document_id=%s)",
+            (book_id, document_id) * 5,
         )
     ).fetchone()
     return bool(row and row[0])
@@ -456,7 +461,8 @@ async def save_draft(
         raise FinancialDocumentStateError(f"An issued {spec.label.lower()} stays unchanged")
     if current is not None and await _linked_to_visit(conn, book_id, document_id):
         raise FinancialDocumentLinkedError(
-            f"This {spec.label.lower()} belongs to a visit or a prepaid sale and is not edited here"
+            f"This {spec.label.lower()} belongs to a visit, a prepaid sale or transport "
+            "and is not edited here"
         )
     currency = await (
         await conn.execute("select minor_units from gba.currencies where code=%s", (body.currency,))

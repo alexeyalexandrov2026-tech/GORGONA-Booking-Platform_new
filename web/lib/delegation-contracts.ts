@@ -92,7 +92,7 @@ export const ACCESS_LEVELS: Record<"manage" | "view", DelegablePermission[]> = {
 };
 // M6b (ADR-0031): a carrier's dispatcher is granted transport actions; reading comes with any of them.
 export const TRANSPORT_ACTIONS: [DelegablePermission, string][] = [
-  ["transport.plan", "Plan trips"],
+  ["transport.plan", "Plan trips (API only)"],
   ["transport.assign", "Assign crews"],
   ["transport.events", "Record stop events"],
 ];
