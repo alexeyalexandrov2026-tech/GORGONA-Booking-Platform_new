@@ -19,6 +19,7 @@ from gorgona_booking.business import transport_brokerage as brokerage
 from gorgona_booking.business import transport_clearance as clearance
 from gorgona_booking.business import transport_events as events
 from gorgona_booking.business import transport_money as money
+from gorgona_booking.business import transport_tenders as tenders
 from gorgona_booking.business.transport import (
     OrderInput,
     OrderList,
@@ -688,3 +689,75 @@ async def get_carrier_eligibility(
         if view is None:
             raise NotFoundError("Carrier not found", counterparty_id=str(counterparty_id))
         return brokerage.carrier_eligibility(view, on)
+
+
+# N2: tenders of trip legs to other carriers; transport.broker, company-wide.
+
+
+@router.get("/trips/{trip_id}/tenders")
+async def get_trip_tenders(
+    business_id: UUID, trip_id: UUID, request: Request, principal: CurrentPrincipal
+) -> tenders.TenderListView:
+    async with _broker(request, principal, business_id) as access:
+        view = await tenders.list_tenders(access.conn, trip_id)
+        if view is None:
+            raise NotFoundError("Trip not found", trip_id=str(trip_id))
+        return view
+
+
+@router.get("/tenders/{tender_id}")
+async def get_tender(
+    business_id: UUID, tender_id: UUID, request: Request, principal: CurrentPrincipal
+) -> tenders.TenderView:
+    async with _broker(request, principal, business_id) as access:
+        view = await tenders.load_tender(access.conn, tender_id)
+        if view is None:
+            raise NotFoundError("Tender not found", tender_id=str(tender_id))
+        return view
+
+
+@router.put("/tenders/{tender_id}")
+async def put_tender(
+    business_id: UUID,
+    tender_id: UUID,
+    body: tenders.TenderInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> tenders.TenderView:
+    """N2: offer some legs of a trip to one carrier for a carrier rate."""
+    async with _broker(request, principal, business_id) as access:
+        return await tenders.save_tender(
+            access.conn,
+            business_id,
+            tender_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/tenders/{tender_id}/answers")
+async def post_tender_answer(
+    business_id: UUID,
+    tender_id: UUID,
+    body: tenders.AnswerInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> tenders.TenderView:
+    """N2: the carrier's answer or the broker's withdrawal, with its source."""
+    async with _broker(request, principal, business_id) as access:
+        view = await tenders.answer_tender(
+            access.conn,
+            business_id,
+            tender_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+        if view is None:
+            raise NotFoundError("Tender not found", tender_id=str(tender_id))
+        return view

@@ -93,6 +93,9 @@ K_TABLES = {
     # N1 (0080): broker authority and carrier profiles.
     "transport_broker_authorities",
     "transport_carrier_profiles",
+    # N2 (0082): tenders and their answers.
+    "transport_tenders",
+    "transport_tender_answers",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
