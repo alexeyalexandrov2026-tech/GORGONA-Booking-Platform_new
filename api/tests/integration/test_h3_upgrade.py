@@ -181,6 +181,13 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                 predicate = sql.SQL(" where t.kind not in ('equipment'{})").format(
                     sql.SQL(", 'staff'") if target_version[0] < 32 else sql.SQL("")
                 )
+            # N4: a grant naming transport.tender and an answer given by the carrier's company
+            # cannot be represented before migration 0084.
+            if target_version[0] < 84:
+                if table == "delegation_grants":
+                    predicate = sql.SQL(" where not 'transport.tender' = any(t.permissions)")
+                elif table in ("transport_tender_answers", "transport_rate_confirmation_answers"):
+                    predicate = sql.SQL(" where t.source <> 'platform'")
             # L2a: before migration 0067 a booking holds one interval per resource; keep the
             # first, which is what such a schema would have held.
             if target_version[0] < 67 and table in ("booking_allocations", "resource_allocations"):

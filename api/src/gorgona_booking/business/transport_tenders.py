@@ -20,6 +20,7 @@ from gorgona_booking.booking import idempotency
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import IdempotencyKeyReusedError
 from gorgona_booking.business import transport_brokerage as brokerage
+from gorgona_booking.business import transport_carrier_companies as carriers
 from gorgona_booking.business.module_gate import TRANSPORT_MODULE, module_writes
 from gorgona_booking.business.transport import require_transport
 from gorgona_booking.business.transport_money import _AMOUNT, _exact, _text, _units
@@ -84,6 +85,14 @@ class AnswerInput(_Strict):
     schema_version: Literal[1]
     kind: Literal["accepted", "declined", "withdrawn"]
     source: Literal["email", "phone", "load_board", "other"]
+    occurred_at: AwareDatetime
+
+
+class CarrierAnswerInput(_Strict):
+    """N4: the carrier's own answer, given in its company through a grant."""
+
+    schema_version: Literal[1]
+    kind: Literal["accepted", "declined"]
     occurred_at: AwareDatetime
 
 
@@ -329,11 +338,17 @@ async def answer_tender(
     user_id: UUID,
     actor: str,
     key: str,
-    body: AnswerInput,
+    body: AnswerInput | CarrierAnswerInput,
+    servicer: UUID | None = None,
 ) -> TenderView | None:
-    """Record the carrier's answer or the broker's withdrawal; None for no tender."""
+    """Record the carrier's answer or the broker's withdrawal; None for no tender.
+
+    N4: with `servicer`, the carrier's own company answers through its grant (source platform).
+    """
     await require_transport(conn, business)
-    scope = IdempotencyScope(business, actor, "transport.tender_answer", key)
+    action = "transport.tender_answer" if servicer is None else "transport.tender_carrier_answer"
+    scope = IdempotencyScope(business, actor, action, key)
+    source = "platform" if isinstance(body, CarrierAnswerInput) else body.source
     fingerprint = brokerage._fingerprint(tender, body)
     stored = await idempotency.claim(conn, scope, fingerprint)
     if stored is not None:
@@ -343,21 +358,24 @@ async def answer_tender(
     view = await load_tender(conn, tender)
     if view is None:
         return None
+    if servicer is not None:
+        await carriers.require_carrier(conn, view.counterparty_id, servicer)
     try:
         async with module_writes(TRANSPORT_MODULE), conn.transaction():
             await _lock(conn, view.trip_id)
             view = await _required(conn, tender)
             same = [a for a in view.answers if a.kind == body.kind]
             if same:
-                if (same[0].source, same[0].occurred_at) != (body.source, body.occurred_at):
+                if (same[0].source, same[0].occurred_at) != (source, body.occurred_at):
                     raise TransportTenderClosedError("The tender already has this answer")
             else:
                 if body.kind == "accepted" and body.occurred_at >= view.offered_at:
                     await _eligible(conn, view.trip_id, view.counterparty_id, body.occurred_at)
                 await conn.execute(
                     "insert into gba.transport_tender_answers (tenant_id, tender_id, kind, "
-                    "source, occurred_at, created_by) values (%s, %s, %s, %s, %s, %s)",
-                    (business, tender, body.kind, body.source, body.occurred_at, user_id),
+                    "source, servicer_business_id, occurred_at, created_by) "
+                    "values (%s, %s, %s, %s, %s, %s, %s)",
+                    (business, tender, body.kind, source, servicer, body.occurred_at, user_id),
                 )
                 if body.kind == "accepted":
                     # N3: the acceptance agrees version 1 of the rate confirmation.
@@ -370,9 +388,9 @@ async def answer_tender(
                     )
                     await conn.execute(
                         "insert into gba.transport_rate_confirmation_answers (tenant_id, "
-                        "tender_id, revision, kind, source, occurred_at, created_by) "
-                        "values (%s, %s, 1, 'agreed', %s, %s, %s)",
-                        (business, tender, body.source, body.occurred_at, user_id),
+                        "tender_id, revision, kind, source, servicer_business_id, occurred_at, "
+                        "created_by) values (%s, %s, 1, 'agreed', %s, %s, %s, %s)",
+                        (business, tender, source, servicer, body.occurred_at, user_id),
                     )
     except CheckViolation as exc:
         error = _ANSWER_ERRORS.get(exc.diag.constraint_name or "")

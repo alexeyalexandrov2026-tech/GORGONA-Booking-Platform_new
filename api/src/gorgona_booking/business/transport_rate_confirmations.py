@@ -18,6 +18,7 @@ from gorgona_booking.booking import idempotency
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import IdempotencyKeyReusedError
 from gorgona_booking.business import transport_brokerage as brokerage
+from gorgona_booking.business import transport_carrier_companies as carriers
 from gorgona_booking.business.module_gate import TRANSPORT_MODULE, module_writes
 from gorgona_booking.business.transport import require_transport
 from gorgona_booking.business.transport_money import _AMOUNT, _exact, _text, _units
@@ -54,6 +55,14 @@ class ProposalInput(_Strict):
         if not self.terms.strip():
             raise ValueError("terms have visible text")
         return self
+
+
+class CarrierConfirmationAnswerInput(_Strict):
+    """N4: the carrier's own answer to a version, given in its company through a grant."""
+
+    schema_version: Literal[1]
+    kind: Literal["agreed", "declined"]
+    occurred_at: AwareDatetime
 
 
 class ConfirmationAnswerInput(_Strict):
@@ -220,11 +229,17 @@ async def answer(
     user_id: UUID,
     actor: str,
     key: str,
-    body: ConfirmationAnswerInput,
+    body: ConfirmationAnswerInput | CarrierConfirmationAnswerInput,
+    servicer: UUID | None = None,
 ) -> RateConfirmationView | None:
-    """The carrier's answer to one version; None for no such version."""
+    """The carrier's answer to one version; None for no such version.
+
+    N4: with `servicer`, the carrier's own company answers through its grant (source platform).
+    """
     await require_transport(conn, business)
-    scope = IdempotencyScope(business, actor, "transport.rate_confirmation_answer", key)
+    action = "transport.rate_confirmation_answer" + ("" if servicer is None else "_carrier")
+    scope = IdempotencyScope(business, actor, action, key)
+    source = "platform" if isinstance(body, CarrierConfirmationAnswerInput) else body.source
     fingerprint = brokerage._fingerprint(f"{tender}/{revision}", body)
     stored = await idempotency.claim(conn, scope, fingerprint)
     if stored is not None:
@@ -234,13 +249,26 @@ async def answer(
     view = await load_confirmation(conn, tender)
     if view is None or not any(v.revision == revision for v in view.versions):
         return None
+    if servicer is not None:
+        tendered = await load_tender(conn, tender)
+        assert tendered is not None  # noqa: S101 - a version exists only for a tender
+        await carriers.require_carrier(conn, tendered.counterparty_id, servicer)
     try:
         async with module_writes(TRANSPORT_MODULE), conn.transaction():
             await conn.execute(
                 "insert into gba.transport_rate_confirmation_answers (tenant_id, tender_id, "
-                "revision, kind, source, occurred_at, created_by) "
-                "values (%s, %s, %s, %s, %s, %s, %s)",
-                (business, tender, revision, body.kind, body.source, body.occurred_at, user_id),
+                "revision, kind, source, servicer_business_id, occurred_at, created_by) "
+                "values (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    business,
+                    tender,
+                    revision,
+                    body.kind,
+                    source,
+                    servicer,
+                    body.occurred_at,
+                    user_id,
+                ),
             )
     except UniqueViolation as exc:
         raise TransportRateConfirmationConflictError("This version is already answered") from exc

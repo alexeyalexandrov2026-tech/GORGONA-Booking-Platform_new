@@ -99,6 +99,7 @@ K_TABLES = {
     # N3 (0083): rate confirmations and their answers.
     "transport_rate_confirmations",
     "transport_rate_confirmation_answers",
+    "transport_carrier_companies",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

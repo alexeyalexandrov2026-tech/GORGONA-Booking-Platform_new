@@ -37,6 +37,8 @@ class Permission(StrEnum):
     TRANSPORT_MANAGE = "transport.manage"
     # ADR-0034: broker authority and carrier profiles; owners and managers, not delegated (N1).
     TRANSPORT_BROKER = "transport.broker"
+    # N4: a carrier company's managers answer the tenders addressed to it, only through a grant.
+    TRANSPORT_TENDER = "transport.tender"
     MEMBERS_MANAGE = "members.manage"
     MEMBERS_MANAGE_ADMINS = "members.manage_admins"
     SETTINGS_MANAGE = "settings.manage"
@@ -77,6 +79,7 @@ _MANAGER = _FRONT_DESK | {
     Permission.TRANSPORT_EVENTS,
     Permission.TRANSPORT_MANAGE,
     Permission.TRANSPORT_BROKER,
+    Permission.TRANSPORT_TENDER,
     Permission.MEMBERS_MANAGE,
     Permission.SETTINGS_MANAGE,
     Permission.READINESS_READ,
@@ -109,6 +112,7 @@ TRANSPORT_DELEGABLE = frozenset(
         Permission.TRANSPORT_PLAN,
         Permission.TRANSPORT_ASSIGN,
         Permission.TRANSPORT_EVENTS,
+        Permission.TRANSPORT_TENDER,
     }
 )
 DELEGABLE_PERMISSIONS = BOOKING_DELEGABLE | TRANSPORT_DELEGABLE

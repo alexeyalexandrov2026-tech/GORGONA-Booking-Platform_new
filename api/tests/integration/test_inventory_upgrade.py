@@ -100,6 +100,7 @@ K_TABLES = {
     # N3 (0083): rate confirmations and their answers.
     "transport_rate_confirmations",
     "transport_rate_confirmation_answers",
+    "transport_carrier_companies",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

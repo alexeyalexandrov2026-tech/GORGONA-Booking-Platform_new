@@ -16,6 +16,7 @@ from pydantic import AwareDatetime, Field, model_validator
 from gorgona_booking.booking import idempotency
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import IdempotencyKeyReusedError
+from gorgona_booking.business import transport_carrier_companies as carriers
 from gorgona_booking.business.module_gate import TRANSPORT_MODULE, module_writes
 from gorgona_booking.business.transport import (
     TripView,
@@ -26,6 +27,7 @@ from gorgona_booking.business.transport import (
 )
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import ConflictError, DomainError, NotFoundError
+from gorgona_booking.tenancy.authorization import PermissionDeniedError
 
 QUANTITY_KINDS = frozenset({"loaded", "delivered", "refused", "damaged"})
 
@@ -84,6 +86,23 @@ def _same(row: tuple[Any, ...], lines: dict[int, int], trip_id: UUID, body: Even
     ) and lines == {q.leg_position: q.quantity for q in body.quantities}
 
 
+async def _tendered_only(
+    conn: RuntimeConnection, trip_id: UUID, party: UUID, body: EventInput
+) -> None:
+    """Refuse a stop or a quantity outside the legs tendered to this carrier and accepted."""
+    legs = await carriers.tendered_legs(conn, trip_id, party)
+    stops = await (
+        await conn.execute(
+            "select pickup_stop, delivery_stop from gba.transport_legs "
+            "where trip_id = %s and position = any(%s)",
+            (trip_id, sorted(legs)),
+        )
+    ).fetchall()
+    at_stop = any(body.stop_position in (row[0], row[1]) for row in stops)
+    if not at_stop or any(q.leg_position not in legs for q in body.quantities):
+        raise PermissionDeniedError("Your company records events only on its tendered legs")
+
+
 async def _view(conn: RuntimeConnection, trip_id: UUID) -> TripView:
     view = await load_trip(conn, trip_id)
     if view is None:
@@ -100,9 +119,15 @@ async def record_event(
     actor: str,
     key: str,
     body: EventInput,
+    servicer: UUID | None = None,
 ) -> TripView:
-    """Record one stop event; a repeat of its source event id changes nothing (ADR-0030)."""
+    """Record one stop event; a repeat of its source event id changes nothing (ADR-0030).
+
+    N4: a delegate of a linked carrier company records only on its accepted tendered legs.
+    """
     await require_transport(conn, business)
+    if servicer is not None and (party := await carriers.linked_carrier(conn, servicer)):
+        await _tendered_only(conn, trip_id, party, body)
     scope = IdempotencyScope(business, actor, "transport.event", key)
     fingerprint = _fingerprint(trip_id, body)
     stored = await idempotency.claim(conn, scope, fingerprint)

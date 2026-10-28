@@ -92,6 +92,8 @@ def test_only_booking_and_dispatch_work_is_delegable() -> None:
         Permission.TRANSPORT_PLAN,
         Permission.TRANSPORT_ASSIGN,
         Permission.TRANSPORT_EVENTS,
+        # N4: a carrier company's answers to the tenders addressed to it.
+        Permission.TRANSPORT_TENDER,
     } == DELEGABLE_PERMISSIONS
     for never in (
         Permission.BUSINESS_READ,
@@ -103,6 +105,7 @@ def test_only_booking_and_dispatch_work_is_delegable() -> None:
         Permission.SETTINGS_MANAGE,
         Permission.READINESS_READ,
         Permission.TRANSPORT_MANAGE,
+        Permission.TRANSPORT_BROKER,
     ):
         assert never not in DELEGABLE_PERMISSIONS
     # Every delegable permission is one a servicer role can hold; the role still limits it.

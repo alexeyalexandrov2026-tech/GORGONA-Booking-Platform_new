@@ -16,6 +16,7 @@ from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import transport as service
 from gorgona_booking.business import transport_assignments as fleet
 from gorgona_booking.business import transport_brokerage as brokerage
+from gorgona_booking.business import transport_carrier_companies as carriers
 from gorgona_booking.business import transport_clearance as clearance
 from gorgona_booking.business import transport_events as events
 from gorgona_booking.business import transport_money as money
@@ -68,7 +69,11 @@ from gorgona_booking.business.transport_money import (
 )
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
-from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenant
+from gorgona_booking.tenancy.authorization import (
+    PermissionDeniedError,
+    TenantAccess,
+    authorized_tenant,
+)
 
 router = APIRouter(prefix="/v1/businesses/{business_id}/transport", tags=["transport"])
 
@@ -333,6 +338,7 @@ async def post_event(
             actor=principal.actor,
             key=idempotency_key,
             body=body,
+            servicer=_servicer(access),
         )
 
 
@@ -638,6 +644,113 @@ async def get_broker_eligibility(
     async with _broker(request, principal, business_id) as access:
         view = await brokerage.load_authority(access.conn)
         return brokerage.authority_eligibility(view, on)
+
+
+def _servicer(access: TenantAccess) -> UUID | None:
+    """N4: the servicing company of a delegated request, None for the business's own staff."""
+    return None if access.delegation is None else access.delegation.servicer_business_id
+
+
+@asynccontextmanager
+async def _carrier(
+    request: Request, principal: CurrentPrincipal, business_id: UUID
+) -> AsyncIterator[tuple[TenantAccess, UUID]]:
+    """N4: a carrier company's delegate under a grant with transport.tender; never a role."""
+    async with _access(request, principal, business_id, Permission.TRANSPORT_TENDER) as access:
+        servicer = _servicer(access)
+        if servicer is None:
+            raise PermissionDeniedError("Only the carrier's company answers here")
+        yield access, servicer
+
+
+@router.get("/carriers/{counterparty_id}/company")
+async def get_carrier_company(
+    business_id: UUID, counterparty_id: UUID, request: Request, principal: CurrentPrincipal
+) -> carriers.LinkView:
+    async with _broker(request, principal, business_id) as access:
+        view = await carriers.load_link(access.conn, counterparty_id)
+        if view is None:
+            raise NotFoundError("Carrier not found", counterparty_id=str(counterparty_id))
+        return view
+
+
+@router.put("/carriers/{counterparty_id}/company")
+async def put_carrier_company(
+    business_id: UUID,
+    counterparty_id: UUID,
+    body: carriers.LinkInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> carriers.LinkView:
+    """N4: link a carrier to its own company on the platform, or unlink it."""
+    async with _broker(request, principal, business_id) as access:
+        view = await carriers.save_link(
+            access.conn,
+            business_id,
+            counterparty_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+        if view is None:
+            raise NotFoundError("Carrier not found", counterparty_id=str(counterparty_id))
+        return view
+
+
+@router.post("/tenders/{tender_id}/carrier-answers")
+async def post_tender_carrier_answer(
+    business_id: UUID,
+    tender_id: UUID,
+    body: tenders.CarrierAnswerInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> tenders.TenderView:
+    """N4: the carrier answers its tender in its own company, through its grant."""
+    async with _carrier(request, principal, business_id) as (access, servicer):
+        view = await tenders.answer_tender(
+            access.conn,
+            business_id,
+            tender_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+            servicer=servicer,
+        )
+        if view is None:
+            raise NotFoundError("Tender not found", tender_id=str(tender_id))
+        return view
+
+
+@router.post("/tenders/{tender_id}/rate-confirmation/{revision}/carrier-answers")
+async def post_rate_confirmation_carrier_answer(
+    business_id: UUID,
+    tender_id: UUID,
+    revision: Annotated[int, Path(ge=1, le=2_147_483_647)],
+    body: confirmations.CarrierConfirmationAnswerInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> confirmations.RateConfirmationView:
+    """N4: the carrier answers one version in its own company, through its grant."""
+    async with _carrier(request, principal, business_id) as (access, servicer):
+        view = await confirmations.answer(
+            access.conn,
+            business_id,
+            tender_id,
+            revision,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+            servicer=servicer,
+        )
+        if view is None:
+            raise NotFoundError("Rate confirmation not found", tender_id=str(tender_id))
+        return view
 
 
 @router.get("/carriers/{counterparty_id}/profile")
