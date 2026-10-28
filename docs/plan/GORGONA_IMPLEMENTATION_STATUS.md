@@ -1,6 +1,10 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-27: N3 rate confirmations, locally verified
+## Current checkpoint — 2026-10-28: N4 carrier companies and tracking, locally verified
+
+N4 on `codex/package-n4-tracking` (code `cd301f1`, [validation record](evidence/2026-10-28-n4-carrier-companies/VALIDATION.md)): migration **0084** links a carrier to its own company on the platform in insert-only versions; that company's delegates answer the tenders and rate confirmations addressed to their carrier through a grant with `transport.tender` (source `platform`) and record stop events only on their accepted tendered legs. gates-1 failed once (a unit test listing the delegable rights; fixed; kept in the record); gates-2: focused **826 passed**, full **2647 passed, 4 skipped**. Readiness and enabling transport wait for the owner's word. Next migration **0085**.
+
+## Previous checkpoint — 2026-10-27: N3 rate confirmations, locally verified
 
 N3 on `codex/package-n3-rate-confirmations` (code `526189e`, [validation record](evidence/2026-10-27-n3-rate-confirmations/VALIDATION.md)): migration **0083** keeps rate confirmation versions of accepted tenders and the carrier's answers as insert-only facts; accepting a tender writes version 1, agreed; a change is in force only once the carrier agrees. gates-1 failed once (4 tests outside transport under load, passed alone; kept in the record); gates-2: focused **820 passed**, full **2641 passed, 4 skipped**. Not tested: a signed copy that is the business's own document; the backfill on accepted tenders. Readiness and enabling transport wait for the owner's word. Next migration **0084**.
 

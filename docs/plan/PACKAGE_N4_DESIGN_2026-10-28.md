@@ -11,7 +11,8 @@ Owner 2026-10-28: "continue" after N3 (full delegation: «Делай как сч
   (revision, the carrier's business or none to unlink). A company is linked to at most one carrier of a broker
   at a time; the broker's own business is refused.
 - **The carrier answers through its grant**, never through the broker's rights: a new delegable right
-  `transport.tender` (never given to a role). A delegate of the linked company accepts or declines a tender
+  `transport.tender`, held by owners and managers of their own company and used only through
+  a grant (the broker's own staff are refused). A delegate of the linked company accepts or declines a tender
   addressed to its carrier and agrees to or declines a rate confirmation version. The answer is stored with the
   source `platform` and the carrier's business; the broker still records an external carrier's answer with its
   source (N2, N3). A delegate of a company that is not the tender's carrier is refused (403).
@@ -26,7 +27,7 @@ Owner 2026-10-28: "continue" after N3 (full delegation: «Делай как сч
   (`transport.tender` through a grant). All need the module.
 - Next migration after this slice: **0085**.
 
-## Acceptance of N4
+## Acceptance of N4 (PASS, 2026-10-28)
 
 | id | Requirement |
 |---|---|
@@ -34,5 +35,5 @@ Owner 2026-10-28: "continue" after N3 (full delegation: «Делай как сч
 | N4-02 | A delegate of the linked company accepts or declines its tender; the answer has the source `platform` and the company; a company that is not the carrier is refused; the rules of N2 hold |
 | N4-03 | A delegate of the linked company agrees to or declines a rate confirmation version; the rules of N3 hold |
 | N4-04 | A linked carrier's delegate records stop events only on its accepted tendered legs; a repeat changes nothing; after a withdrawal it is refused |
-| N4-05 | `transport.tender` is never a role right; the module off and direct SQL updates and deletes are refused |
+| N4-05 | `transport.tender` works only through a grant; the module off and direct SQL updates and deletes are refused |
 | N4-06 | Upgrade 0083 → 0084 keeps every row; the full suite stays green |
