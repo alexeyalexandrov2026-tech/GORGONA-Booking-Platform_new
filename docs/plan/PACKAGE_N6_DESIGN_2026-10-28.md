@@ -27,7 +27,7 @@ Owner 2026-10-28: "Start N6" (full delegation: «Делай как считае�
   accrued) are shown in words. The carrier company link and the carrier's own answers through a grant stay on
   the API (N4) and come to the screens later. No migration (next stays **0086**).
 
-## Acceptance of N6
+## Acceptance of N6 (PASS, 2026-10-28)
 
 | id | Requirement |
 |---|---|

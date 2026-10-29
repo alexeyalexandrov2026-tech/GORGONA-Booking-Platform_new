@@ -1,6 +1,10 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-28: N5 carrier pay and margin, locally verified
+## Current checkpoint — 2026-10-28: N6 brokerage on the transport screens, locally verified
+
+N6 on `codex/package-n6-screens` (code `33fc82e`, [validation record](evidence/2026-10-28-n6-brokerage-screens/VALIDATION.md)): strict web contracts for the N1–N5 routes and brokerage panels on the transport screen for company-wide owners and managers — broker authority, carriers with eligibility in words, loads to cover, tenders with answers, rate confirmation versions, carrier pay and the order margin; a real-browser test on desktop and mobile. No migration. Dev and gates-1 failures kept in the record; gates-2: focused **832 passed**, full **2653 passed, 4 skipped**. A branch-limited member is covered by the page rule and the server refusal, not by a browser run. Readiness and enabling transport wait for the owner's word. Next migration **0086**.
+
+## Previous checkpoint — 2026-10-28: N5 carrier pay and margin, locally verified
 
 N5 on `codex/package-n5-carrier-pay` (code `5dd4700`, [validation record](evidence/2026-10-28-n5-carrier-pay/VALIDATION.md)): migration **0085** books one insert-only FIN-03 payable manual accrual per accepted tender with closed legs, for the rate confirmation in force (fixed or per mile); `GET orders/{order}/margin` derives the invoice total less the accrued pay of the order's own tenders, listing shared tenders without subtracting them. One dev failure kept in the record (the accrual kind); gates-1: focused **831 passed**, full **2652 passed, 4 skipped**. Readiness and enabling transport wait for the owner's word. Next migration **0086**.
 
