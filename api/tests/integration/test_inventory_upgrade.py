@@ -101,6 +101,7 @@ K_TABLES = {
     "transport_rate_confirmations",
     "transport_rate_confirmation_answers",
     "transport_carrier_companies",
+    "transport_tender_accruals",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

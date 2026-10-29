@@ -100,6 +100,7 @@ K_TABLES = {
     "transport_rate_confirmations",
     "transport_rate_confirmation_answers",
     "transport_carrier_companies",
+    "transport_tender_accruals",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

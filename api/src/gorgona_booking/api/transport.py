@@ -17,6 +17,7 @@ from gorgona_booking.business import transport as service
 from gorgona_booking.business import transport_assignments as fleet
 from gorgona_booking.business import transport_brokerage as brokerage
 from gorgona_booking.business import transport_carrier_companies as carriers
+from gorgona_booking.business import transport_carrier_pay as carrier_pay
 from gorgona_booking.business import transport_clearance as clearance
 from gorgona_booking.business import transport_events as events
 from gorgona_booking.business import transport_money as money
@@ -661,6 +662,51 @@ async def _carrier(
         if servicer is None:
             raise PermissionDeniedError("Only the carrier's company answers here")
         yield access, servicer
+
+
+@router.get("/tenders/{tender_id}/accrual")
+async def get_tender_accrual(
+    business_id: UUID, tender_id: UUID, request: Request, principal: CurrentPrincipal
+) -> carrier_pay.CarrierPayView:
+    async with _broker(request, principal, business_id) as access:
+        view = await carrier_pay.load_pay(access.conn, business_id, tender_id)
+        if view is None:
+            raise NotFoundError("Accrual not found", tender_id=str(tender_id))
+        return view
+
+
+@router.post("/tenders/{tender_id}/accrual")
+async def post_tender_accrual(
+    business_id: UUID,
+    tender_id: UUID,
+    body: carrier_pay.CarrierPayInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> carrier_pay.CarrierPayView:
+    """N5: the carrier's one FIN-03 payable for an accepted tender with closed legs."""
+    async with _broker(request, principal, business_id) as access:
+        return await carrier_pay.accrue(
+            access.conn,
+            business_id,
+            tender_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/orders/{order_id}/margin")
+async def get_order_margin(
+    business_id: UUID, order_id: UUID, request: Request, principal: CurrentPrincipal
+) -> carrier_pay.MarginView:
+    """N5: revenue less the order's own carrier pay; derived, never stored."""
+    async with _broker(request, principal, business_id) as access:
+        view = await carrier_pay.load_margin(access.conn, business_id, order_id)
+        if view is None:
+            raise NotFoundError("Order not found", order_id=str(order_id))
+        return view
 
 
 @router.get("/carriers/{counterparty_id}/company")

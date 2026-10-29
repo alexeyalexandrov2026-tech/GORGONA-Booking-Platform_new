@@ -428,6 +428,8 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (83, "-- Rate confirmation branch scope:"),
                 # N4: carrier companies (company-wide).
                 (84, "-- Carrier company branch scope:"),
+                # N5: carrier pay (company-wide).
+                (85, "-- Carrier pay branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker
