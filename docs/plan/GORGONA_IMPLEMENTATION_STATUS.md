@@ -1,6 +1,10 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-28: N4 carrier companies and tracking, locally verified
+## Current checkpoint — 2026-10-28: N5 carrier pay and margin, locally verified
+
+N5 on `codex/package-n5-carrier-pay` (code `5dd4700`, [validation record](evidence/2026-10-28-n5-carrier-pay/VALIDATION.md)): migration **0085** books one insert-only FIN-03 payable manual accrual per accepted tender with closed legs, for the rate confirmation in force (fixed or per mile); `GET orders/{order}/margin` derives the invoice total less the accrued pay of the order's own tenders, listing shared tenders without subtracting them. One dev failure kept in the record (the accrual kind); gates-1: focused **831 passed**, full **2652 passed, 4 skipped**. Readiness and enabling transport wait for the owner's word. Next migration **0086**.
+
+## Previous checkpoint — 2026-10-28: N4 carrier companies and tracking, locally verified
 
 N4 on `codex/package-n4-tracking` (code `cd301f1`, [validation record](evidence/2026-10-28-n4-carrier-companies/VALIDATION.md)): migration **0084** links a carrier to its own company on the platform in insert-only versions; that company's delegates answer the tenders and rate confirmations addressed to their carrier through a grant with `transport.tender` (source `platform`) and record stop events only on their accepted tendered legs. gates-1 failed once (a unit test listing the delegable rights; fixed; kept in the record); gates-2: focused **826 passed**, full **2647 passed, 4 skipped**. Readiness and enabling transport wait for the owner's word. Next migration **0085**.
 

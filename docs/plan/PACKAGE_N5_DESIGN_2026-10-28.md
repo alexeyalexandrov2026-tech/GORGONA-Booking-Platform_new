@@ -23,7 +23,7 @@ from `7cde106` (N4).
   listed as shared and not subtracted. The margin is revenue less cost, given only with revenue and one currency.
 - Quick pay and factoring stay later (plan decision 6). Next migration after this slice: **0086**.
 
-## Acceptance of N5
+## Acceptance of N5 (PASS, 2026-10-28)
 
 | id | Requirement |
 |---|---|
