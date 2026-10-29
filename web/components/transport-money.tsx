@@ -50,7 +50,7 @@ const roleLabel = (role: string) =>
   ROLES.find(([value]) => value === role)?.[1] ?? role;
 
 /** The books and, for the chosen one, its accounts. */
-function useBooks(businessId: string, onError: (text: string) => void) {
+export function useBooks(businessId: string, onError: (text: string) => void) {
   const [books, setBooks] = useState<Book[]>([]);
   const [book, setBook] = useState("");
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -83,7 +83,7 @@ function useBooks(businessId: string, onError: (text: string) => void) {
   return { books, book, setBook: choose, accounts };
 }
 
-function BookSelect({
+export function BookSelect({
   books,
   value,
   onChange,

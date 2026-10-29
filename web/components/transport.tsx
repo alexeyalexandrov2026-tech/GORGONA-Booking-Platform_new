@@ -23,6 +23,7 @@ import {
   fetchTrip,
   recordEvent,
 } from "../lib/transport-api";
+import { Brokerage, OrderMargin } from "./transport-brokerage";
 import { OrderMoney, TripPay } from "./transport-money";
 import { legOpen } from "../lib/transport-rules";
 import {
@@ -112,6 +113,8 @@ export type TransportRights = {
   fleet: boolean;
   // M7b: rates, invoices and trip pay; a company-wide finance member only.
   money: boolean;
+  // N6: brokerage (ADR-0034); a company-wide owner or manager with transport.broker.
+  broker: boolean;
 };
 
 async function allCustomers(businessId: string): Promise<Customer[]> {
@@ -338,6 +341,13 @@ export function TransportScreen({
               notify={notify}
             />
           )}
+          {rights.broker && moneyOrder && (
+            <OrderMargin
+              key={`margin-${moneyOrder.order_id}`}
+              businessId={businessId}
+              order={moneyOrder}
+            />
+          )}
           <TripForm
             key={
               editing ? `edit-${editing.trip_id}-${editing.revision}` : "new"
@@ -370,6 +380,9 @@ export function TransportScreen({
           }
           notify={notify}
         />
+      )}
+      {loaded && rights.broker && (
+        <Brokerage businessId={businessId} trips={trips} notify={notify} />
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { brokerageResponseSchema } from "./brokerage-contracts";
 import { invoiceSchema, obligationSchema } from "./financial-contracts";
 
 // M6a (package M): strict response contracts of the transport routes the dispatch board and the trip
@@ -217,6 +218,8 @@ export function transportResponseSchema(
   suffix: string,
   method: string,
 ): z.ZodType | null {
+  const brokerage = brokerageResponseSchema(suffix, method);
+  if (brokerage) return brokerage;
   if (suffix === "/transport/trips" && method === "GET") return tripListSchema;
   if (trip.test(suffix) && (method === "GET" || method === "PUT"))
     return tripSchema;

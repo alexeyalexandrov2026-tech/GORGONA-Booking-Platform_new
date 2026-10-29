@@ -28,6 +28,8 @@ export default function TransportPage() {
                     fleet: true,
                     // Money routes refuse a branch-limited member (company-wide finance).
                     money: !member?.location_id,
+                    // N6: brokerage tables are company-wide (transport.broker).
+                    broker: !member?.location_id,
                   }
                 : {
                     plan: false,
@@ -35,6 +37,7 @@ export default function TransportPage() {
                     events: granted("transport.events"),
                     fleet: false,
                     money: false,
+                    broker: false,
                   }
             }
           />

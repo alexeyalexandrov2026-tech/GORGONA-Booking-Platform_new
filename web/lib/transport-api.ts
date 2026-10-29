@@ -18,7 +18,8 @@ import type {
   VehicleList,
 } from "./transport-contracts";
 
-const base = (business: string) => `/v1/businesses/${business}/transport`;
+export const base = (business: string) =>
+  `/v1/businesses/${business}/transport`;
 const after = (cursor?: string) =>
   cursor ? `?after=${encodeURIComponent(cursor)}` : "";
 
@@ -62,7 +63,7 @@ export const fetchClearance = (
   managementFetch<Clearance>(`${base(business)}/trips/${trip}/clearance`);
 
 const pending = new Map<string, string>();
-async function command<T>(
+export async function command<T>(
   path: string,
   method: string,
   body: unknown,
