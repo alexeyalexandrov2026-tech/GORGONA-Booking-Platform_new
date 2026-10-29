@@ -22,7 +22,7 @@
 - The independent review (one extra agent) needs the owner's consent; it stays open in the record.
 - Readiness, enabling transport, `main`, PR, deployment: only on the owner's word.
 
-## Acceptance of N7
+## Acceptance of N7 (PASS, 2026-10-29)
 
 | id | Requirement |
 |---|---|

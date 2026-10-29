@@ -1,6 +1,10 @@
 # Cloud Code handoff — GORGONA business platform
 
-## Current checkpoint — 2026-10-28: N6 brokerage on the transport screens, locally verified
+## Current checkpoint — 2026-10-29: package N acceptance (N7), technically accepted locally; independent review open
+
+N7 on `codex/package-n7-acceptance` (code `08f519c`, [acceptance record](docs/plan/evidence/2026-10-29-n7-acceptance/ACCEPTANCE.md)): one end-to-end test of a brokered two-leg load through the API and PostgreSQL (no authority refused, a carrier without a profile refused, two carriers on two legs, a covered leg refuses a second acceptance, rate confirmation version 2 agreed with version 1 kept, stop events close the leg and a repeat changes nothing, each pay accrues once, margin 1500.00 − 900.00 − 450.00 = 150.00 with no margin column); the record maps TMS-01..03 and N-01..N-09 to proofs and limits. Gates-1 found an N6 defect (Save authority enabled before the authority was read, so a fast save sent revision 0); the button now waits for the read. Gates-2: focused **833 passed**, full **2654 passed, 4 skipped**. No migration. **The one independent review of package N waits for the owner's consent**; readiness, enabling transport and `main` wait for the owner's word. Next migration **0086**.
+
+## Previous checkpoint — 2026-10-28: N6 brokerage on the transport screens, locally verified
 
 N6 on `codex/package-n6-screens` (code `33fc82e`, [validation record](docs/plan/evidence/2026-10-28-n6-brokerage-screens/VALIDATION.md)): strict web contracts for the N1–N5 routes and brokerage panels on the transport screen for company-wide owners and managers — broker authority, carriers with eligibility in words, loads to cover, tenders with answers, rate confirmation versions, carrier pay and the order margin; a real-browser test on desktop and mobile. No migration. Dev and gates-1 failures kept in the record; gates-2: focused **832 passed**, full **2653 passed, 4 skipped**. A branch-limited member is covered by the page rule and the server refusal, not by a browser run. Readiness and enabling transport wait for the owner's word. Next migration **0086**.
 
