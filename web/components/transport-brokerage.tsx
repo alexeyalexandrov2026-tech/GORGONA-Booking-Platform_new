@@ -276,7 +276,8 @@ function AuthorityPanel({
           onChange={setChecked}
         />
         <div className="mgmt-form-actions">
-          <button type="submit" disabled={busy}>
+          {/* A save expects the revision that was read; until then it would guess. */}
+          <button type="submit" disabled={busy || authority === null}>
             Save authority
           </button>
         </div>
