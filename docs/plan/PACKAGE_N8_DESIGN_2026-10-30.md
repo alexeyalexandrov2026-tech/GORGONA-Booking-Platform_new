@@ -28,11 +28,14 @@ and sees "Save authority" disabled.
 - A carrier on its own trip still sees the stop places of the other legs of that trip.
 - Readiness, enabling transport, `main`, PR, deployment: only on the owner's word.
 
-## Acceptance of N8
+## Acceptance of N8 (PASS, 2026-10-30)
 
-| id | Requirement |
-|---|---|
-| N8-01 | Each RN fix has a test that failed before the fix (red run recorded) |
-| N8-02 | 0086 upgrade test on PostgreSQL 18; insert-only and RLS unchanged |
-| N8-03 | The full suite green; one executor, one disposable cluster |
-| N8-04 | ACCEPTANCE.md corrected with the review closed and its findings listed |
+Code `b6cd7ef`; evidence [CHECKS.json](evidence/2026-10-30-n8-review-fixes/CHECKS.json); run folder
+`GorgonaBookingTests/package-n8-20261030-c59e116` (STATE.md has every run and slip).
+
+| id | Requirement | Result |
+|---|---|---|
+| N8-01 | Each RN fix has a test that failed before the fix (red run recorded) | PASS: red-1 and red-2 saw the intended defect for every RN (RN-03, RN-06, RN-07 only in red-2; the setup slip is recorded) |
+| N8-02 | 0086 upgrade test on PostgreSQL 18; insert-only and RLS unchanged | PASS: `test_n8_upgrade` upgrades a non-empty 0085 database keeping every row |
+| N8-03 | The full suite green; one executor, one disposable cluster | PASS in gates-5: static PASS, focused 844 passed, full 2665 passed, 4 skipped. Gates-1..4 failed and are kept: mypy (fixed); Playwright install files vanished (reinstalled on the owner's word); the runner's git call crashed (0xC0000142); `test_i4_browser` "read ECONNRESET" (an existing test, passed alone and in gates-5, cause open) |
+| N8-04 | ACCEPTANCE.md corrected with the review closed and its findings listed | PASS: [ACCEPTANCE.md](evidence/2026-10-29-n7-acceptance/ACCEPTANCE.md) |
