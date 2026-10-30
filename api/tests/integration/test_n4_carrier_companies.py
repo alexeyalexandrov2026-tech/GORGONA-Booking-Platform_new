@@ -5,6 +5,7 @@ company's delegates answer through a grant with the right transport.tender and r
 events only on the legs tendered to their carrier and accepted.
 """
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid7
 
@@ -21,7 +22,7 @@ from tests.integration.test_delegations import Parties, owner_a, owner_b, partie
 from tests.integration.test_m1_transport_planning import Transport, accepted, error, transport
 from tests.integration.test_m3_transport_events import event
 from tests.integration.test_m4_dispatcher_grants import acting, dispatcher
-from tests.integration.test_n1_broker_carriers import carrier, profile
+from tests.integration.test_n1_broker_carriers import authority, carrier, profile
 from tests.integration.test_n2_tenders import _broker, _trip, answer, offer, state
 from tests.integration.test_n3_rate_confirmations import proposal
 from tests.support.fake_idp import FakeIdp
@@ -53,12 +54,29 @@ def link(company: UUID | None, revision: int) -> dict[str, Any]:
     }
 
 
-async def carrier_answer(
-    t: Transport, tender: UUID, kind: str, at: str = "2026-10-26T18:00:00+00:00"
-) -> httpx.Response:
+def at(hours: float) -> str:
+    return (datetime.now(UTC) + timedelta(hours=hours)).isoformat()
+
+
+def fresh_offer(trip: UUID, party: UUID, legs: list[int], **changes: Any) -> dict[str, Any]:
+    """N8: an offer open now, since a carrier answers at the server's time."""
+    return offer(trip, party, legs, offered_at=at(-1), expires_at=at(24), **changes)
+
+
+async def fresh_broker(t: Transport) -> UUID:
+    """Authority and one carrier profile checked today, never stale at the server's time."""
+    today = datetime.now(UTC).date().isoformat()
+    assert (await t.put("/broker-authority", authority(0, checked_on=today))).status_code == 200
+    party = await carrier(t, "FAKE Fresh Carrier")
+    saved = await t.put(f"/carriers/{party}/profile", profile(0, checked_on=today))
+    assert saved.status_code == 200, saved.text
+    return party
+
+
+async def carrier_answer(t: Transport, tender: UUID, kind: str) -> httpx.Response:
     return await t.client.post(
         f"{t.base}/tenders/{tender}/carrier-answers",
-        json={"schema_version": 1, "kind": kind, "occurred_at": at},
+        json={"schema_version": 1, "kind": kind},
         headers={**t.headers, "Idempotency-Key": str(uuid7())},
     )
 
@@ -66,7 +84,7 @@ async def carrier_answer(
 async def carrier_agree(t: Transport, tender: UUID, revision: int, kind: str) -> httpx.Response:
     return await t.client.post(
         f"{t.base}/tenders/{tender}/rate-confirmation/{revision}/carrier-answers",
-        json={"schema_version": 1, "kind": kind, "occurred_at": "2026-10-26T22:00:00+00:00"},
+        json={"schema_version": 1, "kind": kind},
         headers={**t.headers, "Idempotency-Key": str(uuid7())},
     )
 
@@ -74,11 +92,11 @@ async def carrier_agree(t: Transport, tender: UUID, revision: int, kind: str) ->
 async def linked(t: Transport, world: BookingWorld) -> tuple[UUID, UUID, UUID]:
     """A trip, its carrier linked to business B, and a tender of leg 2 (stops 1 and 3)."""
     trip = await _trip(t)
-    party = await _broker(t)
+    party = await fresh_broker(t)
     saved = await t.put(f"/carriers/{party}/company", link(world.b.tenant_id, 0))
     assert saved.status_code == 200, saved.text
     tender = uuid7()
-    assert (await t.put(f"/tenders/{tender}", offer(trip, party, [2]))).status_code == 200
+    assert (await t.put(f"/tenders/{tender}", fresh_offer(trip, party, [2]))).status_code == 200
     return trip, party, tender
 
 
@@ -178,7 +196,7 @@ async def test_the_linked_company_answers_a_rate_confirmation_version(
     d = acting(t, parties, dispatcher)
     assert (await carrier_answer(d, tender, "accepted")).status_code == 200
     path = f"/tenders/{tender}/rate-confirmation"
-    assert (await t.put(path, proposal(1))).status_code == 200
+    assert (await t.put(path, proposal(1, proposed_at=at(0)))).status_code == 200
     assert (await carrier_agree(d, tender, 1, "agreed")).status_code == 409
     agreed = await carrier_agree(d, tender, 2, "agreed")
     assert agreed.status_code == 200, agreed.text
@@ -218,7 +236,7 @@ async def test_a_linked_carrier_tracks_only_its_accepted_legs(
         await event(d, trip, "arrived", 2),
     ):
         assert refused.status_code == 403, refused.text
-    withdrawn = await answer(t, tender, "withdrawn", at="2026-10-26T19:00:00+00:00")
+    withdrawn = await answer(t, tender, "withdrawn", at=at(0.05))
     assert withdrawn.status_code == 200, withdrawn.text
     late = await event(d, trip, "delivered", 3, quantities=((2, 6),))
     assert late.status_code == 403, late.text

@@ -107,8 +107,11 @@ async def _linked_to_visit(conn: RuntimeConnection, book_id: UUID, document_id: 
             " or exists (select 1 from gba.transport_order_invoices where book_id=%s"
             " and document_id=%s)"
             " or exists (select 1 from gba.transport_pay_accruals where book_id=%s"
+            " and document_id=%s)"
+            # N8 (RN-01): the carrier's pay of an accepted tender is frozen like the driver's.
+            " or exists (select 1 from gba.transport_tender_accruals where book_id=%s"
             " and document_id=%s)",
-            (book_id, document_id) * 5,
+            (book_id, document_id) * 6,
         )
     ).fetchone()
     return bool(row and row[0])

@@ -10,6 +10,7 @@ read back.
 import os
 import shutil
 import subprocess
+import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
@@ -165,6 +166,20 @@ def test_brokerage_on_the_screens_real_browser(
                     "legs": [leg(pallets, 10, 1, 2)],
                 },
             )
+            call(
+                "PUT",
+                f"{business}/transport/orders/{orders[p]}/rate",
+                {
+                    "schema_version": 1,
+                    "expected_revision": 0,
+                    "currency": "USD",
+                    "basis": "fixed",
+                    "amount": "1500.00",
+                },
+            )
+
+        def close(p: str) -> None:
+            """N8 (RN-09): the leg runs only after the browser tendered it."""
             for kind, position, hours in (("loaded", 1, 2), ("delivered", 2, 1)):
                 call(
                     "POST",
@@ -181,17 +196,6 @@ def test_brokerage_on_the_screens_real_browser(
                     },
                 )
             call(
-                "PUT",
-                f"{business}/transport/orders/{orders[p]}/rate",
-                {
-                    "schema_version": 1,
-                    "expected_revision": 0,
-                    "currency": "USD",
-                    "basis": "fixed",
-                    "amount": "1500.00",
-                },
-            )
-            call(
                 "POST",
                 f"{business}/transport/orders/{orders[p]}/invoice",
                 {
@@ -205,15 +209,33 @@ def test_brokerage_on_the_screens_real_browser(
                     "extra_lines": [],
                 },
             )
-        result = subprocess.run(  # noqa: S603 - fixed repository script, located npm
+
+        agreed = (
+            "select count(*) from gba.transport_rate_confirmation_answers a "
+            "join gba.transport_tenders t on t.tenant_id = a.tenant_id and t.id = a.tender_id "
+            "where t.trip_id = %s and a.revision = 2 and a.kind = 'agreed'"
+        )
+        browser = subprocess.Popen(  # noqa: S603 - fixed repository script, located npm
             [npm, "run", "test:management:transport-brokerage"],
             cwd=web,
             env=env,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=1200,
-            check=False,
         )
+        # The browser tenders each leg; once its version 2 is agreed the leg runs and is invoiced.
+        waiting = set(PROJECTS)
+        deadline = time.monotonic() + 1200
+        while waiting and browser.poll() is None and time.monotonic() < deadline:
+            for p in sorted(waiting):
+                with owner_tenant_transaction(owner_conn, world.a.tenant_id):
+                    row = owner_conn.execute(agreed, (trips[p],)).fetchone()
+                if row and row[0]:
+                    close(p)
+                    waiting.discard(p)
+            time.sleep(0.25)
+        stdout, stderr = browser.communicate(timeout=1200)
+        result = subprocess.CompletedProcess(browser.args, browser.returncode, stdout, stderr)
         snapshots = "".join(
             f"\n--- {path.parent.name}\n" + path.read_text(encoding="utf-8")
             for path in sorted((web / "test-results").glob("*/error-context.md"))

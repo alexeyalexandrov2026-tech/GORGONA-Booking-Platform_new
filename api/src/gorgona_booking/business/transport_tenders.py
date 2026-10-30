@@ -23,7 +23,13 @@ from gorgona_booking.business import transport_brokerage as brokerage
 from gorgona_booking.business import transport_carrier_companies as carriers
 from gorgona_booking.business.module_gate import TRANSPORT_MODULE, module_writes
 from gorgona_booking.business.transport import require_transport
-from gorgona_booking.business.transport_money import _AMOUNT, _exact, _text, _units
+from gorgona_booking.business.transport_money import (
+    _AMOUNT,
+    TransportAlreadyAccruedError,
+    _exact,
+    _text,
+    _units,
+)
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import ConflictError, DomainError, InvalidReferenceError, NotFoundError
 
@@ -89,11 +95,13 @@ class AnswerInput(_Strict):
 
 
 class CarrierAnswerInput(_Strict):
-    """N4: the carrier's own answer, given in its company through a grant."""
+    """N4: the carrier's own answer, given in its company through a grant.
+
+    N8 (RN-05): it is recorded at the server's time; the carrier never states the time.
+    """
 
     schema_version: Literal[1]
     kind: Literal["accepted", "declined"]
-    occurred_at: AwareDatetime
 
 
 class AnswerView(BaseModel):
@@ -198,6 +206,31 @@ async def _lock(conn: RuntimeConnection, trip: UUID) -> None:
     )
 
 
+async def server_time(conn: RuntimeConnection) -> datetime:
+    """N8 (RN-05): the time a platform answer is recorded, never stated by the carrier."""
+    row = await (await conn.execute("select pg_catalog.statement_timestamp()")).fetchone()
+    assert row is not None  # noqa: S101 - the function always returns a row
+    when: datetime = row[0]
+    return when
+
+
+async def _not_accrued(conn: RuntimeConnection, tender: UUID) -> None:
+    """N8 (RN-04): once paid, a tender is neither withdrawn nor repriced."""
+    row = await (
+        await conn.execute(
+            "select 1 from gba.transport_tender_accruals where tender_id = %s", (tender,)
+        )
+    ).fetchone()
+    if row is not None:
+        raise TransportAlreadyAccruedError(
+            "The carrier's pay is accrued; the tender keeps its terms", tender_id=str(tender)
+        )
+
+
+class TransportLegStartedError(ConflictError):
+    code = "TRANSPORT_LEG_STARTED"
+
+
 async def _local_date(conn: RuntimeConnection, trip: UUID, at: datetime) -> date:
     """The date of an instant in the time zone of the trip's first stop."""
     row = await (
@@ -269,10 +302,13 @@ async def save_tender(
         await idempotency.complete(conn, scope, 200, {"tender_id": str(tender)})
         return existing
     trip = await (
-        await conn.execute("select 1 from gba.transport_trips where id = %s", (body.trip_id,))
+        await conn.execute("select status from gba.transport_trips where id = %s", (body.trip_id,))
     ).fetchone()
     if trip is None:
         raise NotFoundError("Trip not found", trip_id=str(body.trip_id))
+    if trip[0] != "planned":
+        # N8 (RN-09): a leg the trip already runs is never tendered and paid twice.
+        raise TransportLegStartedError("A started trip is not tendered", trip_id=str(body.trip_id))
     legs = await (
         await conn.execute(
             "select position from gba.transport_legs where trip_id = %s "
@@ -325,6 +361,7 @@ async def save_tender(
 
 _ANSWER_ERRORS: dict[str, type[DomainError]] = {
     "transport_tender_answers_state_check": TransportTenderClosedError,
+    "transport_tenders_accrued_check": TransportAlreadyAccruedError,
     "transport_tender_answers_leg_check": TransportLegTenderedError,
     "transport_tender_answers_time_check": TransportTenderTimeError,
 }
@@ -364,18 +401,26 @@ async def answer_tender(
         async with module_writes(TRANSPORT_MODULE), conn.transaction():
             await _lock(conn, view.trip_id)
             view = await _required(conn, tender)
+            occurred = (
+                body.occurred_at if isinstance(body, AnswerInput) else await server_time(conn)
+            )
             same = [a for a in view.answers if a.kind == body.kind]
             if same:
-                if (same[0].source, same[0].occurred_at) != (source, body.occurred_at):
+                # A carrier's repeat is the same answer whatever the clock now reads.
+                if same[0].source != source or (
+                    isinstance(body, AnswerInput) and same[0].occurred_at != occurred
+                ):
                     raise TransportTenderClosedError("The tender already has this answer")
             else:
-                if body.kind == "accepted" and body.occurred_at >= view.offered_at:
-                    await _eligible(conn, view.trip_id, view.counterparty_id, body.occurred_at)
+                if body.kind == "withdrawn":
+                    await _not_accrued(conn, tender)
+                if body.kind == "accepted" and occurred >= view.offered_at:
+                    await _eligible(conn, view.trip_id, view.counterparty_id, occurred)
                 await conn.execute(
                     "insert into gba.transport_tender_answers (tenant_id, tender_id, kind, "
                     "source, servicer_business_id, occurred_at, created_by) "
                     "values (%s, %s, %s, %s, %s, %s, %s)",
-                    (business, tender, body.kind, source, servicer, body.occurred_at, user_id),
+                    (business, tender, body.kind, source, servicer, occurred, user_id),
                 )
                 if body.kind == "accepted":
                     # N3: the acceptance agrees version 1 of the rate confirmation.
@@ -384,13 +429,13 @@ async def answer_tender(
                         "revision, basis, amount, terms, proposed_at, created_by) "
                         "select tenant_id, id, 1, basis, amount, terms, %s, %s "
                         "from gba.transport_tenders where id = %s",
-                        (body.occurred_at, user_id, tender),
+                        (occurred, user_id, tender),
                     )
                     await conn.execute(
                         "insert into gba.transport_rate_confirmation_answers (tenant_id, "
                         "tender_id, revision, kind, source, servicer_business_id, occurred_at, "
                         "created_by) values (%s, %s, 1, 'agreed', %s, %s, %s, %s)",
-                        (business, tender, source, servicer, body.occurred_at, user_id),
+                        (business, tender, source, servicer, occurred, user_id),
                     )
     except CheckViolation as exc:
         error = _ANSWER_ERRORS.get(exc.diag.constraint_name or "")

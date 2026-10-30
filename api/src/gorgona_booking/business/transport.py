@@ -607,6 +607,25 @@ def _check_legs(body: TripInput) -> None:
             )
 
 
+class TransportTripTenderedError(ConflictError):
+    code = "TRANSPORT_TRIP_TENDERED"
+
+
+# N8 (RN-02): an open offer or an accepted, not withdrawn tender holds the trip's plan.
+LIVE_TENDER = (
+    "exists (select 1 from gba.transport_tenders t where t.trip_id = %s "
+    "and not exists (select 1 from gba.transport_tender_answers a where a.tender_id = t.id "
+    "and a.kind in ('declined', 'withdrawn')) "
+    "and (t.expires_at > pg_catalog.statement_timestamp() or exists (select 1 "
+    "from gba.transport_tender_answers a where a.tender_id = t.id and a.kind = 'accepted')))"
+)
+
+
+async def _tendered(conn: RuntimeConnection, trip_id: UUID) -> bool:
+    row = await (await conn.execute("select " + LIVE_TENDER, (trip_id,))).fetchone()
+    return bool(row and row[0])
+
+
 async def save_trip(
     conn: RuntimeConnection,
     business: UUID,
@@ -656,12 +675,20 @@ async def save_trip(
     missing = [str(load) for load in load_ids if load not in loads or loads[load][1]]
     if missing:
         raise InvalidReferenceError("Unknown load", field="load_id", load_ids=missing)
+    # N8 (RN-02): a tender and a re-plan of one trip wait for each other, tender lock first.
+    await conn.execute(
+        "select pg_catalog.pg_advisory_xact_lock("
+        "pg_catalog.hashtextextended('gba:trip-tender:' || %s::text, 0))",
+        (trip_id,),
+    )
     current = await (
         await conn.execute(
             "select revision, status from gba.transport_trips where id = %s for update",
             (trip_id,),
         )
     ).fetchone()
+    if current is not None and await _tendered(conn, trip_id):
+        raise TransportTripTenderedError("A tendered trip keeps the legs its carriers took")
     found = 0 if current is None else int(current[0])
     if found != body.expected_revision:
         raise TransportRevisionConflictError(

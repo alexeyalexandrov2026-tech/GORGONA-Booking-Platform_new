@@ -49,12 +49,29 @@ test("an owner covers a leg through a carrier and sees the order margin", async 
   const p = testInfo.project.name as "desktop" | "mobile";
   const carrier = `FAKE Carrier ${p}`;
   await signIn(page);
+  // N8: the authority read is held back; "Save authority" waits for it (the N6 race fix).
+  const read = "**/transport/broker-authority";
+  await page.route(read, async (route) => {
+    if (route.request().method() === "GET") {
+      await new Promise((resolve) => setTimeout(resolve, 6000));
+    }
+    await route.continue();
+  });
   await page.getByRole("link", { name: "Transport", exact: true }).click();
+  const authority = section(page, "Broker authority");
+  const form = authority.getByRole("form", { name: "Broker authority form" });
+  await expect(
+    form.getByRole("button", { name: "Save authority" }),
+  ).toBeDisabled();
+  await expect(
+    form.getByRole("button", { name: "Save authority" }),
+  ).toBeEnabled({
+    timeout: 20000,
+  });
+  await page.unroute(read);
   await expect(page.getByText("Loading the trips…")).toBeHidden();
 
   // N6-01: the broker authority, saved as a new version; today's eligibility in words.
-  const authority = section(page, "Broker authority");
-  const form = authority.getByRole("form", { name: "Broker authority form" });
   await form.getByLabel("Authority number").fill(`MC-FAKE-${p}`);
   await form.getByLabel("Bond reference").fill(`BMC84-FAKE-${p}`);
   await form.getByLabel("Effective from").fill("2026-01-01");
@@ -156,8 +173,14 @@ test("an owner covers a leg through a carrier and sees the order margin", async 
   await accrue.getByLabel("Expense account").selectOption({ label: expense });
   await accrue.getByLabel("Payable account").selectOption({ label: payable });
   await accrue.getByLabel("Number").fill(`FAKE-CP-${p}`);
-  await accrue.getByRole("button", { name: "Accrue carrier pay" }).click();
-  await expect(statusOf(page)).toHaveText("Carrier pay accrued.");
+  // N8 (RN-09): the leg runs only after it is tendered; the harness closes it once version 2
+  // is agreed, so the accrual is refused in words until then.
+  await expect(async () => {
+    await accrue.getByRole("button", { name: "Accrue carrier pay" }).click();
+    await expect(statusOf(page)).toHaveText("Carrier pay accrued.", {
+      timeout: 3000,
+    });
+  }).toPass({ timeout: 90000 });
   await expect(panel).toContainText(
     "Carrier pay 950.00 USD for version 2, open 950.00",
   );

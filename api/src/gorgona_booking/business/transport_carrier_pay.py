@@ -17,6 +17,7 @@ from gorgona_booking.booking.models import IdempotencyKeyReusedError
 from gorgona_booking.business import financial_documents, settlements
 from gorgona_booking.business import transport_money as money
 from gorgona_booking.business import transport_rate_confirmations as confirmations
+from gorgona_booking.business import transport_tenders as tenders
 from gorgona_booking.business.financial_contracts import (
     InvoiceDocumentView,
     InvoiceDraftInput,
@@ -53,8 +54,10 @@ class MarginView(BaseModel):
     order_id: UUID
     currency: str | None
     revenue: str | None
-    carrier_cost: str
+    carrier_cost: str | None
     margin: str | None
+    # N8 (RN-08): amounts in different currencies are never added together.
+    currencies_differ: bool = False
     tenders: list[MarginLine]
     shared: list[MarginLine]
 
@@ -118,6 +121,11 @@ async def accrue(
     view = await load_tender(conn, tender)
     if view is None:
         raise NotFoundError("Tender not found", tender_id=str(tender))
+    # N8 (RN-04): the accrual waits for any answer or new rate on the trip, then reads the
+    # tender's answers again, so a withdrawal and the payable never pass each other.
+    await tenders._lock(conn, view.trip_id)
+    view = await load_tender(conn, tender)
+    assert view is not None  # noqa: S101 - tenders are insert-only
     trip = await (
         await conn.execute(
             "select reference from gba.transport_trips where id = %s for update", (view.trip_id,)
@@ -252,8 +260,9 @@ async def load_margin(conn: RuntimeConnection, business: UUID, order: UUID) -> M
         order_id=order,
         currency=next(iter(currencies)) if single and currencies else None,
         revenue=revenue,
-        carrier_cost=f"{cost:.{units}f}",
+        carrier_cost=f"{cost:.{units}f}" if single else None,
         margin=(f"{Decimal(revenue) - cost:.{units}f}" if revenue is not None and single else None),
         tenders=own,
         shared=shared,
+        currencies_differ=not single,
     )

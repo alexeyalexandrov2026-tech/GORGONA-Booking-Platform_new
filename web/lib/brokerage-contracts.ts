@@ -134,10 +134,11 @@ export const marginSchema = z.strictObject({
     .regex(/^[A-Z]{3}$/)
     .nullable(),
   revenue: money.nullable(),
-  carrier_cost: money,
+  carrier_cost: money.nullable(),
   margin: money.nullable(),
   tenders: z.array(marginLine).max(1000),
   shared: z.array(marginLine).max(1000),
+  currencies_differ: z.boolean(),
 });
 
 export type Authority = z.infer<typeof authoritySchema>;

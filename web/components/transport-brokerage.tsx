@@ -431,7 +431,6 @@ function VersionAnswer({
   const [kind, setKind] = useState<"agreed" | "declined">("agreed");
   const [source, setSource] = useState<Source>("phone");
   // The answer's time stays the same until it is recorded, so a retry is the same request.
-  const [at] = useState(() => new Date().toISOString());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function submit(event: React.FormEvent) {
@@ -444,7 +443,7 @@ function VersionAnswer({
           schema_version: 1,
           kind,
           source,
-          occurred_at: at,
+          occurred_at: new Date().toISOString(),
         }),
       );
       notify("Version answer recorded.");
@@ -506,11 +505,9 @@ function TenderPanel({
     offered ? "accepted" : "withdrawn",
   );
   const [source, setSource] = useState<Source>("phone");
-  const [answeredAt, setAnsweredAt] = useState(() => new Date().toISOString());
   const [basis, setBasis] = useState<"fixed" | "per_mile">("fixed");
   const [amount, setAmount] = useState("");
   const [terms, setTerms] = useState("");
-  const [proposedAt, setProposedAt] = useState(() => new Date().toISOString());
   const { books, book, setBook, accounts } = useBooks(businessId, setError);
   const [expense, setExpense] = useState("");
   const [payable, setPayable] = useState("");
@@ -560,10 +557,9 @@ function TenderPanel({
           schema_version: 1,
           kind,
           source,
-          occurred_at: answeredAt,
+          occurred_at: new Date().toISOString(),
         }),
       );
-      setAnsweredAt(new Date().toISOString());
       notify("Answer recorded.");
     }, "The answer was not recorded");
   };
@@ -578,10 +574,9 @@ function TenderPanel({
           amount,
           terms,
           document_id: null,
-          proposed_at: proposedAt,
+          proposed_at: new Date().toISOString(),
         }),
       );
-      setProposedAt(new Date().toISOString());
       setAmount("");
       setTerms("");
       notify("Version proposed.");
@@ -795,7 +790,6 @@ function TenderForm({
 }) {
   // The record id and the offer time stay the same until the tender is saved.
   const [tender] = useState(() => crypto.randomUUID());
-  const [offeredAt] = useState(() => new Date().toISOString());
   const [carrier, setCarrier] = useState("");
   const [basis, setBasis] = useState<"fixed" | "per_mile">("fixed");
   const [amount, setAmount] = useState("");
@@ -820,7 +814,7 @@ function TenderForm({
           basis,
           amount,
           terms,
-          offered_at: offeredAt,
+          offered_at: new Date().toISOString(),
           expires_at: new Date(expires).toISOString(),
         }),
       );
@@ -1217,9 +1211,19 @@ export function OrderMargin({
             {margin.revenue ? `${margin.revenue}${unit}` : "Not invoiced"}
           </dd>
           <dt>Carrier cost</dt>
-          <dd>{`${margin.carrier_cost}${unit}`}</dd>
+          <dd>
+            {margin.carrier_cost
+              ? `${margin.carrier_cost}${unit}`
+              : "Not added: the amounts are in different currencies"}
+          </dd>
           <dt>Margin</dt>
-          <dd>{margin.margin ? `${margin.margin}${unit}` : "Not known yet"}</dd>
+          <dd>
+            {margin.margin
+              ? `${margin.margin}${unit}`
+              : margin.currencies_differ
+                ? "Not known: the amounts are in different currencies"
+                : "Not known yet"}
+          </dd>
           <dt>Shared tenders</dt>
           <dd>
             {margin.shared.length === 0

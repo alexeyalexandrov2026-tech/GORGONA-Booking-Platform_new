@@ -101,6 +101,25 @@ async def _tendered_only(
     at_stop = any(body.stop_position in (row[0], row[1]) for row in stops)
     if not at_stop or any(q.leg_position not in legs for q in body.quantities):
         raise PermissionDeniedError("Your company records events only on its tendered legs")
+    if not body.quantities:
+        # N8 (RN-03): a stop-level event closes every leg at the stop, so only a stop that
+        # serves this carrier's legs alone is its to arrive at or depart from.
+        shared = await (
+            await conn.execute(
+                "select 1 from gba.transport_legs where trip_id = %s "
+                "and %s in (pickup_stop, delivery_stop) and not position = any(%s) limit 1",
+                (trip_id, body.stop_position, sorted(legs)),
+            )
+        ).fetchone()
+        if shared is not None:
+            raise TransportEventOutOfScopeError(
+                "This stop also serves legs of others; the broker records it",
+                stop_position=body.stop_position,
+            )
+
+
+class TransportEventOutOfScopeError(PermissionDeniedError):
+    code = "TRANSPORT_EVENT_OUT_OF_SCOPE"
 
 
 async def _view(conn: RuntimeConnection, trip_id: UUID) -> TripView:
@@ -128,6 +147,9 @@ async def record_event(
     await require_transport(conn, business)
     if servicer is not None and (party := await carriers.linked_carrier(conn, servicer)):
         await _tendered_only(conn, trip_id, party, body)
+    elif servicer is not None and await carriers.ever_linked(conn, servicer):
+        # N8 (RN-06): unlinking takes a carrier's rights away, never widens them.
+        raise PermissionDeniedError("Your company is no longer linked as this business's carrier")
     scope = IdempotencyScope(business, actor, "transport.event", key)
     fingerprint = _fingerprint(trip_id, body)
     stored = await idempotency.claim(conn, scope, fingerprint)

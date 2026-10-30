@@ -143,6 +143,35 @@ async def linked_carrier(conn: RuntimeConnection, servicer: UUID) -> UUID | None
     return None if row is None else row[0]
 
 
+async def ever_linked(conn: RuntimeConnection, servicer: UUID) -> bool:
+    """N8 (RN-06): a company once linked as a carrier stays a carrier, linked now or not."""
+    row = await (
+        await conn.execute(
+            "select 1 from gba.transport_carrier_companies where carrier_business_id = %s limit 1",
+            (servicer,),
+        )
+    ).fetchone()
+    return row is not None
+
+
+async def carrier_trips(conn: RuntimeConnection, counterparty: UUID | None) -> set[UUID]:
+    """N8 (RN-07): the trips with a leg this carrier accepted and still holds."""
+    if counterparty is None:
+        return set()
+    rows = await (
+        await conn.execute(
+            "select distinct t.trip_id from gba.transport_tenders t "
+            "where t.counterparty_id = %s "
+            "and exists (select 1 from gba.transport_tender_answers a "
+            "where a.tender_id = t.id and a.kind = 'accepted') "
+            "and not exists (select 1 from gba.transport_tender_answers a "
+            "where a.tender_id = t.id and a.kind = 'withdrawn')",
+            (counterparty,),
+        )
+    ).fetchall()
+    return {row[0] for row in rows}
+
+
 async def require_carrier(conn: RuntimeConnection, counterparty: UUID, servicer: UUID) -> None:
     """Refuse a company that is not now linked to this carrier."""
     if await linked_carrier(conn, servicer) != counterparty:

@@ -57,6 +57,20 @@ async def tender(m: Money, trip: UUID, party: UUID, legs: list[int], **changes: 
     return made
 
 
+async def brokered(
+    m: Money, offers: list[tuple[UUID, list[int], dict[str, str]]], *, close: bool = True
+) -> tuple[UUID, UUID, list[UUID]]:
+    """N8 (RN-09): the legs are tendered and accepted before the trip runs, then it runs."""
+    made: list[UUID] = []
+
+    async def before(trip: UUID) -> None:
+        for party, legs, changes in offers:
+            made.append(await tender(m, trip, party, legs, **changes))
+
+    order, trip = await shipped(m, close=close, before=before)
+    return order, trip, made
+
+
 async def second_carrier(m: Money) -> UUID:
     party = await carrier(m.t, "FAKE Second Carrier")
     assert (await m.t.put(f"/carriers/{party}/profile", profile(0))).status_code == 200
@@ -68,9 +82,8 @@ async def second_carrier(m: Money) -> UUID:
 
 async def test_an_accepted_tender_accrues_once_for_the_version_in_force(money: Money) -> None:
     m = money
-    _, trip = await shipped(m)
     party = await _broker(m.t)
-    fixed = await tender(m, trip, party, [2])
+    _, _, (fixed,) = await brokered(m, [(party, [2], {})])
     path = f"/tenders/{fixed}/accrual"
     assert (await m.get(path)).status_code == 404
     body = m.accrual_body()
@@ -98,10 +111,8 @@ async def test_an_accepted_tender_accrues_once_for_the_version_in_force(money: M
     assert code(twice) == "TRANSPORT_ALREADY_ACCRUED"
     assert (await m.get(path)).json() == view
     # A per-mile rate needs the miles: 2.10 x 412.5 = 866.25.
-    _, other_trip = await shipped(m)
-    per_mile = await tender(
-        m, other_trip, await second_carrier(m), [1], basis="per_mile", amount="2.10"
-    )
+    per_mile_terms = {"basis": "per_mile", "amount": "2.10"}
+    _, _, (per_mile,) = await brokered(m, [(await second_carrier(m), [1], per_mile_terms)])
     no_miles = await m.post(f"/tenders/{per_mile}/accrual", m.accrual_body())
     assert no_miles.status_code == 422, no_miles.text
     assert code(no_miles) == "TRANSPORT_MILES_REQUIRED"
@@ -115,22 +126,26 @@ async def test_an_accepted_tender_accrues_once_for_the_version_in_force(money: M
 
 async def test_open_legs_and_closed_tenders_are_refused(money: Money) -> None:
     m = money
-    _, trip = await shipped(m, close=False)
     party = await _broker(m.t)
-    open_leg = await tender(m, trip, party, [2])
+    _, _, (open_leg, first_leg) = await brokered(
+        m, [(party, [2], {}), (party, [1], {})], close=False
+    )
     refused = await m.post(f"/tenders/{open_leg}/accrual", m.accrual_body())
     assert refused.status_code == 409, refused.text
     assert code(refused) == "TRANSPORT_TRIP_NOT_CLOSED"
     # Only the tendered legs count: leg 1 is delivered in full.
-    done = await m.post(f"/tenders/{await tender(m, trip, party, [1])}/accrual", m.accrual_body())
+    done = await m.post(f"/tenders/{first_leg}/accrual", m.accrual_body())
     assert done.status_code == 200, done.text
-    _, closed = await shipped(m)
-    withdrawn = await tender(m, closed, party, [2])
+    withdrawn, declined = uuid7(), uuid7()
+
+    async def closing(trip: UUID) -> None:
+        for made, legs, kind in ((withdrawn, [2], "accepted"), (declined, [1], "declined")):
+            assert (await m.t.put(f"/tenders/{made}", offer(trip, party, legs))).status_code == 200
+            assert (await answer(m.t, made, kind)).status_code == 200
+
+    await shipped(m, before=closing)
     took_back = await answer(m.t, withdrawn, "withdrawn", at="2026-10-26T19:00:00+00:00")
     assert took_back.status_code == 200, took_back.text
-    declined = uuid7()
-    assert (await m.t.put(f"/tenders/{declined}", offer(closed, party, [1]))).status_code == 200
-    assert (await answer(m.t, declined, "declined")).status_code == 200
     for closed_tender in (withdrawn, declined):
         no = await m.post(f"/tenders/{closed_tender}/accrual", m.accrual_body())
         assert no.status_code == 409, no.text
@@ -142,9 +157,8 @@ async def test_open_legs_and_closed_tenders_are_refused(money: Money) -> None:
 
 async def test_the_margin_of_an_order_is_derived_from_its_own_tenders(money: Money) -> None:
     m = money
-    order, trip = await shipped(m)
     party = await _broker(m.t)
-    own = await tender(m, trip, party, [2])
+    order, _, (own,) = await brokered(m, [(party, [2], {})])
     assert (await m.post(f"/tenders/{own}/accrual", m.accrual_body())).status_code == 200
     before = await m.get(f"/orders/{order}/margin")
     assert before.status_code == 200, before.text
@@ -170,13 +184,13 @@ async def test_the_margin_of_an_order_is_derived_from_its_own_tenders(money: Mon
     mixed = uuid7()
     made = await m.t.trip(mixed, INTERSTATE, [leg(pallets, 10, 1, 2), leg(crates, 6, 1, 3)])
     assert made.status_code == 200, made.text
+    both = await tender(m, mixed, party, [1, 2])
     for kind, stop, lines in (
         ("loaded", 1, ((1, 10), (2, 6))),
         ("delivered", 2, ((1, 10),)),
         ("delivered", 3, ((2, 6),)),
     ):
         assert (await event(m.t, mixed, kind, stop, quantities=lines)).status_code == 200
-    both = await tender(m, mixed, party, [1, 2])
     assert (await m.post(f"/tenders/{both}/accrual", m.accrual_body())).status_code == 200
     split = (await m.get(f"/orders/{first}/margin")).json()
     assert (split["carrier_cost"], split["tenders"]) == ("0.00", [])
@@ -203,9 +217,8 @@ async def test_carrier_pay_is_a_broker_task_only(
     manager_b: FakeUser,
 ) -> None:
     m = money
-    order, trip = await shipped(m)
     party = await _broker(m.t)
-    made = await tender(m, trip, party, [2])
+    order, _, (made,) = await brokered(m, [(party, [2], {})])
     other = idp.bearer(manager_b.subject, email=manager_b.email)
     refused = await m.post(
         f"/tenders/{made}/accrual",

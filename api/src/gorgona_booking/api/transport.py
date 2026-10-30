@@ -107,6 +107,7 @@ async def get_orders(
     business_id: UUID, request: Request, principal: CurrentPrincipal, after: UUID | None = None
 ) -> OrderList:
     async with _access(request, principal, business_id) as access:
+        await _not_a_carrier(access)
         return await service.list_orders(access.conn, after)
 
 
@@ -115,6 +116,7 @@ async def get_order(
     business_id: UUID, order_id: UUID, request: Request, principal: CurrentPrincipal
 ) -> OrderView:
     async with _access(request, principal, business_id) as access:
+        await _not_a_carrier(access)
         view = await service.load_order(access.conn, order_id)
         if view is None:
             raise NotFoundError("Order not found", order_id=str(order_id))
@@ -148,6 +150,14 @@ async def get_trips(
     business_id: UUID, request: Request, principal: CurrentPrincipal, after: UUID | None = None
 ) -> TripList:
     async with _access(request, principal, business_id) as access:
+        carrier, party = await _carrier_of(access)
+        if carrier:
+            # N8 (RN-07): a carrier's company sees only the trips it carries a leg of.
+            seen = [
+                await service.load_trip(access.conn, trip)
+                for trip in sorted(await carriers.carrier_trips(access.conn, party))
+            ]
+            return TripList(items=[view for view in seen if view is not None])
         return await service.list_trips(access.conn, after)
 
 
@@ -156,7 +166,9 @@ async def get_trip(
     business_id: UUID, trip_id: UUID, request: Request, principal: CurrentPrincipal
 ) -> TripView:
     async with _access(request, principal, business_id) as access:
-        view = await service.load_trip(access.conn, trip_id)
+        carrier, party = await _carrier_of(access)
+        hidden = carrier and trip_id not in await carriers.carrier_trips(access.conn, party)
+        view = None if hidden else await service.load_trip(access.conn, trip_id)
         if view is None:
             raise NotFoundError("Trip not found", trip_id=str(trip_id))
         return view
@@ -189,6 +201,7 @@ async def get_drivers(
     business_id: UUID, request: Request, principal: CurrentPrincipal, after: UUID | None = None
 ) -> DriverList:
     async with _access(request, principal, business_id) as access:
+        await _not_a_carrier(access)
         return await fleet.list_drivers(access.conn, after)
 
 
@@ -197,6 +210,7 @@ async def get_driver(
     business_id: UUID, driver_id: UUID, request: Request, principal: CurrentPrincipal
 ) -> DriverView:
     async with _access(request, principal, business_id) as access:
+        await _not_a_carrier(access)
         view = await fleet.load_driver(access.conn, driver_id)
         if view is None:
             raise NotFoundError("Driver not found", driver_id=str(driver_id))
@@ -233,6 +247,7 @@ async def get_vehicles(
     business_id: UUID, request: Request, principal: CurrentPrincipal, after: UUID | None = None
 ) -> VehicleList:
     async with _access(request, principal, business_id) as access:
+        await _not_a_carrier(access)
         return await fleet.list_vehicles(access.conn, after)
 
 
@@ -241,6 +256,7 @@ async def get_vehicle(
     business_id: UUID, vehicle_id: UUID, request: Request, principal: CurrentPrincipal
 ) -> VehicleView:
     async with _access(request, principal, business_id) as access:
+        await _not_a_carrier(access)
         view = await fleet.load_vehicle(access.conn, vehicle_id)
         if view is None:
             raise NotFoundError("Vehicle not found", vehicle_id=str(vehicle_id))
@@ -645,6 +661,23 @@ async def get_broker_eligibility(
     async with _broker(request, principal, business_id) as access:
         view = await brokerage.load_authority(access.conn)
         return brokerage.authority_eligibility(view, on)
+
+
+async def _carrier_of(access: TenantAccess) -> tuple[bool, UUID | None]:
+    """N8 (RN-07): whether the acting company is a carrier, and the carrier it is linked as now."""
+    servicer = _servicer(access)
+    if servicer is None:
+        return False, None
+    party = await carriers.linked_carrier(access.conn, servicer)
+    if party is None and not await carriers.ever_linked(access.conn, servicer):
+        return False, None
+    return True, party
+
+
+async def _not_a_carrier(access: TenantAccess) -> None:
+    """N8 (RN-07): the broker's orders and fleet are never a carrier's to read."""
+    if (await _carrier_of(access))[0]:
+        raise PermissionDeniedError("A carrier's company reads only its own trips")
 
 
 def _servicer(access: TenantAccess) -> UUID | None:

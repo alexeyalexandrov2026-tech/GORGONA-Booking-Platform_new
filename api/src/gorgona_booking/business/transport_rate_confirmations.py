@@ -19,9 +19,16 @@ from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import IdempotencyKeyReusedError
 from gorgona_booking.business import transport_brokerage as brokerage
 from gorgona_booking.business import transport_carrier_companies as carriers
+from gorgona_booking.business import transport_tenders as tenders
 from gorgona_booking.business.module_gate import TRANSPORT_MODULE, module_writes
 from gorgona_booking.business.transport import require_transport
-from gorgona_booking.business.transport_money import _AMOUNT, _exact, _text, _units
+from gorgona_booking.business.transport_money import (
+    _AMOUNT,
+    TransportAlreadyAccruedError,
+    _exact,
+    _text,
+    _units,
+)
 from gorgona_booking.business.transport_tenders import (
     TransportTenderClosedError,
     TransportTenderTimeError,
@@ -58,11 +65,13 @@ class ProposalInput(_Strict):
 
 
 class CarrierConfirmationAnswerInput(_Strict):
-    """N4: the carrier's own answer to a version, given in its company through a grant."""
+    """N4: the carrier's own answer to a version, given in its company through a grant.
+
+    N8 (RN-05): it is recorded at the server's time; the carrier never states the time.
+    """
 
     schema_version: Literal[1]
     kind: Literal["agreed", "declined"]
-    occurred_at: AwareDatetime
 
 
 class ConfirmationAnswerInput(_Strict):
@@ -138,6 +147,7 @@ async def load_confirmation(conn: RuntimeConnection, tender: UUID) -> RateConfir
 
 _ERRORS: dict[str, type[DomainError]] = {
     "transport_rate_confirmations_state_check": TransportTenderClosedError,
+    "transport_tenders_accrued_check": TransportAlreadyAccruedError,
     "transport_rate_confirmations_revision_check": TransportRateConfirmationConflictError,
     "transport_rate_confirmations_time_check": TransportTenderTimeError,
     "transport_rate_confirmation_answers_revision_check": TransportRateConfirmationConflictError,
@@ -188,6 +198,9 @@ async def propose(
         _exact(body.amount, await _units(conn, offered.currency))
     try:
         async with module_writes(TRANSPORT_MODULE), conn.transaction():
+            # N8 (RN-04): the accrual and a new version wait for each other on the trip.
+            await tenders._lock(conn, offered.trip_id)
+            await tenders._not_accrued(conn, tender)
             await conn.execute(
                 "insert into gba.transport_rate_confirmations (tenant_id, tender_id, revision, "
                 "basis, amount, terms, document_id, proposed_at, created_by) "
@@ -255,6 +268,20 @@ async def answer(
         await carriers.require_carrier(conn, tendered.counterparty_id, servicer)
     try:
         async with module_writes(TRANSPORT_MODULE), conn.transaction():
+            tendered = await tenders.load_tender(conn, tender)
+            assert tendered is not None  # noqa: S101 - a version exists only for a tender
+            await tenders._lock(conn, tendered.trip_id)
+            # N8 (RN-04): a withdrawn or paid tender agrees no further version.
+            await tenders._not_accrued(conn, tender)
+            tendered = await tenders.load_tender(conn, tender)
+            assert tendered is not None  # noqa: S101 - tenders are insert-only
+            if tendered.state != "accepted":
+                raise TransportTenderClosedError("The tender is closed", tender_id=str(tender))
+            occurred = (
+                body.occurred_at
+                if isinstance(body, ConfirmationAnswerInput)
+                else await tenders.server_time(conn)
+            )
             await conn.execute(
                 "insert into gba.transport_rate_confirmation_answers (tenant_id, tender_id, "
                 "revision, kind, source, servicer_business_id, occurred_at, created_by) "
@@ -266,7 +293,7 @@ async def answer(
                     body.kind,
                     source,
                     servicer,
-                    body.occurred_at,
+                    occurred,
                     user_id,
                 ),
             )

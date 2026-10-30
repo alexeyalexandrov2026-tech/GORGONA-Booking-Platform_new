@@ -80,6 +80,7 @@ const margin = {
   margin: "600.00",
   tenders: [{ tender_id: uuid(5), amount: "900.00" }],
   shared: [],
+  currencies_differ: false,
 };
 
 test("brokerage responses are strict", () => {
