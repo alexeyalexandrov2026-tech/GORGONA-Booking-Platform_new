@@ -17,6 +17,13 @@ class LiveServerStoppedError(AssertionError):
     """D-01: the server thread died while the test was still using it."""
 
 
+# Playwright's request client (page.request, route.fetch) pools sockets with no idle limit
+# (http.Agent keepAlive: true). With uvicorn's default 5 s limit the server could close a socket
+# at the moment the client reused it, and the request failed with "read ECONNRESET". An idle
+# connection now outlives any test; stopping the server still closes it.
+KEEP_ALIVE_SECONDS = 3600
+
+
 def free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -34,6 +41,7 @@ def live_server(app: FastAPI, port: int) -> Iterator[str]:
             log_level="error",
             access_log=False,
             proxy_headers=False,
+            timeout_keep_alive=KEEP_ALIVE_SECONDS,
         )
     )
 
