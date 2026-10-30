@@ -40,15 +40,15 @@ PostgreSQL 18 cluster per run, gates, a source-bound record, code and docs commi
 7. Without the module enabled every write is `MODULE_DISABLED` and writes nothing; reads continue. With the
    module not accepted every write is `MODULE_NOT_READY`.
 
-## Acceptance of O1 (all NOT TESTED)
+## Acceptance of O1 — PASS 2026-10-30 (code `b4bff00`, [evidence](evidence/2026-10-30-o1-estimates/CHECKS.json))
 
-| id | Requirement |
-|---|---|
-| O1-01 | The module is listed, `implemented`, not enableable, depends on counterparties and finance documents; writes refused `MODULE_NOT_READY`; reads empty |
-| O1-02 | A project is saved and replaced with its revision; stale revision, taken number, unknown customer, unknown time zone refused |
-| O1-03 | Estimate versions are insert-only: v1, then v2 on base 1; a stale base refused; old versions unchanged; totals derived half up |
-| O1-04 | A proposal is stamped once on the latest version; an older version cannot be proposed; a later version may follow; direct SQL updates and deletes of lines and versions refused |
-| O1-05 | The currency is fixed once an estimate exists |
-| O1-06 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch's projects |
-| O1-07 | Two racing saves on one base leave one version and one `CONSTRUCTION_ESTIMATE_STALE` after an observed `pg_locks` wait |
-| O1-08 | 0086 -> 0087 keeps every row; the full suite stays green |
+| id | Requirement | Result |
+|---|---|---|
+| O1-01 | The module is listed, `implemented`, not enableable, depends on counterparties and finance documents; writes refused `MODULE_NOT_READY`; reads empty | PASS |
+| O1-02 | A project is saved and replaced with its revision; stale revision, taken number, unknown customer, unknown time zone refused | PASS |
+| O1-03 | Estimate versions are insert-only: v1, then v2 on base 1; a stale base refused; old versions unchanged; totals derived half up | PASS |
+| O1-04 | A proposal is stamped once on the latest version; an older version cannot be proposed; a later version may follow; direct SQL updates and deletes of lines and versions refused | PASS |
+| O1-05 | The currency is fixed once an estimate exists | PASS |
+| O1-06 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch's projects | PASS |
+| O1-07 | Two racing saves on one base leave one version and one `CONSTRUCTION_ESTIMATE_STALE` after an observed `pg_locks` wait | PASS |
+| O1-08 | 0086 -> 0087 keeps every row; the full suite stays green | PASS |
