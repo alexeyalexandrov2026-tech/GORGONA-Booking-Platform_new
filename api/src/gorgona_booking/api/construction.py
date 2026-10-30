@@ -12,6 +12,7 @@ from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import construction as service
+from gorgona_booking.business import construction_contracts as contracts
 from gorgona_booking.business.construction import (
     EstimateInput,
     EstimateList,
@@ -21,12 +22,21 @@ from gorgona_booking.business.construction import (
     ProjectView,
     ProposalInput,
 )
+from gorgona_booking.business.construction_contracts import (
+    ChangeOrderInput,
+    ChangeOrderList,
+    ChangeOrderView,
+    ContractInput,
+    ContractView,
+    DecisionInput,
+)
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
 from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenant
 
 router = APIRouter(prefix="/v1/businesses/{business_id}/construction", tags=["construction"])
 Version = Annotated[int, Path(ge=1, le=100_000)]
+Number = Annotated[int, Path(ge=1, le=100_000)]
 
 
 @asynccontextmanager
@@ -151,6 +161,113 @@ async def post_proposal(
             business_id,
             project_id,
             version,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/contract")
+async def get_contract(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> ContractView:
+    async with _access(request, principal, business_id) as access:
+        view = await contracts.load_contract(access.conn, project_id)
+        if view is None:
+            raise NotFoundError("Contract not found", project_id=str(project_id))
+        return view
+
+
+@router.post("/projects/{project_id}/contract")
+async def post_contract(
+    business_id: UUID,
+    project_id: UUID,
+    body: ContractInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ContractView:
+    """O2 decision 1: the customer's acceptance of the latest proposal, the original contract."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_APPROVE) as access:
+        return await contracts.accept(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/change-orders")
+async def get_change_orders(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> ChangeOrderList:
+    async with _access(request, principal, business_id) as access:
+        return await contracts.list_change_orders(access.conn, project_id)
+
+
+@router.get("/projects/{project_id}/change-orders/{number}")
+async def get_change_order(
+    business_id: UUID,
+    project_id: UUID,
+    number: Number,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ChangeOrderView:
+    async with _access(request, principal, business_id) as access:
+        view = await contracts.load_change_order(access.conn, project_id, number)
+        if view is None:
+            raise NotFoundError("Change order not found", project_id=str(project_id), number=number)
+        return view
+
+
+@router.post("/projects/{project_id}/change-orders")
+async def post_change_order(
+    business_id: UUID,
+    project_id: UUID,
+    body: ChangeOrderInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ChangeOrderView:
+    """O2 decision 3: the next change order, proposed."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await contracts.propose_change(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/projects/{project_id}/change-orders/{number}/decision")
+async def post_change_order_decision(
+    business_id: UUID,
+    project_id: UUID,
+    number: Number,
+    body: DecisionInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ChangeOrderView:
+    """O2 decision 4: the customer's answer needs `construction.approve`; a withdrawal `manage`."""
+    permission = (
+        Permission.CONSTRUCTION_MANAGE
+        if body.decision == "withdrawn"
+        else Permission.CONSTRUCTION_APPROVE
+    )
+    async with _access(request, principal, business_id, permission) as access:
+        return await contracts.decide(
+            access.conn,
+            business_id,
+            project_id,
+            number,
             user_id=principal.user_id,
             actor=principal.actor,
             key=idempotency_key,

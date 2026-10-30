@@ -52,11 +52,19 @@ class ConstructionEstimateStaleError(ConflictError):
     code = "CONSTRUCTION_ESTIMATE_STALE"
 
 
-class _Strict(BaseModel):
+class ConstructionContractExistsError(ConflictError):
+    code = "CONSTRUCTION_CONTRACT_EXISTS"
+
+
+class ConstructionCustomerFixedError(ConflictError):
+    code = "CONSTRUCTION_CUSTOMER_FIXED"
+
+
+class Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
-class ProjectInput(_Strict):
+class ProjectInput(Strict):
     schema_version: Literal[1]
     expected_revision: int = Field(ge=0, le=2_147_483_647)
     number: str = Field(min_length=1, max_length=64)
@@ -71,7 +79,7 @@ class ProjectInput(_Strict):
 LineKind = Literal["material", "labor", "equipment", "subcontract", "other"]
 
 
-class LineInput(_Strict):
+class LineInput(Strict):
     kind: LineKind
     description: str = Field(min_length=1, max_length=500)
     phase: str = Field(min_length=1, max_length=64)
@@ -82,14 +90,14 @@ class LineInput(_Strict):
     material_id: UUID | None = None
 
 
-class EstimateInput(_Strict):
+class EstimateInput(Strict):
     schema_version: Literal[1]
     based_on: int = Field(ge=0, le=100_000)
     note: str | None = Field(default=None, min_length=1, max_length=1000)
     lines: list[LineInput] = Field(min_length=1, max_length=500)
 
 
-class ProposalInput(_Strict):
+class ProposalInput(Strict):
     schema_version: Literal[1]
 
 
@@ -165,7 +173,7 @@ async def require_construction(conn: RuntimeConnection, business: UUID) -> None:
             await require_module(conn, business, dependency)
 
 
-def _fingerprint(subject: str, body: BaseModel) -> str:
+def request_fingerprint(subject: str, body: BaseModel) -> str:
     return hashlib.sha256(
         json.dumps(
             {"subject": subject, "body": body.model_dump(mode="json")},
@@ -175,7 +183,7 @@ def _fingerprint(subject: str, body: BaseModel) -> str:
     ).hexdigest()
 
 
-async def _latest(conn: RuntimeConnection, project_id: UUID) -> int:
+async def latest_version(conn: RuntimeConnection, project_id: UUID) -> int:
     row = await (
         await conn.execute(
             "select coalesce(max(version), 0) from gba.construction_estimate_versions "
@@ -184,6 +192,15 @@ async def _latest(conn: RuntimeConnection, project_id: UUID) -> int:
         )
     ).fetchone()
     return int(row[0]) if row else 0
+
+
+async def has_contract(conn: RuntimeConnection, project_id: UUID) -> bool:
+    row = await (
+        await conn.execute(
+            "select 1 from gba.construction_contracts where project_id = %s", (project_id,)
+        )
+    ).fetchone()
+    return row is not None
 
 
 async def load_project(conn: RuntimeConnection, project_id: UUID) -> ProjectView | None:
@@ -206,7 +223,7 @@ async def load_project(conn: RuntimeConnection, project_id: UUID) -> ProjectView
         site_address=row[5],
         time_zone=row[6],
         currency=row[7],
-        latest_version=await _latest(conn, project_id),
+        latest_version=await latest_version(conn, project_id),
     )
 
 
@@ -259,7 +276,7 @@ async def save_project(
     """Replace a construction project whole, with its expected revision (decisions 1-2)."""
     await require_construction(conn, business)
     scope = IdempotencyScope(business, actor, "construction.project", key)
-    fingerprint = _fingerprint(str(project_id), body)
+    fingerprint = request_fingerprint(str(project_id), body)
     stored = await idempotency.claim(conn, scope, fingerprint)
     if stored is not None:
         if stored.request_hash != fingerprint:
@@ -274,7 +291,8 @@ async def save_project(
         raise InvalidReferenceError("Unknown branch", field="location_id")
     current = await (
         await conn.execute(
-            "select revision, currency from gba.construction_projects where id = %s for update",
+            "select revision, currency, customer_id from gba.construction_projects "
+            "where id = %s for update",
             (project_id,),
         )
     ).fetchone()
@@ -283,10 +301,20 @@ async def save_project(
         raise ConstructionRevisionConflictError(
             "The project changed since it was read; reload it", revision=found
         )
-    if current is not None and current[1] != body.currency and await _latest(conn, project_id):
+    if (
+        current is not None
+        and current[1] != body.currency
+        and await latest_version(conn, project_id)
+    ):
         raise ConstructionCurrencyFixedError(
             "A project with an estimate keeps its currency", currency=current[1]
         )
+    if (
+        current is not None
+        and current[2] != body.customer_id
+        and await has_contract(conn, project_id)
+    ):
+        raise ConstructionCustomerFixedError("A project with a contract keeps its customer")
     values = (
         body.location_id,
         body.number,
@@ -323,6 +351,10 @@ async def save_project(
             raise ConstructionCurrencyFixedError(
                 "A project with an estimate keeps its currency"
             ) from exc
+        if exc.diag.constraint_name == "construction_projects_customer_check":
+            raise ConstructionCustomerFixedError(
+                "A project with a contract keeps its customer"
+            ) from exc
         if exc.diag.constraint_name == "construction_projects_time_zone_check":
             raise ConstructionTimeZoneError("Unknown time zone") from exc
         raise
@@ -332,7 +364,7 @@ async def save_project(
     return view
 
 
-async def _lock_project(conn: RuntimeConnection, project_id: UUID) -> str:
+async def lock_project(conn: RuntimeConnection, project_id: UUID) -> str:
     row = await (
         await conn.execute(
             "select currency from gba.construction_projects where id = %s for update",
@@ -425,14 +457,18 @@ async def save_estimate(
     """Add the next estimate version on the latest one the client read (decisions 3-4)."""
     await require_construction(conn, business)
     scope = IdempotencyScope(business, actor, "construction.estimate", key)
-    fingerprint = _fingerprint(str(project_id), body)
+    fingerprint = request_fingerprint(str(project_id), body)
     stored = await idempotency.claim(conn, scope, fingerprint)
     if stored is not None:
         if stored.request_hash != fingerprint:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return await _stored_estimate(conn, project_id, stored.body)
-    await _lock_project(conn, project_id)
-    latest = await _latest(conn, project_id)
+    await lock_project(conn, project_id)
+    if await has_contract(conn, project_id):
+        raise ConstructionContractExistsError(
+            "The project has a contract; change its scope with a change order"
+        )
+    latest = await latest_version(conn, project_id)
     if body.based_on != latest:
         raise ConstructionEstimateStaleError(
             "The estimate changed since it was read; reload it", latest_version=latest
@@ -468,6 +504,10 @@ async def save_estimate(
                 )
     except ForeignKeyViolation as exc:
         raise InvalidReferenceError("Unknown material", field="material_id") from exc
+    except CheckViolation as exc:
+        if exc.diag.constraint_name == "construction_estimate_versions_contract_check":
+            raise ConstructionContractExistsError("The project has a contract") from exc
+        raise
     view = await load_estimate(conn, project_id, version)
     assert view is not None  # noqa: S101 - saved above
     await idempotency.complete(conn, scope, 200, {"version": version})
@@ -498,17 +538,17 @@ async def propose(
     """Stamp the latest version as the proposal sent to the customer, once (decision 5)."""
     await require_construction(conn, business)
     scope = IdempotencyScope(business, actor, "construction.proposal", key)
-    fingerprint = _fingerprint(f"{project_id}:{version}", body)
+    fingerprint = request_fingerprint(f"{project_id}:{version}", body)
     stored = await idempotency.claim(conn, scope, fingerprint)
     if stored is not None:
         if stored.request_hash != fingerprint:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return await _stored_estimate(conn, project_id, stored.body)
-    await _lock_project(conn, project_id)
+    await lock_project(conn, project_id)
     current = await load_estimate(conn, project_id, version)
     if current is None:
         raise NotFoundError("Estimate not found", project_id=str(project_id), version=version)
-    latest = await _latest(conn, project_id)
+    latest = await latest_version(conn, project_id)
     if version != latest:
         raise ConstructionEstimateStaleError(
             "Only the latest estimate version can be proposed", latest_version=latest

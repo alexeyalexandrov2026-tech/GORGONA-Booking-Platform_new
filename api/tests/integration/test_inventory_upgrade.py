@@ -106,6 +106,11 @@ K_TABLES = {
     "construction_projects",
     "construction_estimate_versions",
     "construction_estimate_lines",
+    # O2 (0088): the contract and change orders.
+    "construction_contracts",
+    "construction_change_orders",
+    "construction_change_order_lines",
+    "construction_change_order_decisions",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
