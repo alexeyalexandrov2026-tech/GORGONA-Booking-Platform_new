@@ -58,15 +58,15 @@ The customer's own answer on the platform (decision 11, with a grant); a signed 
 version; removing scope that an earlier change order added (a later change order removes only
 original-contract scope); retainage and warranty terms on the contract (O5, O6); budget and costs (O3).
 
-## Acceptance of O2 (all NOT TESTED)
+## Acceptance of O2 — PASS 2026-10-30 (code `5ab928f`, [evidence](evidence/2026-10-30-o2-contract/CHECKS.json))
 
-| id | Requirement |
-|---|---|
-| O2-01 | Only the latest proposed version becomes the contract; never-proposed and older versions refused; one contract per project; the contract records signatory, source and who recorded it |
-| O2-02 | After the contract no estimate version is added and the customer cannot change; direct SQL updates and deletes of contracts, change orders, lines and decisions refused |
-| O2-03 | Change orders need a contract, are numbered in sequence, insert-only; remove names a contract line and never exceeds its remaining quantity |
-| O2-04 | The current contract sum = original + approved changes (add, remove, reprice); rejected, withdrawn and proposed change orders do not count; the original never changes |
-| O2-05 | A decided change order refuses another decision; approve and reject need `construction.approve` |
-| O2-06 | Two racing approvals, and an approval racing a withdrawal, leave one decision after an observed `pg_locks` wait; two racing acceptances leave one contract |
-| O2-07 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch |
-| O2-08 | 0087 -> 0088 keeps every row; the full suite stays green |
+| id | Requirement | Result |
+|---|---|---|
+| O2-01 | Only the latest proposed version becomes the contract; never-proposed and older versions refused; one contract per project; the contract records signatory, source and who recorded it | PASS |
+| O2-02 | After the contract no estimate version is added and the customer cannot change; direct SQL updates and deletes of contracts, change orders, lines and decisions refused | PASS |
+| O2-03 | Change orders need a contract, are numbered in sequence, insert-only; remove names a contract line and never exceeds its remaining quantity | PASS |
+| O2-04 | The current contract sum = original + approved changes (add, remove, reprice); rejected, withdrawn and proposed change orders do not count; the original never changes | PASS |
+| O2-05 | A decided change order refuses another decision; approve and reject need `construction.approve` | PASS |
+| O2-06 | Two racing approvals, and an approval racing a withdrawal, leave one decision after an observed `pg_locks` wait; two racing acceptances leave one contract | PASS |
+| O2-07 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch | PASS |
+| O2-08 | 0087 -> 0088 keeps every row; the full suite stays green | PASS |
