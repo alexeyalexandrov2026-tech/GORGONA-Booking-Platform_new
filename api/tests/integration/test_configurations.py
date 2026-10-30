@@ -132,7 +132,7 @@ async def test_lifecycle_keeps_every_version_and_replays(
         "finance_documents",
         "inventory",
     ]
-    assert len(catalog["modules"]) == 20
+    assert len(catalog["modules"]) == 21
     registry = (
         await config.client.get(
             f"/v1/businesses/{a}/readiness-registry", headers=config.auth(owner_a)
@@ -156,7 +156,7 @@ async def test_lifecycle_keeps_every_version_and_replays(
 
     validated = (await config.step(owner_a, a, 1, "validate", 1)).json()
     assert (validated["state"], validated["revision"]) == ("validated", 2)
-    assert validated["validation"] == {"registry_version": 4, "problems": [], "warnings": []}
+    assert validated["validation"] == {"registry_version": 5, "problems": [], "warnings": []}
     publish_key = str(uuid7())
     published = (await config.step(owner_a, a, 1, "publish", 2, key=publish_key)).json()
     assert (published["state"], published["revision"]) == ("published", 3)
@@ -665,7 +665,7 @@ async def test_registry_v2_preserves_published_v1_finance_and_admits_h_only_when
         patch.setattr(config_service, "MODULE_REGISTRY_VERSION", 1)
         await config.publish(owner_a, a, 0, [BOOKING, "finance", "counterparties"])
     current = (await config.get(owner_a, a)).json()
-    assert current["registry_version"] == 4
+    assert current["registry_version"] == 5
     assert current["published"]["registry_version"] == 1
     assert "finance" in current["effective_module_ids"]
     assert "finance_documents" not in current["effective_module_ids"]
@@ -698,7 +698,7 @@ async def test_registry_v2_preserves_published_v1_finance_and_admits_h_only_when
     published = await config.step(owner_a, a, 2, "publish", 2)
     assert published.status_code == 200, published.text
     final = (await config.get(owner_a, a)).json()
-    assert final["published"]["registry_version"] == 4
+    assert final["published"]["registry_version"] == 5
     assert "finance_documents" in final["effective_module_ids"]
 
 

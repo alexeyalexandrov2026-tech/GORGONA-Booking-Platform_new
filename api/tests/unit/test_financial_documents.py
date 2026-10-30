@@ -238,7 +238,7 @@ def test_financial_document_gate_follows_fin03_and_requires_explicit_configurati
     )
     from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness
 
-    assert MODULE_REGISTRY_VERSION == 4
+    assert MODULE_REGISTRY_VERSION == 5
     scenario = next(item for item in SCENARIOS if item.id == "FIN-03")
     financial = MODULES_BY_ID["finance_documents"]
     assert scenario.status == Readiness.TECHNICALLY_VERIFIED

@@ -101,6 +101,10 @@ K_TABLES = {
     "transport_rate_confirmation_answers",
     "transport_carrier_companies",
     "transport_tender_accruals",
+    # O1 (0087): construction projects and estimates.
+    "construction_projects",
+    "construction_estimate_versions",
+    "construction_estimate_lines",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
