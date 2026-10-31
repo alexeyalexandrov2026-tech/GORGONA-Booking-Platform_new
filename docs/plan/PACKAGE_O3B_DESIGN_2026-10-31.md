@@ -44,8 +44,9 @@ over-budget per line, per phase and in total, next to O3a's committed.
 3. **Each fact is linked once.** Across the whole company a fact has at most one link that is not reversed.
    Every link carries `attempt` = 1 + the number of earlier links of the same fact, and
    `(tenant, fact, attempt)` is unique; a new link needs every earlier link of that fact reversed. Two racing
-   links of one fact (same or different projects) leave one; the other waits on the first (an observed
-   `pg_locks` wait) and gets `CONSTRUCTION_COST_ALREADY_LINKED`.
+   links of one fact in one project leave one after an observed `pg_locks` wait on the project lock; in two
+   projects the unique `(tenant, fact, attempt)` lets only one commit. The loser gets
+   `CONSTRUCTION_COST_ALREADY_LINKED`.
 4. **A reversal instead of an edit.** A link is never changed. A reversal is one insert-only row per link with
    a reason (1-500); a reversed link no longer counts and its fact may be linked again (to another line or
    project). A second reversal is `CONSTRUCTION_COST_REVERSED`. Facts linked stay as they were: a stock
@@ -71,9 +72,9 @@ one line); facts in another currency; screens (O7).
 
 | id | Requirement | Result |
 |---|---|---|
-| O3b-01 | A write-off line links at its valuation in the project's branch and currency; a receipt line, a zero-valued line, another branch's write-off and another currency are refused | NOT TESTED |
-| O3b-02 | A line of an issued payable invoice or manual accrual links at its amount; a draft, a receivable, a credit note and another currency are refused | NOT TESTED |
-| O3b-03 | An approved time entry links at worked seconds (breaks deducted) × the rate, rounded half up; open, proposed and declined entries and another branch's entries are refused | NOT TESTED |
+| O3b-01 | A write-off line links at its valuation in the project's branch and currency; a receipt line, an unknown line, a project in another branch and another currency are refused | NOT TESTED |
+| O3b-02 | A line of an issued payable invoice or manual accrual links at its amount; a draft, an issued receivable, an unknown line and another currency are refused | NOT TESTED |
+| O3b-03 | An approved time entry links at worked seconds (breaks deducted) × the rate, rounded half up; open, proposed and declined entries and a project in another branch are refused | NOT TESTED |
 | O3b-04 | A fact links once across projects; after its reversal it links again; two racing links of one fact leave one after an observed `pg_locks` wait | NOT TESTED |
 | O3b-05 | A link is reversed once (racing reversals leave one); direct SQL updates and deletes are refused; a forged amount, currency or attempt is refused by the database | NOT TESTED |
 | O3b-06 | Actual, remaining and over-budget per line, phase and total; reversed links do not count; budget, committed and actual reconcile; an overrun is not blocked | NOT TESTED |
