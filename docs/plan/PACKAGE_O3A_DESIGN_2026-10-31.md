@@ -62,15 +62,15 @@ Actual costs and their links (O3b); phase dates and dependencies (O4); commitmen
 commitment is always in the project currency); a commitment as a FIN-03 document (the payable it produces is an
 actual cost linked in O3b); retention on subcontracts (O5, O6).
 
-## Acceptance of O3a — NOT TESTED
+## Acceptance of O3a — PASS 2026-10-31 (code `447ff4f`, [evidence](evidence/2026-10-31-o3a-budget/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| O3a-01 | No budget without a contract; the budget has the contract lines and the approved added lines, current quantity and cost after approved removals; the budget total equals the contract's current cost; unapproved change orders do not count | NOT TESTED |
-| O3a-02 | Phases are the line phase labels with their sums, in first-appearance order | NOT TESTED |
-| O3a-03 | A commitment needs a contract, a counterparty with the role of its kind, numbered in sequence; kind and counterparty fixed | NOT TESTED |
-| O3a-04 | Versions are insert-only, need the read revision; cancelled is final; lines name a budget line once; direct SQL updates and deletes refused, unknown budget lines refused by the database | NOT TESTED |
-| O3a-05 | Committed = latest version of open commitments; uncommitted and over-committed shown per line and phase; an overrun is not blocked | NOT TESTED |
-| O3a-06 | Two racing revisions leave one after an observed `pg_locks` wait; two racing creations get 1 and 2 | NOT TESTED |
-| O3a-07 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch; `construction.manage` needed for writes | NOT TESTED |
-| O3a-08 | 0088 -> 0089 keeps every row; the full suite stays green | NOT TESTED |
+| O3a-01 | No budget without a contract; the budget has the contract lines and the approved added lines, current quantity and cost after approved removals; the budget total equals the contract's current cost; unapproved change orders do not count | PASS |
+| O3a-02 | Phases are the line phase labels with their sums, in first-appearance order | PASS |
+| O3a-03 | A commitment needs a contract, a counterparty with the role of its kind, numbered in sequence; kind and counterparty fixed | PASS |
+| O3a-04 | Versions are insert-only, need the read revision; cancelled is final; lines name a budget line once; direct SQL updates and deletes refused, unknown budget lines refused by the database | PASS |
+| O3a-05 | Committed = latest version of open commitments; uncommitted and over-committed shown per line and phase; an overrun is not blocked | PASS |
+| O3a-06 | Two racing revisions leave one after an observed `pg_locks` wait; two racing creations get 1 and 2 | PASS |
+| O3a-07 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch; `construction.manage` needed for writes | PASS |
+| O3a-08 | 0088 -> 0089 keeps every row; the full suite stays green | PASS |
