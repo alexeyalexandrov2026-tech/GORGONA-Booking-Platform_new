@@ -1,4 +1,4 @@
-"""Construction API (ADR-0035): projects and estimate versions; nothing is delegated in O1."""
+"""Construction API (ADR-0035): projects, estimates, the contract, the budget and commitments."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -12,6 +12,7 @@ from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import construction as service
+from gorgona_booking.business import construction_budget as budget
 from gorgona_booking.business import construction_contracts as contracts
 from gorgona_booking.business.construction import (
     EstimateInput,
@@ -21,6 +22,13 @@ from gorgona_booking.business.construction import (
     ProjectList,
     ProjectView,
     ProposalInput,
+)
+from gorgona_booking.business.construction_budget import (
+    BudgetView,
+    CommitmentInput,
+    CommitmentList,
+    CommitmentView,
+    RevisionInput,
 )
 from gorgona_booking.business.construction_contracts import (
     ChangeOrderInput,
@@ -264,6 +272,84 @@ async def post_change_order_decision(
     )
     async with _access(request, principal, business_id, permission) as access:
         return await contracts.decide(
+            access.conn,
+            business_id,
+            project_id,
+            number,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/budget")
+async def get_budget(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> BudgetView:
+    """O3a decision 1: the contract's cost side per line and phase, with what is committed."""
+    async with _access(request, principal, business_id) as access:
+        return await budget.load_budget(access.conn, project_id)
+
+
+@router.get("/projects/{project_id}/commitments")
+async def get_commitments(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> CommitmentList:
+    async with _access(request, principal, business_id) as access:
+        return await budget.list_commitments(access.conn, project_id)
+
+
+@router.get("/projects/{project_id}/commitments/{number}")
+async def get_commitment(
+    business_id: UUID,
+    project_id: UUID,
+    number: Number,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> CommitmentView:
+    async with _access(request, principal, business_id) as access:
+        view = await budget.load_commitment(access.conn, project_id, number)
+        if view is None:
+            raise NotFoundError("Commitment not found", project_id=str(project_id), number=number)
+        return view
+
+
+@router.post("/projects/{project_id}/commitments")
+async def post_commitment(
+    business_id: UUID,
+    project_id: UUID,
+    body: CommitmentInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> CommitmentView:
+    """O3a decisions 3-4: the next subcontract or supplier order, version 1."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await budget.create(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.put("/projects/{project_id}/commitments/{number}")
+async def put_commitment(
+    business_id: UUID,
+    project_id: UUID,
+    number: Number,
+    body: RevisionInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> CommitmentView:
+    """O3a decision 4: the next version, on the revision the client read; cancelled is final."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await budget.revise(
             access.conn,
             business_id,
             project_id,
