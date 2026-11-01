@@ -48,6 +48,12 @@ class ConstructionScopeExceededError(ConflictError):
     code = "CONSTRUCTION_SCOPE_EXCEEDED"
 
 
+class ConstructionBelowCompletedError(ConflictError):
+    """O4a decision 8: an approved removal never leaves a contract line below the work done."""
+
+    code = "CONSTRUCTION_BELOW_COMPLETED"
+
+
 class ConstructionChangeOrderDecidedError(ConflictError):
     code = "CONSTRUCTION_CHANGE_ORDER_DECIDED"
 
@@ -535,6 +541,10 @@ async def decide(
         if exc.diag.constraint_name == "construction_change_order_decisions_scope_check":
             raise ConstructionScopeExceededError(
                 "Approving it would remove more than the contract line holds"
+            ) from exc
+        if exc.diag.constraint_name == "construction_change_order_decisions_completed_check":
+            raise ConstructionBelowCompletedError(
+                "Approving it would leave a contract line below the work already done"
             ) from exc
         raise
     view = await load_change_order(conn, project_id, number)

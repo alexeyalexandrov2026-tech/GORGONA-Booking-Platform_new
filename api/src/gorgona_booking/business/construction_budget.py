@@ -175,8 +175,12 @@ async def _project_currency(conn: RuntimeConnection, project_id: UUID) -> str:
     return str(row[0])
 
 
-async def _budget_lines(conn: RuntimeConnection, project_id: UUID) -> list[dict[str, Any]]:
-    """The contract lines after approved removals, then the added lines of approved changes (1)."""
+async def budget_lines(conn: RuntimeConnection, project_id: UUID) -> list[dict[str, Any]]:
+    """The contract lines after approved removals, then the added lines of approved changes (1).
+
+    Each line also carries its unit price and contract value as O2 sums the contract: the original
+    line amount less the amounts of its approved removals, each rounded half up (O4a decision 9).
+    """
     contract = await (
         await conn.execute(
             "select version from gba.construction_contracts where project_id = %s", (project_id,)
@@ -197,13 +201,15 @@ async def _budget_lines(conn: RuntimeConnection, project_id: UUID) -> list[dict[
             "quantity": item.quantity,
             "unit_cost_minor": item.unit_cost_minor,
             "budget_minor": item.cost_minor,
+            "unit_price_minor": item.unit_price_minor,
+            "contract_minor": item.price_minor,
         }
         for item in original.lines
     }
     approved = await (
         await conn.execute(
             "select o.number, o.position, o.action, o.contract_position, o.kind, o.description, "
-            "o.phase, o.quantity, o.unit, o.unit_cost_minor "
+            "o.phase, o.quantity, o.unit, o.unit_cost_minor, o.unit_price_minor "
             "from gba.construction_change_order_lines o "
             "join gba.construction_change_order_decisions d on d.tenant_id = o.tenant_id "
             "and d.project_id = o.project_id and d.number = o.number "
@@ -216,6 +222,7 @@ async def _budget_lines(conn: RuntimeConnection, project_id: UUID) -> list[dict[
             base = lines[(None, row[3])]
             base["quantity"] -= row[7]
             base["budget_minor"] -= amount(row[7], base["unit_cost_minor"])
+            base["contract_minor"] -= amount(row[7], base["unit_price_minor"])
             continue
         lines[(row[0], row[1])] = {
             "change_order": row[0],
@@ -227,6 +234,8 @@ async def _budget_lines(conn: RuntimeConnection, project_id: UUID) -> list[dict[
             "quantity": row[7],
             "unit_cost_minor": row[9],
             "budget_minor": amount(row[7], row[9]),
+            "unit_price_minor": row[10],
+            "contract_minor": amount(row[7], row[10]),
         }
     return list(lines.values())
 
@@ -255,7 +264,7 @@ async def load_budget(conn: RuntimeConnection, project_id: UUID) -> BudgetView:
     spent = await actual_by_line(conn, project_id)
     lines: list[BudgetLineView] = []
     phases: dict[str, list[int]] = {}
-    for item in await _budget_lines(conn, project_id):
+    for item in await budget_lines(conn, project_id):
         key = (item["change_order"], item["position"])
         done, used = committed.get(key, 0), spent.get(key, 0)
         budget = int(item["budget_minor"])

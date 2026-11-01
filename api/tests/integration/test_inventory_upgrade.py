@@ -118,6 +118,14 @@ K_TABLES = {
     # O3b (0090): actual cost links.
     "construction_cost_links",
     "construction_cost_reversals",
+    # O4a (0091): schedule, daily reports and completed quantities.
+    "construction_schedule_versions",
+    "construction_schedule_phases",
+    "construction_schedule_dependencies",
+    "construction_daily_reports",
+    "construction_daily_report_crew",
+    "construction_daily_report_photos",
+    "construction_progress_measurements",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

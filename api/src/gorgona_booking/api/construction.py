@@ -1,11 +1,12 @@
-"""Construction API (ADR-0035): projects, estimates, contract, budget, commitments and costs."""
+"""Construction API (ADR-0035): projects, estimates, contract, budget, commitments, costs and
+execution (schedule, daily reports, completed quantities)."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Path, Request
+from fastapi import APIRouter, Path, Query, Request
 
 from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
@@ -15,6 +16,9 @@ from gorgona_booking.business import construction as service
 from gorgona_booking.business import construction_budget as budget
 from gorgona_booking.business import construction_contracts as contracts
 from gorgona_booking.business import construction_costs as costs
+from gorgona_booking.business import construction_daily_reports as reports
+from gorgona_booking.business import construction_progress as progress
+from gorgona_booking.business import construction_schedule as schedule
 from gorgona_booking.business.construction import (
     EstimateInput,
     EstimateList,
@@ -45,6 +49,19 @@ from gorgona_booking.business.construction_costs import (
     CostLinkView,
     ReversalInput,
 )
+from gorgona_booking.business.construction_daily_reports import (
+    DailyReportInput,
+    DailyReportList,
+    DailyReportView,
+)
+from gorgona_booking.business.construction_progress import (
+    MeasurementInput,
+    MeasurementList,
+    MeasurementView,
+    ProgressView,
+    SiteDate,
+)
+from gorgona_booking.business.construction_schedule import ScheduleInput, ScheduleView
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
 from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenant
@@ -53,6 +70,8 @@ router = APIRouter(prefix="/v1/businesses/{business_id}/construction", tags=["co
 Version = Annotated[int, Path(ge=1, le=100_000)]
 Number = Annotated[int, Path(ge=1, le=100_000)]
 CostNumber = Annotated[int, Path(ge=1, le=1_000_000)]
+ScheduleRevision = Annotated[int | None, Query(ge=1, le=100_000)]
+ReportRevision = Annotated[int | None, Query(ge=1, le=1000)]
 
 
 @asynccontextmanager
@@ -431,6 +450,130 @@ async def post_cost_reversal(
             business_id,
             project_id,
             number,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/schedule")
+async def get_schedule(
+    business_id: UUID,
+    project_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    revision: ScheduleRevision = None,
+) -> ScheduleView:
+    """O4a decision 4: a version of the schedule (the latest by default) with what it derives."""
+    async with _access(request, principal, business_id) as access:
+        return await schedule.load_schedule(access.conn, project_id, revision)
+
+
+@router.put("/projects/{project_id}/schedule")
+async def put_schedule(
+    business_id: UUID,
+    project_id: UUID,
+    body: ScheduleInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ScheduleView:
+    """O4a decisions 2-3: the next version, on the version the client read."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await schedule.put_schedule(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/daily-reports")
+async def get_daily_reports(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> DailyReportList:
+    async with _access(request, principal, business_id) as access:
+        return await reports.list_reports(access.conn, project_id)
+
+
+@router.get("/projects/{project_id}/daily-reports/{report_date}")
+async def get_daily_report(
+    business_id: UUID,
+    project_id: UUID,
+    report_date: SiteDate,
+    request: Request,
+    principal: CurrentPrincipal,
+    revision: ReportRevision = None,
+) -> DailyReportView:
+    async with _access(request, principal, business_id) as access:
+        view = await reports.load_report(access.conn, project_id, report_date, revision)
+        if view is None:
+            raise NotFoundError(
+                "Daily report not found", project_id=str(project_id), date=str(report_date)
+            )
+        return view
+
+
+@router.put("/projects/{project_id}/daily-reports/{report_date}")
+async def put_daily_report(
+    business_id: UUID,
+    project_id: UUID,
+    report_date: SiteDate,
+    body: DailyReportInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> DailyReportView:
+    """O4a decision 5: the next revision of the report of a site date."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await reports.put_report(
+            access.conn,
+            business_id,
+            project_id,
+            report_date,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/progress")
+async def get_progress(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> ProgressView:
+    """O4a decision 9: completed per line, phase and total, with values."""
+    async with _access(request, principal, business_id) as access:
+        return await progress.load_progress(access.conn, project_id)
+
+
+@router.get("/projects/{project_id}/progress/measurements")
+async def get_measurements(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> MeasurementList:
+    async with _access(request, principal, business_id) as access:
+        return await progress.list_measurements(access.conn, project_id)
+
+
+@router.post("/projects/{project_id}/progress")
+async def post_measurement(
+    business_id: UUID,
+    project_id: UUID,
+    body: MeasurementInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> MeasurementView:
+    """O4a decisions 6-7: the quantity completed to date on one budget line."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await progress.record(
+            access.conn,
+            business_id,
+            project_id,
             user_id=principal.user_id,
             actor=principal.actor,
             key=idempotency_key,
