@@ -52,8 +52,8 @@ slices:
    follows, step by step, the predecessor with the latest planned finish (ties by phase name). Budget phases
    that the version does not name are listed as unscheduled. No dates are optimised.
 5. **A daily report per site date, with revisions.** A report names its date in the site's time zone; the
-   date is not after today there (the database computes "today" from the project's time zone) and not
-   before 2000-01-01. A report has weather (optional, 1-200), notes (optional, 1-4000), crew lines (up to
+   date is not after today there (the database computes "today" from the project's time zone;
+   `CONSTRUCTION_FUTURE_DATE`) and not before 2000-01-01. A report has weather (optional, 1-200), notes (optional, 1-4000), crew lines (up to
    50: a label 1-64, a headcount 1-1000 and optionally the counterparty whose crew it was) and photos (up to
    50 stage-1 document versions whose file is a PNG or JPEG; anything else is `INVALID_REFERENCE`). A
    correction is a new revision of the same date; earlier revisions stay. Crew lines and photos are written
@@ -61,8 +61,8 @@ slices:
    first); a stale one is `CONSTRUCTION_REVISION_CONFLICT`. A report that is all empty is refused
    (`INVALID_REQUEST`).
 6. **Completed quantities are cumulative measurements.** A measurement names a budget line (a contract
-   line, or an added line of an approved change order), a site date (not after today there, not before the
-   latest measurement of the same line), the **quantity completed to date** on that line (0 or more, 4
+   line, or an added line of an approved change order), a site date (not after today there, `CONSTRUCTION_FUTURE_DATE`; not before the
+   latest measurement of the same line, `CONSTRUCTION_MEASUREMENT_ORDER`), the **quantity completed to date** on that line (0 or more, 4
    decimals, the line's unit) and an optional note (1-500). Measurements are insert-only and numbered per
    project; the latest one of a line counts.
 7. **Never above the contract.** The quantity to date is at most the line's contracted quantity: the
@@ -94,15 +94,15 @@ Inspections, defects and the punch list (O4b); actual start and finish dates typ
 from measurements); weather from a provider; resource levelling and date optimisation; upload of photos (the
 existing stage-1 document upload is used); screens (O7).
 
-## Acceptance of O4a — NOT TESTED
+## Acceptance of O4a — PASS 2026-11-01 (code `6afdbd7`, [evidence](evidence/2026-11-01-o4a-execution/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| O4a-01 | Schedule versions are insert-only; a phase outside the budget, a finish before the start and a stale version are refused; two racing revisions leave one after an observed `pg_locks` wait | NOT TESTED |
-| O4a-02 | A dependency on itself and one that closes a cycle are refused by the database; the view shows conflicts, the critical chain and unscheduled phases | NOT TESTED |
-| O4a-03 | Daily reports: one per site date with revisions; a date after today in the site's time zone is refused; crew, weather, notes and image photos are kept; a non-image or unknown document is refused | NOT TESTED |
-| O4a-04 | Measurements are cumulative; above the contracted quantity is refused; an added line of an approved change order is measurable; a lower value needs a note; a date before the line's latest measurement is refused | NOT TESTED |
-| O4a-05 | An approved removal below the completed quantity is refused; a measurement racing that approval leaves one outcome after an observed `pg_locks` wait | NOT TESTED |
-| O4a-06 | Progress per line, phase and total: contracted, completed, percent, contract value and completed value; a finished project's completed value equals the current contract sum | NOT TESTED |
-| O4a-07 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch; `construction.manage` needed for writes; direct SQL updates and deletes are refused | NOT TESTED |
-| O4a-08 | 0090 -> 0091 keeps every row; the full suite stays green | NOT TESTED |
+| O4a-01 | Schedule versions are insert-only; a phase outside the budget, a finish before the start and a stale version are refused; two racing revisions leave one after an observed `pg_locks` wait | PASS |
+| O4a-02 | A dependency on itself and one that closes a cycle are refused by the database; the view shows conflicts, the critical chain and unscheduled phases | PASS |
+| O4a-03 | Daily reports: one per site date with revisions; a date after today in the site's time zone is refused; crew, weather, notes and image photos are kept; a non-image or unknown document is refused | PASS |
+| O4a-04 | Measurements are cumulative; above the contracted quantity is refused; an added line of an approved change order is measurable; a lower value needs a note; a date before the line's latest measurement is refused | PASS |
+| O4a-05 | An approved removal below the completed quantity is refused; a measurement racing that approval leaves one outcome after an observed `pg_locks` wait | PASS |
+| O4a-06 | Progress per line, phase and total: contracted, completed, percent, contract value and completed value; a finished project's completed value equals the current contract sum | PASS |
+| O4a-07 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch; `construction.manage` needed for writes; direct SQL updates and deletes are refused | PASS |
+| O4a-08 | 0090 -> 0091 keeps every row; the full suite stays green | PASS |
