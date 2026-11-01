@@ -125,6 +125,12 @@ K_TABLES = {
     "construction_daily_report_crew",
     "construction_daily_report_photos",
     "construction_progress_measurements",
+    # O4b (0092): inspections, defects and the punch list.
+    "construction_inspections",
+    "construction_inspection_photos",
+    "construction_quality_items",
+    "construction_quality_item_events",
+    "construction_quality_item_photos",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

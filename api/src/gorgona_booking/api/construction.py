@@ -18,6 +18,7 @@ from gorgona_booking.business import construction_contracts as contracts
 from gorgona_booking.business import construction_costs as costs
 from gorgona_booking.business import construction_daily_reports as reports
 from gorgona_booking.business import construction_progress as progress
+from gorgona_booking.business import construction_quality as quality
 from gorgona_booking.business import construction_schedule as schedule
 from gorgona_booking.business.construction import (
     EstimateInput,
@@ -60,6 +61,17 @@ from gorgona_booking.business.construction_progress import (
     MeasurementView,
     ProgressView,
     SiteDate,
+)
+from gorgona_booking.business.construction_quality import (
+    EventInput,
+    InspectionInput,
+    InspectionList,
+    InspectionView,
+    ItemInput,
+    ItemKind,
+    ItemList,
+    ItemState,
+    ItemView,
 )
 from gorgona_booking.business.construction_schedule import ScheduleInput, ScheduleView
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
@@ -574,6 +586,127 @@ async def post_measurement(
             access.conn,
             business_id,
             project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/inspections")
+async def get_inspections(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> InspectionList:
+    async with _access(request, principal, business_id) as access:
+        return await quality.list_inspections(access.conn, project_id)
+
+
+@router.get("/projects/{project_id}/inspections/{number}")
+async def get_inspection(
+    business_id: UUID,
+    project_id: UUID,
+    number: CostNumber,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> InspectionView:
+    async with _access(request, principal, business_id) as access:
+        view = await quality.load_inspection(access.conn, project_id, number)
+        if view is None:
+            raise NotFoundError("Inspection not found", project_id=str(project_id), number=number)
+        return view
+
+
+@router.post("/projects/{project_id}/inspections")
+async def post_inspection(
+    business_id: UUID,
+    project_id: UUID,
+    body: InspectionInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> InspectionView:
+    """O4b decision 2: the next inspection of the project."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await quality.record_inspection(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/quality-items")
+async def get_quality_items(
+    business_id: UUID,
+    project_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    kind: ItemKind | None = None,
+    state: ItemState | None = None,
+    phase: Annotated[str | None, Query(min_length=1, max_length=64)] = None,
+) -> ItemList:
+    """O4b decision 6: items with their derived state, and the summary per phase and kind."""
+    async with _access(request, principal, business_id) as access:
+        return await quality.list_items(access.conn, project_id, kind, state, phase)
+
+
+@router.get("/projects/{project_id}/quality-items/{number}")
+async def get_quality_item(
+    business_id: UUID,
+    project_id: UUID,
+    number: CostNumber,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ItemView:
+    async with _access(request, principal, business_id) as access:
+        view = await quality.load_item(access.conn, project_id, number)
+        if view is None:
+            raise NotFoundError("Item not found", project_id=str(project_id), number=number)
+        return view
+
+
+@router.post("/projects/{project_id}/quality-items")
+async def post_quality_item(
+    business_id: UUID,
+    project_id: UUID,
+    body: ItemInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ItemView:
+    """O4b decisions 3-4: the next defect or punch item, open."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await quality.record_item(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/projects/{project_id}/quality-items/{number}/events")
+async def post_quality_event(
+    business_id: UUID,
+    project_id: UUID,
+    number: CostNumber,
+    body: EventInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ItemView:
+    """O4b decision 5: the next move of an item, on the events the client saw."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await quality.move_item(
+            access.conn,
+            business_id,
+            project_id,
+            number,
             user_id=principal.user_id,
             actor=principal.actor,
             key=idempotency_key,
