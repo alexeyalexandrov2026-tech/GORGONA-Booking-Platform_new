@@ -68,15 +68,15 @@ Supplier credit notes netted against a linked payable (reverse the link and link
 labor rate tables (the rate is entered per link); allocating one fact across several budget lines (one fact,
 one line); facts in another currency; screens (O7).
 
-## Acceptance of O3b — NOT TESTED
+## Acceptance of O3b — PASS 2026-10-31 (code `c464df9`, [evidence](evidence/2026-10-31-o3b-costs/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| O3b-01 | A write-off line links at its valuation in the project's branch and currency; a receipt line, an unknown line, a project in another branch and another currency are refused | NOT TESTED |
-| O3b-02 | A line of an issued payable invoice or manual accrual links at its amount; a draft, an issued receivable, an unknown line and another currency are refused | NOT TESTED |
-| O3b-03 | An approved time entry links at worked seconds (breaks deducted) × the rate, rounded half up; open, proposed and declined entries and a project in another branch are refused | NOT TESTED |
-| O3b-04 | A fact links once across projects; after its reversal it links again; two racing links of one fact leave one after an observed `pg_locks` wait | NOT TESTED |
-| O3b-05 | A link is reversed once (racing reversals leave one); direct SQL updates and deletes are refused; a forged amount, currency or attempt is refused by the database | NOT TESTED |
-| O3b-06 | Actual, remaining and over-budget per line, phase and total; reversed links do not count; budget, committed and actual reconcile; an overrun is not blocked | NOT TESTED |
-| O3b-07 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch; `construction.manage` needed for writes | NOT TESTED |
-| O3b-08 | 0089 -> 0090 keeps every row; the full suite stays green | NOT TESTED |
+| O3b-01 | A write-off line links at its valuation in the project's branch and currency; a receipt line, an unknown line, a project in another branch and another currency are refused | PASS |
+| O3b-02 | A line of an issued payable invoice or manual accrual links at its amount; a draft, an issued receivable, an unknown line and another currency are refused | PASS |
+| O3b-03 | An approved time entry links at worked seconds (breaks deducted) × the rate, rounded half up; open, proposed and declined entries and a project in another branch are refused | PASS |
+| O3b-04 | A fact links once across projects; after its reversal it links again; two racing links of one fact leave one after an observed `pg_locks` wait | PASS |
+| O3b-05 | A link is reversed once (racing reversals leave one); direct SQL updates and deletes are refused; a forged amount, currency or attempt is refused by the database | PASS |
+| O3b-06 | Actual, remaining and over-budget per line, phase and total; reversed links do not count; budget, committed and actual reconcile; an overrun is not blocked | PASS |
+| O3b-07 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch; `construction.manage` needed for writes | PASS |
+| O3b-08 | 0089 -> 0090 keeps every row; the full suite stays green | PASS |
