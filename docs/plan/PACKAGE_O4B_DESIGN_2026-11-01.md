@@ -66,14 +66,14 @@ Reassigning an item or moving its due date (a new item replaces it); notificatio
 party; customers answering on the platform (O6 with the grant of decision 11); the link of a repair's cost
 to actual costs (warranty claims in O6 link through O3b); screens (O7).
 
-## Acceptance of O4b — NOT TESTED
+## Acceptance of O4b — PASS 2026-11-01 (code `6b6124f`, [evidence](evidence/2026-11-01-o4b-quality/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| O4b-01 | Inspections are insert-only and numbered; a date after today on the site, a phase outside the budget, an unknown counterparty and a non-image photo are refused; without the contract nothing is written | NOT TESTED |
-| O4b-02 | Defect and punch items are numbered with their references checked; an item naming a passed inspection is refused by the database; a due date before the raised date is refused | NOT TESTED |
-| O4b-03 | Moves open -> fixed -> closed, fixed -> open (with a note) and open -> void (with a note) are kept as events; closed and void are final; a move the state does not allow is refused by the database too; a stale expected sequence is refused | NOT TESTED |
-| O4b-04 | Two racing moves of one item leave one after an observed `pg_locks` wait | NOT TESTED |
-| O4b-05 | Views: state from the latest event, history with photos, overdue in the site's time zone, summary per phase and kind | NOT TESTED |
-| O4b-06 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch; `construction.manage` needed for writes; direct SQL updates and deletes are refused | NOT TESTED |
-| O4b-07 | 0091 -> 0092 keeps every row; the full suite stays green | NOT TESTED |
+| O4b-01 | Inspections are insert-only and numbered; a date after today on the site, a phase outside the budget, an unknown counterparty and a non-image photo are refused; without the contract nothing is written | PASS |
+| O4b-02 | Defect and punch items are numbered with their references checked; an item naming a passed inspection is refused by the database; a due date before the raised date is refused | PASS |
+| O4b-03 | Moves open -> fixed -> closed, fixed -> open (with a note) and open -> void (with a note) are kept as events; closed and void are final; a move the state does not allow is refused by the database too; a stale expected sequence is refused | PASS |
+| O4b-04 | Two racing moves of one item leave one after an observed `pg_locks` wait | PASS |
+| O4b-05 | Views: state from the latest event, history with photos, overdue in the site's time zone, summary per phase and kind | PASS |
+| O4b-06 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch; `construction.manage` needed for writes; direct SQL updates and deletes are refused | PASS |
+| O4b-07 | 0091 -> 0092 keeps every row; the full suite stays green | PASS |
