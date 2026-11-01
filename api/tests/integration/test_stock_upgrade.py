@@ -114,6 +114,9 @@ K_TABLES = {
     "construction_commitments",
     "construction_commitment_versions",
     "construction_commitment_lines",
+    # O3b (0090): actual cost links.
+    "construction_cost_links",
+    "construction_cost_reversals",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

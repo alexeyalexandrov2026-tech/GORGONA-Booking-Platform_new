@@ -115,6 +115,9 @@ K_TABLES = {
     "construction_commitments",
     "construction_commitment_versions",
     "construction_commitment_lines",
+    # O3b (0090): actual cost links.
+    "construction_cost_links",
+    "construction_cost_reversals",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

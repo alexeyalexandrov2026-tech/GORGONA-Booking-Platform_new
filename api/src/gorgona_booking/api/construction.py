@@ -1,4 +1,4 @@
-"""Construction API (ADR-0035): projects, estimates, the contract, the budget and commitments."""
+"""Construction API (ADR-0035): projects, estimates, contract, budget, commitments and costs."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -14,6 +14,7 @@ from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import construction as service
 from gorgona_booking.business import construction_budget as budget
 from gorgona_booking.business import construction_contracts as contracts
+from gorgona_booking.business import construction_costs as costs
 from gorgona_booking.business.construction import (
     EstimateInput,
     EstimateList,
@@ -38,6 +39,12 @@ from gorgona_booking.business.construction_contracts import (
     ContractView,
     DecisionInput,
 )
+from gorgona_booking.business.construction_costs import (
+    CostLinkInput,
+    CostLinkList,
+    CostLinkView,
+    ReversalInput,
+)
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
 from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenant
@@ -45,6 +52,7 @@ from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenan
 router = APIRouter(prefix="/v1/businesses/{business_id}/construction", tags=["construction"])
 Version = Annotated[int, Path(ge=1, le=100_000)]
 Number = Annotated[int, Path(ge=1, le=100_000)]
+CostNumber = Annotated[int, Path(ge=1, le=1_000_000)]
 
 
 @asynccontextmanager
@@ -350,6 +358,75 @@ async def put_commitment(
     """O3a decision 4: the next version, on the revision the client read; cancelled is final."""
     async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
         return await budget.revise(
+            access.conn,
+            business_id,
+            project_id,
+            number,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/costs")
+async def get_costs(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> CostLinkList:
+    async with _access(request, principal, business_id) as access:
+        return await costs.list_links(access.conn, project_id)
+
+
+@router.get("/projects/{project_id}/costs/{number}")
+async def get_cost(
+    business_id: UUID,
+    project_id: UUID,
+    number: CostNumber,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> CostLinkView:
+    async with _access(request, principal, business_id) as access:
+        view = await costs.load_link(access.conn, project_id, number)
+        if view is None:
+            raise NotFoundError("Cost link not found", project_id=str(project_id), number=number)
+        return view
+
+
+@router.post("/projects/{project_id}/costs")
+async def post_cost(
+    business_id: UUID,
+    project_id: UUID,
+    body: CostLinkInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> CostLinkView:
+    """O3b decisions 1-3: one fact on one budget line, counted once."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await costs.link(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/projects/{project_id}/costs/{number}/reversal")
+async def post_cost_reversal(
+    business_id: UUID,
+    project_id: UUID,
+    number: CostNumber,
+    body: ReversalInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> CostLinkView:
+    """O3b decision 4: a link leaves actual with a reason, once; its fact may be linked again."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await costs.reverse(
             access.conn,
             business_id,
             project_id,

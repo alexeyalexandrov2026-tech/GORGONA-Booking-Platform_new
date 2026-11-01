@@ -3,7 +3,8 @@
 docs/plan/PACKAGE_O3A_DESIGN_2026-10-31.md. The budget is the contract's cost side per line and
 phase (the original contract plus approved change orders), derived on read, never stored.
 Commitments (subcontracts and supplier orders) are versioned and insert-only; committed is the
-latest version of every open commitment. Overruns are shown, not blocked. The database rechecks the
+latest version of every open commitment. Overruns are shown, not blocked. O3b adds actual costs
+beside committed (construction_costs.actual_by_line). The database rechecks the
 sequences, the counterparty's role, the cancellation and the budget line each commitment line names.
 """
 
@@ -31,6 +32,7 @@ from gorgona_booking.business.construction import (
     require_construction,
 )
 from gorgona_booking.business.construction_contracts import ConstructionNoContractError
+from gorgona_booking.business.construction_costs import actual_by_line
 from gorgona_booking.business.module_gate import CONSTRUCTION_MODULE, module_writes
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import ConflictError, InvalidReferenceError, NotFoundError
@@ -131,6 +133,9 @@ class BudgetLineView(BaseModel):
     committed_minor: int
     uncommitted_minor: int
     over_committed: bool
+    actual_minor: int
+    remaining_minor: int
+    over_budget: bool
 
 
 class PhaseView(BaseModel):
@@ -139,6 +144,9 @@ class PhaseView(BaseModel):
     committed_minor: int
     uncommitted_minor: int
     over_committed: bool
+    actual_minor: int
+    remaining_minor: int
+    over_budget: bool
 
 
 class BudgetView(BaseModel):
@@ -147,6 +155,8 @@ class BudgetView(BaseModel):
     budget_minor: int
     committed_minor: int
     uncommitted_minor: int
+    actual_minor: int
+    remaining_minor: int
     lines: list[BudgetLineView]
     phases: list[PhaseView]
 
@@ -242,10 +252,12 @@ async def _committed(conn: RuntimeConnection, project_id: UUID) -> dict[BudgetKe
 async def load_budget(conn: RuntimeConnection, project_id: UUID) -> BudgetView:
     currency = await _project_currency(conn, project_id)
     committed = await _committed(conn, project_id)
+    spent = await actual_by_line(conn, project_id)
     lines: list[BudgetLineView] = []
     phases: dict[str, list[int]] = {}
     for item in await _budget_lines(conn, project_id):
-        done = committed.get((item["change_order"], item["position"]), 0)
+        key = (item["change_order"], item["position"])
+        done, used = committed.get(key, 0), spent.get(key, 0)
         budget = int(item["budget_minor"])
         lines.append(
             BudgetLineView(
@@ -253,19 +265,26 @@ async def load_budget(conn: RuntimeConnection, project_id: UUID) -> BudgetView:
                 committed_minor=done,
                 uncommitted_minor=budget - done,
                 over_committed=done > budget,
+                actual_minor=used,
+                remaining_minor=budget - used,
+                over_budget=used > budget,
             )
         )
-        sums = phases.setdefault(item["phase"], [0, 0])
+        sums = phases.setdefault(item["phase"], [0, 0, 0])
         sums[0] += budget
         sums[1] += done
+        sums[2] += used
     budget_total = sum(item.budget_minor for item in lines)
     committed_total = sum(item.committed_minor for item in lines)
+    actual_total = sum(item.actual_minor for item in lines)
     return BudgetView(
         project_id=project_id,
         currency=currency,
         budget_minor=budget_total,
         committed_minor=committed_total,
         uncommitted_minor=budget_total - committed_total,
+        actual_minor=actual_total,
+        remaining_minor=budget_total - actual_total,
         lines=lines,
         phases=[
             PhaseView(
@@ -274,6 +293,9 @@ async def load_budget(conn: RuntimeConnection, project_id: UUID) -> BudgetView:
                 committed_minor=sums[1],
                 uncommitted_minor=sums[0] - sums[1],
                 over_committed=sums[1] > sums[0],
+                actual_minor=sums[2],
+                remaining_minor=sums[0] - sums[2],
+                over_budget=sums[2] > sums[0],
             )
             for phase, sums in phases.items()
         ],
