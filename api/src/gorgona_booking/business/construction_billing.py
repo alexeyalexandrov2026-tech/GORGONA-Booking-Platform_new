@@ -29,7 +29,10 @@ from gorgona_booking.business.construction import (
     require_construction,
 )
 from gorgona_booking.business.construction_budget import BudgetKey, budget_lines
-from gorgona_booking.business.construction_contracts import ConstructionNoContractError
+from gorgona_booking.business.construction_contracts import (
+    ConstructionAcceptedError,
+    ConstructionNoContractError,
+)
 from gorgona_booking.business.construction_progress import (
     ConstructionFutureDateError,
     ConstructionPeriodBilledError,
@@ -367,6 +370,8 @@ def _refused(exc: CheckViolation) -> Exception | None:
         return ConstructionPeriodBilledError("This period is already billed")
     if name == "construction_pay_applications_date_check":
         return ConstructionFutureDateError("The period ends after today on the site")
+    if name == "construction_pay_applications_accepted_check":
+        return ConstructionAcceptedError("The final acceptance closed billing")
     if name in (
         "construction_pay_applications_sequence_check",
         "construction_pay_applications_previous_check",
@@ -421,6 +426,14 @@ async def record_application(
     await lock_project(conn, project_id)
     if not await has_contract(conn, project_id):
         raise ConstructionNoContractError("A pay application needs a contract")
+    closed = await (
+        await conn.execute(
+            "select 1 from gba.construction_acceptances where project_id = %s and scope = 'final'",
+            (project_id,),
+        )
+    ).fetchone()
+    if closed is not None:
+        raise ConstructionAcceptedError("The final acceptance closed billing")
     if body.period_end > await site_today(conn, project_id):
         raise ConstructionFutureDateError("The period ends after today on the site")
     latest = await (

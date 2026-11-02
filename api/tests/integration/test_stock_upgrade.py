@@ -135,6 +135,9 @@ K_TABLES = {
     "construction_retainage_rates",
     "construction_pay_applications",
     "construction_pay_application_lines",
+    # O6a (0094): stage and final acceptances and retainage releases.
+    "construction_acceptances",
+    "construction_retainage_releases",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

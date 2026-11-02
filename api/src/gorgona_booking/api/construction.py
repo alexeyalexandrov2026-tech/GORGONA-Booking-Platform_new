@@ -13,6 +13,7 @@ from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import construction as service
+from gorgona_booking.business import construction_acceptance as acceptance
 from gorgona_booking.business import construction_billing as billing
 from gorgona_booking.business import construction_budget as budget
 from gorgona_booking.business import construction_contracts as contracts
@@ -29,6 +30,12 @@ from gorgona_booking.business.construction import (
     ProjectList,
     ProjectView,
     ProposalInput,
+)
+from gorgona_booking.business.construction_acceptance import (
+    AcceptanceInput,
+    AcceptanceList,
+    AcceptanceView,
+    ReleaseInput,
 )
 from gorgona_booking.business.construction_billing import (
     PayApplicationInput,
@@ -794,6 +801,76 @@ async def post_pay_application(
             access.conn,
             business_id,
             project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/acceptances")
+async def get_acceptances(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> AcceptanceList:
+    """O6a decision 11: every acceptance, every phase and the retainage totals."""
+    async with _access(request, principal, business_id) as access:
+        return await acceptance.list_acceptances(access.conn, project_id)
+
+
+@router.get("/projects/{project_id}/acceptances/{number}")
+async def get_acceptance(
+    business_id: UUID,
+    project_id: UUID,
+    number: Number,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> AcceptanceView:
+    async with _access(request, principal, business_id) as access:
+        view = await acceptance.load_acceptance(access.conn, project_id, number)
+        if view is None:
+            raise NotFoundError("Acceptance not found", project_id=str(project_id), number=number)
+        return view
+
+
+@router.post("/projects/{project_id}/acceptances")
+async def post_acceptance(
+    business_id: UUID,
+    project_id: UUID,
+    body: AcceptanceInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> AcceptanceView:
+    """O6a decisions 2-6: the customer's acceptance of a phase or of the whole project."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_APPROVE) as access:
+        return await acceptance.record_acceptance(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/projects/{project_id}/acceptances/{number}/release")
+async def post_retainage_release(
+    business_id: UUID,
+    project_id: UUID,
+    number: Number,
+    body: ReleaseInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> AcceptanceView:
+    """O6a decision 8: release the retainage an acceptance frees, once."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await acceptance.record_release(
+            access.conn,
+            business_id,
+            project_id,
+            number,
             user_id=principal.user_id,
             actor=principal.actor,
             key=idempotency_key,

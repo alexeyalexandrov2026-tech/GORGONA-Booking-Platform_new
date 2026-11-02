@@ -30,7 +30,10 @@ from gorgona_booking.business.construction import (
     require_construction,
 )
 from gorgona_booking.business.construction_budget import BudgetKey, budget_lines
-from gorgona_booking.business.construction_contracts import ConstructionNoContractError
+from gorgona_booking.business.construction_contracts import (
+    ConstructionAcceptedError,
+    ConstructionNoContractError,
+)
 from gorgona_booking.business.module_gate import CONSTRUCTION_MODULE, module_writes
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import ConflictError, DomainError, InvalidReferenceError, NotFoundError
@@ -321,6 +324,8 @@ def _refused(exc: CheckViolation) -> Exception | None:
         return ConstructionAboveContractError("Completed never exceeds the contracted quantity")
     if name == "construction_progress_measurements_note_check":
         return ConstructionCorrectionNoteError("A lower quantity is a correction with a note")
+    if name == "construction_progress_measurements_accepted_check":
+        return ConstructionAcceptedError("Accepted work is closed for measurements")
     return None
 
 

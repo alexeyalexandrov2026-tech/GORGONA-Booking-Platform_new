@@ -136,6 +136,9 @@ K_TABLES = {
     "construction_retainage_rates",
     "construction_pay_applications",
     "construction_pay_application_lines",
+    # O6a (0094): stage and final acceptances and retainage releases.
+    "construction_acceptances",
+    "construction_retainage_releases",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

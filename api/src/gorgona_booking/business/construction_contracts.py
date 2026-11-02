@@ -64,6 +64,12 @@ class ConstructionChangeOrderDecidedError(ConflictError):
     code = "CONSTRUCTION_CHANGE_ORDER_DECIDED"
 
 
+class ConstructionAcceptedError(ConflictError):
+    """O6a decisions 3 and 7: an accepted scope is accepted once, and accepted work is closed."""
+
+    code = "CONSTRUCTION_ACCEPTED"
+
+
 Source = Literal["paper", "email"]
 Decision = Literal["approved", "rejected", "withdrawn"]
 
@@ -555,6 +561,10 @@ async def decide(
         if exc.diag.constraint_name == "construction_change_order_decisions_billed_check":
             raise ConstructionBelowBilledError(
                 "Approving it would take the contract sum below what was already billed"
+            ) from exc
+        if exc.diag.constraint_name == "construction_change_order_decisions_accepted_check":
+            raise ConstructionAcceptedError(
+                "Approving it would change accepted work; accepted work is closed"
             ) from exc
         raise
     view = await load_change_order(conn, project_id, number)
