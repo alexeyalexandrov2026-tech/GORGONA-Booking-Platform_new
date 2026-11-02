@@ -81,6 +81,12 @@ class ConstructionCorrectionNoteError(DomainError):
     code = "CONSTRUCTION_CORRECTION_NOTE"
 
 
+class ConstructionPeriodBilledError(ConflictError):
+    """O5 decisions 3 and 7: a billed period is closed."""
+
+    code = "CONSTRUCTION_PERIOD_BILLED"
+
+
 class MeasurementInput(Strict):
     schema_version: Literal[1]
     change_order: int | None = Field(default=None, ge=1, le=100_000)
@@ -183,14 +189,17 @@ async def site_today(conn: RuntimeConnection, project_id: UUID) -> date:
     return day
 
 
-async def completed_by_line(conn: RuntimeConnection, project_id: UUID) -> dict[BudgetKey, Decimal]:
-    """The latest measurement of every measured budget line (decision 6)."""
+async def completed_by_line(
+    conn: RuntimeConnection, project_id: UUID, as_of: date | None = None
+) -> dict[BudgetKey, Decimal]:
+    """The latest measurement of every measured budget line, dated on or before `as_of` if given."""
     rows = await (
         await conn.execute(
             "select distinct on (change_order, budget_position) change_order, budget_position, "
             "quantity_to_date from gba.construction_progress_measurements where project_id = %s "
+            "and (%s::date is null or measured_on <= %s::date) "
             "order by change_order, budget_position, number desc",
-            (project_id,),
+            (project_id, as_of, as_of),
         )
     ).fetchall()
     return {(row[0], int(row[1])): Decimal(row[2]) for row in rows}
@@ -306,6 +315,8 @@ def _refused(exc: CheckViolation) -> Exception | None:
         return ConstructionFutureDateError("The date is after today on the site")
     if name == "construction_progress_measurements_order_check":
         return ConstructionMeasurementOrderError("A measurement is not dated before the latest")
+    if name == "construction_progress_measurements_period_check":
+        return ConstructionPeriodBilledError("A billed period is closed for measurements")
     if name == "construction_progress_measurements_contract_check":
         return ConstructionAboveContractError("Completed never exceeds the contracted quantity")
     if name == "construction_progress_measurements_note_check":
@@ -352,6 +363,16 @@ async def record(
     if latest is not None and body.measured_on < latest[0]:
         raise ConstructionMeasurementOrderError(
             "A measurement is not dated before the line's latest one", latest=str(latest[0])
+        )
+    closed = await (
+        await conn.execute(
+            "select max(period_end) from gba.construction_pay_applications where project_id = %s",
+            (project_id,),
+        )
+    ).fetchone()
+    if closed is not None and closed[0] is not None and body.measured_on <= closed[0]:
+        raise ConstructionPeriodBilledError(
+            "A billed period is closed; date the measurement after it", billed=str(closed[0])
         )
     if body.quantity_to_date > line["quantity"]:
         raise ConstructionAboveContractError(

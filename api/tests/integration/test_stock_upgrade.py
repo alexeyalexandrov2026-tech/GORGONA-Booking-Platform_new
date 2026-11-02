@@ -131,6 +131,10 @@ K_TABLES = {
     "construction_quality_items",
     "construction_quality_item_events",
     "construction_quality_item_photos",
+    # O5 (0093): retainage rates and pay applications.
+    "construction_retainage_rates",
+    "construction_pay_applications",
+    "construction_pay_application_lines",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

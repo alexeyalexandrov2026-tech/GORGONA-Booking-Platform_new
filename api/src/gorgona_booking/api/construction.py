@@ -13,6 +13,7 @@ from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import construction as service
+from gorgona_booking.business import construction_billing as billing
 from gorgona_booking.business import construction_budget as budget
 from gorgona_booking.business import construction_contracts as contracts
 from gorgona_booking.business import construction_costs as costs
@@ -28,6 +29,13 @@ from gorgona_booking.business.construction import (
     ProjectList,
     ProjectView,
     ProposalInput,
+)
+from gorgona_booking.business.construction_billing import (
+    PayApplicationInput,
+    PayApplicationList,
+    PayApplicationView,
+    RetainageInput,
+    RetainageView,
 )
 from gorgona_booking.business.construction_budget import (
     BudgetView,
@@ -707,6 +715,85 @@ async def post_quality_event(
             business_id,
             project_id,
             number,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/retainage")
+async def get_retainage(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> RetainageView:
+    """O5 decision 2: the current retainage rate."""
+    async with _access(request, principal, business_id) as access:
+        return await billing.load_retainage(access.conn, project_id)
+
+
+@router.put("/projects/{project_id}/retainage")
+async def put_retainage(
+    business_id: UUID,
+    project_id: UUID,
+    body: RetainageInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> RetainageView:
+    """O5 decision 2: the next version of the retainage rate."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await billing.put_retainage(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/pay-applications")
+async def get_pay_applications(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> PayApplicationList:
+    """O5 decision 10: every application and the totals against the contract."""
+    async with _access(request, principal, business_id) as access:
+        return await billing.list_applications(access.conn, business_id, project_id)
+
+
+@router.get("/projects/{project_id}/pay-applications/{number}")
+async def get_pay_application(
+    business_id: UUID,
+    project_id: UUID,
+    number: Number,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> PayApplicationView:
+    async with _access(request, principal, business_id) as access:
+        view = await billing.load_application(access.conn, business_id, project_id, number)
+        if view is None:
+            raise NotFoundError(
+                "Pay application not found", project_id=str(project_id), number=number
+            )
+        return view
+
+
+@router.post("/projects/{project_id}/pay-applications")
+async def post_pay_application(
+    business_id: UUID,
+    project_id: UUID,
+    body: PayApplicationInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> PayApplicationView:
+    """O5 decisions 3-6: the next pay application and its two FIN-03 drafts."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await billing.record_application(
+            access.conn,
+            business_id,
+            project_id,
             user_id=principal.user_id,
             actor=principal.actor,
             key=idempotency_key,

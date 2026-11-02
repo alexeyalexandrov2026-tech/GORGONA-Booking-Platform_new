@@ -54,6 +54,12 @@ class ConstructionBelowCompletedError(ConflictError):
     code = "CONSTRUCTION_BELOW_COMPLETED"
 
 
+class ConstructionBelowBilledError(ConflictError):
+    """O5 decision 8: an approval never takes the contract sum below what was billed."""
+
+    code = "CONSTRUCTION_BELOW_BILLED"
+
+
 class ConstructionChangeOrderDecidedError(ConflictError):
     code = "CONSTRUCTION_CHANGE_ORDER_DECIDED"
 
@@ -545,6 +551,10 @@ async def decide(
         if exc.diag.constraint_name == "construction_change_order_decisions_completed_check":
             raise ConstructionBelowCompletedError(
                 "Approving it would leave a contract line below the work already done"
+            ) from exc
+        if exc.diag.constraint_name == "construction_change_order_decisions_billed_check":
+            raise ConstructionBelowBilledError(
+                "Approving it would take the contract sum below what was already billed"
             ) from exc
         raise
     view = await load_change_order(conn, project_id, number)
