@@ -138,6 +138,10 @@ K_TABLES = {
     # O6a (0094): stage and final acceptances and retainage releases.
     "construction_acceptances",
     "construction_retainage_releases",
+    # O6b (0095): warranty claims, their events and repairs.
+    "construction_warranty_claims",
+    "construction_warranty_claim_events",
+    "construction_warranty_repairs",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

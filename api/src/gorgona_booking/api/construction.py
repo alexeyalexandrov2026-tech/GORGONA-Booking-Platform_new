@@ -22,6 +22,7 @@ from gorgona_booking.business import construction_daily_reports as reports
 from gorgona_booking.business import construction_progress as progress
 from gorgona_booking.business import construction_quality as quality
 from gorgona_booking.business import construction_schedule as schedule
+from gorgona_booking.business import construction_warranty as warranty
 from gorgona_booking.business.construction import (
     EstimateInput,
     EstimateList,
@@ -89,6 +90,14 @@ from gorgona_booking.business.construction_quality import (
     ItemView,
 )
 from gorgona_booking.business.construction_schedule import ScheduleInput, ScheduleView
+from gorgona_booking.business.construction_warranty import (
+    ClaimEventInput,
+    ClaimInput,
+    ClaimList,
+    ClaimView,
+    ReconciliationView,
+    RepairInput,
+)
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
 from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenant
@@ -876,3 +885,106 @@ async def post_retainage_release(
             key=idempotency_key,
             body=body,
         )
+
+
+@router.get("/projects/{project_id}/warranty-claims")
+async def get_warranty_claims(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> ClaimList:
+    """O6b decision 2: every warranty claim with its state and repair cost."""
+    async with _access(request, principal, business_id) as access:
+        return await warranty.list_claims(access.conn, project_id)
+
+
+@router.get("/projects/{project_id}/warranty-claims/{number}")
+async def get_warranty_claim(
+    business_id: UUID,
+    project_id: UUID,
+    number: CostNumber,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ClaimView:
+    async with _access(request, principal, business_id) as access:
+        view = await warranty.load_claim(access.conn, project_id, number)
+        if view is None:
+            raise NotFoundError("Claim not found", project_id=str(project_id), number=number)
+        return view
+
+
+@router.post("/projects/{project_id}/warranty-claims")
+async def post_warranty_claim(
+    business_id: UUID,
+    project_id: UUID,
+    body: ClaimInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ClaimView:
+    """O6b decision 2: the next warranty claim, open, inside the warranty period."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await warranty.record_claim(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/projects/{project_id}/warranty-claims/{number}/events")
+async def post_warranty_event(
+    business_id: UUID,
+    project_id: UUID,
+    number: CostNumber,
+    body: ClaimEventInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ClaimView:
+    """O6b decision 3: the next move of a claim, on the events the client saw."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await warranty.move_claim(
+            access.conn,
+            business_id,
+            project_id,
+            number,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/projects/{project_id}/warranty-claims/{number}/repairs")
+async def post_warranty_repair(
+    business_id: UUID,
+    project_id: UUID,
+    number: CostNumber,
+    body: RepairInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> ClaimView:
+    """O6b decision 4: a cost link of the project assigned to a claim as its repair cost."""
+    async with _access(request, principal, business_id, Permission.CONSTRUCTION_MANAGE) as access:
+        return await warranty.record_repair(
+            access.conn,
+            business_id,
+            project_id,
+            number,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/projects/{project_id}/reconciliation")
+async def get_reconciliation(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> ReconciliationView:
+    """O6b decision 5: the project's figures and their differences, all derived."""
+    async with _access(request, principal, business_id) as access:
+        return await warranty.load_reconciliation(access.conn, business_id, project_id)
