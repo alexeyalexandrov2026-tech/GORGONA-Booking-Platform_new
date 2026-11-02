@@ -88,14 +88,14 @@ notes against a pay application (FIN-03 credit notes stay available but are not 
 percentage-of-completion revenue recognition and lien waivers (plan, "Not in this package"); stored
 materials billed before installation; screens (O7).
 
-## Acceptance of O5 — NOT TESTED
+## Acceptance of O5 — PASS 2026-11-01 (code `11a5508`, [evidence](evidence/2026-11-01-o5-billing/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| O5-01 | Retainage rate versions are insert-only, 0-5000 basis points, a stale revision is refused; an application keeps the rate it used | NOT TESTED |
-| O5-02 | An application bills completed value as of its period end minus earlier billing, per line; retained is rounded down and due is the rest; a FIN-03 receivable invoice (due) and a separate receivable accrual without a due date (retained) are drafted, frozen, and issue as two obligations | NOT TESTED |
-| O5-03 | One application per period: a period not after the previous one, a period after today on the site, nothing to bill and no contract are refused; a measurement dated in a billed period is refused | NOT TESTED |
-| O5-04 | Billed to date never exceeds the contract sum: a finished project bills exactly the contract sum; an approval below billed is refused; the database refuses a forged application (over the sum, wrong arithmetic, wrong rate, wrong document, lines not adding up) | NOT TESTED |
-| O5-05 | Two racing applications for one period leave one after an observed `pg_locks` wait | NOT TESTED |
-| O5-06 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch; `construction.manage` needed for writes; direct SQL updates and deletes are refused | NOT TESTED |
-| O5-07 | 0092 -> 0093 keeps every row; the full suite stays green | NOT TESTED |
+| O5-01 | Retainage rate versions are insert-only, 0-5000 basis points, a stale revision is refused; an application keeps the rate it used | PASS |
+| O5-02 | An application bills completed value as of its period end minus earlier billing, per line; retained is rounded down and due is the rest; a FIN-03 receivable invoice (due) and a separate receivable accrual without a due date (retained) are drafted, frozen, and issue as two obligations | PASS |
+| O5-03 | One application per period: a period not after the previous one, a period after today on the site, nothing to bill and no contract are refused; a measurement dated in a billed period is refused | PASS |
+| O5-04 | Billed to date never exceeds the contract sum: a finished project bills exactly the contract sum; an approval below billed is refused; the database refuses a forged application (over the sum, wrong arithmetic, wrong rate, wrong document, lines not adding up) | PASS |
+| O5-05 | Two racing applications for one period leave one after an observed `pg_locks` wait | PASS |
+| O5-06 | Module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch; `construction.manage` needed for writes; direct SQL updates and deletes are refused | PASS |
+| O5-07 | 0092 -> 0093 keeps every row; the full suite stays green | PASS |
