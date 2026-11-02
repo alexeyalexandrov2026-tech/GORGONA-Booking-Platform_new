@@ -110,14 +110,14 @@ answering on the platform (plan decision 11, with the grant); blocking FIN-03 co
 (decision 9); revoking an acceptance (it is a fact; a later problem is a quality item or a warranty
 claim); screens (O7).
 
-## Acceptance of O6a (all NOT TESTED)
+## Acceptance of O6a — PASS 2026-11-02 (code `c06ec73`, [evidence](evidence/2026-11-02-o6a-acceptance/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| O6a-01 | A phase or final acceptance is numbered and insert-only, with its signatory, source and site date; a date after today on the site, an unknown phase, the source `platform`, a missing contract and a member without `construction.approve` are refused; each scope is accepted once and nothing after the final acceptance | NOT TESTED |
-| O6a-02 | Only finished work is accepted (lines below their contracted quantity or measured after the acceptance date are refused); open or fixed items of the phase block a phase acceptance and any open or fixed item blocks the final one; the final one needs the contract billed in full and records the warranty period | NOT TESTED |
-| O6a-03 | Accepted work is closed: measurements and change-order approvals touching an accepted phase, and after the final acceptance every measurement, approval and pay application, are refused; rejections and withdrawals stay possible | NOT TESTED |
-| O6a-04 | Retainage is released once per acceptance by the amount the server derives (a phase's held retainage once it is billed in full; the rest at the final acceptance); nothing more than is held, nothing twice, nothing after the final release (O-08) | NOT TESTED |
-| O6a-05 | Two racing releases of one acceptance, and an acceptance racing a measurement of its phase, each leave one outcome after an observed `pg_locks` wait | NOT TESTED |
-| O6a-06 | The database refuses forged acceptances and releases (sequence, date, scope, unfinished work, open items, not billed, wrong amount, second release) and direct SQL updates and deletes; module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch | NOT TESTED |
-| O6a-07 | 0093 -> 0094 keeps every row; the full suite stays green | NOT TESTED |
+| O6a-01 | A phase or final acceptance is numbered and insert-only, with its signatory, source and site date; a date after today on the site, an unknown phase, the source `platform`, a missing contract and a member without `construction.approve` are refused; each scope is accepted once and nothing after the final acceptance | PASS |
+| O6a-02 | Only finished work is accepted (lines below their contracted quantity or measured after the acceptance date are refused); open or fixed items of the phase block a phase acceptance and any open or fixed item blocks the final one; the final one needs the contract billed in full and records the warranty period | PASS |
+| O6a-03 | Accepted work is closed: measurements and change-order approvals touching an accepted phase, and after the final acceptance every measurement, approval and pay application, are refused; rejections and withdrawals stay possible | PASS |
+| O6a-04 | Retainage is released once per acceptance by the amount the server derives (a phase's held retainage once it is billed in full; the rest at the final acceptance); nothing more than is held, nothing twice, nothing after the final release (O-08) | PASS |
+| O6a-05 | Two racing releases of one acceptance, and an acceptance racing a measurement of its phase, each leave one outcome after an observed `pg_locks` wait | PASS |
+| O6a-06 | The database refuses forged acceptances and releases (sequence, date, scope, unfinished work, open items, not billed, wrong amount, second release) and direct SQL updates and deletes; module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch | PASS |
+| O6a-07 | 0093 -> 0094 keeps every row; the full suite stays green | PASS |
