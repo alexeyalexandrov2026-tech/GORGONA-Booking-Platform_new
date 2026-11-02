@@ -67,16 +67,16 @@ source-bound record, code and docs commits, push for CI without a PR. From this 
 
 Photos of a claim (a later screen slice may add them as for quality items); customers raising claims on
 the platform (plan decision 11, with the grant); blocking FIN-03 collection of retainage before release
-(O6a decision 9; the view reports it); a warranty extension; screens (O7).
+(O6a decision 9; the view reports it); a warranty extension; screens (O7). No test settles a pay-application obligation: paid and credited are read from FIN-03 balances, and the arithmetic of settled amounts is covered by a unit test only.
 
-## Acceptance of O6b (all NOT TESTED)
+## Acceptance of O6b — PASS 2026-11-02 (code `44736e8`, [evidence](evidence/2026-11-02-o6b-reconciliation/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| O6b-01 | A warranty claim is numbered and insert-only with its title, phase, place, reporter and site date; without the final acceptance, before it, after the warranty end, after today on the site, with an unknown phase, without the contract and for a member without `construction.manage` it is refused | NOT TESTED |
-| O6b-02 | A claim moves only open to repaired or rejected and repaired to closed or open; closed and rejected are final; rejecting and reopening need a note | NOT TESTED |
-| O6b-03 | A cost link of the project is assigned to a claim once; a reversed link, a link already assigned and a closed or rejected claim are refused; a link reversed later stops counting for the claim; each fact still counts once | NOT TESTED |
-| O6b-04 | The reconciliation view derives contract, completed, budget, committed, actual (warranty repair apart), billed, retained, due, released, held, paid and credited on the FIN-03 obligations, and the differences, including retainage settled before its release (O-05) | NOT TESTED |
-| O6b-05 | Two racing moves of one claim leave one outcome after an observed `pg_locks` wait | NOT TESTED |
-| O6b-06 | The database refuses forged claims, events and repairs (sequence, period, date, phase, move, note, link, claim state) and direct SQL updates and deletes; module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch | NOT TESTED |
-| O6b-07 | 0094 -> 0095 keeps every row; the full suite stays green | NOT TESTED |
+| O6b-01 | A warranty claim is numbered and insert-only with its title, phase, place, reporter and site date; without the final acceptance, before it, after the warranty end, after today on the site, with an unknown phase, without the contract and for a member without `construction.manage` it is refused | PASS |
+| O6b-02 | A claim moves only open to repaired or rejected and repaired to closed or open; closed and rejected are final; rejecting and reopening need a note | PASS |
+| O6b-03 | A cost link of the project is assigned to a claim once; a reversed link, a link already assigned and a closed or rejected claim are refused; a link reversed later stops counting for the claim; each fact still counts once | PASS |
+| O6b-04 | The reconciliation view derives contract, completed, budget, committed, actual (warranty repair apart), billed, retained, due, released, held, paid and credited on the FIN-03 obligations, and the differences, including retainage settled before its release (O-05) | PASS |
+| O6b-05 | Two racing moves of one claim leave one outcome after an observed `pg_locks` wait | PASS |
+| O6b-06 | The database refuses forged claims, events and repairs (sequence, period, date, phase, move, note, link, claim state) and direct SQL updates and deletes; module off: writes `MODULE_DISABLED`, nothing written; another company sees nothing; a branch-limited member sees only its branch | PASS |
+| O6b-07 | 0094 -> 0095 keeps every row; the full suite stays green | PASS |
