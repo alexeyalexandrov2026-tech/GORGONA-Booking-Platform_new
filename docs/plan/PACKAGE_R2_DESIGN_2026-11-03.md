@@ -17,7 +17,8 @@ from the R1 docs commit `101e3ad`, in the O5 worktree. Same process: failing tes
 
 ## Decisions (R2, agent)
 
-1. **A class booking holds a class, never a unit** (RENT-01 part 1): a number (per business, in sequence), the
+1. **A class booking holds a class, never a unit** (RENT-01 part 1): a number (in sequence per pickup branch; refined during
+   code: a branch-limited member cannot see other branches, so a per-business number cannot be checked in its scope), the
    class, a customer (an active counterparty with the customer role), a pickup branch and a return branch, a period
    `[starts_at, ends_at)` in UTC (ends after starts, at most 366 days) and an optional note. It is insert-only; a
    cancellation is its own record with a reason, once (`RENTAL_BOOKING_CANCELLED`, 409, for another).
@@ -35,16 +36,16 @@ from the R1 docs commit `101e3ad`, in the O5 worktree. Same process: failing tes
    nothing; a branch-limited member sees and books only at its own pickup branch; direct SQL updates and deletes are
    refused.
 
-## Acceptance of R2 — NOT TESTED
+## Acceptance of R2 — PASS 2026-11-03 (code `e34ac3f`, [evidence](evidence/2026-11-03-r2-rental-bookings/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R2-01 | A booking holds a class with customer, branches and period, numbered and insert-only; references and periods are checked | NOT TESTED |
-| R2-02 | Availability is units minus the peak of overlapping bookings; a booking that would go below zero is refused; touching periods and cancelled bookings do not count | NOT TESTED |
-| R2-03 | A booking is cancelled once with a reason; the cancellation frees the class | NOT TESTED |
-| R2-04 | Two racing bookings for the last unit leave one after an observed `pg_locks` wait | NOT TESTED |
-| R2-05 | The database refuses a forged booking above availability, updates and deletes; module off writes nothing; another company sees nothing; a branch member sees and books only at its branch | NOT TESTED |
-| R2-06 | 0096 -> 0097 keeps every row; the full suite stays green | NOT TESTED |
+| R2-01 | A booking holds a class with customer, branches and period, numbered and insert-only; references and periods are checked | PASS |
+| R2-02 | Availability is units minus the peak of overlapping bookings; a booking that would go below zero is refused; touching periods and cancelled bookings do not count | PASS |
+| R2-03 | A booking is cancelled once with a reason; the cancellation frees the class | PASS |
+| R2-04 | Two racing bookings for the last unit leave one after an observed `pg_locks` wait | PASS |
+| R2-05 | The database refuses a forged booking above availability, updates and deletes; module off writes nothing; another company sees nothing; a branch member sees and books only at its branch | PASS |
+| R2-06 | 0096 -> 0097 keeps every row; the full suite stays green | PASS |
 
 ## Not in R2
 
