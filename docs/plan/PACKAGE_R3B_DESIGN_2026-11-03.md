@@ -34,15 +34,15 @@ gates on the VM `gorgona-dev`, a source-bound record, code and docs commits, pus
    `rental.block_release`; module off writes nothing; branch scope by the unit's branch; another company sees nothing;
    direct SQL updates and deletes refused.
 
-## Acceptance of R3b — NOT TESTED
+## Acceptance of R3b — PASS 2026-11-03 (code `b5cff95`, [evidence](evidence/2026-11-03-r3b-rental-blocks/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R3b-01 | A block holds its unit for a period with a kind and reason; it never overlaps an assignment of the unit either way; it is released once with its hold | NOT TESTED |
-| R3b-02 | Availability counts blocked units; a block that would leave a booking without a unit and a booking that meets a blocked unit are refused | NOT TESTED |
-| R3b-03 | A unit with a current or future hold does not move; without one it moves and its resource follows | NOT TESTED |
-| R3b-04 | The shared guard keeps every earlier lane; the database refuses forged blocks, holds, updates and deletes; module off writes nothing; scope holds | NOT TESTED |
-| R3b-05 | 0098 -> 0099 keeps every row; the full suite stays green | NOT TESTED |
+| R3b-01 | A block holds its unit for a period with a kind and reason; it never overlaps an assignment of the unit either way; it is released once with its hold | PASS |
+| R3b-02 | Availability counts blocked units; a block that would leave a booking without a unit and a booking that meets a blocked unit are refused | PASS |
+| R3b-03 | A unit with a current or future hold does not move; without one it moves and its resource follows | PASS |
+| R3b-04 | The shared guard keeps every earlier lane; the database refuses forged blocks, holds, updates and deletes; module off writes nothing; scope holds | PASS |
+| R3b-05 | 0098 -> 0099 keeps every row; the full suite stays green | PASS |
 
 ## Not in R3b
 
