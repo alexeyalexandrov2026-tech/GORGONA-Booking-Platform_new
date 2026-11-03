@@ -40,16 +40,18 @@ assigns them. **R3b** adds maintenance and blocks, moves between branches and th
    deletes are refused. Two racing assignments of one unit to two overlapping bookings leave one after an observed
    `pg_locks` wait (the service locks the unit row).
 
-## Acceptance of R3a — NOT TESTED
+## Acceptance of R3a — PASS 2026-11-03 (code `ab98936`, [evidence](evidence/2026-11-03-r3a-rental-assignment/CHECKS.json))
+
+Refined during the slice: migrations may not lift row security, so the upgrade does not fill existing units; no unit can exist before 0098 in a real database (rental was never enableable) and the not null refuses the upgrade loudly if one did. R3a-01 and R3a-06 are accepted in that form.
 
 | id | Requirement | Result |
 |---|---|---|
-| R3a-01 | Every unit has its own active rental resource in its branch; existing units get one in the upgrade | NOT TESTED |
-| R3a-02 | A unit of the booked class at the pickup branch is assigned for the booking period with one confirmed allocation; a wrong class, branch, retired unit or cancelled booking is refused | NOT TESTED |
-| R3a-03 | A unit is never held by two overlapping bookings (database exclusion); two racing assignments leave one after an observed wait | NOT TESTED |
-| R3a-04 | A new assignment replaces the current one and releases its allocation; a cancellation releases the booking's assignment; history stays | NOT TESTED |
-| R3a-05 | The shared guard keeps every earlier lane (booking, reservation, shift, trip) and refuses forged rental allocations, updates and deletes; module off writes nothing; scope holds | NOT TESTED |
-| R3a-06 | 0097 -> 0098 keeps every row and gives each existing unit its resource; the full suite stays green | NOT TESTED |
+| R3a-01 | Every unit has its own active rental resource in its branch; existing units get one in the upgrade | PASS |
+| R3a-02 | A unit of the booked class at the pickup branch is assigned for the booking period with one confirmed allocation; a wrong class, branch, retired unit or cancelled booking is refused | PASS |
+| R3a-03 | A unit is never held by two overlapping bookings (database exclusion); two racing assignments leave one after an observed wait | PASS |
+| R3a-04 | A new assignment replaces the current one and releases its allocation; a cancellation releases the booking's assignment; history stays | PASS |
+| R3a-05 | The shared guard keeps every earlier lane (booking, reservation, shift, trip) and refuses forged rental allocations, updates and deletes; module off writes nothing; scope holds | PASS |
+| R3a-06 | 0097 -> 0098 keeps every row and gives each existing unit its resource; the full suite stays green | PASS |
 
 ## Not in R3a
 
