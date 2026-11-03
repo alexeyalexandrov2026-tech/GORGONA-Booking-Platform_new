@@ -163,7 +163,7 @@ async def require_rental(conn: RuntimeConnection, business: UUID) -> None:
             await require_module(conn, business, dependency)
 
 
-def _fingerprint(subject: str, body: BaseModel) -> str:
+def fingerprint(subject: str, body: BaseModel) -> str:
     return hashlib.sha256(
         json.dumps(
             {"subject": subject, "body": body.model_dump(mode="json")},
@@ -173,7 +173,7 @@ def _fingerprint(subject: str, body: BaseModel) -> str:
     ).hexdigest()
 
 
-async def _branch(conn: RuntimeConnection) -> UUID | None:
+async def caller_branch(conn: RuntimeConnection) -> UUID | None:
     """The caller's branch when it is branch-limited, else None."""
     row = await (await conn.execute("select gba.current_location_id()")).fetchone()
     return row[0] if row else None
@@ -238,13 +238,13 @@ async def save_class(
 ) -> ClassView:
     """Replace a class whole with its expected revision and its full attribute set (decision 1)."""
     await require_rental(conn, business)
-    if await _branch(conn) is not None:
+    if await caller_branch(conn) is not None:
         raise PermissionDeniedError("Classes are company-wide; a branch member does not write them")
     scope = IdempotencyScope(business, actor, "rental.class", key)
-    fingerprint = _fingerprint(str(class_id), body)
-    stored = await idempotency.claim(conn, scope, fingerprint)
+    request = fingerprint(str(class_id), body)
+    stored = await idempotency.claim(conn, scope, request)
     if stored is not None:
-        if stored.request_hash != fingerprint:
+        if stored.request_hash != request:
             raise IdempotencyKeyReusedError("Key was used for another request")
         view = await load_class(conn, class_id)
         if view is None:
@@ -376,16 +376,16 @@ async def save_unit(
     """Replace a unit whole with its expected revision and its values (decision 2)."""
     await require_rental(conn, business)
     scope = IdempotencyScope(business, actor, "rental.unit", key)
-    fingerprint = _fingerprint(str(unit_id), body)
-    stored = await idempotency.claim(conn, scope, fingerprint)
+    request = fingerprint(str(unit_id), body)
+    stored = await idempotency.claim(conn, scope, request)
     if stored is not None:
-        if stored.request_hash != fingerprint:
+        if stored.request_hash != request:
             raise IdempotencyKeyReusedError("Key was used for another request")
         view = await load_unit(conn, unit_id)
         if view is None:
             raise NotFoundError("Unit not found", unit_id=str(unit_id))
         return view
-    branch = await _branch(conn)
+    branch = await caller_branch(conn)
     known = await (
         await conn.execute("select 1 from gba.locations where id = %s", (body.location_id,))
     ).fetchone()

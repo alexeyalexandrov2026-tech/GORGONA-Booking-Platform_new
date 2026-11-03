@@ -5,12 +5,14 @@ from contextlib import asynccontextmanager
 from uuid import UUID
 
 from fastapi import APIRouter, Request
+from pydantic import AwareDatetime
 
 from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import rental as service
+from gorgona_booking.business import rental_bookings as bookings
 from gorgona_booking.business.rental import (
     ClassInput,
     ClassList,
@@ -18,6 +20,13 @@ from gorgona_booking.business.rental import (
     UnitInput,
     UnitList,
     UnitView,
+)
+from gorgona_booking.business.rental_bookings import (
+    AvailabilityView,
+    BookingInput,
+    BookingList,
+    BookingView,
+    CancellationInput,
 )
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
@@ -128,4 +137,86 @@ async def put_unit(
             actor=principal.actor,
             key=idempotency_key,
             body=body,
+        )
+
+
+@router.get("/bookings")
+async def get_bookings(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    after: UUID | None = None,
+    class_id: UUID | None = None,
+) -> BookingList:
+    async with _access(request, principal, business_id) as access:
+        return await bookings.list_bookings(access.conn, after, class_id)
+
+
+@router.get("/bookings/{booking_id}")
+async def get_booking(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> BookingView:
+    async with _access(request, principal, business_id) as access:
+        view = await bookings.load_booking(access.conn, booking_id)
+        if view is None:
+            raise NotFoundError("Booking not found", booking_id=str(booking_id))
+        return view
+
+
+@router.post("/bookings")
+async def post_booking(
+    business_id: UUID,
+    body: BookingInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> BookingView:
+    """R2 decisions 1-3: a class for a period, while its units at the pickup branch cover it."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await bookings.create_booking(
+            access.conn,
+            business_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/bookings/{booking_id}/cancellation")
+async def post_cancellation(
+    business_id: UUID,
+    booking_id: UUID,
+    body: CancellationInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> BookingView:
+    """R2 decision 1: a booking is cancelled once, with its reason."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await bookings.cancel_booking(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/availability")
+async def get_availability(
+    business_id: UUID,
+    class_id: UUID,
+    location_id: UUID,
+    starts_at: AwareDatetime,
+    ends_at: AwareDatetime,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> AvailabilityView:
+    """R2 decision 2: units minus the peak of overlapping bookings over a period."""
+    async with _access(request, principal, business_id) as access:
+        return await bookings.availability(
+            access.conn, business_id, class_id, location_id, starts_at, ends_at
         )

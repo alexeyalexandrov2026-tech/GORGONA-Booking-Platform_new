@@ -148,6 +148,9 @@ K_TABLES = {
     "rental_class_attributes",
     "rental_units",
     "rental_unit_values",
+    # R2 (0097): rental bookings and their cancellations.
+    "rental_bookings",
+    "rental_booking_cancellations",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
