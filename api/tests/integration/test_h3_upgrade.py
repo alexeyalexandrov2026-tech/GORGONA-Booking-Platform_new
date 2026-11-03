@@ -225,6 +225,21 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                         "where e.tenant_id=t.tenant_id and e.id=t.entry_id "
                         "and e.source_kind='stock' and e.tenant_id=any({}))"
                     ).format(incompatible)
+            # R3a: a rental unit has its own resource from migration 0098 on, and no unit can
+            # exist in a real database before it (rental was never enableable); an older schema
+            # takes neither the units, their values, their resources nor their holds.
+            rental: sql.Composable | None = None
+            if target_version[0] < 98 and table == "resources":
+                rental = sql.SQL("t.kind <> 'rental_unit'")
+            elif target_version[0] < 98 and table == "resource_allocations":
+                rental = sql.SQL("t.source_kind <> 'rental_assignment'")
+            elif target_version[0] < 98 and table in ("rental_units", "rental_unit_values"):
+                rental = sql.SQL("false")
+            if rental is not None:
+                if predicate == sql.SQL(""):
+                    predicate = sql.SQL(" where {}").format(rental)
+                else:
+                    predicate = sql.SQL("{} and {}").format(predicate, rental)
             query = sql.SQL("select {} from {} t{}").format(
                 names, sql.Identifier("gba", table), predicate
             )

@@ -12,6 +12,7 @@ from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import rental as service
+from gorgona_booking.business import rental_assignments as assignments
 from gorgona_booking.business import rental_bookings as bookings
 from gorgona_booking.business.rental import (
     ClassInput,
@@ -20,6 +21,11 @@ from gorgona_booking.business.rental import (
     UnitInput,
     UnitList,
     UnitView,
+)
+from gorgona_booking.business.rental_assignments import (
+    AssignmentInput,
+    AssignmentList,
+    AssignmentView,
 )
 from gorgona_booking.business.rental_bookings import (
     AvailabilityView,
@@ -219,4 +225,34 @@ async def get_availability(
     async with _access(request, principal, business_id) as access:
         return await bookings.availability(
             access.conn, business_id, class_id, location_id, starts_at, ends_at
+        )
+
+
+@router.get("/bookings/{booking_id}/assignments")
+async def get_assignments(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> AssignmentList:
+    async with _access(request, principal, business_id) as access:
+        return await assignments.list_assignments(access.conn, booking_id)
+
+
+@router.post("/bookings/{booking_id}/assignment")
+async def post_assignment(
+    business_id: UUID,
+    booking_id: UUID,
+    body: AssignmentInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> AssignmentView:
+    """R3a decisions 2-3: hold a suitable unit for the booking period, replacing the current one."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await assignments.assign_unit(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
         )

@@ -590,7 +590,8 @@ async def salon_overview(
         staff_count_row = await (
             await conn.execute(
                 "select count(*) from gba.resources where tenant_id = %s and "
-                "is_active = true and kind not in ('staff', 'driver', 'truck', 'trailer')",
+                "is_active = true and kind not in "
+                "('staff', 'driver', 'truck', 'trailer', 'rental_unit')",
                 (salon_id,),
             )
         ).fetchone()
@@ -1624,7 +1625,8 @@ async def list_staff(
         rows = await (
             await access.conn.execute(
                 "select id, location_id, kind, display_name, is_active from gba.resources "
-                "where kind not in ('staff', 'driver', 'truck', 'trailer') order by display_name"
+                "where kind not in ('staff', 'driver', 'truck', 'trailer', 'rental_unit') "
+                "order by display_name"
             )
         ).fetchall()
     return [
@@ -1684,7 +1686,8 @@ async def update_staff(
                 "update gba.resources set "
                 "display_name = coalesce(%s, display_name), "
                 "is_active = coalesce(%s, is_active) "
-                "where id = %s and kind not in ('staff', 'driver', 'truck', 'trailer') "
+                "where id = %s and kind not in "
+                "('staff', 'driver', 'truck', 'trailer', 'rental_unit') "
                 "returning id, location_id, "
                 "kind, display_name, is_active",
                 (body.display_name, body.is_active, resource_id),
@@ -1715,7 +1718,7 @@ async def get_staff_schedule(
             await conn.execute(
                 "select id, display_name, is_active, location_id from "
                 "gba.resources where id = %s "
-                "and kind not in ('staff', 'driver', 'truck', 'trailer')",
+                "and kind not in ('staff', 'driver', 'truck', 'trailer', 'rental_unit')",
                 (resource_id,),
             )
         ).fetchone()
@@ -1771,7 +1774,7 @@ async def update_staff_schedule(
             await conn.execute(
                 "select id, display_name, is_active, location_id from "
                 "gba.resources where id = %s "
-                "and kind not in ('staff', 'driver', 'truck', 'trailer')",
+                "and kind not in ('staff', 'driver', 'truck', 'trailer', 'rental_unit')",
                 (resource_id,),
             )
         ).fetchone()
@@ -1836,7 +1839,7 @@ async def update_staff_services(
             await conn.execute(
                 "select id, display_name, is_active, location_id from "
                 "gba.resources where id = %s "
-                "and kind not in ('staff', 'driver', 'truck', 'trailer')",
+                "and kind not in ('staff', 'driver', 'truck', 'trailer', 'rental_unit')",
                 (resource_id,),
             )
         ).fetchone()

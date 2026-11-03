@@ -309,6 +309,37 @@ async def create_booking(
     return view
 
 
+async def release_current(
+    conn: RuntimeConnection,
+    business: UUID,
+    booking_id: UUID,
+    user_id: UUID,
+    reason: Literal["replaced", "cancelled"],
+) -> None:
+    """R3a: release the booking's current unit assignment and its hold, in the caller's
+    transaction."""
+    row = await (
+        await conn.execute(
+            "select a.id from gba.rental_assignments a where a.booking_id = %s and not exists ("
+            "select 1 from gba.rental_assignment_releases l "
+            "where l.tenant_id = a.tenant_id and l.assignment_id = a.id)",
+            (booking_id,),
+        )
+    ).fetchone()
+    if row is None:
+        return
+    await conn.execute(
+        "insert into gba.rental_assignment_releases (tenant_id, assignment_id, reason, "
+        "released_by) values (%s, %s, %s, %s)",
+        (business, row[0], reason, user_id),
+    )
+    await conn.execute(
+        "update gba.resource_allocations set state = 'released' "
+        "where source_kind = 'rental_assignment' and source_id = %s",
+        (row[0],),
+    )
+
+
 async def cancel_booking(
     conn: RuntimeConnection,
     business: UUID,
@@ -346,6 +377,8 @@ async def cancel_booking(
                 "cancelled_by) values (%s, %s, %s, %s)",
                 (business, booking_id, body.reason, user_id),
             )
+            # R3a: the cancellation frees the unit held for the booking.
+            await release_current(conn, business, booking_id, user_id, "cancelled")
     except UniqueViolation as exc:
         raise RentalBookingCancelledError("The booking is already cancelled") from exc
     view = await load_booking(conn, booking_id)

@@ -150,6 +150,9 @@ K_TABLES = {
     # R2 (0097): rental bookings and their cancellations.
     "rental_bookings",
     "rental_booking_cancellations",
+    # R3a (0098): rental assignments and their releases.
+    "rental_assignments",
+    "rental_assignment_releases",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

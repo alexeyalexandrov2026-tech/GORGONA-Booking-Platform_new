@@ -415,10 +415,19 @@ async def save_unit(
     try:
         async with module_writes(RENTAL_MODULE), conn.transaction():
             if current is None:
+                # R3a: every unit has its own occupancy resource in its branch.
+                resource = await (
+                    await conn.execute(
+                        "insert into gba.resources (tenant_id, location_id, kind, display_name, "
+                        "is_active) values (%s, %s, 'rental_unit', %s, %s) returning id",
+                        (business, body.location_id, body.identifier, body.state == "active"),
+                    )
+                ).fetchone()
+                assert resource is not None  # noqa: S101 - returning id
                 await conn.execute(
                     "insert into gba.rental_units (tenant_id, id, class_id, identifier, "
-                    "location_id, state, revision, created_by) "
-                    "values (%s, %s, %s, %s, %s, %s, 1, %s)",
+                    "location_id, state, revision, created_by, resource_id) "
+                    "values (%s, %s, %s, %s, %s, %s, 1, %s, %s)",
                     (
                         business,
                         unit_id,
@@ -427,6 +436,7 @@ async def save_unit(
                         body.location_id,
                         body.state,
                         user_id,
+                        resource[0],
                     ),
                 )
             else:
@@ -434,6 +444,12 @@ async def save_unit(
                     "update gba.rental_units set location_id = %s, state = %s, "
                     "revision = revision + 1, updated_at = now() where id = %s",
                     (body.location_id, body.state, unit_id),
+                )
+                await conn.execute(
+                    "update gba.resources r set location_id = %s, is_active = %s "
+                    "from gba.rental_units u where u.id = %s and r.tenant_id = u.tenant_id "
+                    "and r.id = u.resource_id",
+                    (body.location_id, body.state == "active", unit_id),
                 )
             for name, value in sorted(body.values.items()):
                 await conn.execute(

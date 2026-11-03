@@ -28,12 +28,13 @@ _FUNCTIONS = dict(
         re.DOTALL,
     )
 )
-# M2 (0075) replaces the shared occupancy guard again (trip assignments); approve that text.
+# M2 (0075) and R3a (0098) replace the shared occupancy guard again (trip and rental
+# assignments); approve the latest text.
 _FUNCTIONS.update(
     (name, body)
     for name, body in re.findall(
         _FUNCTION_PATTERN,
-        (_MIGRATIONS / "0075_transport_assignments.sql").read_text(encoding="utf-8"),
+        (_MIGRATIONS / "0098_rental_assignments.sql").read_text(encoding="utf-8"),
         re.DOTALL,
     )
     if name == "guard_resource_allocation"
@@ -354,13 +355,14 @@ _SHARED_CHECKS = {
         "resources",
         "resources_kind_valid",
     ): "((kind = ANY (ARRAY['artist'::text, 'chair'::text, 'room'::text, 'staff'::text, "
-    "'equipment'::text, 'driver'::text, 'truck'::text, 'trailer'::text])))",
-    # L1 (0066): equipment is a resource kind; M2 (0075): drivers, trucks and trailers too.
+    "'equipment'::text, 'driver'::text, 'truck'::text, 'trailer'::text, 'rental_unit'::text])))",
+    # L1 (0066): equipment is a resource kind; M2 (0075): drivers, trucks and trailers too;
+    # R3a (0098): rental units.
     (
         "resource_allocations",
         "resource_allocations_source_kind",
     ): "((source_kind = ANY (ARRAY['booking'::text, 'reservation'::text, 'shift'::text, "
-    "'trip_assignment'::text])))",  # M2 (0075): trip assignments hold transport lanes
+    "'trip_assignment'::text, 'rental_assignment'::text])))",  # M2 (0075), R3a (0098)
 }
 
 
