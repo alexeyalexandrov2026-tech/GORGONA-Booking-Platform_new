@@ -232,9 +232,12 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
             if target_version[0] < 98 and table == "resources":
                 rental = sql.SQL("t.kind <> 'rental_unit'")
             elif target_version[0] < 98 and table == "resource_allocations":
-                rental = sql.SQL("t.source_kind <> 'rental_assignment'")
+                rental = sql.SQL("t.source_kind not in ('rental_assignment', 'rental_block')")
             elif target_version[0] < 98 and table in ("rental_units", "rental_unit_values"):
                 rental = sql.SQL("false")
+            # R3b: a rental block hold cannot be represented before migration 0099.
+            elif target_version[0] < 99 and table == "resource_allocations":
+                rental = sql.SQL("t.source_kind <> 'rental_block'")
             if rental is not None:
                 if predicate == sql.SQL(""):
                     predicate = sql.SQL(" where {}").format(rental)

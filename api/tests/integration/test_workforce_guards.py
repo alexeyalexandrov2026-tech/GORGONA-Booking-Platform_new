@@ -197,7 +197,8 @@ async def test_damaged_workforce_schema_refuses_reads_and_writes(
         restore = (
             "alter table gba.resource_allocations add constraint "
             "resource_allocations_source_kind check (source_kind in "
-            "('booking','reservation','shift','trip_assignment','rental_assignment'))"  # M2, R3a
+            "('booking','reservation','shift','trip_assignment','rental_assignment',"
+            "'rental_block'))"  # M2 (0075), R3a (0098), R3b (0099)
         )
     elif damage == "policy":
         change = (

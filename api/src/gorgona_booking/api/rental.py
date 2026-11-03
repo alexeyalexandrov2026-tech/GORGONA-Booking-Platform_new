@@ -13,6 +13,7 @@ from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import rental as service
 from gorgona_booking.business import rental_assignments as assignments
+from gorgona_booking.business import rental_blocks as blocks
 from gorgona_booking.business import rental_bookings as bookings
 from gorgona_booking.business.rental import (
     ClassInput,
@@ -26,6 +27,12 @@ from gorgona_booking.business.rental_assignments import (
     AssignmentInput,
     AssignmentList,
     AssignmentView,
+)
+from gorgona_booking.business.rental_blocks import (
+    BlockInput,
+    BlockList,
+    BlockReleaseInput,
+    BlockView,
 )
 from gorgona_booking.business.rental_bookings import (
     AvailabilityView,
@@ -251,6 +258,60 @@ async def post_assignment(
             access.conn,
             business_id,
             booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/units/{unit_id}/blocks")
+async def get_blocks(
+    business_id: UUID, unit_id: UUID, request: Request, principal: CurrentPrincipal
+) -> BlockList:
+    async with _access(request, principal, business_id) as access:
+        return await blocks.list_blocks(access.conn, unit_id)
+
+
+@router.post("/units/{unit_id}/blocks")
+async def post_block(
+    business_id: UUID,
+    unit_id: UUID,
+    body: BlockInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> BlockView:
+    """R3b decisions 1-2: take a unit out of service for a period, if every booking keeps a unit."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await blocks.create_block(
+            access.conn,
+            business_id,
+            unit_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/units/{unit_id}/blocks/{block_id}/release")
+async def post_block_release(
+    business_id: UUID,
+    unit_id: UUID,
+    block_id: UUID,
+    body: BlockReleaseInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> BlockView:
+    """R3b decision 1: a block is released once, with its hold."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await blocks.release_block(
+            access.conn,
+            business_id,
+            unit_id,
+            block_id,
             user_id=principal.user_id,
             actor=principal.actor,
             key=idempotency_key,

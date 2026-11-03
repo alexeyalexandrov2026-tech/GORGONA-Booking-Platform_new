@@ -153,6 +153,9 @@ K_TABLES = {
     # R3a (0098): rental assignments and their releases.
     "rental_assignments",
     "rental_assignment_releases",
+    # R3b (0099): rental unit blocks and their releases.
+    "rental_unit_blocks",
+    "rental_unit_block_releases",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

@@ -184,9 +184,10 @@ begin
     end if;
     if exists (select 1 from gba.resources r where r.tenant_id = new.tenant_id
         and r.id = new.resource_id
-        and (r.kind = 'rental_unit') <> (new.source_kind = 'rental_assignment')) then
+        and (r.kind = 'rental_unit')
+            <> (new.source_kind in ('rental_assignment', 'rental_block'))) then
         raise exception using errcode = '23514',
-            message = 'rental occupancy is only for rental assignments';
+            message = 'rental occupancy is only for rental assignments and blocks';
     end if;
     if new.source_kind = 'rental_assignment' then
         if tg_op = 'INSERT' and not exists (
@@ -207,6 +208,27 @@ begin
         ) then
             raise exception using errcode = '23514',
                 message = 'a rental allocation is released by its release';
+        end if;
+    end if;
+    if new.source_kind = 'rental_block' then
+        if tg_op = 'INSERT' and not exists (
+            select 1 from gba.rental_unit_blocks b
+              join gba.rental_units u on u.tenant_id = b.tenant_id and u.id = b.unit_id
+             where b.tenant_id = new.tenant_id and b.id = new.source_id
+               and u.resource_id = new.resource_id and new.state = 'confirmed'
+               and b.creation_xid = pg_current_xact_id()
+               and new.during = tstzrange(b.starts_at, b.ends_at, '[)')
+        ) then
+            raise exception using errcode = '23514',
+                message = 'a rental block hold follows its exact block';
+        end if;
+        if tg_op = 'UPDATE' and new.state = 'released' and not exists (
+            select 1 from gba.rental_unit_block_releases l
+             where l.tenant_id = new.tenant_id and l.block_id = new.source_id
+               and l.creation_xid = pg_current_xact_id()
+        ) then
+            raise exception using errcode = '23514',
+                message = 'a rental block hold is released by its release';
         end if;
     end if;
     return new;

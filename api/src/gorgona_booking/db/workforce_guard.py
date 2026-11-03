@@ -28,13 +28,13 @@ _FUNCTIONS = dict(
         re.DOTALL,
     )
 )
-# M2 (0075) and R3a (0098) replace the shared occupancy guard again (trip and rental
-# assignments); approve the latest text.
+# M2 (0075), R3a (0098) and R3b (0099) replace the shared occupancy guard again (trip and
+# rental assignments, rental blocks); approve the latest text.
 _FUNCTIONS.update(
     (name, body)
     for name, body in re.findall(
         _FUNCTION_PATTERN,
-        (_MIGRATIONS / "0098_rental_assignments.sql").read_text(encoding="utf-8"),
+        (_MIGRATIONS / "0099_rental_blocks.sql").read_text(encoding="utf-8"),
         re.DOTALL,
     )
     if name == "guard_resource_allocation"
@@ -362,7 +362,8 @@ _SHARED_CHECKS = {
         "resource_allocations",
         "resource_allocations_source_kind",
     ): "((source_kind = ANY (ARRAY['booking'::text, 'reservation'::text, 'shift'::text, "
-    "'trip_assignment'::text, 'rental_assignment'::text])))",  # M2 (0075), R3a (0098)
+    "'trip_assignment'::text, 'rental_assignment'::text, 'rental_block'::text])))",
+    # M2 (0075), R3a (0098), R3b (0099)
 }
 
 

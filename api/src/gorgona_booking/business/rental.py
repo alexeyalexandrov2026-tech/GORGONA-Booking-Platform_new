@@ -60,6 +60,12 @@ class RentalUnitRetiredError(ConflictError):
     code = "RENTAL_UNIT_RETIRED"
 
 
+class RentalUnitHeldError(ConflictError):
+    """R3b decision 3: a unit with a current or future hold keeps its branch."""
+
+    code = "RENTAL_UNIT_HELD"
+
+
 class RentalValueInvalidError(DomainError):
     code = "RENTAL_VALUE_INVALID"
 
@@ -396,8 +402,8 @@ async def save_unit(
         raise InvalidReferenceError("Unknown class", field="class_id")
     current = await (
         await conn.execute(
-            "select revision, class_id, identifier, state from gba.rental_units "
-            "where id = %s for update",
+            "select revision, class_id, identifier, state, location_id, resource_id "
+            "from gba.rental_units where id = %s for update",
             (unit_id,),
         )
     ).fetchone()
@@ -411,6 +417,16 @@ async def save_unit(
     if current is not None and (current[1] != body.class_id or current[2] != body.identifier):
         raise RentalUnitFixedError("A unit keeps its class and identifier")
     _check_values(klass.attributes, body.values)
+    if current is not None and current[4] != body.location_id:
+        held = await (
+            await conn.execute(
+                "select 1 from gba.resource_allocations where resource_id = %s "
+                "and state in ('held', 'confirmed') and upper(during) > now()",
+                (current[5],),
+            )
+        ).fetchone()
+        if held is not None:
+            raise RentalUnitHeldError("A unit with a current or future hold keeps its branch")
     revision = found + 1
     try:
         async with module_writes(RENTAL_MODULE), conn.transaction():
@@ -465,6 +481,10 @@ async def save_unit(
         raise InvalidReferenceError("Unknown reference", field="class_id") from exc
     except CheckViolation as exc:
         name = exc.diag.constraint_name or ""
+        if name == "rental_units_held_check":
+            raise RentalUnitHeldError(
+                "A unit with a current or future hold keeps its branch"
+            ) from exc
         if name == "rental_units_retired_check":
             raise RentalUnitRetiredError("A retired unit takes no new revision") from exc
         if name == "rental_units_revision_sequence_check":
