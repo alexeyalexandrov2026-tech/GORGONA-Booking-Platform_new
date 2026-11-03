@@ -35,16 +35,16 @@ commits, push for CI without a PR.
    (`MODULE_NOT_READY` before acceptance, `MODULE_DISABLED` in the database) and nothing is written; another company
    sees nothing; direct SQL updates of insert-only rows and deletes are refused.
 
-## Acceptance of R1 — NOT TESTED
+## Acceptance of R1 — PASS 2026-11-03 (code `15a884d`, [evidence](evidence/2026-11-03-r1-rental-catalog/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R1-01 | The module is registered implemented and cannot be enabled; with it off every write is refused and nothing is written; reads answer | NOT TESTED |
-| R1-02 | A class is replaced whole with its revision and its full attribute set per revision; a taken or changed code, a stale revision and a bad attribute set are refused | NOT TESTED |
-| R1-03 | A unit is replaced whole with its revision and typed values; unknown key, wrong type, missing required, taken identifier, changed class or identifier and a retired unit are refused | NOT TESTED |
-| R1-04 | Owners and managers read and write; front desk is refused; a branch-limited manager sees and writes only its branch's units and writes no class; another company sees nothing | NOT TESTED |
-| R1-05 | The database refuses forged values, attribute rows outside their revision, updates of insert-only rows and deletes | NOT TESTED |
-| R1-06 | 0095 -> 0096 keeps every row; the full suite stays green | NOT TESTED |
+| R1-01 | The module is registered implemented and cannot be enabled; with it off every write is refused and nothing is written; reads answer | PASS |
+| R1-02 | A class is replaced whole with its revision and its full attribute set per revision; a taken or changed code, a stale revision and a bad attribute set are refused | PASS |
+| R1-03 | A unit is replaced whole with its revision and typed values; unknown key, wrong type, missing required, taken identifier, changed class or identifier and a retired unit are refused | PASS |
+| R1-04 | Owners and managers read and write; front desk is refused; a branch-limited manager sees and writes only its branch's units and writes no class; another company sees nothing | PASS |
+| R1-05 | The database refuses forged values, attribute rows outside their revision, updates of insert-only rows and deletes | PASS |
+| R1-06 | 0095 -> 0096 keeps every row; the full suite stays green | PASS |
 
 ## Not in R1
 
