@@ -48,15 +48,15 @@ check of which reads of STOCK-01, FIN-03 and WORK-01 it can use. O7b (this) buil
 6. Accessibility and times as in O7a (named forms, tables in focusable regions, site dates, axe, no horizontal
    scroll at 375 px).
 
-## Acceptance of O7b — NOT TESTED
+## Acceptance of O7b — PASS 2026-11-03 (code `ded715d`, [evidence](evidence/2026-11-02-o7b-construction-screens/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| O7b-01 | Strict contracts accept every O3a and O4a response the screens read and refuse unknown fields and bad values | NOT TESTED |
-| O7b-02 | In a real browser (desktop and mobile) an owner sees the budget, creates a subcontract and revises it above the line's budget; the budget shows committed and over committed as the server derived them; the database holds both versions | NOT TESTED |
-| O7b-03 | The owner saves a schedule with a dependency and sees the planned finish; saves a daily report by keyboard; records a completed quantity after a lost answer once and sees the progress; the database holds them | NOT TESTED |
-| O7b-04 | Axe finds no violation on the budget and execution parts; no horizontal scroll on mobile | NOT TESTED |
-| O7b-05 | Web static checks and the full suite stay green | NOT TESTED |
+| O7b-01 | Strict contracts accept every O3a and O4a response the screens read and refuse unknown fields and bad values | PASS |
+| O7b-02 | In a real browser (desktop and mobile) an owner sees the budget, creates a subcontract and revises it above the line's budget; the budget shows committed and over committed as the server derived them; the database holds both versions | PASS |
+| O7b-03 | The owner saves a schedule with a dependency and sees the planned finish; saves a daily report by keyboard; records a completed quantity after a lost answer once and sees the progress; the database holds them | PASS |
+| O7b-04 | Axe finds no violation on the budget and execution parts; no horizontal scroll on mobile | PASS |
+| O7b-05 | Web static checks and the full suite stay green | PASS |
 
 ## Not in O7b
 
