@@ -8,7 +8,13 @@ import { fetchCounterparties } from "../lib/counterparty-api";
 import { fetchWorkspace, type LocationItem } from "../lib/management-api";
 import {
   fetchAllProjects,
+  fetchBudget,
   fetchChangeOrders,
+  fetchCommitments,
+  fetchDailyReports,
+  fetchMeasurements,
+  fetchProgress,
+  fetchSchedule,
   fetchContract,
   fetchEstimate,
   fetchEstimates,
@@ -17,7 +23,13 @@ import {
   saveProject,
 } from "../lib/construction-api";
 import type {
+  Budget,
   ChangeOrderSummary,
+  CommitmentSummary,
+  DailyReportList,
+  Measurement,
+  Progress,
+  Schedule,
   Contract,
   Estimate,
   EstimateSummary,
@@ -30,18 +42,29 @@ import {
   Estimates,
 } from "./construction-estimates";
 import { ChangeOrders } from "./construction-changes";
+import { BudgetPanel, Commitments } from "./construction-budget";
+import {
+  DailyReports,
+  ProgressPanel,
+  SchedulePanel,
+} from "./construction-execution";
 
 export type Customer = { id: string; name: string };
+/** An active counterparty with its roles (customer, contractor, supplier, ...). */
+export type Party = Customer & { roles: string[] };
 
-async function allCustomers(businessId: string): Promise<Customer[]> {
-  const customers: Customer[] = [];
+async function allParties(businessId: string): Promise<Party[]> {
+  const parties: Party[] = [];
   let after: string | undefined;
   for (;;) {
     const page = await fetchCounterparties(businessId, "", "active", after);
     for (const c of page.items)
-      if (c.roles.includes("customer"))
-        customers.push({ id: c.counterparty_id, name: c.display_name });
-    if (!page.next_cursor) return customers;
+      parties.push({
+        id: c.counterparty_id,
+        name: c.display_name,
+        roles: c.roles,
+      });
+    if (!page.next_cursor) return parties;
     after = page.next_cursor;
   }
 }
@@ -54,7 +77,7 @@ function upsert(list: Project[], item: Project): Project[] {
 
 export function ConstructionScreen({ businessId }: { businessId: string }) {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [parties, setParties] = useState<Party[]>([]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,13 +90,13 @@ export function ConstructionScreen({ businessId }: { businessId: string }) {
     Promise.all([
       fetchAllProjects(businessId),
       // Without the counterparties module there is no customer to choose; the list still works.
-      allCustomers(businessId).catch(() => [] as Customer[]),
+      allParties(businessId).catch(() => [] as Party[]),
       fetchWorkspace(businessId).then((w) => w.locations),
     ])
       .then(([list, people, places]) => {
         if (!live) return;
         setProjects(list);
-        setCustomers(people);
+        setParties(people);
         setLocations(places);
         setLoaded(true);
       })
@@ -88,8 +111,8 @@ export function ConstructionScreen({ businessId }: { businessId: string }) {
 
   const customerName = useCallback(
     (id: string) =>
-      customers.find((c) => c.id === id)?.name ?? "Unknown customer",
-    [customers],
+      parties.find((c) => c.id === id)?.name ?? "Unknown customer",
+    [parties],
   );
   const branchName = (id: string) =>
     locations.find((l) => l.id === id)?.name ?? "Unknown branch";
@@ -184,6 +207,7 @@ export function ConstructionScreen({ businessId }: { businessId: string }) {
           project={selected}
           customerName={customerName(selected.customer_id)}
           branchName={branchName(selected.location_id)}
+          parties={parties}
           onChange={changed}
           onEdit={setEditing}
           notify={setNotice}
@@ -194,7 +218,7 @@ export function ConstructionScreen({ businessId }: { businessId: string }) {
           key={editing?.project_id ?? "new"}
           businessId={businessId}
           editing={editing}
-          customers={customers}
+          customers={parties.filter((p) => p.roles.includes("customer"))}
           locations={locations}
           onSaved={(project) => {
             changed(project);
@@ -379,7 +403,33 @@ type Loaded = {
   contract: Contract | null;
   original: Estimate | null;
   orders: ChangeOrderSummary[];
+  /** O7b: present once the project has a contract. */
+  execution: Execution | null;
 };
+type Execution = {
+  budget: Budget;
+  commitments: CommitmentSummary[];
+  schedule: Schedule;
+  reports: DailyReportList["items"];
+  progress: Progress;
+  measurements: Measurement[];
+};
+
+async function loadExecution(
+  businessId: string,
+  id: string,
+): Promise<Execution> {
+  const [budget, commitments, schedule, reports, progress, measurements] =
+    await Promise.all([
+      fetchBudget(businessId, id),
+      fetchCommitments(businessId, id),
+      fetchSchedule(businessId, id),
+      fetchDailyReports(businessId, id),
+      fetchProgress(businessId, id),
+      fetchMeasurements(businessId, id),
+    ]);
+  return { budget, commitments, schedule, reports, progress, measurements };
+}
 
 /** Everything the project page shows, read from the server; nothing is set here. */
 async function loadProject(
@@ -391,7 +441,7 @@ async function loadProject(
     fetchEstimates(businessId, id),
     fetchContract(businessId, id),
   ]);
-  const [latest, original, orders] = await Promise.all([
+  const [latest, original, orders, execution] = await Promise.all([
     fresh.latest_version
       ? fetchEstimate(businessId, id, fresh.latest_version)
       : Promise.resolve(null),
@@ -401,10 +451,18 @@ async function loadProject(
     contract
       ? fetchChangeOrders(businessId, id).then((o) => o.items)
       : Promise.resolve([] as ChangeOrderSummary[]),
+    contract ? loadExecution(businessId, id) : Promise.resolve(null),
   ]);
   return {
     fresh,
-    loaded: { estimates: list.items, latest, contract, original, orders },
+    loaded: {
+      estimates: list.items,
+      latest,
+      contract,
+      original,
+      orders,
+      execution,
+    },
   };
 }
 
@@ -413,6 +471,7 @@ function ProjectPage({
   project,
   customerName,
   branchName,
+  parties,
   onChange,
   onEdit,
   notify,
@@ -421,6 +480,7 @@ function ProjectPage({
   project: Project;
   customerName: string;
   branchName: string;
+  parties: Party[];
   onChange: (project: Project) => void;
   onEdit: (project: Project) => void;
   notify: (text: string) => void;
@@ -544,6 +604,46 @@ function ProjectPage({
               orders={state.orders}
               onChanged={refresh}
             />
+          )}
+          {state.execution && (
+            <>
+              <BudgetPanel
+                project={project}
+                places={places}
+                budget={state.execution.budget}
+              />
+              <Commitments
+                businessId={businessId}
+                project={project}
+                places={places}
+                budget={state.execution.budget}
+                commitments={state.execution.commitments}
+                parties={parties}
+                onChanged={refresh}
+              />
+              <SchedulePanel
+                key={`schedule:${state.execution.schedule.revision}`}
+                businessId={businessId}
+                project={project}
+                schedule={state.execution.schedule}
+                phases={state.execution.budget.phases.map((p) => p.phase)}
+                onChanged={refresh}
+              />
+              <DailyReports
+                businessId={businessId}
+                project={project}
+                reports={state.execution.reports}
+                onChanged={refresh}
+              />
+              <ProgressPanel
+                businessId={businessId}
+                project={project}
+                places={places}
+                progress={state.execution.progress}
+                measurements={state.execution.measurements}
+                onChanged={refresh}
+              />
+            </>
           )}
         </>
       )}

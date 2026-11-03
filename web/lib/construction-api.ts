@@ -3,9 +3,17 @@
 // retry after a lost answer is the same request (as on the transport screens, ADR-0030).
 import { ManagementApiError, managementFetch } from "./management-api";
 import type {
+  Budget,
   ChangeOrder,
   ChangeOrderList,
+  Commitment,
+  CommitmentSummary,
   Contract,
+  DailyReport,
+  DailyReportList,
+  Measurement,
+  Progress,
+  Schedule,
   Estimate,
   EstimateList,
   LineKind,
@@ -197,6 +205,151 @@ export const decide = (
 ) =>
   command<ChangeOrder>(
     `${projectPath(business, project)}/change-orders/${number}/decision`,
+    "POST",
+    body,
+  );
+
+// O7b: the budget, commitments, schedule, daily reports and completed quantities.
+export const fetchBudget = (business: string, project: string) =>
+  managementFetch<Budget>(`${projectPath(business, project)}/budget`);
+export const fetchCommitments = (business: string, project: string) =>
+  managementFetch<{ items: CommitmentSummary[] }>(
+    `${projectPath(business, project)}/commitments`,
+  ).then((list) => list.items);
+export const fetchCommitment = (
+  business: string,
+  project: string,
+  number: number,
+) =>
+  managementFetch<Commitment>(
+    `${projectPath(business, project)}/commitments/${number}`,
+  );
+export type CommitmentLineBody = {
+  change_order: number | null;
+  position: number;
+  amount_minor: number;
+};
+export type CommitmentBody = {
+  schema_version: 1;
+  kind: "subcontract" | "purchase_order";
+  counterparty_id: string;
+  title: string;
+  reference: string | null;
+  note: string | null;
+  lines: CommitmentLineBody[];
+};
+export const createCommitment = (
+  business: string,
+  project: string,
+  body: CommitmentBody,
+) =>
+  command<Commitment>(
+    `${projectPath(business, project)}/commitments`,
+    "POST",
+    body,
+  );
+export type RevisionBody = {
+  schema_version: 1;
+  expected_revision: number;
+  state: "open" | "cancelled";
+  title: string;
+  reference: string | null;
+  note: string | null;
+  lines: CommitmentLineBody[];
+};
+export const reviseCommitment = (
+  business: string,
+  project: string,
+  number: number,
+  body: RevisionBody,
+) =>
+  command<Commitment>(
+    `${projectPath(business, project)}/commitments/${number}`,
+    "PUT",
+    body,
+  );
+
+export const fetchSchedule = (business: string, project: string) =>
+  managementFetch<Schedule>(`${projectPath(business, project)}/schedule`);
+export type ScheduleBody = {
+  schema_version: 1;
+  expected_revision: number;
+  note: string | null;
+  phases: {
+    phase: string;
+    planned_start: string;
+    planned_finish: string;
+    depends_on: string[];
+  }[];
+};
+export const saveSchedule = (
+  business: string,
+  project: string,
+  body: ScheduleBody,
+) =>
+  command<Schedule>(`${projectPath(business, project)}/schedule`, "PUT", body);
+
+export const fetchDailyReports = (business: string, project: string) =>
+  managementFetch<DailyReportList>(
+    `${projectPath(business, project)}/daily-reports`,
+  ).then((list) => list.items);
+/** The report of a site date, or null while there is none. */
+export async function fetchDailyReport(
+  business: string,
+  project: string,
+  date: string,
+): Promise<DailyReport | null> {
+  try {
+    return await managementFetch<DailyReport>(
+      `${projectPath(business, project)}/daily-reports/${date}`,
+    );
+  } catch (error) {
+    if (error instanceof ManagementApiError && error.code === "NOT_FOUND")
+      return null;
+    throw error;
+  }
+}
+export type DailyReportBody = {
+  schema_version: 1;
+  expected_revision: number;
+  weather: string | null;
+  notes: string | null;
+  crew: { label: string; headcount: number; counterparty_id: null }[];
+  photos: { document_id: string; revision: number }[];
+};
+export const saveDailyReport = (
+  business: string,
+  project: string,
+  date: string,
+  body: DailyReportBody,
+) =>
+  command<DailyReport>(
+    `${projectPath(business, project)}/daily-reports/${date}`,
+    "PUT",
+    body,
+  );
+
+export const fetchProgress = (business: string, project: string) =>
+  managementFetch<Progress>(`${projectPath(business, project)}/progress`);
+export const fetchMeasurements = (business: string, project: string) =>
+  managementFetch<{ items: Measurement[] }>(
+    `${projectPath(business, project)}/progress/measurements`,
+  ).then((list) => list.items);
+export type MeasurementBody = {
+  schema_version: 1;
+  change_order: number | null;
+  position: number;
+  measured_on: string;
+  quantity_to_date: string;
+  note: string | null;
+};
+export const recordMeasurement = (
+  business: string,
+  project: string,
+  body: MeasurementBody,
+) =>
+  command<Measurement>(
+    `${projectPath(business, project)}/progress`,
     "POST",
     body,
   );

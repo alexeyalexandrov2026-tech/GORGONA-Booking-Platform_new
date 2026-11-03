@@ -40,6 +40,7 @@
     "test:management:transport-money": "playwright test tests/transport-money.spec.ts --max-failures=1",
     "test:management:transport-brokerage": "playwright test tests/transport-brokerage.spec.ts --max-failures=1",
     "test:management:construction": "playwright test tests/construction.spec.ts --max-failures=1",
+    "test:management:construction-execution": "playwright test tests/construction-execution.spec.ts --max-failures=1",
     "test:management:stock-documents": "playwright test tests/stock-documents.spec.ts --max-failures=1"
   },
   "dependencies": {
