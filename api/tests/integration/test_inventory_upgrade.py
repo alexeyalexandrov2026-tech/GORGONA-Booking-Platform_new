@@ -143,6 +143,11 @@ K_TABLES = {
     "construction_warranty_claims",
     "construction_warranty_claim_events",
     "construction_warranty_repairs",
+    # R1 (0096): rental classes, units and their values.
+    "rental_classes",
+    "rental_class_attributes",
+    "rental_units",
+    "rental_unit_values",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

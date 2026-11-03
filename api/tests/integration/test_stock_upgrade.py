@@ -142,6 +142,11 @@ K_TABLES = {
     "construction_warranty_claims",
     "construction_warranty_claim_events",
     "construction_warranty_repairs",
+    # R1 (0096): rental classes, units and their values.
+    "rental_classes",
+    "rental_class_attributes",
+    "rental_units",
+    "rental_unit_values",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

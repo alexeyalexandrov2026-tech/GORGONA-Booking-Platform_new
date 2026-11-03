@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[5] = 5
+MODULE_REGISTRY_VERSION: Literal[6] = 6
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -234,6 +234,19 @@ MODULES: tuple[PlatformModule, ...] = (
         "No contract, change orders, budget, execution, billing or screens yet; it cannot be "
         "enabled until package O is accepted.",
         "New construction projects, estimate versions and proposals. Reads continue.",
+    ),
+    # ADR-0036 (package R): implemented, not enableable until acceptance and the owner's word.
+    _module(
+        "rental",
+        "Rental and hire",
+        _OPTIONAL,
+        ("counterparties", "finance_documents"),
+        Readiness.IMPLEMENTED,
+        "Package R slice R1 (ADR-0036): item classes with a typed attribute set per revision and "
+        "units with an identifier, a branch, a state and checked values. No bookings, assignment, "
+        "rates, agreements, security, inspections, settlement or screens yet; it cannot be "
+        "enabled until package R is accepted.",
+        "New rental classes and units. Reads continue.",
     ),
     _module(
         "storefronts", "Storefronts and marketplaces", _OPTIONAL, ("products_services", "sales")
