@@ -79,15 +79,15 @@ O8 (acceptance of BUILD-01 and O-01..O-10) follows O7c.
    label, the result of a command is announced in a status line and a refusal in an alert; no horizontal
    page scroll at 375 px; axe finds no violation on the list, the project page and the change orders.
 
-## Acceptance of O7a — NOT TESTED
+## Acceptance of O7a — PASS 2026-11-02 (code `6c5ea3d`, [evidence](evidence/2026-11-02-o7a-construction-screens/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| O7a-01 | Strict contracts accept every O1-O2 response and refuse an unknown field, a bad id, a bad quantity or a negative amount; money input is converted to exact minor units by the currency's decimal places | NOT TESTED |
-| O7a-02 | In a real browser (desktop and mobile) an owner creates a project, saves two estimate versions (the second after a lost answer, saved once), sends the second as the proposal and records the customer's acceptance; the database holds two versions, the second proposed, and the contract on it with source and recorder | NOT TESTED |
-| O7a-03 | In the same browser the owner proposes a change order that adds and removes scope and approves it by keyboard with its source; the contract's current sum shown is the server's original plus the approved change; the database holds the decision with its source | NOT TESTED |
-| O7a-04 | Axe finds no violation on the list, the project page and the change orders; no horizontal scroll on mobile | NOT TESTED |
-| O7a-05 | Web static checks (typecheck, lint, format, unit, build) and the full suite stay green | NOT TESTED |
+| O7a-01 | Strict contracts accept every O1-O2 response and refuse an unknown field, a bad id, a bad quantity or a negative amount; money input is converted to exact minor units by the currency's decimal places | PASS |
+| O7a-02 | In a real browser (desktop and mobile) an owner creates a project, saves two estimate versions (the second after a lost answer, saved once), sends the second as the proposal and records the customer's acceptance; the database holds two versions, the second proposed, and the contract on it with source and recorder | PASS |
+| O7a-03 | In the same browser the owner proposes a change order that adds and removes scope and approves it by keyboard with its source; the contract's current sum shown is the server's original plus the approved change; the database holds the decision with its source | PASS |
+| O7a-04 | Axe finds no violation on the list, the project page and the change orders; no horizontal scroll on mobile | PASS |
+| O7a-05 | Web static checks (typecheck, lint, format, unit, build) and the full suite stay green | PASS |
 
 ## Not in O7a
 
