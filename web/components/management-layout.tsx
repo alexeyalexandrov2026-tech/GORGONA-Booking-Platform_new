@@ -39,6 +39,7 @@ const NAV_ITEMS = [
   { href: "/finance/", label: "Financial documents" },
   { href: "/prepaid/", label: "Prepaid" },
   { href: "/transport/", label: "Transport" },
+  { href: "/construction/", label: "Construction" },
   { href: "/provider-admission/", label: "Provider admission" },
   { href: "/settings/", label: "Settings" },
 ];
@@ -79,6 +80,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         "/materials/",
         "/stock-documents/",
         "/transport/",
+        "/construction/",
       ].includes(item.href) ||
         (!delegation &&
           ["owner", "manager"].includes(membership?.role ?? "")) ||

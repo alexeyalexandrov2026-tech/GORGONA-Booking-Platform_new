@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ledgerResponseSchema } from "./ledger-contracts";
 import { inventoryResponseSchema } from "./inventory-contracts";
 import { transportResponseSchema } from "./transport-contracts";
+import { constructionResponseSchema } from "./construction-contracts";
 import {
   creditSchema,
   financialResponseSchema,
@@ -393,6 +394,8 @@ export function managementResponseSchema(
     if (workforce) return workforce;
     const transport = transportResponseSchema(business[1] ?? "", method);
     if (transport) return transport;
+    const construction = constructionResponseSchema(business[1] ?? "", method);
+    if (construction) return construction;
     if (business[1] === "" && method === "GET") return businessSchema;
     if (business[1] === "/industry-catalog" && method === "GET")
       return industryCatalogSchema;

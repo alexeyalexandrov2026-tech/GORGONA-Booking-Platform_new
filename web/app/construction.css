@@ -1,0 +1,20 @@
+/* O7a (package O): the construction screens; the shared management styles do the rest. */
+.construction-screen section {
+  margin-top: 28px;
+}
+.construction-line {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-bottom: 16px;
+}
+@media (min-width: 900px) {
+  .construction-line {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 16px;
+  }
+  .construction-line > button {
+    align-self: center;
+    justify-self: start;
+  }
+}
