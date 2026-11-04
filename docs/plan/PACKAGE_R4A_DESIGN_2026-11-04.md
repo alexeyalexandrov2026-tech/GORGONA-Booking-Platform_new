@@ -40,15 +40,15 @@ accepted quote, extensions and changes as insert-only versions checked against o
 6. **Rules as before**: `rental.manage` to record a card, `rental.read` to list and quote; idempotency scope
    `rental.rate_card`; module off writes nothing; branch scope by the card's branch; another company sees nothing.
 
-## Acceptance of R4a — NOT TESTED
+## Acceptance of R4a — PASS 2026-11-04 (code `79d678f`, [evidence](evidence/2026-11-04-r4a-rental-rates/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R4a-01 | Rate cards are insert-only versions per class and branch with no gap; back-dating, missing or non-positive rates, a bad currency and duplicate extras are refused | NOT TESTED |
-| R4a-02 | The quote is the cheapest cover by the card's units plus extras, in integer minor units; no card in force is `RENTAL_NO_RATE` | NOT TESTED |
-| R4a-03 | A booking is quoted from the card in force when it was made; a later version does not change it | NOT TESTED |
-| R4a-04 | The database refuses updates, deletes, a forged version and extras without their card; module off writes nothing; scope holds | NOT TESTED |
-| R4a-05 | 0099 -> 0100 keeps every row; the full suite stays green | NOT TESTED |
+| R4a-01 | Rate cards are insert-only versions per class and branch with no gap; back-dating, missing or non-positive rates, a bad currency and duplicate extras are refused | PASS |
+| R4a-02 | The quote is the cheapest cover by the card's units plus extras, in integer minor units; no card in force is `RENTAL_NO_RATE` | PASS |
+| R4a-03 | A booking is quoted from the card in force when it was made; a later version does not change it | PASS |
+| R4a-04 | The database refuses updates, deletes, a forged version and extras without their card; module off writes nothing; scope holds | PASS |
+| R4a-05 | 0099 -> 0100 keeps every row; the full suite stays green | PASS |
 
 ## Not in R4a
 
