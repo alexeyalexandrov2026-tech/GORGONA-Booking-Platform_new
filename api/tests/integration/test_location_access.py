@@ -450,6 +450,8 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (98, "-- Rental branch scope:"),
                 # R3b: rental unit blocks (by the unit's branch).
                 (99, "-- Rental branch scope:"),
+                # R4a: rental rate cards (by the card's branch).
+                (100, "-- Rental branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker

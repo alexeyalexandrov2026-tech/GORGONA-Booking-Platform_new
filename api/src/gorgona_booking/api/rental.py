@@ -15,6 +15,7 @@ from gorgona_booking.business import rental as service
 from gorgona_booking.business import rental_assignments as assignments
 from gorgona_booking.business import rental_blocks as blocks
 from gorgona_booking.business import rental_bookings as bookings
+from gorgona_booking.business import rental_rates as rates
 from gorgona_booking.business.rental import (
     ClassInput,
     ClassList,
@@ -40,6 +41,13 @@ from gorgona_booking.business.rental_bookings import (
     BookingList,
     BookingView,
     CancellationInput,
+)
+from gorgona_booking.business.rental_rates import (
+    QuoteInput,
+    QuoteView,
+    RateCardInput,
+    RateCardList,
+    RateCardView,
 )
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
@@ -317,3 +325,55 @@ async def post_block_release(
             key=idempotency_key,
             body=body,
         )
+
+
+@router.get("/classes/{class_id}/rate-cards")
+async def get_rate_cards(
+    business_id: UUID,
+    class_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    location_id: UUID | None = None,
+) -> RateCardList:
+    async with _access(request, principal, business_id) as access:
+        return await rates.list_cards(access.conn, class_id, location_id)
+
+
+@router.post("/classes/{class_id}/rate-cards")
+async def post_rate_card(
+    business_id: UUID,
+    class_id: UUID,
+    body: RateCardInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> RateCardView:
+    """R4a decisions 1-2: record the next version of a class's rate card at a branch."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await rates.create_card(
+            access.conn,
+            business_id,
+            class_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/quotes")
+async def post_quote(
+    business_id: UUID, body: QuoteInput, request: Request, principal: CurrentPrincipal
+) -> QuoteView:
+    """R4a decision 3: quote a class at a branch for a period from the card in force now."""
+    async with _access(request, principal, business_id) as access:
+        return await rates.quote_period(access.conn, body)
+
+
+@router.get("/bookings/{booking_id}/quote")
+async def get_booking_quote(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> QuoteView:
+    """R4a decision 4: quote a booking from the card in force when it was made."""
+    async with _access(request, principal, business_id) as access:
+        return await rates.quote_booking(access.conn, booking_id)

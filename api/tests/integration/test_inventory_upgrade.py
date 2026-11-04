@@ -157,6 +157,9 @@ K_TABLES = {
     # R3b (0099): rental unit blocks and their releases.
     "rental_unit_blocks",
     "rental_unit_block_releases",
+    # R4a (0100): rental rate cards and their extras.
+    "rental_rate_cards",
+    "rental_rate_card_extras",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
