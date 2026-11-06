@@ -42,15 +42,15 @@ occupancy.
    `rental.agreement` and `rental.agreement_version`; module off writes nothing; branch scope by the booking's pickup
    branch; another company sees nothing.
 
-## Acceptance of R4b — NOT TESTED
+## Acceptance of R4b — PASS 2026-11-06 (code `a098477`, [evidence](evidence/2026-11-06-r4b-rental-agreements/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R4b-01 | Accepting records version 1 frozen from the card in force at the booking with the chosen extras, the source, who accepted and when; a later card version does not change it | NOT TESTED |
-| R4b-02 | A change is version 2, 3 with a reason, the same card and period and new extras; earlier versions stay | NOT TESTED |
-| R4b-03 | A second agreement, a cancelled booking, an unknown extra, a future acceptance time and a missing reason are refused | NOT TESTED |
-| R4b-04 | The database refuses updates, deletes, a forged card, period, version, extra price or total; module off writes nothing; scope holds | NOT TESTED |
-| R4b-05 | 0100 -> 0101 keeps every row; the full suite stays green | NOT TESTED |
+| R4b-01 | Accepting records version 1 frozen from the card in force at the booking with the chosen extras, the source, who accepted and when; a later card version does not change it | PASS |
+| R4b-02 | A change is version 2, 3 with a reason, the same card and period and new extras; earlier versions stay | PASS |
+| R4b-03 | A second agreement, a cancelled booking, an unknown extra, a future acceptance time and a missing reason are refused | PASS |
+| R4b-04 | The database refuses updates, deletes, a forged card, period, version, extra price or total; module off writes nothing; scope holds | PASS |
+| R4b-05 | 0100 -> 0101 keeps every row; the full suite stays green | PASS |
 
 ## Not in R4b
 
