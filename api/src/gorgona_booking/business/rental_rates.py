@@ -173,7 +173,7 @@ async def _view(conn: RuntimeConnection, row: Any) -> RateCardView:
     )
 
 
-async def _load(conn: RuntimeConnection, card_id: UUID) -> RateCardView | None:
+async def load_card(conn: RuntimeConnection, card_id: UUID) -> RateCardView | None:
     row = await (await conn.execute(_CARD + "where id = %s", (card_id,))).fetchone()
     return None if row is None else await _view(conn, row)
 
@@ -228,7 +228,7 @@ async def create_card(
     if stored is not None:
         if stored.request_hash != request:
             raise IdempotencyKeyReusedError("Key was used for another request")
-        view = await _load(conn, UUID(str(stored.body["rate_card_id"])))
+        view = await load_card(conn, UUID(str(stored.body["rate_card_id"])))
         if view is None:
             raise NotFoundError("Rate card not found")
         return view
@@ -285,13 +285,13 @@ async def create_card(
                 "A rate card takes effect no earlier than it is recorded"
             ) from exc
         raise
-    view = await _load(conn, card_id)
+    view = await load_card(conn, card_id)
     assert view is not None  # noqa: S101 - saved above
     await idempotency.complete(conn, scope, 200, {"rate_card_id": str(card_id)})
     return view
 
 
-async def _in_force(
+async def in_force(
     conn: RuntimeConnection, class_id: UUID, location_id: UUID, moment: datetime
 ) -> RateCardView:
     row = await (
@@ -310,7 +310,7 @@ async def _in_force(
     return await _view(conn, row)
 
 
-def _priced(
+def priced(
     card: RateCardView,
     starts: datetime,
     ends: datetime,
@@ -350,8 +350,8 @@ async def quote_period(conn: RuntimeConnection, body: QuoteInput) -> QuoteView:
     await _known(conn, body.class_id, body.location_id)
     clock = await (await conn.execute("select now()")).fetchone()
     now = clock[0] if clock else datetime.now(UTC)
-    card = await _in_force(conn, body.class_id, body.location_id, now)
-    return _priced(card, body.starts_at, body.ends_at, body.extras)
+    card = await in_force(conn, body.class_id, body.location_id, now)
+    return priced(card, body.starts_at, body.ends_at, body.extras)
 
 
 async def quote_booking(conn: RuntimeConnection, booking_id: UUID) -> QuoteView:
@@ -359,6 +359,6 @@ async def quote_booking(conn: RuntimeConnection, booking_id: UUID) -> QuoteView:
     booking = await load_booking(conn, booking_id)
     if booking is None:
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
-    card = await _in_force(conn, booking.class_id, booking.pickup_location_id, booking.booked_at)
-    view = _priced(card, booking.starts_at, booking.ends_at, [])
+    card = await in_force(conn, booking.class_id, booking.pickup_location_id, booking.booked_at)
+    view = priced(card, booking.starts_at, booking.ends_at, [])
     return view.model_copy(update={"booking_id": booking_id})

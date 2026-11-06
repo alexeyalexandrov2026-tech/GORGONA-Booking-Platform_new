@@ -12,6 +12,7 @@ from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import rental as service
+from gorgona_booking.business import rental_agreements as agreements
 from gorgona_booking.business import rental_assignments as assignments
 from gorgona_booking.business import rental_blocks as blocks
 from gorgona_booking.business import rental_bookings as bookings
@@ -23,6 +24,11 @@ from gorgona_booking.business.rental import (
     UnitInput,
     UnitList,
     UnitView,
+)
+from gorgona_booking.business.rental_agreements import (
+    AcceptInput,
+    AgreementView,
+    ChangeInput,
 )
 from gorgona_booking.business.rental_assignments import (
     AssignmentInput,
@@ -377,3 +383,55 @@ async def get_booking_quote(
     """R4a decision 4: quote a booking from the card in force when it was made."""
     async with _access(request, principal, business_id) as access:
         return await rates.quote_booking(access.conn, booking_id)
+
+
+@router.get("/bookings/{booking_id}/agreement")
+async def get_agreement(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> AgreementView:
+    async with _access(request, principal, business_id) as access:
+        return await agreements.load_agreement(access.conn, booking_id)
+
+
+@router.post("/bookings/{booking_id}/agreement")
+async def post_agreement(
+    business_id: UUID,
+    booking_id: UUID,
+    body: AcceptInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> AgreementView:
+    """R4b decisions 1-2: freeze the booking's quote as version 1 of its agreement."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await agreements.accept(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/bookings/{booking_id}/agreement/versions")
+async def post_agreement_version(
+    business_id: UUID,
+    booking_id: UUID,
+    body: ChangeInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> AgreementView:
+    """R4b decision 3: the next version over the same card and period with new extras."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await agreements.change(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )

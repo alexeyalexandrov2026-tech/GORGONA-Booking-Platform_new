@@ -159,6 +159,10 @@ K_TABLES = {
     # R4a (0100): rental rate cards and their extras.
     "rental_rate_cards",
     "rental_rate_card_extras",
+    # R4b (0101): rental agreements, their versions and extras.
+    "rental_agreements",
+    "rental_agreement_versions",
+    "rental_agreement_version_extras",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
