@@ -35,15 +35,15 @@ asked to go on to the next stage right after R4b.
 5. **Rules as before**: `rental.manage`; idempotency scope `rental.period`; module off writes nothing; branch scope by
    the booking's pickup branch; another company sees nothing; direct SQL updates and deletes refused.
 
-## Acceptance of R4c — NOT TESTED
+## Acceptance of R4c — PASS 2026-11-07 (code `c38efe8`, [evidence](evidence/2026-11-06-r4c-rental-extensions/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R4c-01 | An extension records the period change, the next agreement version priced from the frozen card, and moves the unit's hold; history stays | NOT TESTED |
-| R4c-02 | A change that leaves a booking of the class without a unit is `RENTAL_UNAVAILABLE`; one that meets another hold of the unit is `RENTAL_UNIT_BUSY`; a shorter period frees availability | NOT TESTED |
-| R4c-03 | No agreement, a cancelled booking, a blank reason and a bad period are refused | NOT TESTED |
-| R4c-04 | The database refuses updates, deletes, a period change without its agreement version and an assignment for an old period; module off writes nothing; scope holds | NOT TESTED |
-| R4c-05 | 0101 -> 0102 keeps every row; R2, R3 and R4 behave as before without changes; the full suite stays green | NOT TESTED |
+| R4c-01 | An extension records the period change, the next agreement version priced from the frozen card, and moves the unit's hold; history stays | PASS |
+| R4c-02 | A change that leaves a booking of the class without a unit is `RENTAL_UNAVAILABLE`; one that meets another hold of the unit is `RENTAL_UNIT_BUSY`; a shorter period frees availability | PASS |
+| R4c-03 | No agreement, a cancelled booking, a blank reason and a bad period are refused | PASS |
+| R4c-04 | The database refuses updates, deletes, a period change without its agreement version and an assignment for an old period; module off writes nothing; scope holds | PASS |
+| R4c-05 | 0101 -> 0102 keeps every row; R2, R3 and R4 behave as before without changes; the full suite stays green | PASS |
 
 ## Not in R4c
 
