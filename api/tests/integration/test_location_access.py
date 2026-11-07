@@ -458,6 +458,8 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (102, "-- Rental branch scope:"),
                 # R5a: rental securities and their events (by the pickup branch).
                 (103, "-- Rental branch scope:"),
+                # R5b: provider links of rental security events (by the pickup branch).
+                (104, "-- Rental branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker

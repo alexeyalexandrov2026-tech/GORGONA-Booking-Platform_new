@@ -76,6 +76,14 @@ class SecurityEventInput(Strict):
         return self
 
 
+class ProviderEvidenceView(BaseModel):
+    """R5b: the signature-checked test-mode receipt that shows the event."""
+
+    receipt_id: UUID
+    intent: str
+    linked_by: UUID
+
+
 class SecurityEventView(BaseModel):
     sequence: int
     kind: Kind
@@ -85,6 +93,7 @@ class SecurityEventView(BaseModel):
     basis: str | None
     occurred_at: datetime
     recorded_by: UUID
+    provider: ProviderEvidenceView | None = None
 
 
 class SecurityView(BaseModel):
@@ -113,8 +122,12 @@ async def load_security(conn: RuntimeConnection, booking_id: UUID) -> SecurityVi
         raise NotFoundError("Security not found", booking_id=str(booking_id))
     rows = await (
         await conn.execute(
-            "select sequence, kind, amount, reference, hold_expires_at, basis, occurred_at, "
-            "recorded_by from gba.rental_security_events where security_id = %s order by sequence",
+            "select e.sequence, e.kind, e.amount, e.reference, e.hold_expires_at, e.basis, "
+            "e.occurred_at, e.recorded_by, l.receipt_id, l.intent, l.linked_by "
+            "from gba.rental_security_events e "
+            "left join gba.rental_security_provider_links l on l.tenant_id = e.tenant_id "
+            "and l.security_id = e.security_id and l.sequence = e.sequence "
+            "where e.security_id = %s order by e.sequence",
             (row[0],),
         )
     ).fetchall()
@@ -128,6 +141,11 @@ async def load_security(conn: RuntimeConnection, booking_id: UUID) -> SecurityVi
             basis=r[5],
             occurred_at=r[6],
             recorded_by=r[7],
+            provider=(
+                None
+                if r[8] is None
+                else ProviderEvidenceView(receipt_id=r[8], intent=r[9], linked_by=r[10])
+            ),
         )
         for r in rows
     ]

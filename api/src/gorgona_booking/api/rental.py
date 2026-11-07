@@ -10,7 +10,7 @@ from pydantic import AwareDatetime
 from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
-from gorgona_booking.auth.permissions import Permission
+from gorgona_booking.auth.permissions import ROLE_PERMISSIONS, Permission
 from gorgona_booking.business import rental as service
 from gorgona_booking.business import rental_agreements as agreements
 from gorgona_booking.business import rental_assignments as assignments
@@ -19,6 +19,7 @@ from gorgona_booking.business import rental_bookings as bookings
 from gorgona_booking.business import rental_extensions as extensions
 from gorgona_booking.business import rental_rates as rates
 from gorgona_booking.business import rental_security as securities
+from gorgona_booking.business import rental_security_provider as evidence
 from gorgona_booking.business.rental import (
     ClassInput,
     ClassList,
@@ -65,7 +66,11 @@ from gorgona_booking.business.rental_security import (
 )
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
-from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenant
+from gorgona_booking.tenancy.authorization import (
+    PermissionDeniedError,
+    TenantAccess,
+    authorized_tenant,
+)
 
 router = APIRouter(prefix="/v1/businesses/{business_id}/rental", tags=["rental"])
 
@@ -513,6 +518,34 @@ async def post_security_event(
             access.conn,
             business_id,
             booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/bookings/{booking_id}/security/events/{sequence}/provider")
+async def post_security_evidence(
+    business_id: UUID,
+    booking_id: UUID,
+    sequence: int,
+    body: evidence.EvidenceInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> SecurityView:
+    """R5b decisions 1-4: name the sandbox receipt; a capture's evidence needs rental.approve."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        kind = await evidence.event_kind(access.conn, booking_id, sequence)
+        allowed = ROLE_PERMISSIONS.get(access.role or "", frozenset())
+        if kind == "captured" and Permission.RENTAL_APPROVE not in allowed:
+            raise PermissionDeniedError("Capture evidence needs rental.approve")
+        return await evidence.link_receipt(
+            access.conn,
+            business_id,
+            booking_id,
+            sequence,
             user_id=principal.user_id,
             actor=principal.actor,
             key=idempotency_key,
