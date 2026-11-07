@@ -17,6 +17,7 @@ from gorgona_booking.business import rental_assignments as assignments
 from gorgona_booking.business import rental_blocks as blocks
 from gorgona_booking.business import rental_bookings as bookings
 from gorgona_booking.business import rental_extensions as extensions
+from gorgona_booking.business import rental_inspections as inspections
 from gorgona_booking.business import rental_rates as rates
 from gorgona_booking.business import rental_security as securities
 from gorgona_booking.business import rental_security_provider as evidence
@@ -52,6 +53,7 @@ from gorgona_booking.business.rental_bookings import (
     CancellationInput,
 )
 from gorgona_booking.business.rental_extensions import PeriodInput
+from gorgona_booking.business.rental_inspections import InspectionInput, InspectionsView
 from gorgona_booking.business.rental_rates import (
     QuoteInput,
     QuoteView,
@@ -546,6 +548,36 @@ async def post_security_evidence(
             business_id,
             booking_id,
             sequence,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/bookings/{booking_id}/inspections")
+async def get_inspections(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> InspectionsView:
+    async with _access(request, principal, business_id) as access:
+        return await inspections.load_inspections(access.conn, booking_id)
+
+
+@router.post("/bookings/{booking_id}/inspections")
+async def post_inspection(
+    business_id: UUID,
+    booking_id: UUID,
+    body: InspectionInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> InspectionsView:
+    """R6a decisions 1-5: the handover or the return of the booking's current assignment."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await inspections.record_inspection(
+            access.conn,
+            business_id,
+            booking_id,
             user_id=principal.user_id,
             actor=principal.actor,
             key=idempotency_key,

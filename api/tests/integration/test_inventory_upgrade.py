@@ -169,6 +169,8 @@ K_TABLES = {
     "rental_securities",
     "rental_security_events",
     "rental_security_provider_links",
+    "rental_inspections",
+    "rental_inspection_marks",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
