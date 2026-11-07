@@ -37,15 +37,15 @@ provider and no live card hold in either without the owner's word.
 5. **Rules as before**: module off writes nothing; branch scope by the booking's pickup branch; another company sees
    nothing; direct SQL updates and deletes refused.
 
-## Acceptance of R5a — NOT TESTED
+## Acceptance of R5a — PASS 2026-11-07 (code `ffe05b8`, [evidence](evidence/2026-11-07-r5a-rental-security/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R5a-01 | A request records the amount in the agreement currency; held, captured in parts and released record the rest once; the view derives the state and every figure | NOT TESTED |
-| R5a-02 | Capture above what is held, an event after closing, a second hold, a release before hold and a capture without basis are refused; expiry closes requested or held | NOT TESTED |
-| R5a-03 | No agreement, a cancelled booking, a second request, a bad amount or method are refused; capture needs `rental.approve` | NOT TESTED |
-| R5a-04 | The database refuses updates, deletes, forged sequences, amounts and currency; module off writes nothing; scope holds | NOT TESTED |
-| R5a-05 | 0102 -> 0103 keeps every row; the full suite stays green | NOT TESTED |
+| R5a-01 | A request records the amount in the agreement currency; held, captured in parts and released record the rest once; the view derives the state and every figure | PASS |
+| R5a-02 | Capture above what is held, an event after closing, a second hold, a release before hold and a capture without basis are refused; expiry closes requested or held | PASS |
+| R5a-03 | No agreement, a cancelled booking, a second request, a bad amount or method are refused; capture needs `rental.approve` | PASS |
+| R5a-04 | The database refuses updates, deletes, forged sequences, amounts and currency; module off writes nothing; scope holds | PASS |
+| R5a-05 | 0102 -> 0103 keeps every row; the full suite stays green | PASS |
 
 ## Not in R5a
 
