@@ -16,6 +16,7 @@ from gorgona_booking.business import rental_agreements as agreements
 from gorgona_booking.business import rental_assignments as assignments
 from gorgona_booking.business import rental_blocks as blocks
 from gorgona_booking.business import rental_bookings as bookings
+from gorgona_booking.business import rental_extensions as extensions
 from gorgona_booking.business import rental_rates as rates
 from gorgona_booking.business.rental import (
     ClassInput,
@@ -48,6 +49,7 @@ from gorgona_booking.business.rental_bookings import (
     BookingView,
     CancellationInput,
 )
+from gorgona_booking.business.rental_extensions import PeriodInput
 from gorgona_booking.business.rental_rates import (
     QuoteInput,
     QuoteView,
@@ -427,6 +429,28 @@ async def post_agreement_version(
     """R4b decision 3: the next version over the same card and period with new extras."""
     async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
         return await agreements.change(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/bookings/{booking_id}/agreement/period")
+async def post_agreement_period(
+    business_id: UUID,
+    booking_id: UUID,
+    body: PeriodInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> AgreementView:
+    """R4c decisions 1-3: move the booking period with the next agreement version and the hold."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await extensions.change_period(
             access.conn,
             business_id,
             booking_id,

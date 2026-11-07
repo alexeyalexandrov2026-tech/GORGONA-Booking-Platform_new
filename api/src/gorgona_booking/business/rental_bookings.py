@@ -106,10 +106,15 @@ async def load_booking(conn: RuntimeConnection, booking_id: UUID) -> BookingView
     row = await (
         await conn.execute(
             "select b.number, b.class_id, b.customer_id, b.pickup_location_id, "
-            "b.return_location_id, b.starts_at, b.ends_at, b.note, b.booked_at, c.reason, "
+            "b.return_location_id, coalesce(p.starts_at, b.starts_at), "
+            "coalesce(p.ends_at, b.ends_at), b.note, b.booked_at, c.reason, "
             "c.cancelled_at from gba.rental_bookings b "
             "left join gba.rental_booking_cancellations c "
-            "on c.tenant_id = b.tenant_id and c.booking_id = b.id where b.id = %s",
+            "on c.tenant_id = b.tenant_id and c.booking_id = b.id "
+            # R4c: the current period is the latest change, or the booked period.
+            "left join lateral (select q.starts_at, q.ends_at from gba.rental_booking_periods q "
+            "where q.tenant_id = b.tenant_id and q.booking_id = b.id "
+            "order by q.sequence desc limit 1) p on true where b.id = %s",
             (booking_id,),
         )
     ).fetchone()

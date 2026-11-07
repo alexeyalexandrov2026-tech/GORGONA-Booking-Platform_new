@@ -163,6 +163,8 @@ K_TABLES = {
     "rental_agreements",
     "rental_agreement_versions",
     "rental_agreement_version_extras",
+    # R4c (0102): rental booking period changes.
+    "rental_booking_periods",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

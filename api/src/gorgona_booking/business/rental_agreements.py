@@ -187,7 +187,7 @@ async def load_agreement(conn: RuntimeConnection, booking_id: UUID) -> Agreement
     )
 
 
-async def _open_booking(conn: RuntimeConnection, booking_id: UUID) -> BookingView:
+async def open_booking(conn: RuntimeConnection, booking_id: UUID) -> BookingView:
     booking = await load_booking(conn, booking_id)
     if booking is None:
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
@@ -196,13 +196,13 @@ async def _open_booking(conn: RuntimeConnection, booking_id: UUID) -> BookingVie
     return booking
 
 
-async def _check_time(conn: RuntimeConnection, accepted_at: datetime) -> None:
+async def check_time(conn: RuntimeConnection, accepted_at: datetime) -> None:
     clock = await (await conn.execute("select now()")).fetchone()
     if accepted_at > (clock[0] if clock else datetime.now(UTC)):
         raise RentalValueInvalidError("An acceptance is not in the future")
 
 
-async def _insert_version(
+async def record_version(
     conn: RuntimeConnection,
     business: UUID,
     agreement_id: UUID,
@@ -280,10 +280,10 @@ async def accept(
         if stored.request_hash != request:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return await load_agreement(conn, booking_id)
-    booking = await _open_booking(conn, booking_id)
+    booking = await open_booking(conn, booking_id)
     if await _agreement_id(conn, booking_id) is not None:
         raise RentalAgreementExistsError("The booking already has an agreement")
-    await _check_time(conn, body.accepted_at)
+    await check_time(conn, body.accepted_at)
     card = await in_force(conn, booking.class_id, booking.pickup_location_id, booking.booked_at)
     quote = priced(card, booking.starts_at, booking.ends_at, body.extras)
     agreement_id = uuid7()
@@ -294,7 +294,7 @@ async def accept(
                 "values (%s, %s, %s, %s)",
                 (business, agreement_id, booking_id, user_id),
             )
-            await _insert_version(conn, business, agreement_id, 1, card, quote, body, None, user_id)
+            await record_version(conn, business, agreement_id, 1, card, quote, body, None, user_id)
     except UniqueViolation as exc:
         raise RentalAgreementExistsError("The booking already has an agreement") from exc
     await idempotency.complete(conn, scope, 200, {"agreement_id": str(agreement_id)})
@@ -320,16 +320,16 @@ async def change(
         if stored.request_hash != request:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return await load_agreement(conn, booking_id)
-    await _open_booking(conn, booking_id)
+    await open_booking(conn, booking_id)
     current = await load_agreement(conn, booking_id)
-    await _check_time(conn, body.accepted_at)
+    await check_time(conn, body.accepted_at)
     latest = current.versions[-1]
     card = await load_card(conn, latest.rate_card_id)
     if card is None:
         raise NotFoundError("Rate card not found", rate_card_id=str(latest.rate_card_id))
     quote = priced(card, latest.starts_at, latest.ends_at, body.extras)
     async with module_writes(RENTAL_MODULE), conn.transaction():
-        await _insert_version(
+        await record_version(
             conn,
             business,
             current.agreement_id,

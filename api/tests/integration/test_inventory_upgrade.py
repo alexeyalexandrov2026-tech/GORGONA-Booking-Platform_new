@@ -164,6 +164,8 @@ K_TABLES = {
     "rental_agreements",
     "rental_agreement_versions",
     "rental_agreement_version_extras",
+    # R4c (0102): rental booking period changes.
+    "rental_booking_periods",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
