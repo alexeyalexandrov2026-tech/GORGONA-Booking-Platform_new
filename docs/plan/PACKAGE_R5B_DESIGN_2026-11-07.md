@@ -20,24 +20,24 @@ asked to go on to the next stage right after R5a.
    test-mode (`livemode` false) events of an admitted, not revoked connection of the company; R5b only reads them.
    The platform never calls the provider; a person records the event (R5a) and names the receipt that shows it.
 2. **What a receipt shows**, checked by the database against the stored facts: `held` by an observed charge of the
-   intent that is paid and not captured, for the security amount; `captured` by the intent's success with the amount
-   received equal to everything captured so far; `released` or `expired` by the intent's cancellation, or by its
-   success when the rest was never captured. The currency is the security currency; one intent per security.
+   intent that is paid with nothing captured (a charge receipt keeps only the captured amount, K5a); `captured` by the
+   intent's success for the security amount with the amount received equal to everything captured so far; `released` or `expired` by the intent's cancellation, or by its
+   success when the rest was never captured, each for the security amount. The currency is the security currency; one intent per security.
 3. **A link is permanent history**: one per security event, one security per intent, never an operation, payment or
    journal entry; the security figures stay those of R5a; nothing changes a charge.
 4. **Permissions and rules as before**: `rental.manage` (a capture's evidence needs `rental.approve`); idempotency
    scope `rental.security_provider`; module off writes nothing; branch scope by the booking's pickup branch; another
    company, another connection or a revoked connection is refused; direct SQL updates and deletes refused.
 
-## Acceptance of R5b — NOT TESTED
+## Acceptance of R5b — PASS 2026-11-07 (code `e4efe63`, [evidence](evidence/2026-11-07-r5b-rental-provider-holds/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R5b-01 | A held, a partial capture and the release of a card hold link to the sandbox receipts of one intent; the view shows them | NOT TESTED |
-| R5b-02 | A receipt of another intent, amount, currency, kind or state, a second link, a non-card security and an unrecorded event are refused | NOT TESTED |
-| R5b-03 | Another company's or a revoked connection's receipt is refused; capture evidence needs `rental.approve` | NOT TESTED |
-| R5b-04 | The database refuses updates, deletes and forged links; module off writes nothing; scope holds | NOT TESTED |
-| R5b-05 | 0103 -> 0104 keeps every row; the provider suites and the full suite stay green | NOT TESTED |
+| R5b-01 | A held, a partial capture and the release of a card hold link to the sandbox receipts of one intent; the view shows them | PASS |
+| R5b-02 | A receipt of another intent, amount, currency, kind or state, a second link, a non-card security and an unrecorded event are refused | PASS |
+| R5b-03 | Another company's or a revoked connection's receipt is refused; capture evidence needs `rental.approve` | PASS |
+| R5b-04 | The database refuses updates, deletes and forged links; module off writes nothing; scope holds | PASS |
+| R5b-05 | 0103 -> 0104 keeps every row; the provider suites and the full suite stay green | PASS |
 
 ## Not in R5b
 
