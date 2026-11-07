@@ -40,15 +40,15 @@ passed on the VM; a rerun needs GitHub credentials this agent does not have.
    SQL updates and deletes refused. Errors: `RENTAL_INSPECTION_STATE` (wrong order, missing agreement, assignment or
    handover, a second one), `RENTAL_INSPECTION_INVALID` (meter or mark rules).
 
-## Acceptance of R6a — NOT TESTED
+## Acceptance of R6a — PASS 2026-11-07 (code `78db1a8`, [evidence](evidence/2026-11-07-r6a-rental-inspections/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R6a-01 | A handover and a return of the current assignment record meters, level, note and marks with photos; the view shows both | NOT TESTED |
-| R6a-02 | A return before the handover, a second handover or return, no agreement, no assignment or a cancelled booking are refused | NOT TESTED |
-| R6a-03 | A missing, extra or lower return meter, a level or mark out of range, a new mark at handover and a non-image photo are refused | NOT TESTED |
-| R6a-04 | The database refuses updates, deletes and forged inspections or marks; module off writes nothing; scope holds | NOT TESTED |
-| R6a-05 | 0104 -> 0105 keeps every row; the full suite stays green | NOT TESTED |
+| R6a-01 | A handover and a return of the current assignment record meters, level, note and marks with photos; the view shows both | PASS |
+| R6a-02 | A return before the handover, a second handover or return, no agreement, no assignment or a cancelled booking are refused | PASS |
+| R6a-03 | A missing, extra or lower return meter, a level or mark out of range, a new mark at handover and a non-image photo are refused | PASS |
+| R6a-04 | The database refuses updates, deletes and forged inspections or marks; module off writes nothing; scope holds | PASS |
+| R6a-05 | 0104 -> 0105 keeps every row; the full suite stays green | PASS |
 
 ## Not in R6a
 
