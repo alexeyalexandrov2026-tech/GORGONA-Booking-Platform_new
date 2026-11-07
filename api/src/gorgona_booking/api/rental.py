@@ -18,6 +18,7 @@ from gorgona_booking.business import rental_blocks as blocks
 from gorgona_booking.business import rental_bookings as bookings
 from gorgona_booking.business import rental_extensions as extensions
 from gorgona_booking.business import rental_rates as rates
+from gorgona_booking.business import rental_security as securities
 from gorgona_booking.business.rental import (
     ClassInput,
     ClassList,
@@ -56,6 +57,11 @@ from gorgona_booking.business.rental_rates import (
     RateCardInput,
     RateCardList,
     RateCardView,
+)
+from gorgona_booking.business.rental_security import (
+    SecurityEventInput,
+    SecurityInput,
+    SecurityView,
 )
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
@@ -451,6 +457,59 @@ async def post_agreement_period(
     """R4c decisions 1-3: move the booking period with the next agreement version and the hold."""
     async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
         return await extensions.change_period(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/bookings/{booking_id}/security")
+async def get_security(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> SecurityView:
+    async with _access(request, principal, business_id) as access:
+        return await securities.load_security(access.conn, booking_id)
+
+
+@router.post("/bookings/{booking_id}/security")
+async def post_security(
+    business_id: UUID,
+    booking_id: UUID,
+    body: SecurityInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> SecurityView:
+    """R5a decision 1: request the booking's security in its agreement currency."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await securities.request_security(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/bookings/{booking_id}/security/events")
+async def post_security_event(
+    business_id: UUID,
+    booking_id: UUID,
+    body: SecurityEventInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> SecurityView:
+    """R5a decisions 2 and 4: the next event; capturing needs rental.approve."""
+    permission = Permission.RENTAL_APPROVE if body.kind == "captured" else Permission.RENTAL_MANAGE
+    async with _access(request, principal, business_id, permission) as access:
+        return await securities.record_event(
             access.conn,
             business_id,
             booking_id,
