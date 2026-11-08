@@ -10,11 +10,15 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-11-07: R6b overdue time and meter excess, derived, verified on the VM
+## Current checkpoint — 2026-11-08: R7a final settlement invoice of a rental agreement, verified on the VM
+
+R7a on `codex/package-r7a-rental-settlement` (from R6b docs `0432c98`; design `5f968b9`, code `31cf73d`, [R7a design](PACKAGE_R7A_DESIGN_2026-11-07.md), [R7a evidence](evidence/2026-11-07-r7a-rental-settlement/CHECKS.json)): R7 is split (R7b damage charges and refunds, R7c reconciliation). Migration **0106** adds insert-only `rental_settlements`, one per booking after its return: the latest agreement version total, the meter excess and the late return (started hours at the card hour rate, else started days at the day rate; `RENTAL_SETTLEMENT_UNPRICED` otherwise), recomputed by the guard, with the FIN-03 receivable invoice draft of the customer for the total written in the same request and kept linked (`FINANCIAL_DOCUMENT_LINKED`). Routes `GET`/`POST bookings/{id}/settlement`. Fuel is not priced. VM gates-1: static PASS, focused 1090 passed, full 2834 passed and 4 skipped. R6b CI run 42438106172: success. Next: R7b.
+
+## Previous checkpoint — 2026-11-07: R6b overdue time and meter excess, derived, verified on the VM
 
 R6b on `codex/package-r6b-rental-usage` (from R6a docs `18470ae`; design `af3f01f`, code `010692f`, [R6b design](PACKAGE_R6B_DESIGN_2026-11-07.md), [R6b evidence](evidence/2026-11-07-r6b-rental-usage/CHECKS.json)): no migration (next stays **0106**). `GET bookings/{id}/usage` derives on read, from the latest agreement version, its rate card and the R6a inspections, the state (not handed over, out, returned), the overdue seconds and started hours to the return (or the read while out) past the agreement period end, the meter distance, the allowance (per day times rental days), the excess and its amount at the card's excess rate. Nothing is stored or charged; R7 settles. VM gates-1: static PASS, focused 1084 passed, full 2828 passed and 4 skipped. R6a CI run 42426865948: success. Next: R7.
 
-## Previous checkpoint — 2026-11-07: R6a handover and return inspections, verified on the VM
+## Earlier checkpoint — 2026-11-07: R6a handover and return inspections, verified on the VM
 
 R6a on `codex/package-r6a-rental-inspections` (from R5b docs `fc1c378`; design `7d5dec6`, code `78db1a8`, [R6a design](PACKAGE_R6A_DESIGN_2026-11-07.md), [R6a evidence](evidence/2026-11-07-r6a-rental-inspections/CHECKS.json)): R6 is split (R6b: overdue and meter excess). Migration **0105** adds insert-only `rental_inspections`, one handover and one return per booking, naming the current unit assignment of a booking with an agreement that is not cancelled; a return follows the handover of the same assignment; the class meter reading never goes back (none for a class without a meter); a level 0..100 and a note; `rental_inspection_marks` written with the inspection (1..50, minor or major, new only on a return, a photo a PNG or JPEG document version). Routes `GET`/`POST bookings/{id}/inspections` (`RENTAL_INSPECTION_STATE`, `RENTAL_INSPECTION_INVALID`). VM gates-1: static PASS, focused 1074 passed, full 2818 passed and 4 skipped. R5b CI run 42413235532: FAIL on the flaky browser check `service-catalog.spec.ts:137` (no web change). Next: R6b.
 

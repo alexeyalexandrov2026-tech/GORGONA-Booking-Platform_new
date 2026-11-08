@@ -36,15 +36,15 @@ package O (O5 pay applications): the business record and its FIN-03 receivable i
    updates and deletes refused. Errors: `RENTAL_SETTLEMENT_STATE` (no return, no agreement, cancelled, settled),
    `RENTAL_SETTLEMENT_UNPRICED`.
 
-## Acceptance of R7a — NOT TESTED
+## Acceptance of R7a — PASS 2026-11-08 (code `31cf73d`, [evidence](evidence/2026-11-07-r7a-rental-settlement/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R7a-01 | A returned booking settles once into a FIN-03 receivable draft with the rental, excess and late lines; the view shows the figures and the document | NOT TESTED |
-| R7a-02 | Before the return, without an agreement, a cancelled booking and a second settlement are refused; an overdue return on a card without hour or day rate is unpriced | NOT TESTED |
-| R7a-03 | An extension's latest total counts; a return on time and within the allowance gives the rental line only; a day-rate card prices started days | NOT TESTED |
-| R7a-04 | The database refuses updates, deletes and forged figures or documents; module off writes nothing; scope holds | NOT TESTED |
-| R7a-05 | 0105 -> 0106 keeps every row; the full suite stays green | NOT TESTED |
+| R7a-01 | A returned booking settles once into a FIN-03 receivable draft with the rental, excess and late lines; the view shows the figures and the document | PASS |
+| R7a-02 | Before the return, without an agreement, a cancelled booking and a second settlement are refused; an overdue return on a card without hour or day rate is unpriced | PASS |
+| R7a-03 | An extension's latest total counts; a return on time and within the allowance gives the rental line only; a day-rate card prices started days | PASS |
+| R7a-04 | The database refuses updates, deletes and forged figures or documents; module off writes nothing; scope holds | PASS |
+| R7a-05 | 0105 -> 0106 keeps every row; the full suite stays green | PASS |
 
 ## Not in R7a
 
