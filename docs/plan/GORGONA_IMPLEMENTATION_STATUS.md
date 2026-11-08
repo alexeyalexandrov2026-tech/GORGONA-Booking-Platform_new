@@ -1,10 +1,14 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-11-08: R7a final settlement invoice of a rental agreement, verified on the VM
+## Current checkpoint — 2026-11-08: R7b damage charges and refunds of a rental agreement, verified on the VM
+
+R7b on `codex/package-r7b-rental-damage-refunds` (from R7a docs `2ef404e`; design `0453d6a` corrected in `00c7dc0`, code `b174d1b`, [R7b design](PACKAGE_R7B_DESIGN_2026-11-08.md), [R7b evidence](evidence/2026-11-08-r7b-rental-damage-refunds/CHECKS.json)): migration **0107** adds insert-only `rental_damage_charges` with `rental_damage_charge_marks` (after the settlement, new return marks each charged once, the customer's FIN-03 receivable invoice draft for the amount) and `rental_refunds` (a FIN-03 credit note against an issued obligation of the settlement or a charge, or a recorded external refund; all refunds within the settlement total plus the damage charged). Both need `rental.approve`; FIN-03 keeps the drafts linked. Routes `GET bookings/{id}/charges`, `POST bookings/{id}/damage-charges`, `POST bookings/{id}/refunds`. VM gates-1: static PASS, focused 1095 passed, full 2839 passed and 4 skipped. R7a CI run 42449693704: success. Next: R7c.
+
+## Previous checkpoint — 2026-11-08: R7a final settlement invoice of a rental agreement, verified on the VM
 
 R7a on `codex/package-r7a-rental-settlement` (from R6b docs `0432c98`; design `5f968b9`, code `31cf73d`, [R7a design](PACKAGE_R7A_DESIGN_2026-11-07.md), [R7a evidence](evidence/2026-11-07-r7a-rental-settlement/CHECKS.json)): R7 is split (R7b damage charges and refunds, R7c reconciliation). Migration **0106** adds insert-only `rental_settlements`, one per booking after its return: the latest agreement version total, the meter excess and the late return (started hours at the card hour rate, else started days at the day rate; `RENTAL_SETTLEMENT_UNPRICED` otherwise), recomputed by the guard, with the FIN-03 receivable invoice draft of the customer for the total written in the same request and kept linked (`FINANCIAL_DOCUMENT_LINKED`). Routes `GET`/`POST bookings/{id}/settlement`. Fuel is not priced. VM gates-1: static PASS, focused 1090 passed, full 2834 passed and 4 skipped. R6b CI run 42438106172: success. Next: R7b.
 
-## Previous checkpoint — 2026-11-07: R6b overdue time and meter excess, derived, verified on the VM
+## Earlier checkpoint — 2026-11-07: R6b overdue time and meter excess, derived, verified on the VM
 
 R6b on `codex/package-r6b-rental-usage` (from R6a docs `18470ae`; design `af3f01f`, code `010692f`, [R6b design](PACKAGE_R6B_DESIGN_2026-11-07.md), [R6b evidence](evidence/2026-11-07-r6b-rental-usage/CHECKS.json)): no migration (next stays **0106**). `GET bookings/{id}/usage` derives on read, from the latest agreement version, its rate card and the R6a inspections, the state (not handed over, out, returned), the overdue seconds and started hours to the return (or the read while out) past the agreement period end, the meter distance, the allowance (per day times rental days), the excess and its amount at the card's excess rate. Nothing is stored or charged; R7 settles. VM gates-1: static PASS, focused 1084 passed, full 2828 passed and 4 skipped. R6a CI run 42426865948: success. Next: R7.
 

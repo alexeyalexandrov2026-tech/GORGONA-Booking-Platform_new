@@ -18,7 +18,7 @@ invoice; that was wrong (a slip, recorded).
   last.
 - Service `business/rental_charges.py`; routes `GET bookings/{id}/charges`, `POST bookings/{id}/damage-charges`,
   `POST bookings/{id}/refunds`; `financial_documents` keeps a charge invoice linked and `credit_notes` keeps a refund
-credit note linked (`FINANCIAL_DOCUMENT_LINKED`).
+  credit note linked (`FINANCIAL_DOCUMENT_LINKED`).
 
 ## Decisions (R7b, agent)
 
@@ -42,15 +42,15 @@ credit note linked (`FINANCIAL_DOCUMENT_LINKED`).
    booking's pickup branch; another company's booking or book is refused. Errors: `RENTAL_CHARGE_STATE` (not settled,
    a basis mark that is not new, of another inspection or already charged), `RENTAL_REFUND_EXCEEDS`.
 
-## Acceptance of R7b — NOT TESTED
+## Acceptance of R7b — PASS 2026-11-08 (code `b174d1b`, [evidence](evidence/2026-11-08-r7b-rental-damage-refunds/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R7b-01 | A damage charge on new return marks writes a receivable draft; a credit-note and an external refund are their own records; the view lists them | NOT TESTED |
-| R7b-02 | Before settlement, a mark that is not new or already charged, and a refund over the ceiling are refused; both need `rental.approve` | NOT TESTED |
-| R7b-03 | The settlement, the security and earlier charges are unchanged; FIN-03 keeps the drafts linked | NOT TESTED |
-| R7b-04 | The database refuses updates, deletes and forged records or documents; module off writes nothing; scope holds | NOT TESTED |
-| R7b-05 | 0106 -> 0107 keeps every row; the full suite stays green | NOT TESTED |
+| R7b-01 | A damage charge on new return marks writes a receivable draft; a credit-note and an external refund are their own records; the view lists them | PASS |
+| R7b-02 | Before settlement, a mark that is not new or already charged, and a refund over the ceiling are refused; both need `rental.approve` | PASS |
+| R7b-03 | The settlement, the security and earlier charges are unchanged; FIN-03 keeps the drafts linked | PASS |
+| R7b-04 | The database refuses updates, deletes and forged records or documents; module off writes nothing; scope holds | PASS |
+| R7b-05 | 0106 -> 0107 keeps every row; the full suite stays green | PASS |
 
 ## Not in R7b
 
