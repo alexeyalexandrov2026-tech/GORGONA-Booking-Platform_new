@@ -21,6 +21,7 @@ from gorgona_booking.business import rental_inspections as inspections
 from gorgona_booking.business import rental_rates as rates
 from gorgona_booking.business import rental_security as securities
 from gorgona_booking.business import rental_security_provider as evidence
+from gorgona_booking.business import rental_settlements as settlements
 from gorgona_booking.business import rental_usage as usage
 from gorgona_booking.business.rental import (
     ClassInput,
@@ -593,3 +594,33 @@ async def get_usage(
     """R6b decisions 1-5: overdue time and meter excess, derived on read."""
     async with _access(request, principal, business_id) as access:
         return await usage.load_usage(access.conn, booking_id)
+
+
+@router.get("/bookings/{booking_id}/settlement")
+async def get_settlement(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> settlements.SettlementView:
+    async with _access(request, principal, business_id) as access:
+        return await settlements.load_settlement(access.conn, booking_id)
+
+
+@router.post("/bookings/{booking_id}/settlement")
+async def post_settlement(
+    business_id: UUID,
+    booking_id: UUID,
+    body: settlements.SettlementInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> settlements.SettlementView:
+    """R7a decisions 1-5: settle the returned booking into one FIN-03 receivable draft."""
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await settlements.settle(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )

@@ -462,6 +462,8 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (104, "-- Rental branch scope:"),
                 # R6a: handover and return inspections and their marks (by the pickup branch).
                 (105, "-- Rental branch scope:"),
+                # R7a: rental settlements (by the pickup branch).
+                (106, "-- Rental branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker

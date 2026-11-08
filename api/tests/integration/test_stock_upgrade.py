@@ -170,6 +170,7 @@ K_TABLES = {
     "rental_security_provider_links",
     "rental_inspections",
     "rental_inspection_marks",
+    "rental_settlements",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
