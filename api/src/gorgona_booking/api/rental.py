@@ -16,6 +16,7 @@ from gorgona_booking.business import rental_agreements as agreements
 from gorgona_booking.business import rental_assignments as assignments
 from gorgona_booking.business import rental_blocks as blocks
 from gorgona_booking.business import rental_bookings as bookings
+from gorgona_booking.business import rental_charges as charges
 from gorgona_booking.business import rental_extensions as extensions
 from gorgona_booking.business import rental_inspections as inspections
 from gorgona_booking.business import rental_rates as rates
@@ -616,6 +617,58 @@ async def post_settlement(
     """R7a decisions 1-5: settle the returned booking into one FIN-03 receivable draft."""
     async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
         return await settlements.settle(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/bookings/{booking_id}/charges")
+async def get_charges(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> charges.ChargesView:
+    async with _access(request, principal, business_id) as access:
+        return await charges.load_charges(access.conn, booking_id)
+
+
+@router.post("/bookings/{booking_id}/damage-charges")
+async def post_damage_charge(
+    business_id: UUID,
+    booking_id: UUID,
+    body: charges.DamageChargeInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> charges.ChargesView:
+    """R7b decision 1: a damage charge on new return marks; needs rental.approve."""
+    async with _access(request, principal, business_id, Permission.RENTAL_APPROVE) as access:
+        return await charges.record_damage_charge(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.post("/bookings/{booking_id}/refunds")
+async def post_refund(
+    business_id: UUID,
+    booking_id: UUID,
+    body: charges.RefundInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> charges.ChargesView:
+    """R7b decision 2: a credit-note or external refund; needs rental.approve."""
+    async with _access(request, principal, business_id, Permission.RENTAL_APPROVE) as access:
+        return await charges.record_refund(
             access.conn,
             business_id,
             booking_id,

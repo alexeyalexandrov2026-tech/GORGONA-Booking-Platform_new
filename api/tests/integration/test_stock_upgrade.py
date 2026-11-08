@@ -171,6 +171,9 @@ K_TABLES = {
     "rental_inspections",
     "rental_inspection_marks",
     "rental_settlements",
+    "rental_damage_charges",
+    "rental_damage_charge_marks",
+    "rental_refunds",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

@@ -98,7 +98,8 @@ async def _linked_to_visit(conn: RuntimeConnection, book_id: UUID, document_id: 
     Those drafts are built from the visit or the sale; their routes keep trusting what they wrote.
     Package M review R-01: so are a transport order invoice and a trip pay accrual.
     Package O (O5 decision 6): so are a pay application's invoice and its retainage accrual.
-    Package R (R7a decision 3): so is a rental settlement's invoice.
+    Package R (R7a decision 3, R7b decision 1): so are a rental settlement's and a damage
+    charge's invoice.
     """
     row = await (
         await conn.execute(
@@ -119,8 +120,11 @@ async def _linked_to_visit(conn: RuntimeConnection, book_id: UUID, document_id: 
             " and retainage_document_id=%s)"
             # R7a (RENT-01): a rental settlement's invoice is built from the agreement and its use.
             " or exists (select 1 from gba.rental_settlements where book_id=%s"
+            " and invoice_document_id=%s)"
+            # R7b: so is a rental damage charge's invoice.
+            " or exists (select 1 from gba.rental_damage_charges where book_id=%s"
             " and invoice_document_id=%s)",
-            (book_id, document_id) * 9,
+            (book_id, document_id) * 10,
         )
     ).fetchone()
     return bool(row and row[0])
