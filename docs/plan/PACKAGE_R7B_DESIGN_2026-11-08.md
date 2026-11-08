@@ -6,8 +6,10 @@ Branch `codex/package-r7b-rental-damage-refunds` from the R7a docs commit `2ef40
 gates on the VM `gorgona-dev`, a source-bound record, code and docs commits, push for CI without a PR. The owner
 asked to go on to the next stage right after each slice. R7a CI run 42449693704 on `2ef404e`: success.
 
-FIN-03 has invoices and manual accruals but no credit note; R7b does not change FIN-03. A refund is therefore a FIN-03
-**payable** invoice draft to the customer (what the business owes back) or a recorded external refund.
+A refund uses the existing FIN-03 credit note (H3, migration 0027): a credit note against the issued obligation of the
+settlement or damage-charge invoice; at its issue FIN-03 itself turns the paid part into a separate refund obligation.
+Correction 2026-11-08 before red: the first design commit `0453d6a` said FIN-03 has no credit note and proposed a payable
+invoice; that was wrong (a slip, recorded).
 
 ## Scope
 
@@ -15,7 +17,8 @@ FIN-03 has invoices and manual accruals but no credit note; R7b does not change 
   with its FIN-03 draft when it has one; guards under the class row lock; module gate; tenant isolation; branch scope
   last.
 - Service `business/rental_charges.py`; routes `GET bookings/{id}/charges`, `POST bookings/{id}/damage-charges`,
-  `POST bookings/{id}/refunds`; `financial_documents` keeps both drafts linked.
+  `POST bookings/{id}/refunds`; `financial_documents` keeps a charge invoice linked and `credit_notes` keeps a refund
+credit note linked (`FINANCIAL_DOCUMENT_LINKED`).
 
 ## Decisions (R7b, agent)
 
@@ -24,13 +27,16 @@ FIN-03 has invoices and manual accruals but no credit note; R7b does not change 
    in the agreement currency, a reason, and one FIN-03 receivable invoice draft of the customer for that amount,
    written in the same request.
 2. **A refund** needs `rental.approve` and a settled booking, an amount above 0 and a reason; all refunds of a booking
-   never exceed the settlement total plus the damage charged. Its method is `payable` (a FIN-03 payable invoice draft
-   to the customer for the amount, written in the same request) or `external` (a reference and the time it was made).
+   never exceed the settlement total plus the damage charged. Its method is `credit` (a FIN-03 credit note draft, in
+   the same request, against the issued obligation of the settlement or a damage-charge invoice of the booking, reducing
+   its lines in order up to the amount; refused while that invoice is not issued) or `external` (a reference and the
+   time it was made).
 3. **Separate obligations.** A charge or a refund never edits the settlement, the security or another charge; a
    security capture never edits a charge (rental plan decision 5). Corrections are new records.
 4. **The database rechecks** the settlement, the basis marks (of the return, new, not charged before), the numbering,
-   the refund ceiling, and that each named document is the receivable (charge) or payable (refund) invoice of the
-   booking's customer in the agreement currency for the amount. Records are never updated or deleted.
+   the refund ceiling, and that a charge names the receivable invoice of the booking's customer in the agreement
+   currency for its amount and a credit refund a credit note of an obligation of the booking's settlement or charges for
+   its amount. Records are never updated or deleted.
 5. **Permissions and rules as before**: reading under the rental read rules, writing under `rental.approve`;
    idempotency scopes `rental.damage_charge` and `rental.refund`; module off writes nothing; branch scope by the
    booking's pickup branch; another company's booking or book is refused. Errors: `RENTAL_CHARGE_STATE` (not settled,
@@ -40,7 +46,7 @@ FIN-03 has invoices and manual accruals but no credit note; R7b does not change 
 
 | id | Requirement | Result |
 |---|---|---|
-| R7b-01 | A damage charge on new return marks writes a receivable draft; a payable and an external refund are their own records; the view lists them | NOT TESTED |
+| R7b-01 | A damage charge on new return marks writes a receivable draft; a credit-note and an external refund are their own records; the view lists them | NOT TESTED |
 | R7b-02 | Before settlement, a mark that is not new or already charged, and a refund over the ceiling are refused; both need `rental.approve` | NOT TESTED |
 | R7b-03 | The settlement, the security and earlier charges are unchanged; FIN-03 keeps the drafts linked | NOT TESTED |
 | R7b-04 | The database refuses updates, deletes and forged records or documents; module off writes nothing; scope holds | NOT TESTED |
