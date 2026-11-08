@@ -21,6 +21,7 @@ from gorgona_booking.business import rental_inspections as inspections
 from gorgona_booking.business import rental_rates as rates
 from gorgona_booking.business import rental_security as securities
 from gorgona_booking.business import rental_security_provider as evidence
+from gorgona_booking.business import rental_usage as usage
 from gorgona_booking.business.rental import (
     ClassInput,
     ClassList,
@@ -583,3 +584,12 @@ async def post_inspection(
             key=idempotency_key,
             body=body,
         )
+
+
+@router.get("/bookings/{booking_id}/usage")
+async def get_usage(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> usage.UsageView:
+    """R6b decisions 1-5: overdue time and meter excess, derived on read."""
+    async with _access(request, principal, business_id) as access:
+        return await usage.load_usage(access.conn, booking_id)
