@@ -27,14 +27,14 @@ on to the next stage right after each slice. R6a CI run 42426865948 on `18470ae`
 5. **Read only.** The view states the `as_of` time it used; it creates no charge, invoice, security event or
    payment. Permissions and scope as for the other rental reads; another company's booking is not found.
 
-## Acceptance of R6b — NOT TESTED
+## Acceptance of R6b — PASS 2026-11-07 (code `010692f`, [evidence](evidence/2026-11-07-r6b-rental-usage/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R6b-01 | Before handover, out and returned give the right state; distance, allowance, excess and its amount follow the card and the agreement days | NOT TESTED |
-| R6b-02 | A return after the period end gives the overdue seconds and started hours; a return before it gives 0; while out the read time counts | NOT TESTED |
-| R6b-03 | No allowance gives no excess; no rate gives no amount; a class without a meter gives no distance; an extension's latest version counts | NOT TESTED |
-| R6b-04 | Branch scope and another company give not found; the full suite stays green | NOT TESTED |
+| R6b-01 | Before handover, out and returned give the right state; distance, allowance, excess and its amount follow the card and the agreement days | PASS |
+| R6b-02 | A return after the period end gives the overdue seconds and started hours; a return before it gives 0; while out the read time counts | PASS |
+| R6b-03 | No allowance gives no excess; no rate gives no amount; a class without a meter gives no distance; an extension's latest version counts | PASS |
+| R6b-04 | Branch scope and another company give not found; the full suite stays green | PASS |
 
 ## Not in R6b
 
