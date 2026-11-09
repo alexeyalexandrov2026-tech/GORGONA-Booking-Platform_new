@@ -20,6 +20,7 @@ from gorgona_booking.business import rental_charges as charges
 from gorgona_booking.business import rental_extensions as extensions
 from gorgona_booking.business import rental_inspections as inspections
 from gorgona_booking.business import rental_rates as rates
+from gorgona_booking.business import rental_reconciliation as reconciliation
 from gorgona_booking.business import rental_security as securities
 from gorgona_booking.business import rental_security_provider as evidence
 from gorgona_booking.business import rental_settlements as settlements
@@ -677,3 +678,12 @@ async def post_refund(
             key=idempotency_key,
             body=body,
         )
+
+
+@router.get("/bookings/{booking_id}/reconciliation")
+async def get_reconciliation(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> reconciliation.ReconciliationView:
+    """R7c decisions 1-5: charged, paid, credited, refunded and secured, derived on read."""
+    async with _access(request, principal, business_id) as access:
+        return await reconciliation.load_reconciliation(access.conn, business_id, booking_id)

@@ -6,9 +6,10 @@ a recorded external refund; both need rental.approve and leave the settlement an
 they were.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid7
+from zoneinfo import ZoneInfo
 
 import httpx
 import psycopg
@@ -39,8 +40,12 @@ COUNTS = (
 )
 
 
+# The FAKE business keeps its books in this zone; FIN-03 dates follow its "today".
+ZONE = ZoneInfo("America/New_York")
+
+
 def today() -> str:
-    return datetime.now(UTC).date().isoformat()
+    return datetime.now(ZONE).date().isoformat()
 
 
 async def settled(rental: Rental, b: Books) -> tuple[str, dict[str, Any]]:
@@ -115,7 +120,8 @@ def credit(document: str, number: str | None = None) -> dict[str, Any]:
 
 
 def external(reference: str = "FAKE-BANK-1") -> dict[str, Any]:
-    return {"method": "external", "reference": reference, "refunded_at": f"{today()}T09:00:00Z"}
+    an_hour_ago = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
+    return {"method": "external", "reference": reference, "refunded_at": an_hour_ago}
 
 
 async def issue(rental: Rental, b: Books, document: str) -> str:
