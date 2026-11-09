@@ -27,14 +27,14 @@ asked to go on to the next stage right after each slice. R7b CI run 42511820796 
 5. **Read only**, under the rental read rules and branch scope; a booking without a settlement is not found
    (`NOT_FOUND`); another company's booking is not found.
 
-## Acceptance of R7c — NOT TESTED
+## Acceptance of R7c — PASS 2026-11-09 (code `6876fee`, [evidence](evidence/2026-11-08-r7c-rental-reconciliation/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R7c-01 | A settled booking shows its charged documents as drafts, then issued with principal and open; a payment lowers open | NOT TESTED |
-| R7c-02 | Damage charges add to charged; credit and external refunds show their state, the refund obligation and its payment | NOT TESTED |
-| R7c-03 | The security figures appear when recorded and not otherwise; totals equal the sums of their rows | NOT TESTED |
-| R7c-04 | Before settlement, branch scope and another company give not found; the full suite stays green | NOT TESTED |
+| R7c-01 | A settled booking shows its charged documents as drafts, then issued with principal and open; a payment lowers open | PASS |
+| R7c-02 | Damage charges add to charged; credit and external refunds show their state, the refund obligation and its payment | PASS |
+| R7c-03 | The security figures appear when recorded and not otherwise; totals equal the sums of their rows | PASS |
+| R7c-04 | Before settlement, branch scope and another company give not found; the full suite stays green | PASS |
 
 ## Not in R7c
 

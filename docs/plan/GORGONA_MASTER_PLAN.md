@@ -10,11 +10,15 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-11-08: R7b damage charges and refunds of a rental agreement, verified on the VM
+## Current checkpoint — 2026-11-09: R7c reconciliation per rental agreement, derived, verified on the VM
+
+R7c on `codex/package-r7c-rental-reconciliation` (from R7b docs `6f20a26`; design `c16edcf`, code `6876fee`, [R7c design](PACKAGE_R7C_DESIGN_2026-11-08.md), [R7c evidence](evidence/2026-11-08-r7c-rental-reconciliation/CHECKS.json)): no migration (next stays **0108**). `GET bookings/{id}/reconciliation` derives on read the settlement and damage charge invoices with their FIN-03 state and `gba.obligation_balance` (principal, paid, credited, open), the refunds with their credit note and the refund obligation FIN-03 made, the R5a security figures and the totals. Also fixed: the R7b test took today in UTC while the FAKE business is in America/New_York (a slip, recorded). VM gates-1: static PASS, focused 1098 passed, full 2842 passed and 4 skipped. R7b CI run 42511820796: success. R7 is complete; next: R8 screens.
+
+## Previous checkpoint — 2026-11-08: R7b damage charges and refunds of a rental agreement, verified on the VM
 
 R7b on `codex/package-r7b-rental-damage-refunds` (from R7a docs `2ef404e`; design `0453d6a` corrected in `00c7dc0`, code `b174d1b`, [R7b design](PACKAGE_R7B_DESIGN_2026-11-08.md), [R7b evidence](evidence/2026-11-08-r7b-rental-damage-refunds/CHECKS.json)): migration **0107** adds insert-only `rental_damage_charges` with `rental_damage_charge_marks` (after the settlement, new return marks each charged once, the customer's FIN-03 receivable invoice draft for the amount) and `rental_refunds` (a FIN-03 credit note against an issued obligation of the settlement or a charge, or a recorded external refund; all refunds within the settlement total plus the damage charged). Both need `rental.approve`; FIN-03 keeps the drafts linked. Routes `GET bookings/{id}/charges`, `POST bookings/{id}/damage-charges`, `POST bookings/{id}/refunds`. VM gates-1: static PASS, focused 1095 passed, full 2839 passed and 4 skipped. R7a CI run 42449693704: success. Next: R7c.
 
-## Previous checkpoint — 2026-11-08: R7a final settlement invoice of a rental agreement, verified on the VM
+## Earlier checkpoint — 2026-11-08: R7a final settlement invoice of a rental agreement, verified on the VM
 
 R7a on `codex/package-r7a-rental-settlement` (from R6b docs `0432c98`; design `5f968b9`, code `31cf73d`, [R7a design](PACKAGE_R7A_DESIGN_2026-11-07.md), [R7a evidence](evidence/2026-11-07-r7a-rental-settlement/CHECKS.json)): R7 is split (R7b damage charges and refunds, R7c reconciliation). Migration **0106** adds insert-only `rental_settlements`, one per booking after its return: the latest agreement version total, the meter excess and the late return (started hours at the card hour rate, else started days at the day rate; `RENTAL_SETTLEMENT_UNPRICED` otherwise), recomputed by the guard, with the FIN-03 receivable invoice draft of the customer for the total written in the same request and kept linked (`FINANCIAL_DOCUMENT_LINKED`). Routes `GET`/`POST bookings/{id}/settlement`. Fuel is not priced. VM gates-1: static PASS, focused 1090 passed, full 2834 passed and 4 skipped. R6b CI run 42438106172: success. Next: R7b.
 
