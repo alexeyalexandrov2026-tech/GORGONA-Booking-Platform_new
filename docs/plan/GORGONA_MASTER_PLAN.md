@@ -10,11 +10,15 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-11-09: R7c reconciliation per rental agreement, derived, verified on the VM
+## Current checkpoint — 2026-11-11: R8a rental screens: catalogue, availability and bookings, verified on the VM
+
+R8a on `codex/package-r8a-rental-screens` (from R7c docs `a2bfc54`; design `eef91e1`, code `06b3c25`, [R8a design](PACKAGE_R8A_DESIGN_2026-11-09.md), [R8a evidence](evidence/2026-11-09-r8a-rental-screens/CHECKS.json)): web only, no API change and no migration (next stays **0108**). The Rental page (`web/app/rental/page.tsx`, `web/components/rental.tsx`) with strict contracts (`web/lib/rental-contracts.ts`) and commands that keep their Idempotency-Key (`web/lib/rental-api.ts`): classes and units, availability from the server, bookings with unit assignment and cancellation, times in the branch zone; only active owners and managers who are not delegates. Real browser desktop and mobile with axe and no horizontal scroll. VM gates-1: static PASS, focused 1099 passed, full 2843 passed and 4 skipped. R7c CI run 42558093855: success. Next: R8b.
+
+## Previous checkpoint — 2026-11-09: R7c reconciliation per rental agreement, derived, verified on the VM
 
 R7c on `codex/package-r7c-rental-reconciliation` (from R7b docs `6f20a26`; design `c16edcf`, code `6876fee`, [R7c design](PACKAGE_R7C_DESIGN_2026-11-08.md), [R7c evidence](evidence/2026-11-08-r7c-rental-reconciliation/CHECKS.json)): no migration (next stays **0108**). `GET bookings/{id}/reconciliation` derives on read the settlement and damage charge invoices with their FIN-03 state and `gba.obligation_balance` (principal, paid, credited, open), the refunds with their credit note and the refund obligation FIN-03 made, the R5a security figures and the totals. Also fixed: the R7b test took today in UTC while the FAKE business is in America/New_York (a slip, recorded). VM gates-1: static PASS, focused 1098 passed, full 2842 passed and 4 skipped. R7b CI run 42511820796: success. R7 is complete; next: R8 screens.
 
-## Previous checkpoint — 2026-11-08: R7b damage charges and refunds of a rental agreement, verified on the VM
+## Earlier checkpoint — 2026-11-08: R7b damage charges and refunds of a rental agreement, verified on the VM
 
 R7b on `codex/package-r7b-rental-damage-refunds` (from R7a docs `2ef404e`; design `0453d6a` corrected in `00c7dc0`, code `b174d1b`, [R7b design](PACKAGE_R7B_DESIGN_2026-11-08.md), [R7b evidence](evidence/2026-11-08-r7b-rental-damage-refunds/CHECKS.json)): migration **0107** adds insert-only `rental_damage_charges` with `rental_damage_charge_marks` (after the settlement, new return marks each charged once, the customer's FIN-03 receivable invoice draft for the amount) and `rental_refunds` (a FIN-03 credit note against an issued obligation of the settlement or a charge, or a recorded external refund; all refunds within the settlement total plus the damage charged). Both need `rental.approve`; FIN-03 keeps the drafts linked. Routes `GET bookings/{id}/charges`, `POST bookings/{id}/damage-charges`, `POST bookings/{id}/refunds`. VM gates-1: static PASS, focused 1095 passed, full 2839 passed and 4 skipped. R7a CI run 42449693704: success. Next: R7c.
 

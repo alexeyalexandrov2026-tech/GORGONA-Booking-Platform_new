@@ -36,14 +36,14 @@ the settlement with charges, refunds and the reconciliation.
 5. **Accessibility and times** as in O7a: named forms, tables in focusable regions, the business zone for times,
    axe without violations, no horizontal scroll at 375 px.
 
-## Acceptance of R8a — NOT TESTED
+## Acceptance of R8a — PASS 2026-11-11 (code `06b3c25`, [evidence](evidence/2026-11-09-r8a-rental-screens/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R8a-01 | Strict contracts accept every R1-R3a response the screens read and refuse unknown fields and bad values | NOT TESTED |
-| R8a-02 | In a real browser (desktop and mobile) an owner creates a class and a unit, reads availability, books, assigns the unit and cancels another booking; the database holds them | NOT TESTED |
-| R8a-03 | Axe finds no violation; no horizontal scroll on mobile; a member without rental rights sees the note | NOT TESTED |
-| R8a-04 | Web static checks and the full suite stay green | NOT TESTED |
+| R8a-01 | Strict contracts accept every R1-R3a response the screens read and refuse unknown fields and bad values | PASS |
+| R8a-02 | In a real browser (desktop and mobile) an owner creates a class and a unit, reads availability, books, assigns the unit and cancels another booking; the database holds them | PASS |
+| R8a-03 | Axe finds no violation; no horizontal scroll on mobile; a member without rental rights sees the note | PASS |
+| R8a-04 | Web static checks and the full suite stay green | PASS |
 
 ## Not in R8a
 
