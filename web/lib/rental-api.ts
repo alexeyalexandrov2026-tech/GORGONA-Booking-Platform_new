@@ -5,12 +5,19 @@ import { ManagementApiError, managementFetch } from "./management-api";
 import type {
   Assignment,
   AssignmentList,
+  Agreement,
   Availability,
   Booking,
   BookingList,
   ClassList,
   MeterKind,
+  Quote,
+  RateCard,
+  RateCardList,
   RentalClass,
+  Security,
+  SecurityKind,
+  SecurityMethod,
   Unit,
   UnitList,
 } from "./rental-contracts";
@@ -143,4 +150,96 @@ export const assignUnit = (business: string, booking: string, unit: string) =>
       schema_version: 1,
       unit_id: unit,
     },
+  );
+
+// R8b (package R): rate cards, the quote, the agreement and the security.
+export const fetchRateCards = (business: string, classId: string) =>
+  managementFetch<RateCardList>(
+    `${base(business)}/classes/${classId}/rate-cards`,
+  );
+
+export type RateCardBody = {
+  schema_version: 1;
+  location_id: string;
+  currency: string;
+  rates: { hour?: number; day?: number; week?: number; month?: number };
+  meter_allowance_per_day: number | null;
+  excess_rate: number | null;
+  extras: [];
+};
+export const saveRateCard = (
+  business: string,
+  classId: string,
+  body: RateCardBody,
+) =>
+  command<RateCard>(
+    `${base(business)}/classes/${classId}/rate-cards`,
+    "POST",
+    body,
+  );
+
+/** A read that the server answers with NOT_FOUND while there is nothing yet. */
+async function optional<T>(path: string): Promise<T | null> {
+  try {
+    return await managementFetch<T>(path);
+  } catch (error) {
+    if (error instanceof ManagementApiError && error.code === "NOT_FOUND")
+      return null;
+    throw error;
+  }
+}
+export const fetchQuote = (business: string, booking: string) =>
+  optional<Quote>(`${base(business)}/bookings/${booking}/quote`);
+export const fetchAgreement = (business: string, booking: string) =>
+  optional<Agreement>(`${base(business)}/bookings/${booking}/agreement`);
+export const fetchSecurity = (business: string, booking: string) =>
+  optional<Security>(`${base(business)}/bookings/${booking}/security`);
+
+export type AcceptBody = {
+  schema_version: 1;
+  source: "platform" | "paper" | "email";
+  accepted_by: string;
+  accepted_at: string;
+  extras: [];
+};
+export const acceptAgreement = (
+  business: string,
+  booking: string,
+  body: AcceptBody,
+) =>
+  command<Agreement>(
+    `${base(business)}/bookings/${booking}/agreement`,
+    "POST",
+    body,
+  );
+
+export const requestSecurity = (
+  business: string,
+  booking: string,
+  amount: number,
+  method: SecurityMethod,
+) =>
+  command<Security>(`${base(business)}/bookings/${booking}/security`, "POST", {
+    schema_version: 1,
+    amount,
+    method,
+  });
+
+export type SecurityEventBody = {
+  schema_version: 1;
+  kind: SecurityKind;
+  amount: number;
+  occurred_at: string;
+  reference?: string;
+  basis?: string;
+};
+export const recordSecurityEvent = (
+  business: string,
+  booking: string,
+  body: SecurityEventBody,
+) =>
+  command<Security>(
+    `${base(business)}/bookings/${booking}/security/events`,
+    "POST",
+    body,
   );

@@ -29,6 +29,7 @@ import type {
   RentalClass,
   Unit,
 } from "../lib/rental-contracts";
+import { AgreementAndSecurity, RateCardsSection } from "./rental-agreement";
 
 type Customer = { id: string; name: string };
 
@@ -279,6 +280,12 @@ export function RentalScreen({ businessId }: { businessId: string }) {
               );
               setNotice(`Unit ${saved.identifier} saved.`);
             }}
+          />
+          <RateCardsSection
+            businessId={businessId}
+            classes={classes}
+            locations={locations}
+            notify={setNotice}
           />
           <AvailabilitySection
             businessId={businessId}
@@ -1003,6 +1010,12 @@ function BookingPage({
           </table>
         </div>
       )}
+      <AgreementAndSecurity
+        businessId={businessId}
+        booking={booking}
+        zone={zone}
+        notify={notify}
+      />
       {!booking.cancellation && (
         <>
           <form aria-label="Assign a unit" onSubmit={assign}>

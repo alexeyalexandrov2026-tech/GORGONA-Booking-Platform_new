@@ -102,6 +102,130 @@ export type Availability = z.infer<typeof availabilitySchema>;
 export type Assignment = z.infer<typeof assignmentSchema>;
 export type AssignmentList = z.infer<typeof assignmentListSchema>;
 
+// R8b (package R): rate cards (R4a), the quote and the agreement (R4b) and the security (R5a).
+const money = z.number().int().min(0);
+const code = z.string().regex(/^[A-Z0-9][A-Z0-9_-]{0,31}$/);
+const counts = z.record(z.string(), z.number().int().min(0));
+
+export const rateCardSchema = z.strictObject({
+  rate_card_id: id,
+  class_id: id,
+  location_id: id,
+  version: revision,
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  effective_from: instant,
+  rates: z.strictObject({
+    hour: z.number().int().positive().nullable(),
+    day: z.number().int().positive().nullable(),
+    week: z.number().int().positive().nullable(),
+    month: z.number().int().positive().nullable(),
+  }),
+  meter_allowance_per_day: z.number().int().min(0).nullable(),
+  excess_rate: money.nullable(),
+  extras: z.array(
+    z.strictObject({
+      code,
+      name: text(200),
+      price: money,
+      unit: z.enum(["per_day", "per_rental"]),
+    }),
+  ),
+  created_at: instant,
+});
+export const rateCardListSchema = z.strictObject({
+  items: z.array(rateCardSchema),
+});
+
+export const quoteSchema = z.strictObject({
+  rate_card_id: id,
+  version: revision,
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  starts_at: instant,
+  ends_at: instant,
+  counts,
+  rental: money,
+  rental_days: z.number().int().positive(),
+  extras: z.array(
+    z.strictObject({
+      code,
+      quantity: z.number().int().positive(),
+      amount: money,
+    }),
+  ),
+  total: money,
+  booking_id: id.nullable(),
+});
+
+export const agreementVersionSchema = z.strictObject({
+  version: revision,
+  rate_card_id: id,
+  card_version: revision,
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  starts_at: instant,
+  ends_at: instant,
+  counts,
+  rental: money,
+  rental_days: z.number().int().positive(),
+  extras: z.array(
+    z.strictObject({
+      code,
+      name: text(200),
+      price: money,
+      unit: z.enum(["per_day", "per_rental"]),
+      quantity: z.number().int().positive(),
+      amount: money,
+    }),
+  ),
+  total: money,
+  source: z.enum(["platform", "paper", "email"]),
+  accepted_by: text(200),
+  accepted_at: instant,
+  reason: text(500).nullable(),
+  created_at: instant,
+});
+export const agreementSchema = z.strictObject({
+  agreement_id: id,
+  booking_id: id,
+  current_version: revision,
+  versions: z.array(agreementVersionSchema),
+});
+
+export const securityEventSchema = z.strictObject({
+  sequence: revision,
+  kind: z.enum(["held", "captured", "released", "expired"]),
+  amount: money,
+  reference: text(200).nullable(),
+  hold_expires_at: instant.nullable(),
+  basis: text(500).nullable(),
+  occurred_at: instant,
+  recorded_by: id,
+  provider: z
+    .strictObject({ receipt_id: id, intent: text(120), linked_by: id })
+    .nullable(),
+});
+export const securitySchema = z.strictObject({
+  security_id: id,
+  booking_id: id,
+  amount: money,
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  method: z.enum(["card_hold", "cash", "bank_transfer", "other"]),
+  state: z.enum(["requested", "held", "released", "expired"]),
+  held: money,
+  captured: money,
+  released: money,
+  expired: money,
+  remaining: money,
+  events: z.array(securityEventSchema),
+});
+
+export type RateCard = z.infer<typeof rateCardSchema>;
+export type RateCardList = z.infer<typeof rateCardListSchema>;
+export type Quote = z.infer<typeof quoteSchema>;
+export type Agreement = z.infer<typeof agreementSchema>;
+export type Security = z.infer<typeof securitySchema>;
+export type SecurityKind = Security["events"][number]["kind"];
+export type SecurityMethod = Security["method"];
+
 const nested = (tail: string) => new RegExp(`^/rental${tail}$`, "i");
 const uuid = "[0-9a-f-]{36}";
 const routes: [RegExp, string[], z.ZodType][] = [
@@ -116,6 +240,12 @@ const routes: [RegExp, string[], z.ZodType][] = [
   [nested("/availability"), ["GET"], availabilitySchema],
   [nested(`/bookings/${uuid}/assignments`), ["GET"], assignmentListSchema],
   [nested(`/bookings/${uuid}/assignment`), ["POST"], assignmentSchema],
+  [nested(`/classes/${uuid}/rate-cards`), ["GET"], rateCardListSchema],
+  [nested(`/classes/${uuid}/rate-cards`), ["POST"], rateCardSchema],
+  [nested(`/bookings/${uuid}/quote`), ["GET"], quoteSchema],
+  [nested(`/bookings/${uuid}/agreement`), ["GET", "POST"], agreementSchema],
+  [nested(`/bookings/${uuid}/security`), ["GET", "POST"], securitySchema],
+  [nested(`/bookings/${uuid}/security/events`), ["POST"], securitySchema],
 ];
 
 /** The contract of a rental route under /v1/businesses/{id}, or null for another route. */

@@ -12,6 +12,13 @@ import {
   unitListSchema,
   unitSchema,
 } from "../lib/rental-contracts";
+import {
+  agreementSchema,
+  quoteSchema,
+  rateCardListSchema,
+  rateCardSchema,
+  securitySchema,
+} from "../lib/rental-contracts";
 
 // R8a (package R): strict response contracts of the R1-R3a rental routes the screens read, and who
 // sees the rental screen. FAKE data only.
@@ -157,4 +164,147 @@ test("only active owners and managers who are not delegates see the rental scree
     }),
   ).toBe(false);
   expect(canManageRental(undefined)).toBe(false);
+});
+
+// R8b (package R): rate cards, the quote, the agreement and the security.
+const card = {
+  rate_card_id: uuid(10),
+  class_id: uuid(2),
+  location_id: uuid(4),
+  version: 1,
+  currency: "USD",
+  effective_from: at,
+  rates: { hour: null, day: 5000, week: null, month: null },
+  meter_allowance_per_day: 100,
+  excess_rate: 25,
+  extras: [
+    { code: "SEAT", name: "FAKE child seat", price: 500, unit: "per_day" },
+  ],
+  created_at: at,
+};
+const quote = {
+  rate_card_id: uuid(10),
+  version: 1,
+  currency: "USD",
+  starts_at: at,
+  ends_at: "2031-06-03T10:00:00Z",
+  counts: { day: 2 },
+  rental: 10000,
+  rental_days: 2,
+  extras: [],
+  total: 10000,
+  booking_id: uuid(5),
+};
+const agreement = {
+  agreement_id: uuid(11),
+  booking_id: uuid(5),
+  current_version: 1,
+  versions: [
+    {
+      version: 1,
+      rate_card_id: uuid(10),
+      card_version: 1,
+      currency: "USD",
+      starts_at: at,
+      ends_at: "2031-06-03T10:00:00Z",
+      counts: { day: 2 },
+      rental: 10000,
+      rental_days: 2,
+      extras: [
+        {
+          code: "SEAT",
+          name: "FAKE child seat",
+          price: 500,
+          unit: "per_day",
+          quantity: 1,
+          amount: 1000,
+        },
+      ],
+      total: 11000,
+      source: "paper",
+      accepted_by: "FAKE Renter",
+      accepted_at: at,
+      reason: null,
+      created_at: at,
+    },
+  ],
+};
+const security = {
+  security_id: uuid(12),
+  booking_id: uuid(5),
+  amount: 20000,
+  currency: "USD",
+  method: "card_hold",
+  state: "held",
+  held: 20000,
+  captured: 3000,
+  released: 0,
+  expired: 0,
+  remaining: 17000,
+  events: [
+    {
+      sequence: 1,
+      kind: "held",
+      amount: 20000,
+      reference: "FAKE-TERM-1",
+      hold_expires_at: null,
+      basis: null,
+      occurred_at: at,
+      recorded_by: uuid(13),
+      provider: null,
+    },
+    {
+      sequence: 2,
+      kind: "captured",
+      amount: 3000,
+      reference: null,
+      hold_expires_at: null,
+      basis: "FAKE scratch",
+      occurred_at: at,
+      recorded_by: uuid(13),
+      provider: {
+        receipt_id: uuid(14),
+        intent: "pi_FAKE1",
+        linked_by: uuid(13),
+      },
+    },
+  ],
+};
+
+test("R8b responses parse strictly and refuse bad values", () => {
+  expect(rateCardSchema.parse(card)).toEqual(card);
+  expect(rateCardListSchema.parse({ items: [card] }).items).toHaveLength(1);
+  expect(quoteSchema.parse(quote)).toEqual(quote);
+  expect(
+    quoteSchema.parse({ ...quote, booking_id: null }).booking_id,
+  ).toBeNull();
+  expect(agreementSchema.parse(agreement)).toEqual(agreement);
+  expect(securitySchema.parse(security)).toEqual(security);
+  for (const [schema, value] of [
+    [rateCardSchema, { ...card, currency: "usd" }],
+    [rateCardSchema, { ...card, extra: true }],
+    [quoteSchema, { ...quote, total: -1 }],
+    [agreementSchema, { ...agreement, current_version: 0 }],
+    [securitySchema, { ...security, state: "lost" }],
+    [securitySchema, { ...security, method: "crypto" }],
+  ] as const)
+    expect(schema.safeParse(value).success).toBe(false);
+});
+
+test("the management client knows every R8b rental route", () => {
+  const cases: [string, string, unknown][] = [
+    [`${base}/classes/${uuid(2)}/rate-cards`, "GET", { items: [card] }],
+    [`${base}/classes/${uuid(2)}/rate-cards`, "POST", card],
+    [`${base}/bookings/${uuid(5)}/quote`, "GET", quote],
+    [`${base}/bookings/${uuid(5)}/agreement`, "GET", agreement],
+    [`${base}/bookings/${uuid(5)}/agreement`, "POST", agreement],
+    [`${base}/bookings/${uuid(5)}/security`, "GET", security],
+    [`${base}/bookings/${uuid(5)}/security`, "POST", security],
+    [`${base}/bookings/${uuid(5)}/security/events`, "POST", security],
+  ];
+  for (const [path, method, body] of cases) {
+    const schema = managementResponseSchema(path, method);
+    expect(schema, `${method} ${path}`).not.toBeNull();
+    expect(schema?.safeParse(body).success, `${method} ${path}`).toBe(true);
+  }
 });
