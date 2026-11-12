@@ -33,14 +33,14 @@ security; **R8c** handover and return, the settlement, damage charges, refunds a
 4. Every figure is the server's; a command keeps its Idempotency-Key until it succeeds; accessibility and times as in
    R8a.
 
-## Acceptance of R8b — NOT TESTED
+## Acceptance of R8b — PASS 2026-11-11 (code `b3528b8`, [evidence](evidence/2026-11-11-r8b-rental-agreement-screens/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R8b-01 | Strict contracts accept every R4a-R5a response the screens read and refuse unknown fields and bad values | NOT TESTED |
-| R8b-02 | In a real browser (desktop and mobile) an owner adds a rate card, sees the quote, accepts the agreement, requests the security, holds it and captures part with a basis; the database holds them | NOT TESTED |
-| R8b-03 | Axe finds no violation; no horizontal scroll on mobile | NOT TESTED |
-| R8b-04 | Web static checks and the full suite stay green | NOT TESTED |
+| R8b-01 | Strict contracts accept every R4a-R5a response the screens read and refuse unknown fields and bad values | PASS |
+| R8b-02 | In a real browser (desktop and mobile) an owner adds a rate card, sees the quote, accepts the agreement, requests the security, holds it and captures part with a basis; the database holds them | PASS |
+| R8b-03 | Axe finds no violation; no horizontal scroll on mobile | PASS |
+| R8b-04 | Web static checks and the full suite stay green | PASS |
 
 ## Not in R8b
 
