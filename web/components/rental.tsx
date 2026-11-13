@@ -30,6 +30,7 @@ import type {
   Unit,
 } from "../lib/rental-contracts";
 import { AgreementAndSecurity, RateCardsSection } from "./rental-agreement";
+import { AfterTheAgreement } from "./rental-settlement";
 
 type Customer = { id: string; name: string };
 
@@ -318,6 +319,7 @@ export function RentalScreen({ businessId }: { businessId: string }) {
               allUnits={units}
               zone={branch(selected.pickup_location_id)?.timezone ?? ""}
               className={klass(selected.class_id)?.code ?? "Unknown class"}
+              meterKind={klass(selected.class_id)?.meter_kind ?? "none"}
               branchName={branchName}
               customerName={customerName(selected.customer_id)}
               onChange={bookingChanged}
@@ -876,6 +878,7 @@ function BookingPage({
   allUnits,
   zone,
   className,
+  meterKind,
   branchName,
   customerName,
   onChange,
@@ -887,6 +890,7 @@ function BookingPage({
   allUnits: Unit[];
   zone: string;
   className: string;
+  meterKind: MeterKind;
   branchName: (id: string) => string;
   customerName: string;
   onChange: (item: Booking) => void;
@@ -1055,6 +1059,13 @@ function BookingPage({
           {error}
         </p>
       )}
+      <AfterTheAgreement
+        businessId={businessId}
+        booking={booking}
+        zone={zone}
+        meterKind={meterKind}
+        notify={notify}
+      />
     </section>
   );
 }

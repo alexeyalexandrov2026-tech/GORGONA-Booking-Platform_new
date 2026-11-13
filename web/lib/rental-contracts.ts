@@ -226,6 +226,151 @@ export type Security = z.infer<typeof securitySchema>;
 export type SecurityKind = Security["events"][number]["kind"];
 export type SecurityMethod = Security["method"];
 
+// R8c (package R): inspections (R6a), usage (R6b), the settlement (R7a), damage charges and refunds
+// (R7b) and the reconciliation (R7c).
+const currency = z.string().regex(/^[A-Z]{3}$/);
+const severity = z.enum(["minor", "major"]);
+export const inspectionsSchema = z.strictObject({
+  booking_id: id,
+  inspections: z.array(
+    z.strictObject({
+      inspection_id: id,
+      kind: z.enum(["handover", "return"]),
+      assignment_id: id,
+      unit_id: id,
+      meter: count.nullable(),
+      level: z.number().int().min(0).max(100).nullable(),
+      note: text(1000).nullable(),
+      inspected_by: id,
+      inspected_at: instant,
+      marks: z.array(
+        z.strictObject({
+          position: revision,
+          area: text(100),
+          severity,
+          note: text(500).nullable(),
+          new: z.boolean(),
+          photo: z.strictObject({ document_id: id, revision }).nullable(),
+        }),
+      ),
+    }),
+  ),
+});
+export const usageSchema = z.strictObject({
+  booking_id: id,
+  currency,
+  state: z.enum(["not_handed_over", "out", "returned"]),
+  period_end: instant,
+  rental_days: z.number().int().positive(),
+  as_of: instant,
+  overdue_seconds: count,
+  overdue_hours: count,
+  distance: count.nullable(),
+  allowance: count.nullable(),
+  excess: count.nullable(),
+  excess_amount: money.nullable(),
+});
+export const settlementSchema = z.strictObject({
+  booking_id: id,
+  agreement_version: revision,
+  currency,
+  rental_minor: money,
+  excess_minor: money,
+  late_minor: money,
+  late_units: count,
+  total_minor: money,
+  book_id: id,
+  invoice_document_id: id,
+  settled_by: id,
+  settled_at: instant,
+});
+export const chargesSchema = z.strictObject({
+  booking_id: id,
+  damage_charges: z.array(
+    z.strictObject({
+      number: revision,
+      marks: z.array(revision).min(1),
+      amount_minor: money,
+      reason: text(500),
+      book_id: id,
+      invoice_document_id: id,
+      charged_by: id,
+      charged_at: instant,
+    }),
+  ),
+  refunds: z.array(
+    z.strictObject({
+      number: revision,
+      method: z.enum(["credit", "external"]),
+      amount_minor: money,
+      reason: text(500),
+      reference: text(200).nullable(),
+      refunded_at: instant.nullable(),
+      book_id: id.nullable(),
+      credit_document_id: id.nullable(),
+      recorded_by: id,
+      recorded_at: instant,
+    }),
+  ),
+});
+export const reconciliationSchema = z.strictObject({
+  booking_id: id,
+  currency,
+  documents: z.array(
+    z.strictObject({
+      kind: z.enum(["settlement", "damage_charge"]),
+      number: revision.nullable(),
+      amount_minor: money,
+      book_id: id,
+      document_id: id,
+      state: z.enum(["draft", "issued"]),
+      principal_minor: money,
+      paid_minor: money,
+      credited_minor: money,
+      open_minor: money,
+    }),
+  ),
+  refunds: z.array(
+    z.strictObject({
+      number: revision,
+      method: z.enum(["credit", "external"]),
+      amount_minor: money,
+      state: z.enum(["recorded", "draft", "issued"]),
+      credit_document_id: id.nullable(),
+      refund_obligation_minor: money.nullable(),
+      refund_paid_minor: money.nullable(),
+    }),
+  ),
+  security: z
+    .strictObject({
+      state: z.enum(["requested", "held", "released", "expired"]),
+      amount: money,
+      held: money,
+      captured: money,
+      released: money,
+      expired: money,
+      remaining: money,
+    })
+    .nullable(),
+  totals: z.strictObject({
+    charged_minor: money,
+    invoiced_minor: money,
+    paid_minor: money,
+    credited_minor: money,
+    open_minor: money,
+    refunded_external_minor: money,
+    refund_owed_minor: money,
+  }),
+});
+
+export type Inspections = z.infer<typeof inspectionsSchema>;
+export type Inspection = Inspections["inspections"][number];
+export type Severity = z.infer<typeof severity>;
+export type Usage = z.infer<typeof usageSchema>;
+export type Settlement = z.infer<typeof settlementSchema>;
+export type Charges = z.infer<typeof chargesSchema>;
+export type Reconciliation = z.infer<typeof reconciliationSchema>;
+
 const nested = (tail: string) => new RegExp(`^/rental${tail}$`, "i");
 const uuid = "[0-9a-f-]{36}";
 const routes: [RegExp, string[], z.ZodType][] = [
@@ -246,6 +391,13 @@ const routes: [RegExp, string[], z.ZodType][] = [
   [nested(`/bookings/${uuid}/agreement`), ["GET", "POST"], agreementSchema],
   [nested(`/bookings/${uuid}/security`), ["GET", "POST"], securitySchema],
   [nested(`/bookings/${uuid}/security/events`), ["POST"], securitySchema],
+  [nested(`/bookings/${uuid}/inspections`), ["GET", "POST"], inspectionsSchema],
+  [nested(`/bookings/${uuid}/usage`), ["GET"], usageSchema],
+  [nested(`/bookings/${uuid}/settlement`), ["GET", "POST"], settlementSchema],
+  [nested(`/bookings/${uuid}/charges`), ["GET"], chargesSchema],
+  [nested(`/bookings/${uuid}/damage-charges`), ["POST"], chargesSchema],
+  [nested(`/bookings/${uuid}/refunds`), ["POST"], chargesSchema],
+  [nested(`/bookings/${uuid}/reconciliation`), ["GET"], reconciliationSchema],
 ];
 
 /** The contract of a rental route under /v1/businesses/{id}, or null for another route. */

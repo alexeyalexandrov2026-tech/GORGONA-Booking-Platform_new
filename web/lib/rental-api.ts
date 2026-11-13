@@ -9,6 +9,12 @@ import type {
   Availability,
   Booking,
   BookingList,
+  Charges,
+  Inspections,
+  Reconciliation,
+  Settlement,
+  Severity,
+  Usage,
   ClassList,
   MeterKind,
   Quote,
@@ -240,6 +246,99 @@ export const recordSecurityEvent = (
 ) =>
   command<Security>(
     `${base(business)}/bookings/${booking}/security/events`,
+    "POST",
+    body,
+  );
+
+// R8c (package R): inspections, usage, the settlement, damage charges, refunds and the reconciliation.
+export const fetchInspections = (business: string, booking: string) =>
+  optional<Inspections>(`${base(business)}/bookings/${booking}/inspections`);
+export const fetchUsage = (business: string, booking: string) =>
+  optional<Usage>(`${base(business)}/bookings/${booking}/usage`);
+export const fetchSettlement = (business: string, booking: string) =>
+  optional<Settlement>(`${base(business)}/bookings/${booking}/settlement`);
+export const fetchCharges = (business: string, booking: string) =>
+  optional<Charges>(`${base(business)}/bookings/${booking}/charges`);
+export const fetchReconciliation = (business: string, booking: string) =>
+  optional<Reconciliation>(
+    `${base(business)}/bookings/${booking}/reconciliation`,
+  );
+
+export type MarkBody = {
+  area: string;
+  severity: Severity;
+  note?: string;
+  new: boolean;
+};
+export type InspectionBody = {
+  schema_version: 1;
+  kind: "handover" | "return";
+  meter?: number;
+  level?: number;
+  note?: string;
+  marks: MarkBody[];
+};
+export const recordInspection = (
+  business: string,
+  booking: string,
+  body: InspectionBody,
+) =>
+  command<Inspections>(
+    `${base(business)}/bookings/${booking}/inspections`,
+    "POST",
+    body,
+  );
+
+/** The FIN-03 invoice a settlement or a damage charge drafts. */
+export type InvoiceTerms = {
+  book_id: string;
+  receivable_account_id: string;
+  revenue_account_id: string;
+  invoice_date: string;
+  due_date?: string;
+  number: string;
+};
+export const settle = (
+  business: string,
+  booking: string,
+  terms: InvoiceTerms,
+) =>
+  command<Settlement>(
+    `${base(business)}/bookings/${booking}/settlement`,
+    "POST",
+    { schema_version: 1, ...terms },
+  );
+export const chargeDamage = (
+  business: string,
+  booking: string,
+  body: { marks: number[]; amount: number; reason: string } & InvoiceTerms,
+) =>
+  command<Charges>(
+    `${base(business)}/bookings/${booking}/damage-charges`,
+    "POST",
+    { schema_version: 1, ...body },
+  );
+
+export type RefundBody = {
+  schema_version: 1;
+  amount: number;
+  reason: string;
+} & (
+  | { method: "external"; reference: string; refunded_at: string }
+  | {
+      method: "credit";
+      invoice_document_id: string;
+      credit_date: string;
+      number: string;
+    }
+);
+export const recordRefund = (
+  business: string,
+  booking: string,
+  body: RefundBody,
+) =>
+  command<Charges>(
+    `${base(business)}/bookings/${booking}/refunds`,
     "POST",
     body,
   );

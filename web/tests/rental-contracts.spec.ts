@@ -19,6 +19,13 @@ import {
   rateCardSchema,
   securitySchema,
 } from "../lib/rental-contracts";
+import {
+  chargesSchema,
+  inspectionsSchema,
+  reconciliationSchema,
+  settlementSchema,
+  usageSchema,
+} from "../lib/rental-contracts";
 
 // R8a (package R): strict response contracts of the R1-R3a rental routes the screens read, and who
 // sees the rental screen. FAKE data only.
@@ -301,6 +308,229 @@ test("the management client knows every R8b rental route", () => {
     [`${base}/bookings/${uuid(5)}/security`, "GET", security],
     [`${base}/bookings/${uuid(5)}/security`, "POST", security],
     [`${base}/bookings/${uuid(5)}/security/events`, "POST", security],
+  ];
+  for (const [path, method, body] of cases) {
+    const schema = managementResponseSchema(path, method);
+    expect(schema, `${method} ${path}`).not.toBeNull();
+    expect(schema?.safeParse(body).success, `${method} ${path}`).toBe(true);
+  }
+});
+
+// R8c (package R): inspections (R6a), usage (R6b), the settlement (R7a), damage charges and refunds
+// (R7b) and the reconciliation (R7c).
+const mark = {
+  position: 1,
+  area: "FAKE rear door",
+  severity: "major",
+  note: "FAKE dent",
+  new: true,
+  photo: { document_id: uuid(20), revision: 1 },
+};
+const inspections = {
+  booking_id: uuid(5),
+  inspections: [
+    {
+      inspection_id: uuid(21),
+      kind: "handover",
+      assignment_id: uuid(22),
+      unit_id: uuid(3),
+      meter: 1000,
+      level: 80,
+      note: null,
+      inspected_by: uuid(13),
+      inspected_at: at,
+      marks: [
+        {
+          ...mark,
+          area: "FAKE bumper",
+          severity: "minor",
+          new: false,
+          photo: null,
+        },
+      ],
+    },
+    {
+      inspection_id: uuid(23),
+      kind: "return",
+      assignment_id: uuid(22),
+      unit_id: uuid(3),
+      meter: 1300,
+      level: null,
+      note: "FAKE back on time",
+      inspected_by: uuid(13),
+      inspected_at: at,
+      marks: [mark],
+    },
+  ],
+};
+const usage = {
+  booking_id: uuid(5),
+  currency: "USD",
+  state: "returned",
+  period_end: "2031-06-03T10:00:00Z",
+  rental_days: 2,
+  as_of: at,
+  overdue_seconds: 0,
+  overdue_hours: 0,
+  distance: 300,
+  allowance: 200,
+  excess: 100,
+  excess_amount: 2500,
+};
+const settlement = {
+  booking_id: uuid(5),
+  agreement_version: 1,
+  currency: "USD",
+  rental_minor: 10000,
+  excess_minor: 2500,
+  late_minor: 0,
+  late_units: 0,
+  total_minor: 12500,
+  book_id: uuid(24),
+  invoice_document_id: uuid(25),
+  settled_by: uuid(13),
+  settled_at: at,
+};
+const charges = {
+  booking_id: uuid(5),
+  damage_charges: [
+    {
+      number: 1,
+      marks: [1],
+      amount_minor: 8000,
+      reason: "FAKE dent",
+      book_id: uuid(24),
+      invoice_document_id: uuid(26),
+      charged_by: uuid(13),
+      charged_at: at,
+    },
+  ],
+  refunds: [
+    {
+      number: 1,
+      method: "external",
+      amount_minor: 1000,
+      reason: "FAKE goodwill",
+      reference: "FAKE-REF-1",
+      refunded_at: at,
+      book_id: null,
+      credit_document_id: null,
+      recorded_by: uuid(13),
+      recorded_at: at,
+    },
+  ],
+};
+const reconciliation = {
+  booking_id: uuid(5),
+  currency: "USD",
+  documents: [
+    {
+      kind: "settlement",
+      number: null,
+      amount_minor: 12500,
+      book_id: uuid(24),
+      document_id: uuid(25),
+      state: "draft",
+      principal_minor: 0,
+      paid_minor: 0,
+      credited_minor: 0,
+      open_minor: 0,
+    },
+    {
+      kind: "damage_charge",
+      number: 1,
+      amount_minor: 8000,
+      book_id: uuid(24),
+      document_id: uuid(26),
+      state: "issued",
+      principal_minor: 8000,
+      paid_minor: 3000,
+      credited_minor: 0,
+      open_minor: 5000,
+    },
+  ],
+  refunds: [
+    {
+      number: 1,
+      method: "external",
+      amount_minor: 1000,
+      state: "recorded",
+      credit_document_id: null,
+      refund_obligation_minor: null,
+      refund_paid_minor: null,
+    },
+  ],
+  security: {
+    state: "held",
+    amount: 20000,
+    held: 20000,
+    captured: 0,
+    released: 0,
+    expired: 0,
+    remaining: 20000,
+  },
+  totals: {
+    charged_minor: 20500,
+    invoiced_minor: 8000,
+    paid_minor: 3000,
+    credited_minor: 0,
+    open_minor: 5000,
+    refunded_external_minor: 1000,
+    refund_owed_minor: 0,
+  },
+};
+
+test("R8c responses parse strictly and refuse bad values", () => {
+  expect(inspectionsSchema.parse(inspections)).toEqual(inspections);
+  expect(usageSchema.parse(usage)).toEqual(usage);
+  expect(
+    usageSchema.parse({ ...usage, state: "out", distance: null, excess: null })
+      .distance,
+  ).toBeNull();
+  expect(settlementSchema.parse(settlement)).toEqual(settlement);
+  expect(chargesSchema.parse(charges)).toEqual(charges);
+  expect(reconciliationSchema.parse(reconciliation)).toEqual(reconciliation);
+  expect(
+    reconciliationSchema.parse({ ...reconciliation, security: null }).security,
+  ).toBeNull();
+  for (const [schema, value] of [
+    [inspectionsSchema, { ...inspections, extra: 1 }],
+    [
+      inspectionsSchema,
+      {
+        ...inspections,
+        inspections: [{ ...inspections.inspections[0], kind: "pickup" }],
+      },
+    ],
+    [usageSchema, { ...usage, state: "lost" }],
+    [settlementSchema, { ...settlement, total_minor: -1 }],
+    [
+      chargesSchema,
+      { ...charges, refunds: [{ ...charges.refunds[0], method: "cash" }] },
+    ],
+    [
+      reconciliationSchema,
+      {
+        ...reconciliation,
+        documents: [{ ...reconciliation.documents[0], state: "void" }],
+      },
+    ],
+  ] as const)
+    expect(schema.safeParse(value).success).toBe(false);
+});
+
+test("the management client knows every R8c rental route", () => {
+  const booking = `${base}/bookings/${uuid(5)}`;
+  const cases: [string, string, unknown][] = [
+    [`${booking}/inspections`, "GET", inspections],
+    [`${booking}/inspections`, "POST", inspections],
+    [`${booking}/usage`, "GET", usage],
+    [`${booking}/settlement`, "GET", settlement],
+    [`${booking}/settlement`, "POST", settlement],
+    [`${booking}/charges`, "GET", charges],
+    [`${booking}/damage-charges`, "POST", charges],
+    [`${booking}/refunds`, "POST", charges],
+    [`${booking}/reconciliation`, "GET", reconciliation],
   ];
   for (const [path, method, body] of cases) {
     const schema = managementResponseSchema(path, method);

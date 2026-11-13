@@ -43,6 +43,7 @@
     "test:management:construction-execution": "playwright test tests/construction-execution.spec.ts --max-failures=1",
     "test:management:rental": "playwright test tests/rental.spec.ts --max-failures=1",
     "test:management:rental-agreement": "playwright test tests/rental-agreement.spec.ts --max-failures=1",
+    "test:management:rental-settlement": "playwright test tests/rental-settlement.spec.ts --max-failures=1",
     "test:management:stock-documents": "playwright test tests/stock-documents.spec.ts --max-failures=1"
   },
   "dependencies": {
