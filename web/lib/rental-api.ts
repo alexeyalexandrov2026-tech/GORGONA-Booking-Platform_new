@@ -203,7 +203,7 @@ export const fetchSecurity = (business: string, booking: string) =>
 
 export type AcceptBody = {
   schema_version: 1;
-  source: "platform" | "paper" | "email";
+  source: "paper" | "email";
   accepted_by: string;
   accepted_at: string;
   extras: [];

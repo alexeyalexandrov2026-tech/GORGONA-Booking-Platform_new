@@ -57,7 +57,8 @@ Reason = Annotated[str, AfterValidator(_text), Field(min_length=1, max_length=50
 
 class AcceptInput(Strict):
     schema_version: Literal[1]
-    source: Literal["platform", "paper", "email"]
+    # Platform responses are reserved for a customer acting through a grant (R-09).
+    source: Literal["paper", "email"]
     accepted_by: Name
     accepted_at: AwareDatetime
     extras: Annotated[list[QuoteExtraInput], Field(default_factory=list, max_length=50)]

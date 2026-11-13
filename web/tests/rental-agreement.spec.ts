@@ -111,6 +111,11 @@ test("an owner prices a booking, records the agreement and keeps its security", 
     page.getByText("Quote: rental 100.00 USD for 2 days, total 100.00 USD"),
   ).toBeVisible();
   const accept = page.getByRole("form", { name: "Accept the agreement" });
+  // R9 (R-09): no customer answers on the platform yet, so the source is paper or email.
+  await expect(accept.getByLabel("Source").locator("option")).toHaveText([
+    "Paper",
+    "Email",
+  ]);
   await accept.getByLabel("Source").selectOption({ label: "Paper" });
   await accept.getByLabel("Accepted by").fill("FAKE Renter");
   await accept.getByLabel("Accepted on").fill("2026-01-02");

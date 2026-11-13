@@ -21,6 +21,7 @@ import {
   refusal,
   requestSecurity,
   saveRateCard,
+  type AcceptBody,
 } from "../lib/rental-api";
 import type {
   Agreement,
@@ -378,7 +379,7 @@ function AgreementPanel({
   onAccepted: (saved: Agreement) => void;
 }) {
   const headingId = useId();
-  const [source, setSource] = useState<"platform" | "paper" | "email">("paper");
+  const [source, setSource] = useState<AcceptBody["source"]>("paper");
   const [acceptedBy, setAcceptedBy] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -459,10 +460,9 @@ function AgreementPanel({
                 <select
                   value={source}
                   onChange={(e) =>
-                    setSource(e.target.value as "platform" | "paper" | "email")
+                    setSource(e.target.value as AcceptBody["source"])
                   }
                 >
-                  <option value="platform">Platform</option>
                   <option value="paper">Paper</option>
                   <option value="email">Email</option>
                 </select>
