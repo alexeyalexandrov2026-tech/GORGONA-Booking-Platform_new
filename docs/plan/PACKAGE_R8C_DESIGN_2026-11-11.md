@@ -69,14 +69,14 @@ R8 is split three ways:
    - a command keeps its Idempotency-Key until it succeeds;
    - accessibility and times are handled as in R8a.
 
-## Acceptance of R8c — NOT TESTED
+## Acceptance of R8c — PASS 2026-11-11 (code `c45d3da`, [evidence](evidence/2026-11-11-r8c-rental-settlement-screens/CHECKS.json))
 
 | id | Requirement | Result |
 |---|---|---|
-| R8c-01 | Strict contracts accept every R6a-R7c response the screens read and refuse unknown fields and bad values; the management client knows every route | NOT TESTED |
-| R8c-02 | In a real browser (desktop and mobile) an owner assigns a unit, records the handover (meter 1000) and the return (meter 1300, one new major mark), reads the usage (distance 300 over 200 allowed: excess 100 at 25.00), settles (rental 100.00 and excess 25.00: 125.00), charges the new mark 80.00, records an external refund of 10.00 and reads the reconciliation (charged 205.00, refunded externally 10.00); the database holds them | NOT TESTED |
-| R8c-03 | Axe finds no violation; no horizontal scroll on mobile | NOT TESTED |
-| R8c-04 | Web static checks and the full suite stay green | NOT TESTED |
+| R8c-01 | Strict contracts accept every R6a-R7c response the screens read and refuse unknown fields and bad values; the management client knows every route | PASS |
+| R8c-02 | In a real browser (desktop and mobile) an owner assigns a unit, records the handover (meter 1000) and the return (meter 1300, one new major mark), reads the usage (distance 300 over 200 allowed: excess 100 at 25.00), settles (rental 100.00 and excess 25.00: 125.00), charges the new mark 80.00, records an external refund of 10.00 and reads the reconciliation (charged 205.00, refunded externally 10.00); the database holds them | PASS |
+| R8c-03 | Axe finds no violation; no horizontal scroll on mobile | PASS |
+| R8c-04 | Web static checks and the full suite stay green | PASS |
 
 ## Not in R8c
 
