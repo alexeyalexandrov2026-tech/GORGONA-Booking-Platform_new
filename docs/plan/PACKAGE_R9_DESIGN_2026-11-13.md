@@ -50,11 +50,13 @@ and added «Нет, мы работаем на сервере. Мы не раб�
 - The independent review (one extra agent) needs the owner's consent; it stays open in the record.
 - Readiness of rental, enabling it, `main`, a PR, deployment and live providers: only on the owner's word.
 
-## Acceptance of R9 (NOT TESTED)
+## Acceptance of R9 — PASS (code `2388cda`, [checks](evidence/2026-11-13-r9-acceptance/CHECKS.json))
 
-| id | Requirement |
-|---|---|
-| R9-01 | The agreement refuses the source `platform` on acceptance, change and period change; the screen offers only Paper and Email |
-| R9-02 | The end-to-end test passes on PostgreSQL with the rows read back |
-| R9-03 | The record maps RENT-01 and R-01..R-10 to proofs and limits, with the review open |
-| R9-04 | Web static checks and the full suite stay green; one executor, one disposable cluster |
+| id | Requirement | Result |
+|---|---|---|
+| R9-01 | The agreement refuses the source `platform` on acceptance, change and period change; the screen offers only Paper and Email | PASS |
+| R9-02 | The end-to-end test passes on PostgreSQL with the rows read back | PASS |
+| R9-03 | The record maps RENT-01 and R-01..R-10 to proofs and limits, with the review open | PASS |
+| R9-04 | Web static checks and the full suite stay green; one executor, one disposable cluster | PASS |
+
+The R9 checks cover the staff write fix. R-09 remains PARTIAL because the customer grant flow is open.
