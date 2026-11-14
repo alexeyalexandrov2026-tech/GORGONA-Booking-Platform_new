@@ -1,10 +1,14 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-11-14: rental refund and financial draft review fixes
+## Current checkpoint — 2026-11-14: rental history and sandbox intent review fixes
+
+RR-07 and RR-09 (code `33e931b`, [design](PACKAGE_RR3_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr3-history/CHECKS.json)). Return and usage follow the handover's measurement context. Settled terms are frozen. One sandbox intent has one initial link per tenant. Migration 0110. Static PASS, focused 1118 passed in 1924.19s (0:32:04), full 2862 passed, 4 skipped in 4063.29s (1:07:43). RR-08 remains open. Next migration 0111.
+
+## Previous checkpoint — 2026-11-14: rental refund and financial draft review fixes
 
 RR-05, RR-06 and RR-10 (code `a62b32f`, [design](PACKAGE_RR2_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr2-finance/CHECKS.json)). Voided credits remain in history and release both refund limits. An issued credit takes one share of invoice capacity. Migration 0109 protects linked FIN-03 drafts. Damage records keep the complete reason. Static PASS, focused 1115 passed in 1977.21s (0:32:57), full 2859 passed, 4 skipped in 4033.05s (1:07:13). RR-07 through RR-09 remain open. Next migration 0110.
 
-## Previous checkpoint — 2026-11-14: first rental review fixes on gorgona-dev
+## Earlier checkpoint — 2026-11-14: first rental review fixes on gorgona-dev
 
 RR-01 through RR-04 on `codex/package-r-review-occupancy-fixes` (code `de7a196`, [design](PACKAGE_RR1_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr1-occupancy/CHECKS.json)). The class lock serializes current assignments and fleet capacity. An open handover blocks a second handover of the unit. Assignment replacement, period changes and cancellation close at handover. The return still uses the original assignment. Migration 0108 protects these transitions and retains all rows on a nonempty 0107 upgrade. Static PASS, focused 1112 passed in 2035.62s (0:33:55), full 2856 passed, 4 skipped in 4287.33s (1:11:27). Next are RR-05 through RR-10, followed by PROPERTY-01 planning. In-use changes remain open. Rental readiness and enablement require a separate owner decision. Next migration 0109.
 

@@ -1,0 +1,1036 @@
+{
+  "schema_version": 1,
+  "status": "PASS on gorgona-dev",
+  "reviewed_head": "38009c245d6b1c8ff622fb7e798cba6a8b2ea55e",
+  "design": "1e308d7acc126a26af8e3ec2eecc4545f25b93b3",
+  "branch": "codex/package-r-review-history-fixes",
+  "source_files": {
+    "api/src/gorgona_booking/business/rental_agreements.py": {
+      "sha256": "8997862b568d10fa7151da7983487fe80525fade8bc7cf5cf76635c628f06d52",
+      "blob": "dad7dff3e6c816095894b4a3bf1f273d6b219aea"
+    },
+    "api/src/gorgona_booking/business/rental_settlements.py": {
+      "sha256": "e3b102f5e19bbfabc42ca2069298026d2285eb7614b058fe30b955a8f2b55cf3",
+      "blob": "1a7b79e1e3a2c39ebaa165e4f3b9773f21bf440d"
+    },
+    "api/src/gorgona_booking/business/rental_usage.py": {
+      "sha256": "58c477587956f1947d6120f27d9d2536a04d3d172b5b51b7f4fa6ec714174dc2",
+      "blob": "02b737dac395029c7a6162162bca31c9c031c2f5"
+    },
+    "api/src/gorgona_booking/db/migrations/0110_rental_history_review.sql": {
+      "sha256": "75df4d17ca2cf29f8371af5e98934c1652bc63c9df1edcd881e66e696df1a249",
+      "blob": "d3b0d3096a75ff25a7dde5b8d2f27bb6b410be1e"
+    },
+    "api/tests/integration/test_rr3_rental_history.py": {
+      "sha256": "395b582bc393353b9ccd521a55785bcd3d1e818403d16ca2c8c66bd9caa8d1d7",
+      "blob": "f6885b77b50b3ad1e27216923ed7b8a007b938ac"
+    },
+    "web/components/rental-settlement.tsx": {
+      "sha256": "db088cd615da856aa4f42e0069f42ee5b1d573e744e7bc08045b566a1f169e3c",
+      "blob": "66b6d46f5aee9aa640a03f1dc069c2c8a66fc933"
+    }
+  },
+  "phases": {
+    "dev-1": {
+      "base_sha": "1e308d7acc126a26af8e3ec2eecc4545f25b93b3",
+      "phase": "dev-1",
+      "kind": "focused",
+      "run_dir": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1",
+      "python": "/home/gorgona/gorgona/api/.venv/bin/python",
+      "started_utc": "2026-11-14T16:46:11.735246+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "/usr/lib/postgresql/18/bin/initdb",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1/data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1/init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.74,
+          "log_sha256": "50d3f41209bb4a633a5ecff3d9ee47be1a8d9d20504a1abd7116397901015d7f"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "start",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1/data",
+            "-l",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1/server.log",
+            "-w",
+            "-o",
+            "-p 60865 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.11,
+          "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1/focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1/focused.xml",
+            "tests/integration/test_rr3_rental_history.py",
+            "tests/integration/test_r5b_rental_provider_holds.py",
+            "tests/integration/test_r6b_rental_usage.py",
+            "tests/integration/test_r7a_rental_settlement.py"
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 40.34,
+          "log_sha256": "e53efd6d80e6f557372779dcdb48985a114b463beff89a29d97a664deb307591"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "stop",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1/data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-1",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.1,
+          "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.4.2",
+        "eslint-config-next": "16.4.2",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 197,
+        "sha256": "0b5dbc17c528b0b0a41e9cff8497104223a70c8943f465e1ee15567cfc8d1d0b"
+      },
+      "postgres_port": 60865,
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 197,
+        "sha256": "0b5dbc17c528b0b0a41e9cff8497104223a70c8943f465e1ee15567cfc8d1d0b"
+      },
+      "finished_utc": "2026-11-14T16:46:53.164145+00:00",
+      "results_sha256": "9478b3edfb897af1442556b538178dc3487c2f594ee30531c7950aca624eb651"
+    },
+    "dev-2": {
+      "base_sha": "1e308d7acc126a26af8e3ec2eecc4545f25b93b3",
+      "phase": "dev-2",
+      "kind": "focused",
+      "run_dir": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2",
+      "python": "/home/gorgona/gorgona/api/.venv/bin/python",
+      "started_utc": "2026-11-14T16:47:29.303929+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "/usr/lib/postgresql/18/bin/initdb",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2/data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2/init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.73,
+          "log_sha256": "4e88f1f523d9c278a42097f873a1e9c7818f213337a159908b56d6d291192be2"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "start",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2/data",
+            "-l",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2/server.log",
+            "-w",
+            "-o",
+            "-p 44263 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.12,
+          "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2/focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2/focused.xml",
+            "tests/integration/test_rr3_rental_history.py"
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 12.96,
+          "log_sha256": "c6a842c2c48c08c6f352c1b920864d220a6a43dfc9fa4c6eec49760b6eafaa5a"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "stop",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2/data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/dev-2",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.1,
+          "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.4.2",
+        "eslint-config-next": "16.4.2",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 197,
+        "sha256": "0b5dbc17c528b0b0a41e9cff8497104223a70c8943f465e1ee15567cfc8d1d0b"
+      },
+      "postgres_port": 44263,
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 197,
+        "sha256": "0b5dbc17c528b0b0a41e9cff8497104223a70c8943f465e1ee15567cfc8d1d0b"
+      },
+      "finished_utc": "2026-11-14T16:47:43.337954+00:00",
+      "results_sha256": "db4366d9427b69b90ccbfb030cad98ef406d5444681990fb3692a5944210d26d"
+    },
+    "focused-1": {
+      "base_sha": "1e308d7acc126a26af8e3ec2eecc4545f25b93b3",
+      "phase": "focused-1",
+      "kind": "focused",
+      "run_dir": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1",
+      "python": "/home/gorgona/gorgona/api/.venv/bin/python",
+      "started_utc": "2026-11-14T16:48:33.216285+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "/usr/lib/postgresql/18/bin/initdb",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1/data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1/init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.74,
+          "log_sha256": "6e086a480feaa06201aa951f30cebd9fcfbbb60db6d6e35e741132bc35d08cca"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "start",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1/data",
+            "-l",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1/server.log",
+            "-w",
+            "-o",
+            "-p 34777 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.12,
+          "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1/focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1/focused.xml",
+            "tests/integration/test_rr3_rental_history.py",
+            "tests/integration/test_rr2_rental_finance.py",
+            "tests/integration/test_rr1_rental_occupancy.py",
+            "tests/integration/test_r9_rental_acceptance.py",
+            "tests/integration/test_r8c_rental_settlement_browser.py",
+            "tests/integration/test_r8b_rental_agreement_browser.py",
+            "tests/integration/test_r8a_rental_browser.py",
+            "tests/integration/test_o7a_construction_browser.py",
+            "tests/integration/test_r7c_rental_reconciliation.py",
+            "tests/integration/test_r7b_rental_charges.py",
+            "tests/integration/test_r7b_upgrade.py",
+            "tests/integration/test_credit_notes.py",
+            "tests/integration/test_r7a_rental_settlement.py",
+            "tests/integration/test_r7a_upgrade.py",
+            "tests/integration/test_o5_construction_billing.py",
+            "tests/integration/test_r6b_rental_usage.py",
+            "tests/unit/test_rental_usage.py",
+            "tests/integration/test_r6a_rental_inspections.py",
+            "tests/integration/test_r6a_upgrade.py",
+            "tests/integration/test_r5b_rental_provider_holds.py",
+            "tests/integration/test_documents.py",
+            "tests/integration/test_r5b_upgrade.py",
+            "tests/integration/test_r5a_rental_security.py",
+            "tests/integration/test_r5a_upgrade.py",
+            "tests/integration/test_r4c_rental_extensions.py",
+            "tests/integration/test_r4c_upgrade.py",
+            "tests/integration/test_r4b_rental_agreements.py",
+            "tests/integration/test_r4b_upgrade.py",
+            "tests/integration/test_r4a_rental_rates.py",
+            "tests/integration/test_r4a_upgrade.py",
+            "tests/unit/test_rental_quote.py",
+            "tests/integration/test_r3b_rental_blocks.py",
+            "tests/integration/test_r3b_upgrade.py",
+            "tests/integration/test_r3a_rental_assignment.py",
+            "tests/integration/test_r3a_upgrade.py",
+            "tests/integration/test_r2_rental_bookings.py",
+            "tests/integration/test_r2_upgrade.py",
+            "tests/integration/test_r1_rental_catalog.py",
+            "tests/integration/test_r1_upgrade.py",
+            "tests/integration/test_configurations.py",
+            "tests/unit/test_financial_documents.py",
+            "tests/integration/test_o7b_construction_browser.py",
+            "tests/integration/test_o7a_construction_browser.py",
+            "tests/integration/test_o6b_construction_warranty.py",
+            "tests/integration/test_o6b_upgrade.py",
+            "tests/unit/test_construction_reconciliation.py",
+            "tests/unit/test_quote.py",
+            "tests/unit/test_stage_spans.py",
+            "tests/unit/test_holds_api.py",
+            "tests/integration/test_l8b1_finance_fixes.py",
+            "tests/integration/test_l8b1_booking_fixes.py",
+            "tests/integration/test_l8b1_stock_fixes.py",
+            "tests/integration/test_l8b2_finance_races.py",
+            "tests/integration/test_l8b2_stock_race.py",
+            "tests/integration/test_l8b2_room_stage.py",
+            "tests/integration/test_l8c_direct_sql.py",
+            "tests/integration/test_l9a_fee_policy.py",
+            "tests/integration/test_l4_billing.py",
+            "tests/integration/test_l9a_upgrade.py",
+            "tests/integration/test_l9b_commission_reversal.py",
+            "tests/integration/test_l9b_upgrade.py",
+            "tests/integration/test_m1_transport_planning.py",
+            "tests/integration/test_m1_upgrade.py",
+            "tests/integration/test_m2_transport_assignments.py",
+            "tests/integration/test_m2_upgrade.py",
+            "tests/integration/test_m3_transport_events.py",
+            "tests/integration/test_m3_upgrade.py",
+            "tests/integration/test_m4_dispatcher_grants.py",
+            "tests/integration/test_m4_upgrade.py",
+            "tests/integration/test_m5_transport_clearance.py",
+            "tests/integration/test_m5_upgrade.py",
+            "tests/integration/test_m6a_transport_lists.py",
+            "tests/integration/test_m6a_transport_browser.py",
+            "tests/integration/test_m6b_order_list.py",
+            "tests/integration/test_m6b_transport_browser.py",
+            "tests/integration/test_m7a_transport_money.py",
+            "tests/integration/test_m7_upgrade.py",
+            "tests/unit/test_live_server_harness.py",
+            "tests/integration/test_m7b_money_browser.py",
+            "tests/integration/test_m8_acceptance.py",
+            "tests/integration/test_n1_broker_carriers.py",
+            "tests/integration/test_n1_upgrade.py",
+            "tests/integration/test_m_review_fixes.py",
+            "tests/integration/test_m_review_upgrade.py",
+            "tests/integration/test_n2_tenders.py",
+            "tests/integration/test_n2_upgrade.py",
+            "tests/integration/test_n3_rate_confirmations.py",
+            "tests/integration/test_n3_upgrade.py",
+            "tests/integration/test_n4_carrier_companies.py",
+            "tests/integration/test_n4_upgrade.py",
+            "tests/integration/test_n5_carrier_pay.py",
+            "tests/integration/test_n5_upgrade.py",
+            "tests/integration/test_n6_brokerage_browser.py",
+            "tests/integration/test_n7_acceptance.py",
+            "tests/integration/test_n8_review_fixes.py",
+            "tests/integration/test_n8_upgrade.py",
+            "tests/integration/test_o1_construction_estimates.py",
+            "tests/integration/test_o1_upgrade.py",
+            "tests/integration/test_o2_construction_contract.py",
+            "tests/integration/test_o2_upgrade.py",
+            "tests/integration/test_o3a_construction_budget.py",
+            "tests/integration/test_o3a_upgrade.py",
+            "tests/integration/test_o3b_construction_costs.py",
+            "tests/integration/test_o3b_upgrade.py",
+            "tests/integration/test_o4a_construction_execution.py",
+            "tests/integration/test_o4a_upgrade.py",
+            "tests/integration/test_o4b_construction_quality.py",
+            "tests/integration/test_o4b_upgrade.py",
+            "tests/integration/test_o5_construction_billing.py",
+            "tests/integration/test_o5_upgrade.py",
+            "tests/integration/test_o6a_construction_acceptance.py",
+            "tests/integration/test_o6a_upgrade.py",
+            "tests/unit/test_counterparty_contracts.py",
+            "tests/unit/test_inventory_contracts.py",
+            "tests/unit/test_workforce_contracts.py",
+            "tests/integration/test_i4_browser.py",
+            "tests/unit/test_configuration_contracts.py",
+            "tests/integration/test_configurations.py",
+            "tests/integration/test_delegations.py",
+            "tests/unit/test_delegation_contracts.py",
+            "tests/integration/test_resource_occupancy.py",
+            "tests/integration/test_resource_reservations.py",
+            "tests/integration/test_workforce.py",
+            "tests/integration/test_workforce_review_fixes.py",
+            "tests/integration/test_workforce_upgrade.py",
+            "tests/integration/test_shift_changes.py",
+            "tests/integration/test_shift_changes_guards.py",
+            "tests/integration/test_shift_changes_races.py",
+            "tests/integration/test_timesheet_guards.py",
+            "tests/integration/test_location_access.py",
+            "tests/unit/test_visit_money.py",
+            "tests/integration/test_l8a_review_fixes.py",
+            "tests/integration/test_l7c_customer_visit_browser.py",
+            "tests/integration/test_customer_browser.py",
+            "tests/integration/test_l7b2b_prepaid_list.py",
+            "tests/integration/test_l7b2b_prepaid_browser.py",
+            "tests/integration/test_l7b2_reads.py",
+            "tests/integration/test_l7b2_billing_browser.py",
+            "tests/integration/test_l7b_completion_read.py",
+            "tests/integration/test_l7b_visit_desk_browser.py",
+            "tests/integration/test_l7a_recipe_read.py",
+            "tests/integration/test_l7a_catalog_browser.py",
+            "tests/integration/test_management_browser.py",
+            "tests/integration/test_l6_prepaid.py",
+            "tests/integration/test_l6_upgrade.py",
+            "tests/integration/test_credit_notes.py",
+            "tests/integration/test_l5_commissions.py",
+            "tests/integration/test_l5_upgrade.py",
+            "tests/integration/test_l4_billing.py",
+            "tests/integration/test_l4_upgrade.py",
+            "tests/integration/test_invoice_issue.py",
+            "tests/integration/test_external_payments.py",
+            "tests/unit/test_migration_files.py",
+            "tests/unit/test_delegation_contracts.py",
+            "tests/integration/test_l3_consumption.py",
+            "tests/integration/test_l3_upgrade.py",
+            "tests/integration/test_stock_write_offs.py",
+            "tests/integration/test_stock_upgrade.py",
+            "tests/unit/test_visit_quote.py",
+            "tests/integration/test_l2c_visits.py",
+            "tests/integration/test_l2b_guest_stages.py",
+            "tests/integration/test_l2_stage_occupancy.py",
+            "tests/integration/test_l2_booking_api.py",
+            "tests/integration/test_l2_upgrade.py",
+            "tests/integration/test_l1_service_stages.py",
+            "tests/integration/test_l1_upgrade.py",
+            "tests/integration/test_booking_concurrency.py",
+            "tests/integration/test_customer_api.py",
+            "tests/integration/test_management_booking_invariants.py",
+            "tests/integration/test_inventory_upgrade.py",
+            "tests/integration/test_stock_upgrade.py",
+            "tests/integration/test_catalog.py",
+            "tests/integration/test_management_api.py",
+            "tests/integration/test_resource_kind_boundaries.py",
+            "tests/integration/test_workforce_guards.py",
+            "tests/integration/test_booking_rules.py",
+            "tests/integration/test_h3_upgrade.py",
+            "tests/integration/test_location_access.py",
+            "tests/integration/test_workforce_visibility_upgrade.py"
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 1926.78,
+          "log_sha256": "5ca862ddb260c48fcdb9fa2f3383f9955311f6568f7ff6c854187ce2835db3af"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "stop",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1/data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/focused-1",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.1,
+          "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.4.2",
+        "eslint-config-next": "16.4.2",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 197,
+        "sha256": "987294da9811425d1415cadcaec073469a445870745c4def9d160d650b7e4d2e"
+      },
+      "postgres_port": 34777,
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 197,
+        "sha256": "987294da9811425d1415cadcaec073469a445870745c4def9d160d650b7e4d2e"
+      },
+      "finished_utc": "2026-11-14T17:20:41.099186+00:00",
+      "results_sha256": "673dbfcb2029939f6ef3ac47d41ac1a850d4cc797ee13a7b9e1f66d704a4cf88"
+    },
+    "full-1": {
+      "base_sha": "1e308d7acc126a26af8e3ec2eecc4545f25b93b3",
+      "phase": "full-1",
+      "kind": "full",
+      "run_dir": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1",
+      "python": "/home/gorgona/gorgona/api/.venv/bin/python",
+      "started_utc": "2026-11-14T17:20:41.178107+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "/usr/lib/postgresql/18/bin/initdb",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1/data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1/init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.76,
+          "log_sha256": "4c9a2b8de1241c4ebd5c4af57cc21ae32164f3cecf7175486638100a64c82799"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "start",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1/data",
+            "-l",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1/server.log",
+            "-w",
+            "-o",
+            "-p 58731 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.12,
+          "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+        },
+        {
+          "name": "pytest-full",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1/pytest-full-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1/pytest-full.xml"
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 4066.19,
+          "log_sha256": "4510b59ab0d03729f74a38ddccd63b99416cc5aeb53888b8fb72d33b7fa2fab8"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "stop",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1/data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/full-1",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.1,
+          "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.4.2",
+        "eslint-config-next": "16.4.2",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 197,
+        "sha256": "987294da9811425d1415cadcaec073469a445870745c4def9d160d650b7e4d2e"
+      },
+      "postgres_port": 58731,
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 197,
+        "sha256": "987294da9811425d1415cadcaec073469a445870745c4def9d160d650b7e4d2e"
+      },
+      "finished_utc": "2026-11-14T18:28:28.515604+00:00",
+      "results_sha256": "e68bdf60786ea87e6fc79f507422b94d00898ac704609680861aa8823d69dc25"
+    },
+    "red-1": {
+      "base_sha": "1e308d7acc126a26af8e3ec2eecc4545f25b93b3",
+      "phase": "red-1",
+      "kind": "focused",
+      "run_dir": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1",
+      "python": "/home/gorgona/gorgona/api/.venv/bin/python",
+      "started_utc": "2026-11-14T16:44:23.752073+00:00",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "/usr/lib/postgresql/18/bin/initdb",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1/data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1/init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.74,
+          "log_sha256": "1d9d7336d1000302e6526e5b5c147374e30d937797bbcfaf17f34e711bb1cc54"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "start",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1/data",
+            "-l",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1/server.log",
+            "-w",
+            "-o",
+            "-p 53775 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.11,
+          "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1/focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1/focused.xml",
+            "tests/integration/test_rr3_rental_history.py"
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 1,
+          "required": true,
+          "seconds": 10.35,
+          "log_sha256": "ec64b6d2ede0dbbaf2731d81b273ab73480d920f839a75e97753080ee0504028"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "stop",
+            "-D",
+            "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1/data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/red-1",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.1,
+          "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.4.2",
+        "eslint-config-next": "16.4.2",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 197,
+        "sha256": "0b5dbc17c528b0b0a41e9cff8497104223a70c8943f465e1ee15567cfc8d1d0b"
+      },
+      "postgres_port": 53775,
+      "error": "focused failed; inspect the redacted log",
+      "postmaster_pid_left": false,
+      "data_removed": true,
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 197,
+        "sha256": "0b5dbc17c528b0b0a41e9cff8497104223a70c8943f465e1ee15567cfc8d1d0b"
+      },
+      "finished_utc": "2026-11-14T16:44:35.194355+00:00",
+      "results_sha256": "27fca728efb03da1a6bc260ec6737f5482fc2365b54e371ed81659af8dc8be1a"
+    },
+    "static-1": {
+      "base_sha": "1e308d7acc126a26af8e3ec2eecc4545f25b93b3",
+      "phase": "static-1",
+      "kind": "static",
+      "run_dir": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/static-1",
+      "python": "/home/gorgona/gorgona/api/.venv/bin/python",
+      "started_utc": "2026-11-14T16:47:55.063714+00:00",
+      "steps": [
+        {
+          "name": "ruff-check",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "ruff",
+            "check",
+            "."
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.04,
+          "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+        },
+        {
+          "name": "ruff-format",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "ruff",
+            "format",
+            "--check",
+            "."
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.04,
+          "log_sha256": "9f340d78f35fe3c2c7a79b5697ba83485b7665002db15ff7ddf9b045cc8fb207"
+        },
+        {
+          "name": "mypy",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "mypy"
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.64,
+          "log_sha256": "ac1fa0fa15c678f6967ede261d6da6f5b2adf2d5de1a256340cb9c624dff383e"
+        },
+        {
+          "name": "web-typecheck",
+          "command": [
+            "/usr/bin/npm",
+            "run",
+            "typecheck"
+          ],
+          "cwd": "/home/gorgona/gorgona/web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.23,
+          "log_sha256": "37439f15bbc48c9844af67d4a088da9d892067ceab57dab44a1cd2730d3ebaf8"
+        },
+        {
+          "name": "web-lint",
+          "command": [
+            "/usr/bin/npm",
+            "run",
+            "lint"
+          ],
+          "cwd": "/home/gorgona/gorgona/web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 16.26,
+          "log_sha256": "444a17fd0efde2a58326fc9d3f117cccdd9dc6259f9c6a31638098bc043733a1"
+        },
+        {
+          "name": "web-format",
+          "command": [
+            "/usr/bin/npm",
+            "run",
+            "format:check"
+          ],
+          "cwd": "/home/gorgona/gorgona/web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 5.5,
+          "log_sha256": "3f7187fb6a483373ab268b2e372f3c03415a99ea46b5defe7c1cfade43f01ddf"
+        },
+        {
+          "name": "web-unit",
+          "command": [
+            "/usr/bin/npm",
+            "run",
+            "test:unit"
+          ],
+          "cwd": "/home/gorgona/gorgona/web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.76,
+          "log_sha256": "170b66eff32001f23ad1f5240cdff7fa4f8ad9d72d8675b3e3a0a68bbf503a79"
+        },
+        {
+          "name": "web-build",
+          "command": [
+            "/usr/bin/npm",
+            "run",
+            "build"
+          ],
+          "cwd": "/home/gorgona/gorgona/web",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 6.17,
+          "log_sha256": "16f595ca22f2533c2295b6a3ce6cf986f7a3e3b8f4bcdff739ee0dee432981fa"
+        },
+        {
+          "name": "web-audit",
+          "command": [
+            "/usr/bin/npm",
+            "audit",
+            "--omit=dev",
+            "--json"
+          ],
+          "cwd": "/home/gorgona/gorgona/web",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.51,
+          "log_sha256": "5fdb2582868695a77d9969dca724515b44f67915626b1a979a7288dbcf249ab5"
+        },
+        {
+          "name": "web-audit-all",
+          "command": [
+            "/usr/bin/npm",
+            "audit",
+            "--json"
+          ],
+          "cwd": "/home/gorgona/gorgona/web",
+          "exit_code": 1,
+          "required": false,
+          "seconds": 1.82,
+          "log_sha256": "3a241e361269a5791d6dbcf4aba9d115d88333d86f3e175d00f43c8feda61f7b"
+        }
+      ],
+      "versions": {
+        "pytest": "9.1.1",
+        "psycopg": "3.3.6",
+        "ruff": "0.16.9",
+        "mypy": "2.3.1",
+        "fastapi": "0.142.1",
+        "pydantic": "2.13.5",
+        "stripe": "16.0.0"
+      },
+      "web_installed": {
+        "next": "16.4.2",
+        "eslint-config-next": "16.4.2",
+        "source-map-js": "1.2.2",
+        "postcss": "8.5.23",
+        "react": "19.3.0",
+        "@playwright/test": "1.63.0"
+      },
+      "web_out_before": {
+        "files": 197,
+        "sha256": "0b5dbc17c528b0b0a41e9cff8497104223a70c8943f465e1ee15567cfc8d1d0b"
+      },
+      "source_unchanged_during_run": true,
+      "web_out_after": {
+        "files": 197,
+        "sha256": "987294da9811425d1415cadcaec073469a445870745c4def9d160d650b7e4d2e"
+      },
+      "finished_utc": "2026-11-14T16:48:33.143536+00:00",
+      "results_sha256": "670dd3ac111841f45791ad279a45ac3fdb2dc7e1a7ff16f5e2ccc8c15a31129a"
+    }
+  },
+  "focused_summary": "1118 passed in 1924.19s (0:32:04)",
+  "full_summary": "2862 passed, 4 skipped in 4063.29s (1:07:43)",
+  "skips": [
+    {
+      "test": "tests.container.test_container_image.test_migration_job_is_explicit_and_idempotent",
+      "reason": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "test": "tests.container.test_container_image.test_image_runs_non_root_without_baked_secrets",
+      "reason": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "test": "tests.container.test_container_image.test_api_container_serves_health_web_and_a_real_booking",
+      "reason": "BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1"
+    },
+    {
+      "test": "tests.integration.test_tenant_site_embedding.test_tenant_site_embeds_the_real_wizard",
+      "reason": "BLOCKED: tenant-site verification requires GBA_REQUIRE_TENANT_SITE=1"
+    }
+  ],
+  "audits": {
+    "web-audit": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "web-audit-all": {
+      "info": 0,
+      "low": 0,
+      "moderate": 7,
+      "high": 0,
+      "critical": 0,
+      "total": 7
+    }
+  },
+  "prior_migrations_preserved": 109,
+  "migration": 110,
+  "remaining": [
+    "RR-08",
+    "in-use extensions and swaps",
+    "PROPERTY-01"
+  ],
+  "state_log": "/home/gorgona/gba-runs/package-rr3-20261114-38009c2/STATE.md"
+}

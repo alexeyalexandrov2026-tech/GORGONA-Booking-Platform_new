@@ -10,4 +10,4 @@ RR-07 and RR-09, based on 38009c2. Migration 0110.
 - Links for the same sandbox intent are serialized within a tenant, across classes and branches.
   Scope checks and the provider evidence contract retain their existing behavior.
 
-Verification pending. RR-08 remains a separate allocation-policy decision.
+**PASS on gorgona-dev.** Static PASS, focused 1118 passed in 1924.19s (0:32:04), full 2862 passed, 4 skipped in 4063.29s (1:07:43). RR-08 remains a separate allocation-policy decision.
