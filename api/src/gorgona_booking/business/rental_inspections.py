@@ -31,6 +31,7 @@ _STATE = (
     "rental_inspections_booking_check",
     "rental_inspections_assignment_check",
     "rental_inspections_order_check",
+    "rental_inspections_unit_out_check",
 )
 
 
@@ -199,6 +200,7 @@ async def record_inspection(
         return await load_inspections(conn, booking_id)
     if await load_booking(conn, booking_id) is None:
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
+    await conn.execute("select gba.lock_rental_booking_class(%s, %s)", (business, booking_id))
     assignment = await _current_assignment(conn, booking_id)
     inspection = uuid7()
     try:

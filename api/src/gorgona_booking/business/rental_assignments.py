@@ -19,6 +19,7 @@ from gorgona_booking.business.module_gate import RENTAL_MODULE, module_writes
 from gorgona_booking.business.rental import Strict, fingerprint, require_rental
 from gorgona_booking.business.rental_bookings import (
     RentalBookingCancelledError,
+    RentalBookingHandedOverError,
     load_booking,
     release_current,
 )
@@ -114,6 +115,7 @@ async def assign_unit(
         if view is None:
             raise NotFoundError("Assignment not found")
         return view
+    await conn.execute("select gba.lock_rental_booking_class(%s, %s)", (business, booking_id))
     booking = await load_booking(conn, booking_id)
     if booking is None:
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
@@ -168,6 +170,8 @@ async def assign_unit(
             "The unit is already held for an overlapping booking", unit_id=str(body.unit_id)
         ) from exc
     except CheckViolation as exc:
+        if exc.diag.constraint_name == "rental_booking_handover_check":
+            raise RentalBookingHandedOverError("The booking has already been handed over") from exc
         if exc.diag.constraint_name == "rental_assignments_booking_check":
             raise InvalidReferenceError(
                 "The unit is not suitable for the booking", field="unit_id"

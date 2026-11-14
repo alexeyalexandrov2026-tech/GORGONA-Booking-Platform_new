@@ -61,9 +61,13 @@ class RentalUnitRetiredError(ConflictError):
 
 
 class RentalUnitHeldError(ConflictError):
-    """R3b decision 3: a unit with a current or future hold keeps its branch."""
+    """A unit in use or held cannot be moved or retired."""
 
     code = "RENTAL_UNIT_HELD"
+
+
+class RentalUnavailableError(ConflictError):
+    code = "RENTAL_UNAVAILABLE"
 
 
 class RentalValueInvalidError(DomainError):
@@ -397,6 +401,9 @@ async def save_unit(
     ).fetchone()
     if known is None or (branch is not None and branch != body.location_id):
         raise InvalidReferenceError("Unknown branch", field="location_id")
+    await conn.execute(
+        "select 1 from gba.rental_classes where id = %s for update", (body.class_id,)
+    )
     klass = await load_class(conn, body.class_id)
     if klass is None:
         raise InvalidReferenceError("Unknown class", field="class_id")
@@ -482,8 +489,10 @@ async def save_unit(
     except CheckViolation as exc:
         name = exc.diag.constraint_name or ""
         if name == "rental_units_held_check":
-            raise RentalUnitHeldError(
-                "A unit with a current or future hold keeps its branch"
+            raise RentalUnitHeldError("A unit in use or held cannot be moved or retired") from exc
+        if name == "rental_units_availability_check":
+            raise RentalUnavailableError(
+                "Removing the unit would leave a booking without class capacity"
             ) from exc
         if name == "rental_units_retired_check":
             raise RentalUnitRetiredError("A retired unit takes no new revision") from exc

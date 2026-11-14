@@ -26,7 +26,11 @@ from gorgona_booking.business.rental_agreements import (
     record_version,
 )
 from gorgona_booking.business.rental_assignments import RentalUnitBusyError
-from gorgona_booking.business.rental_bookings import RentalUnavailableError, release_current
+from gorgona_booking.business.rental_bookings import (
+    RentalBookingHandedOverError,
+    RentalUnavailableError,
+    release_current,
+)
 from gorgona_booking.business.rental_rates import load_card, priced
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import NotFoundError
@@ -64,6 +68,7 @@ async def change_period(
         if stored.request_hash != request:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return await load_agreement(conn, booking_id)
+    await conn.execute("select gba.lock_rental_booking_class(%s, %s)", (business, booking_id))
     await open_booking(conn, booking_id)
     current = await load_agreement(conn, booking_id)
     await check_time(conn, body.accepted_at)
@@ -137,6 +142,8 @@ async def change_period(
             "The unit is held for an overlapping assignment or block", unit_id=unit
         ) from exc
     except CheckViolation as exc:
+        if exc.diag.constraint_name == "rental_booking_handover_check":
+            raise RentalBookingHandedOverError("The booking has already been handed over") from exc
         if exc.diag.constraint_name == "rental_booking_periods_availability_check":
             raise RentalUnavailableError(
                 "The change would leave a booking of the class without a unit"

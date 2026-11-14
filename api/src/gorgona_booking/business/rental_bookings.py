@@ -17,7 +17,15 @@ from gorgona_booking.booking import idempotency
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import IdempotencyKeyReusedError
 from gorgona_booking.business.module_gate import RENTAL_MODULE, module_writes
-from gorgona_booking.business.rental import Strict, caller_branch, fingerprint, require_rental
+from gorgona_booking.business.rental import (
+    RentalUnavailableError as RentalUnavailableError,
+)
+from gorgona_booking.business.rental import (
+    Strict,
+    caller_branch,
+    fingerprint,
+    require_rental,
+)
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import ConflictError, InvalidReferenceError, NotFoundError
 
@@ -25,12 +33,12 @@ PAGE = 50
 LONGEST = timedelta(days=366)
 
 
-class RentalUnavailableError(ConflictError):
-    code = "RENTAL_UNAVAILABLE"
-
-
 class RentalBookingCancelledError(ConflictError):
     code = "RENTAL_BOOKING_CANCELLED"
+
+
+class RentalBookingHandedOverError(ConflictError):
+    code = "RENTAL_BOOKING_HANDED_OVER"
 
 
 def _text(value: str) -> str:
@@ -367,12 +375,10 @@ async def cancel_booking(
         if view is None:
             raise NotFoundError("Booking not found", booking_id=str(booking_id))
         return view
+    await conn.execute("select gba.lock_rental_booking_class(%s, %s)", (business, booking_id))
     current = await load_booking(conn, booking_id)
     if current is None:
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
-    await conn.execute(
-        "select 1 from gba.rental_classes where id = %s for update", (current.class_id,)
-    )
     if current.cancellation is not None:
         raise RentalBookingCancelledError("The booking is already cancelled")
     try:
@@ -384,6 +390,10 @@ async def cancel_booking(
             )
             # R3a: the cancellation frees the unit held for the booking.
             await release_current(conn, business, booking_id, user_id, "cancelled")
+    except CheckViolation as exc:
+        if exc.diag.constraint_name == "rental_booking_handover_check":
+            raise RentalBookingHandedOverError("The booking has already been handed over") from exc
+        raise
     except UniqueViolation as exc:
         raise RentalBookingCancelledError("The booking is already cancelled") from exc
     view = await load_booking(conn, booking_id)

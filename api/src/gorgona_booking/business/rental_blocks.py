@@ -154,6 +154,7 @@ async def create_block(
     unit = await _unit(conn, unit_id)
     await conn.execute("select 1 from gba.rental_classes where id = %s for update", (unit[0],))
     await conn.execute("select 1 from gba.rental_units where id = %s for update", (unit_id,))
+    unit = await _unit(conn, unit_id)
     if unit[2] != "active":
         raise RentalUnitRetiredError("A retired unit is not blocked")
     count = await (
