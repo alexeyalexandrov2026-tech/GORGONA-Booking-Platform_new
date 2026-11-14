@@ -10,11 +10,15 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-11-14: rental history and sandbox intent review fixes
+## Current checkpoint — 2026-11-14: whole-period availability for rental class bookings
+
+RR-08 (code `495a38c`, [design](PACKAGE_RR4_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr4-feasibility/CHECKS.json)). A booking needs one feasible unit for its full interval. The class stays unassigned until an actual assignment. Assigned units and maintenance blocks constrain the solver. Booking, assignment, period, block and fleet changes preserve feasibility under the class lock. Migration 0111. Static PASS, focused 1122 passed in 1990.52s (0:33:10), full 2866 passed, 4 skipped in 4158.08s (1:09:18). Next: PROPERTY-01 planning. Release readiness remains an owner decision. Next migration 0112.
+
+## Previous checkpoint — 2026-11-14: rental history and sandbox intent review fixes
 
 RR-07 and RR-09 (code `33e931b`, [design](PACKAGE_RR3_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr3-history/CHECKS.json)). Return and usage follow the handover's measurement context. Settled terms are frozen. One sandbox intent has one initial link per tenant. Migration 0110. Static PASS, focused 1118 passed in 1924.19s (0:32:04), full 2862 passed, 4 skipped in 4063.29s (1:07:43). RR-08 remains open. Next migration 0111.
 
-## Previous checkpoint — 2026-11-14: rental refund and financial draft review fixes
+## Earlier checkpoint — 2026-11-14: rental refund and financial draft review fixes
 
 RR-05, RR-06 and RR-10 (code `a62b32f`, [design](PACKAGE_RR2_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr2-finance/CHECKS.json)). Voided credits remain in history and release both refund limits. An issued credit takes one share of invoice capacity. Migration 0109 protects linked FIN-03 drafts. Damage records keep the complete reason. Static PASS, focused 1115 passed in 1977.21s (0:32:57), full 2859 passed, 4 skipped in 4033.05s (1:07:13). RR-07 through RR-09 remain open. Next migration 0110.
 

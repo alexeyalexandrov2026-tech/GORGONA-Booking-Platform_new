@@ -59,5 +59,5 @@ decision on readiness and enablement. The production launch scope covers all 39 
 - **Dependency audit** — 0 runtime findings and 7 moderate development findings, also present in R8c.
   R9 adds no dependency or migration. The next migration is 0108.
 
-The owner-authorized independent read-only review covered R1 through R9 at `5319468`. Its first four findings are addressed in [the first review fix slice](../../PACKAGE_RR1_DESIGN_2026-11-14.md). RR-05 through RR-10 remain open. Its scope is R1 through R9 and the
+The owner-authorized independent read-only review covered R1 through R9 at `5319468`. Its first four findings are addressed in [the first review fix slice](../../PACKAGE_RR1_DESIGN_2026-11-14.md). The follow-up slices addressed RR-05, RR-06 and RR-10 ([finance](../../PACKAGE_RR2_DESIGN_2026-11-14.md)), RR-07 and RR-09 ([history and intent](../../PACKAGE_RR3_DESIGN_2026-11-14.md)), and RR-08 ([whole-period feasibility](../../PACKAGE_RR4_DESIGN_2026-11-14.md)). The known coverage limits above remain open. Its scope is R1 through R9 and the
 claims in this record, including the plan-to-implementation gaps.

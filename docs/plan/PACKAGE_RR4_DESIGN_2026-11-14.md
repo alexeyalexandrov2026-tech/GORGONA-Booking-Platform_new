@@ -27,3 +27,14 @@ Keep the fast peak rejection. Bound pathological search by returning a distinct 
 error if it cannot be resolved inside the search budget. Benchmark the bound and the common case.
 Guard existing mutations with named SQL checks, defer checks for compound assignment and period
 writes until their final state is visible, and flush them inside the existing error mapping.
+
+## Verification
+
+Static PASS, focused 1122 passed in 1990.52s (0:33:10), full 2866 passed, 4 skipped in 4158.08s (1:09:18). [Checks](evidence/2026-11-14-rr4-feasibility/CHECKS.json)
+
+### Solver timing on gorgona-dev
+
+- RR4 benchmark: 24 units, 30 connected bookings, 1 requested, 20 repetitions, median 10.40 ms, max 11.19 ms
+- RR4 benchmark: 24 units, 30 connected bookings, 12 requested, 20 repetitions, median 16.49 ms, max 17.63 ms
+
+This synthetic timing does not establish production latency or worst-case search time.
