@@ -3,7 +3,7 @@
 **RENT-01 PASS in the development VM.** Class bookings reserve capacity, unit assignments use shared
 occupancy to prevent overlap, and security, damage charges and refunds are separate records. R9
 checks all three in one rental through the API and reads the resulting rows in PostgreSQL. The
-independent package review remains open. Rental is registered as `implemented` and requires an owner
+independent package review has concluded. Rental is registered as `implemented` and requires an owner
 decision on readiness and enablement. The production launch scope covers all 39 industry directions.
 [Package R plan](../../PACKAGE_RENT_PLAN_2026-11-03.md) · [R9 design](../../PACKAGE_R9_DESIGN_2026-11-13.md)
 · [R9 checks](CHECKS.json) · [Shared resource occupancy ADR](../../../adr/0022-shared-resource-occupancy.md)
@@ -59,5 +59,5 @@ decision on readiness and enablement. The production launch scope covers all 39 
 - **Dependency audit** — 0 runtime findings and 7 moderate development findings, also present in R8c.
   R9 adds no dependency or migration. The next migration is 0108.
 
-The independent read-only review remains pending owner approval. Its scope is R1 through R9 and the
+The owner-authorized independent read-only review covered R1 through R9 at `5319468`. Its first four findings are addressed in [the first review fix slice](../../PACKAGE_RR1_DESIGN_2026-11-14.md). RR-05 through RR-10 remain open. Its scope is R1 through R9 and the
 claims in this record, including the plan-to-implementation gaps.

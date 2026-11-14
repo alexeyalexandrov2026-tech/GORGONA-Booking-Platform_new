@@ -13,5 +13,8 @@ RR-04. Run folder `~/gba-runs/package-rr1-20261113-5319468`.
 - Migration 0108 adds guards for these transitions and preserves earlier migrations and history.
   Verify concurrent operations with an observed PostgreSQL lock wait and verify a nonempty 0107 upgrade.
 
-Status **NOT TESTED** until regression, upgrade and full gate evidence is recorded. The remaining review
-findings and PROPERTY-01 follow this slice.
+## Verification on gorgona-dev
+
+**PASS** for RR-01 through RR-04 (code `de7a196`). Static PASS, focused 1112 passed in 2035.62s (0:33:55), full 2856 passed, 4 skipped in 4287.33s (1:11:27). [Source-bound checks](evidence/2026-11-14-rr1-occupancy/CHECKS.json)
+
+The original seven regressions failed before the fix. The final suite also covers the capacity race, the direct runtime SQL guard and a nonempty upgrade. The run journal records the collection and development failures. The remaining review findings and PROPERTY-01 follow this slice.
