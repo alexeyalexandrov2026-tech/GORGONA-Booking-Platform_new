@@ -25,7 +25,7 @@ from gorgona_booking.business.rental import (
 from gorgona_booking.business.rental_assignments import RentalUnitBusyError
 from gorgona_booking.business.rental_bookings import RentalUnavailableError
 from gorgona_booking.db.pool import RuntimeConnection
-from gorgona_booking.errors import ConflictError, NotFoundError
+from gorgona_booking.errors import ConflictError, DatabaseUnavailableError, NotFoundError
 
 LONGEST = timedelta(days=366)
 
@@ -198,13 +198,21 @@ async def create_block(
                 "tstzrange(%s, %s, '[)'), 'confirmed')",
                 (business, unit[3], block_id, body.starts_at, body.ends_at),
             )
-            await conn.execute("set constraints gba.rental_unit_blocks_hold immediate")
+            await conn.execute(
+                "set constraints gba.rental_unit_blocks_hold, "
+                "gba.rental_blocks_feasibility immediate"
+            )
     except ExclusionViolation as exc:
         raise RentalUnitBusyError(
             "The unit is held for an overlapping assignment or block", unit_id=str(unit_id)
         ) from exc
     except CheckViolation as exc:
-        if exc.diag.constraint_name == "rental_unit_blocks_availability_check":
+        if exc.diag.constraint_name == "rental_feasibility_budget_check":
+            raise DatabaseUnavailableError("Rental availability could not be calculated") from exc
+        if exc.diag.constraint_name in (
+            "rental_unit_blocks_availability_check",
+            "rental_period_feasibility_check",
+        ):
             raise RentalUnavailableError("The block would leave a booking without a unit") from exc
         raise
     view = await _load(conn, block_id)

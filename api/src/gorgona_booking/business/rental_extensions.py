@@ -33,7 +33,7 @@ from gorgona_booking.business.rental_bookings import (
 )
 from gorgona_booking.business.rental_rates import load_card, priced
 from gorgona_booking.db.pool import RuntimeConnection
-from gorgona_booking.errors import NotFoundError
+from gorgona_booking.errors import DatabaseUnavailableError, NotFoundError
 
 LONGEST = timedelta(days=366)
 
@@ -144,7 +144,12 @@ async def change_period(
     except CheckViolation as exc:
         if exc.diag.constraint_name == "rental_booking_handover_check":
             raise RentalBookingHandedOverError("The booking has already been handed over") from exc
-        if exc.diag.constraint_name == "rental_booking_periods_availability_check":
+        if exc.diag.constraint_name == "rental_feasibility_budget_check":
+            raise DatabaseUnavailableError("Rental availability could not be calculated") from exc
+        if exc.diag.constraint_name in (
+            "rental_booking_periods_availability_check",
+            "rental_period_feasibility_check",
+        ):
             raise RentalUnavailableError(
                 "The change would leave a booking of the class without a unit"
             ) from exc

@@ -25,7 +25,13 @@ from gorgona_booking.business import modules
 from gorgona_booking.business.module_gate import RENTAL_MODULE, module_writes, require_module
 from gorgona_booking.business.readiness_registry import at_least
 from gorgona_booking.db.pool import RuntimeConnection
-from gorgona_booking.errors import ConflictError, DomainError, InvalidReferenceError, NotFoundError
+from gorgona_booking.errors import (
+    ConflictError,
+    DatabaseUnavailableError,
+    DomainError,
+    InvalidReferenceError,
+    NotFoundError,
+)
 from gorgona_booking.tenancy.authorization import PermissionDeniedError
 
 PAGE = 50
@@ -490,6 +496,8 @@ async def save_unit(
         name = exc.diag.constraint_name or ""
         if name == "rental_units_held_check":
             raise RentalUnitHeldError("A unit in use or held cannot be moved or retired") from exc
+        if exc.diag.constraint_name == "rental_feasibility_budget_check":
+            raise DatabaseUnavailableError("Rental availability could not be calculated") from exc
         if name == "rental_units_availability_check":
             raise RentalUnavailableError(
                 "Removing the unit would leave a booking without class capacity"

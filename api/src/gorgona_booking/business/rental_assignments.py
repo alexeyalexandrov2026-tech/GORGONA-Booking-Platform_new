@@ -16,7 +16,12 @@ from gorgona_booking.booking import idempotency
 from gorgona_booking.booking.idempotency import IdempotencyScope
 from gorgona_booking.booking.models import IdempotencyKeyReusedError
 from gorgona_booking.business.module_gate import RENTAL_MODULE, module_writes
-from gorgona_booking.business.rental import Strict, fingerprint, require_rental
+from gorgona_booking.business.rental import (
+    RentalUnavailableError,
+    Strict,
+    fingerprint,
+    require_rental,
+)
 from gorgona_booking.business.rental_bookings import (
     RentalBookingCancelledError,
     RentalBookingHandedOverError,
@@ -24,7 +29,12 @@ from gorgona_booking.business.rental_bookings import (
     release_current,
 )
 from gorgona_booking.db.pool import RuntimeConnection
-from gorgona_booking.errors import ConflictError, InvalidReferenceError, NotFoundError
+from gorgona_booking.errors import (
+    ConflictError,
+    DatabaseUnavailableError,
+    InvalidReferenceError,
+    NotFoundError,
+)
 
 
 class RentalUnitBusyError(ConflictError):
@@ -163,13 +173,18 @@ async def assign_unit(
             )
             await conn.execute(
                 "set constraints gba.rental_assignments_hold, "
-                "gba.rental_assignment_releases_hold immediate"
+                "gba.rental_assignment_releases_hold, gba.rental_assignments_feasibility immediate"
             )
     except ExclusionViolation as exc:
         raise RentalUnitBusyError(
             "The unit is already held for an overlapping booking", unit_id=str(body.unit_id)
         ) from exc
     except CheckViolation as exc:
+        if exc.diag.constraint_name == "rental_feasibility_budget_check":
+            raise DatabaseUnavailableError("Rental availability could not be calculated") from exc
+
+        if exc.diag.constraint_name == "rental_period_feasibility_check":
+            raise RentalUnavailableError("The assignment leaves a booking without a unit") from exc
         if exc.diag.constraint_name == "rental_booking_handover_check":
             raise RentalBookingHandedOverError("The booking has already been handed over") from exc
         if exc.diag.constraint_name == "rental_assignments_booking_check":

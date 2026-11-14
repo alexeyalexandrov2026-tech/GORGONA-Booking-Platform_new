@@ -27,7 +27,12 @@ from gorgona_booking.business.rental import (
     require_rental,
 )
 from gorgona_booking.db.pool import RuntimeConnection
-from gorgona_booking.errors import ConflictError, InvalidReferenceError, NotFoundError
+from gorgona_booking.errors import (
+    ConflictError,
+    DatabaseUnavailableError,
+    InvalidReferenceError,
+    NotFoundError,
+)
 
 PAGE = 50
 LONGEST = timedelta(days=366)
@@ -199,6 +204,25 @@ async def availability(
     """Units of the class at the branch, the peak of overlapping bookings and what is left."""
     units = await _units(conn, class_id, location_id)
     booked = await _peak(conn, business, class_id, location_id, starts_at, ends_at)
+    available = 0
+    upper = max(0, units - booked)
+    try:
+        while available < upper:
+            candidate = (available + upper + 1) // 2
+            found = await (
+                await conn.execute(
+                    "select gba.rental_period_feasible(%s, %s, %s, %s, %s, %s)",
+                    (business, class_id, location_id, starts_at, ends_at, candidate),
+                )
+            ).fetchone()
+            if found and found[0]:
+                available = candidate
+            else:
+                upper = candidate - 1
+    except CheckViolation as exc:
+        if exc.diag.constraint_name == "rental_feasibility_budget_check":
+            raise DatabaseUnavailableError("Rental availability could not be calculated") from exc
+        raise
     return AvailabilityView(
         class_id=class_id,
         location_id=location_id,
@@ -206,7 +230,7 @@ async def availability(
         ends_at=_utc(ends_at),
         units=units,
         booked=booked,
-        available=units - booked,
+        available=available,
     )
 
 
@@ -309,6 +333,8 @@ async def create_booking(
         raise InvalidReferenceError("Unknown reference", field="customer_id") from exc
     except CheckViolation as exc:
         name = exc.diag.constraint_name or ""
+        if exc.diag.constraint_name == "rental_feasibility_budget_check":
+            raise DatabaseUnavailableError("Rental availability could not be calculated") from exc
         if name == "rental_bookings_availability_check":
             raise RentalUnavailableError("No unit of the class is free") from exc
         if name == "rental_bookings_customer_check":
