@@ -860,7 +860,7 @@ async def void_credit(
     if current.refund_obligation_id is not None:
         await _require_untouched_refund(conn, business_id, book_id, current.refund_obligation_id)
     # A later credit that refunded money relied on this credit's unpaid part.
-    if to_minor(current.applied, current.minor_units):
+    if current.applied != from_minor(0, current.minor_units):
         dependent = await (
             await conn.execute(
                 "select document_id from gba.financial_document_versions "

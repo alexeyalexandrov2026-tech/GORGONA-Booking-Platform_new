@@ -335,7 +335,7 @@ export const reconciliationSchema = z.strictObject({
       number: revision,
       method: z.enum(["credit", "external"]),
       amount_minor: money,
-      state: z.enum(["recorded", "draft", "issued"]),
+      state: z.enum(["recorded", "draft", "issued", "voided"]),
       credit_document_id: id.nullable(),
       refund_obligation_minor: money.nullable(),
       refund_paid_minor: money.nullable(),

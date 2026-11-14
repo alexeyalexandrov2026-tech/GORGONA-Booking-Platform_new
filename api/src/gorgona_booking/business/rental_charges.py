@@ -298,7 +298,7 @@ async def record_damage_charge(
                 InvoiceLineInput(
                     line_id=uuid7(),
                     counter_account_id=body.revenue_account_id,
-                    description=f"Damage charge {number}: {body.reason}",
+                    description=f"Damage charge {number}",
                     amount=from_minor(body.amount, settled.places),
                 ),
             ),
@@ -369,7 +369,11 @@ async def _credit_lines(
             "select l.line_id, l.counter_account_id, l.amount_minor - coalesce(("
             "select sum(x.amount_minor) from gba.financial_document_lines x "
             "join gba.rental_refunds r on r.tenant_id = x.tenant_id and r.book_id = x.book_id "
-            "and r.credit_document_id = x.document_id where x.credited_line_id = l.line_id), 0) "
+            "and r.credit_document_id = x.document_id where x.credited_line_id = l.line_id "
+            "and not gba.credit_voided(r.tenant_id, r.book_id, r.credit_document_id) "
+            "and x.revision = (select max(v.revision) from gba.financial_document_versions v "
+            "where v.tenant_id = x.tenant_id and v.book_id = x.book_id "
+            "and v.document_id = x.document_id)), 0) "
             "from gba.financial_document_lines l where l.book_id = %s and l.document_id = %s "
             "and l.revision = %s order by l.line_no",
             (book, invoice, obligation[1]),
@@ -419,7 +423,8 @@ async def record_refund(
         await conn.execute(
             "select coalesce((select sum(amount_minor) from gba.rental_damage_charges "
             "where booking_id = %s), 0), coalesce((select sum(amount_minor) "
-            "from gba.rental_refunds where booking_id = %s), 0)",
+            "from gba.rental_refunds r where booking_id = %s "
+            "and not gba.credit_voided(r.tenant_id, r.book_id, r.credit_document_id)), 0)",
             (booking_id, booking_id),
         )
     ).fetchone()

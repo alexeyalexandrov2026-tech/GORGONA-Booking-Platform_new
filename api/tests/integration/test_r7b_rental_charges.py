@@ -78,6 +78,8 @@ async def charge(
     marks: list[int],
     amount: int,
     headers: dict[str, str] | None = None,
+    *,
+    reason: str = "FAKE repaired damage",
 ) -> httpx.Response:
     return await rental.client.post(
         f"{rental.base}/bookings/{booking}/damage-charges",
@@ -85,7 +87,7 @@ async def charge(
             "schema_version": 1,
             "marks": marks,
             "amount": amount,
-            "reason": "FAKE repaired damage",
+            "reason": reason,
             "book_id": str(b.book),
             "receivable_account_id": str(b.chart["1200"]),
             "revenue_account_id": str(b.chart["4100"]),

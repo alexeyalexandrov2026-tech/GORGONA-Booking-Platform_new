@@ -34,7 +34,7 @@ class RefundRow(BaseModel):
     number: int
     method: Literal["credit", "external"]
     amount_minor: int
-    state: Literal["recorded", "draft", "issued"]
+    state: Literal["recorded", "draft", "issued", "voided"]
     credit_document_id: UUID | None
     refund_obligation_minor: int | None
     refund_paid_minor: int | None
@@ -183,14 +183,17 @@ async def load_reconciliation(
                 (book, note),
             )
         ).fetchone()
-        issued = state is not None and state[0] == "issued"
+        credit_state: Literal["draft", "issued", "voided"] = "draft"
+        if state is not None and state[0] in ("issued", "voided"):
+            credit_state = state[0]
+        issued = credit_state == "issued"
         owed = await _balance(conn, business, book, "credit_refund", note) if issued else None
         refunds.append(
             RefundRow(
                 number=number,
                 method="credit",
                 amount_minor=int(amount),
-                state="issued" if issued else "draft",
+                state=credit_state,
                 credit_document_id=note,
                 refund_obligation_minor=(owed[0] if owed else 0) if issued else None,
                 refund_paid_minor=(owed[1] if owed else 0) if issued else None,
