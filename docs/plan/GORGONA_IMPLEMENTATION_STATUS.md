@@ -1,10 +1,14 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-11-14: first rental review fixes on gorgona-dev
+## Current checkpoint — 2026-11-14: rental refund and financial draft review fixes
+
+RR-05, RR-06 and RR-10 (code `a62b32f`, [design](PACKAGE_RR2_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr2-finance/CHECKS.json)). Voided credits remain in history and release both refund limits. An issued credit takes one share of invoice capacity. Migration 0109 protects linked FIN-03 drafts. Damage records keep the complete reason. Static PASS, focused 1115 passed in 1977.21s (0:32:57), full 2859 passed, 4 skipped in 4033.05s (1:07:13). RR-07 through RR-09 remain open. Next migration 0110.
+
+## Previous checkpoint — 2026-11-14: first rental review fixes on gorgona-dev
 
 RR-01 through RR-04 on `codex/package-r-review-occupancy-fixes` (code `de7a196`, [design](PACKAGE_RR1_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr1-occupancy/CHECKS.json)). The class lock serializes current assignments and fleet capacity. An open handover blocks a second handover of the unit. Assignment replacement, period changes and cancellation close at handover. The return still uses the original assignment. Migration 0108 protects these transitions and retains all rows on a nonempty 0107 upgrade. Static PASS, focused 1112 passed in 2035.62s (0:33:55), full 2856 passed, 4 skipped in 4287.33s (1:11:27). Next are RR-05 through RR-10, followed by PROPERTY-01 planning. In-use changes remain open. Rental readiness and enablement require a separate owner decision. Next migration 0109.
 
-## Previous checkpoint — 2026-11-13: R9 technical acceptance of RENT-01 on gorgona-dev
+## Earlier checkpoint — 2026-11-13: R9 technical acceptance of RENT-01 on gorgona-dev
 
 R9 on `codex/package-r9-rental-acceptance` (design `a323b58`, code `2388cda`, [acceptance](evidence/2026-11-13-r9-acceptance/ACCEPTANCE.md), [checks](evidence/2026-11-13-r9-acceptance/CHECKS.json)): staff agreement acceptance, change and period change accept Paper and Email. The browser exercises both desktop and mobile. The API/PostgreSQL scenario covers class capacity, unit exclusion, frozen rates, security, handover and return, settlement, damage, refund and reconciliation. VM gates-1: static PASS, focused 1102 passed in 2655.30s (0:44:15), full 2846 passed, 4 skipped in 5764.45s (1:36:04). The two expected pre-fix failures are recorded. R-09 remains PARTIAL (customer grant flow open). The independent package R review awaits owner consent. Rental stays registered as `implemented` and readiness and enablement require an owner decision. Next migration **0108**. [Review handoff](NEXT_AGENT_PACKAGE_R_REVIEW_2026-11-13.md).
 

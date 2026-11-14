@@ -10,4 +10,4 @@ RR-05, RR-06 and RR-10, based on RR1 at 254a1ed.
 - The damage record preserves the complete reason. Its FIN-03 line uses the charge number.
 - Migration 0109 preserves history. RR-07 meter and settlement changes follow separately.
 
-Verification pending.
+**PASS on gorgona-dev.** Static PASS, focused 1115 passed in 1977.21s (0:32:57), full 2859 passed, 4 skipped in 4033.05s (1:07:13).
