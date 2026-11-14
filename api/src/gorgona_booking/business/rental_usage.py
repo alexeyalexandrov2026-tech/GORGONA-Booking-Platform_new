@@ -89,13 +89,22 @@ async def load_usage(conn: RuntimeConnection, booking_id: UUID) -> UsageView:
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
     terms = await (
         await conn.execute(
-            "select v.ends_at, v.rental_days, c.meter_kind, r.meter_allowance_per_day, "
+            "select v.ends_at, v.rental_days, "
+            "case when h.id is null then c.meter_kind "
+            "else coalesce(h.meter_kind, case when h.meter is null then 'none' "
+            "else 'odometer' end) end, "
+            "r.meter_allowance_per_day, "
             "r.excess_rate, r.currency, now() from gba.rental_agreements a "
             "join gba.rental_agreement_versions v on v.tenant_id = a.tenant_id "
             "and v.agreement_id = a.id "
             "join gba.rental_rate_cards r on r.tenant_id = v.tenant_id and r.id = v.rate_card_id "
             "join gba.rental_classes c on c.tenant_id = r.tenant_id and c.id = r.class_id "
-            "where a.booking_id = %s order by v.version desc limit 1",
+            "left join gba.rental_inspections h on h.tenant_id = a.tenant_id "
+            "and h.booking_id = a.booking_id and h.kind = 'handover' "
+            "left join gba.rental_settlements s on s.tenant_id = a.tenant_id "
+            "and s.booking_id = a.booking_id "
+            "where a.booking_id = %s and (s.booking_id is null or v.version = s.agreement_version) "
+            "order by v.version desc limit 1",
             (booking_id,),
         )
     ).fetchone()

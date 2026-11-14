@@ -199,7 +199,9 @@ function InspectionsPanel({
   const [isNew, setIsNew] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const handedOver = inspections.some((i) => i.kind === "handover");
+  const handover = inspections.find((i) => i.kind === "handover");
+  const handedOver = handover !== undefined;
+  const needsMeter = handover ? handover.meter !== null : meterKind !== "none";
   const returned = inspections.some((i) => i.kind === "return");
   const kind = handedOver ? "return" : "handover";
 
@@ -237,7 +239,7 @@ function InspectionsPanel({
       await recordInspection(businessId, booking.booking_id, {
         schema_version: 1,
         kind,
-        ...(meterKind !== "none" && reading !== null ? { meter: reading } : {}),
+        ...(needsMeter && reading !== null ? { meter: reading } : {}),
         ...(percent !== null ? { level: percent } : {}),
         ...(note.trim() ? { note: note.trim() } : {}),
         marks,
@@ -337,7 +339,7 @@ function InspectionsPanel({
               ? "Records the handover."
               : "Records the return."}
           </p>
-          {meterKind !== "none" && (
+          {needsMeter && (
             <label>
               Meter
               <input

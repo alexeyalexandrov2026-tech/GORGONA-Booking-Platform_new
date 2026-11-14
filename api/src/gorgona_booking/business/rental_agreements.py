@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Annotated, Literal, Self
 from uuid import UUID, uuid7
 
-from psycopg.errors import UniqueViolation
+from psycopg.errors import CheckViolation, UniqueViolation
 from pydantic import AfterValidator, AwareDatetime, BaseModel, Field, model_validator
 
 from gorgona_booking.booking import idempotency
@@ -43,6 +43,10 @@ class RentalAgreementExistsError(ConflictError):
     """R4b decision 1: a booking has at most one agreement."""
 
     code = "RENTAL_AGREEMENT_EXISTS"
+
+
+class RentalAgreementSettledError(ConflictError):
+    code = "RENTAL_AGREEMENT_SETTLED"
 
 
 def _text(value: str) -> str:
@@ -321,6 +325,7 @@ async def change(
         if stored.request_hash != request:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return await load_agreement(conn, booking_id)
+    await conn.execute("select gba.lock_rental_booking_class(%s, %s)", (business, booking_id))
     await open_booking(conn, booking_id)
     current = await load_agreement(conn, booking_id)
     await check_time(conn, body.accepted_at)
@@ -329,17 +334,22 @@ async def change(
     if card is None:
         raise NotFoundError("Rate card not found", rate_card_id=str(latest.rate_card_id))
     quote = priced(card, latest.starts_at, latest.ends_at, body.extras)
-    async with module_writes(RENTAL_MODULE), conn.transaction():
-        await record_version(
-            conn,
-            business,
-            current.agreement_id,
-            latest.version + 1,
-            card,
-            quote,
-            body,
-            body.reason,
-            user_id,
-        )
+    try:
+        async with module_writes(RENTAL_MODULE), conn.transaction():
+            await record_version(
+                conn,
+                business,
+                current.agreement_id,
+                latest.version + 1,
+                card,
+                quote,
+                body,
+                body.reason,
+                user_id,
+            )
+    except CheckViolation as exc:
+        if exc.diag.constraint_name == "rental_agreement_versions_settled_check":
+            raise RentalAgreementSettledError("The rental agreement is already settled") from exc
+        raise
     await idempotency.complete(conn, scope, 200, {"agreement_id": str(current.agreement_id)})
     return await load_agreement(conn, booking_id)

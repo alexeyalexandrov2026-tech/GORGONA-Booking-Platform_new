@@ -182,6 +182,8 @@ async def settle(
         return await load_settlement(conn, booking_id)
     if await load_booking(conn, booking_id) is None:
         raise NotFoundError("Booking not found", booking_id=str(booking_id))
+    await conn.execute("select gba.lock_ledger(%s)", (business,))
+    await conn.execute("select gba.lock_rental_booking_class(%s, %s)", (business, booking_id))
     version, rental, hour_rate, day_rate = await _terms(conn, booking_id)
     usage = await load_usage(conn, booking_id)
     if usage.state != "returned":
