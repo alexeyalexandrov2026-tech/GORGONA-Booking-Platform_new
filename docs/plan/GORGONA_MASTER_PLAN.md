@@ -10,11 +10,17 @@
 > направлений. Агентам: не планировать и не описывать запуск «только для салонов» или любой
 > другой одной отрасли; оценки готовности давать по всем 39 направлениям.
 
-## Current checkpoint — 2026-11-14: whole-period availability for rental class bookings
+## Current checkpoint — 2026-11-15: PROPERTY-01 internal catalog backend
+
+Source `8f993e30cf020abdb67b4deaa9f2c64bebb33d7f` on `codex/package-property-01-catalog`. Migration 0112 adds the parcel, building and unit catalog with append-only revisions, private owner and manager history, and tenant and branch isolation. The same mutation key replays its original revision even after module disablement. Missing party fields retain their existing values and explicit null clears the named role. The schema guard fails closed on catalog tenant-policy drift. PostgreSQL verifies concurrent revision conflict and upgrade from a populated 0111. Legacy upgrade tests account for the three new empty catalog tables. The Visit Desk now offers a keyboard-focusable Materials used table, verified on desktop and mobile. The module is implemented and awaits enablement. The next work is the internal catalog screen with browser accessibility and mobile evidence.
+
+VM focused 180 passed in 66.94s (0:01:06). VM full on `117a1ef` 1 failed, 2874 passed, 4 skipped in 3945.02s (1:05:45). The only failure was the obsolete module count in one unit test. The corrected test file passed all 21 tests on the final source. The final API unit suite passed 877 tests. Ruff, mypy, web typecheck, lint, format, unit and build passed. [Code CI 43684904496](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/43684904496) passed on the exact source commit. [Evidence](evidence/2026-11-15-property-catalog/CHECKS.json).
+
+## Previous checkpoint — 2026-11-14: whole-period availability for rental class bookings
 
 RR-08 (code `495a38c`, [design](PACKAGE_RR4_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr4-feasibility/CHECKS.json)). A booking needs one feasible unit for its full interval. The class stays unassigned until an actual assignment. Assigned units and maintenance blocks constrain the solver. Booking, assignment, period, block and fleet changes preserve feasibility under the class lock. Migration 0111. Static PASS, focused 1122 passed in 1990.52s (0:33:10), full 2866 passed, 4 skipped in 4158.08s (1:09:18). Next: PROPERTY-01 planning. Release readiness remains an owner decision. Next migration 0112.
 
-## Previous checkpoint — 2026-11-14: rental history and sandbox intent review fixes
+## Earlier checkpoint — 2026-11-14: rental history and sandbox intent review fixes
 
 RR-07 and RR-09 (code `33e931b`, [design](PACKAGE_RR3_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr3-history/CHECKS.json)). Return and usage follow the handover's measurement context. Settled terms are frozen. One sandbox intent has one initial link per tenant. Migration 0110. Static PASS, focused 1118 passed in 1924.19s (0:32:04), full 2862 passed, 4 skipped in 4063.29s (1:07:43). RR-08 remains open. Next migration 0111.
 
