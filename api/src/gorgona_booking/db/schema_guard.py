@@ -419,7 +419,76 @@ begin
 end;
 """
 
+_PROPERTY_LEASE_EXCLUSION = (
+    "EXCLUDE USING gist (tenant_id WITH =, object_id WITH =, "
+    "daterange(starts_on, ends_on, '[]'::text) WITH &&)"
+)
+_PROPERTY_LEASE_VALIDATION_SOURCE = """
+begin
+    -- Advisory locks do not refresh an older REPEATABLE READ/SERIALIZABLE snapshot.
+    if pg_catalog.current_setting('transaction_isolation') <> 'read committed' then
+        raise exception using errcode = 'serialization_failure',
+            message = 'lease registration requires a read committed transaction';
+    end if;
+    perform pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtextextended('gba:counterparties:' || new.tenant_id::text, 0));
+    if not exists (
+        select 1 from gba.property_objects o
+        where o.tenant_id = new.tenant_id and o.id = new.object_id and o.kind = 'unit'
+    ) then
+        raise exception using errcode = 'check_violation', constraint = 'property_leases_unit',
+            message = 'an exclusive lease requires a property unit';
+    end if;
+
+    select v.effective_from, v.effective_until into new.starts_on, new.ends_on
+    from gba.agreement_versions v
+    join gba.document_versions d
+      on d.tenant_id = v.tenant_id and d.document_id = v.document_id
+     and d.revision = v.document_revision
+    where v.tenant_id = new.tenant_id and v.agreement_id = new.agreement_id
+      and v.revision = new.agreement_revision and v.state = 'agreed'
+      and v.attestation = 'signed_outside_platform'
+      and v.signed_on between date '0001-01-01' and date '9999-12-31'
+      and v.effective_from >= date '0001-01-01'
+      and v.effective_until <= date '9999-12-31'
+      and d.category = 'agreement' and not d.archived and d.file_id is not null
+      and not exists (
+          select 1 from gba.agreement_versions later
+          where later.tenant_id = v.tenant_id and later.agreement_id = v.agreement_id
+            and later.revision > v.revision and later.state <> 'draft'
+      );
+    if not found then
+        raise exception using errcode = 'check_violation',
+            constraint = 'property_leases_signed_source',
+            message = 'an exclusive lease requires the current agreed term and its signed file';
+    end if;
+    return new;
+end;
+"""
+_AGREEMENT_IMMUTABILITY_SOURCE = """
+begin
+    raise exception using errcode = 'check_violation',
+        message = 'agreements and their versions are kept unchanged';
+end;
+"""
+
 _OCCUPANCY_TRIGGERS = (
+    (
+        "property_leases",
+        "property_leases_validate_input",
+        7,
+        "gba.validate_property_lease()",
+        "",
+        _PROPERTY_LEASE_VALIDATION_SOURCE,
+    ),
+    (
+        "property_leases",
+        "property_leases_immutable",
+        27,
+        "gba.reject_agreement_mutation()",
+        "",
+        _AGREEMENT_IMMUTABILITY_SOURCE,
+    ),
     (
         "resource_allocations",
         "resource_allocations_guard",
@@ -521,6 +590,7 @@ _PROPERTY_TABLES = (
     *_PROPERTY_BRANCH_TABLES,
     "property_parties",
     "property_showing_cancellations",
+    "property_leases",
 )
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
@@ -604,6 +674,7 @@ _DEFINITIONS = [
         for table in _PROPERTY_BRANCH_TABLES
     ],
     _company_only("property_parties", "property_parties_unrestricted_scope", "*"),
+    _company_only("property_leases", "property_leases_unrestricted_scope", "*"),
     _definition(
         "property_showing_cancellations",
         f"({_NO_LOCATION} OR "
@@ -733,6 +804,11 @@ and exists (
       and k.conname = 'resource_allocations_no_overlap' and k.contype = 'x' and k.convalidated
       and regexp_replace(pg_catalog.pg_get_constraintdef(k.oid), '[[:space:]]', '', 'g') = %s
 ) and exists (
+    select 1 from pg_catalog.pg_constraint k
+    where k.conrelid = pg_catalog.to_regclass('gba.property_leases')
+      and k.conname = 'property_leases_no_overlap' and k.contype = 'x' and k.convalidated
+      and regexp_replace(pg_catalog.pg_get_constraintdef(k.oid), '[[:space:]]', '', 'g') = %s
+) and exists (
     select 1 from pg_catalog.pg_proc f
     where f.oid = pg_catalog.to_regprocedure('gba.booking_occupancy_state(text)')
       and not f.prosecdef and f.proconfig is null and f.provolatile = 'i'
@@ -805,6 +881,7 @@ async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
         [trigger for _, trigger, _ in _MODULE_TRIGGERS],
         [module.encode() + b"\x00" for _, _, module in _MODULE_TRIGGERS],
         _compact(_OCCUPANCY_CONSTRAINT),
+        _compact(_PROPERTY_LEASE_EXCLUSION),
         _compact(_OCCUPANCY_STATE_SOURCE),
     ]
     for table, trigger, kind, function, columns, source in _OCCUPANCY_TRIGGERS:
