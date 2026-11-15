@@ -249,3 +249,56 @@ async def test_competing_owner_revisions_commit_once(enabled: Catalog) -> None:
         (1, first),
         (2, second),
     ]
+
+
+async def test_omitted_party_links_survive_edits_and_explicit_null_clears_one(
+    enabled: Catalog,
+) -> None:
+    object_id = uuid7()
+    owner, manager = [await enabled.counterparty() for _ in range(2)]
+    original = await enabled.put(object_id, enabled.body(owner_id=owner, manager_id=manager))
+    assert original.is_success, original.text
+
+    body = enabled.body(expected_revision=1, name="FAKE renamed")
+    changed = await enabled.put(object_id, body, key="rename-property")
+    assert changed.is_success, changed.text
+    assert (changed.json()["owner_id"], changed.json()["manager_id"]) == (owner, manager)
+    other_command = await enabled.put(object_id, {**body, "owner_id": None}, key="rename-property")
+    assert other_command.json()["error"]["code"] == "IDEMPOTENCY_KEY_REUSED"
+    cleared = await enabled.put(object_id, enabled.body(expected_revision=2, owner_id=None))
+    assert cleared.is_success, cleared.text
+    assert (cleared.json()["owner_id"], cleared.json()["manager_id"]) == (None, manager)
+
+
+async def test_replay_returns_original_after_disablement(
+    enabled: Catalog, manager_a: FakeUser
+) -> None:
+    object_id = uuid7()
+    body = enabled.body()
+    original = await enabled.put(object_id, body, key="keep-receipt")
+    assert original.is_success, original.text
+    config = Config(enabled.client, enabled.idp)
+    await config.publish(manager_a, enabled.tenant, 1, ["booking_resources", "counterparties"])
+
+    replay = await enabled.put(object_id, body, key="keep-receipt")
+    assert replay.status_code == 200, replay.text
+    assert replay.json() == original.json()
+    denied = await enabled.put(uuid7(), body)
+    assert denied.json()["error"]["code"] == "MODULE_DISABLED"
+    assert denied.status_code == 409
+
+
+async def test_catalog_stops_if_tenant_guard_drifted(enabled: Catalog) -> None:
+    enabled.owner_conn.execute(
+        "alter policy property_revisions_tenant_isolation on gba.property_revisions "
+        "using (true) with check (true)"
+    )
+    try:
+        response = await enabled.client.get(enabled.base, headers=enabled.headers)
+        assert response.status_code == 503, response.text
+    finally:
+        enabled.owner_conn.execute(
+            "alter policy property_revisions_tenant_isolation on gba.property_revisions "
+            "using (tenant_id = gba.current_tenant_id()) "
+            "with check (tenant_id = gba.current_tenant_id())"
+        )

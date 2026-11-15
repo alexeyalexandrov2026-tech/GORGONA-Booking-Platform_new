@@ -115,6 +115,7 @@ create policy property_revisions_tenant_isolation on gba.property_revisions
 create policy property_parties_tenant_isolation on gba.property_parties
     using (tenant_id = gba.current_tenant_id()) with check (tenant_id = gba.current_tenant_id());
 
+-- Property branch scope:
 create policy property_objects_location_scope on gba.property_objects as restrictive to gba_runtime
     using (gba.current_location_id() is null or location_id = gba.current_location_id())
     with check (gba.current_location_id() is null or location_id = gba.current_location_id());

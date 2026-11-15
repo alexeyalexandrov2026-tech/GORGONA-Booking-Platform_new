@@ -392,13 +392,11 @@ _LEDGER_TABLES = (
     "ledger_period_events",
 )
 _PROPERTY_CATALOG_TABLES = ("property_objects", "property_revisions")
+_PROPERTY_TABLES = (*_PROPERTY_CATALOG_TABLES, "property_parties")
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
 _MODULE_TRIGGERS = (
-    *[
-        (table, f"{table}_require_module", "property")
-        for table in (*_PROPERTY_CATALOG_TABLES, "property_parties")
-    ],
+    *[(table, f"{table}_require_module", "property") for table in _PROPERTY_TABLES],
     *[(table, f"{table}_require_module", "counterparties") for table in _COUNTERPARTY_TABLES],
     *[(table, f"{table}_require_module", "documents") for table in _DOCUMENT_TABLES],
     *[(table, f"{table}_require_module", "finance") for table in _LEDGER_TABLES],
@@ -474,6 +472,16 @@ _DEFINITIONS = [
     ],
     _company_only("property_parties", "property_parties_unrestricted_scope", "*"),
     *[
+        (
+            table,
+            f"{table}_tenant_isolation",
+            "*",
+            "(tenant_id=gba.current_tenant_id())",
+            "(tenant_id=gba.current_tenant_id())",
+        )
+        for table in _PROPERTY_TABLES
+    ],
+    *[
         _company_only(table, f"{table}_unrestricted_scope", "*")
         for table in (
             "business_profile_versions",
@@ -532,14 +540,20 @@ select exists (
     select 1 from required r
     left join pg_catalog.pg_class c on c.oid = pg_catalog.to_regclass('gba.' || r.table_name)
     left join pg_catalog.pg_policy p on p.polrelid = c.oid and p.polname = r.policy_name
+    cross join lateral (select r.policy_name = r.table_name || '_tenant_isolation') a(permissive)
     where c.oid is null or not c.relrowsecurity or not c.relforcerowsecurity
-       or p.oid is null or p.polpermissive or p.polcmd::text <> r.command
+       or p.oid is null or p.polpermissive <> a.permissive or p.polcmd::text <> r.command
+       or (a.permissive and exists (
+           select 1 from pg_catalog.pg_policy other
+           where other.polrelid = c.oid and other.polpermissive and other.oid <> p.oid
+       ))
        or coalesce(regexp_replace(pg_catalog.pg_get_expr(p.polqual, c.oid),
                                   '[[:space:]]', '', 'g'), '') <> r.using_expression
        or coalesce(regexp_replace(pg_catalog.pg_get_expr(p.polwithcheck, c.oid),
                                   '[[:space:]]', '', 'g'), '') <> r.check_expression
-       or not coalesce(p.polroles @> array[(select oid from pg_catalog.pg_roles
-                                           where rolname = 'gba_runtime')], false)
+       or not coalesce(case when a.permissive then p.polroles = array[0::oid]
+           else p.polroles @> array[(select oid from pg_catalog.pg_roles
+                                     where rolname = 'gba_runtime')] end, false)
 )
 """.replace("__VALUES__", ", ".join("(%s, %s, %s, %s, %s)" for _ in _DEFINITIONS))
 

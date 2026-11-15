@@ -177,24 +177,26 @@ async def save_property(
     key: str,
     body: PropertyInput,
 ) -> PropertyRevision:
-    if not modules.MODULES_BY_ID[PROPERTY_MODULE].enableable:
-        raise PropertyNotReadyError("The property module is not ready", module_id=PROPERTY_MODULE)
-    await require_module(conn, business, PROPERTY_MODULE)
-    await require_module(conn, business, COUNTERPARTIES_MODULE)
-
     scope = IdempotencyScope(business, actor, "property.object.save", key)
     request_hash = commands.fingerprint(
-        {"object_id": str(object_id), "body": body.model_dump(mode="json")}
+        {"object_id": str(object_id), "body": body.model_dump(mode="json", exclude_unset=True)}
     )
     receipt = await commands.claim(conn, scope, request_hash, RevisionReceipt)
     if receipt is not None:
         return await _get_revision(conn, object_id, receipt.revision)
 
+    if not modules.MODULES_BY_ID[PROPERTY_MODULE].enableable:
+        raise PropertyNotReadyError("The property module is not ready", module_id=PROPERTY_MODULE)
+    await require_module(conn, business, PROPERTY_MODULE)
+    await require_module(conn, business, COUNTERPARTIES_MODULE)
+
     await conn.execute("select gba.lock_property_object(%s, %s)", (business, object_id))
     current = await (
         await conn.execute(
-            "select revision, location_id, kind from gba.property_revisions "
-            "where object_id = %s order by revision desc limit 1",
+            "select v.revision, v.location_id, v.kind, p.owner_id, p.manager_id "
+            "from gba.property_revisions v join gba.property_parties p "
+            "using (tenant_id, object_id, revision) "
+            "where v.object_id = %s order by v.revision desc limit 1",
             (object_id,),
         )
     ).fetchone()
@@ -205,6 +207,14 @@ async def save_property(
         )
     if current is not None and (body.location_id, body.kind) != (current[1], current[2]):
         raise PropertyIdentityFixedError("The property type and branch are fixed")
+
+    owner_id = body.owner_id
+    manager_id = body.manager_id
+    if current is not None:
+        if "owner_id" not in body.model_fields_set:
+            owner_id = current[3]
+        if "manager_id" not in body.model_fields_set:
+            manager_id = current[4]
 
     next_revision = revision + 1
     try:
@@ -233,7 +243,7 @@ async def save_property(
                 "insert into gba.property_parties "
                 "(tenant_id, object_id, revision, owner_id, manager_id, recorded_by) "
                 "values (%s, %s, %s, %s, %s, %s)",
-                (business, object_id, next_revision, body.owner_id, body.manager_id, user_id),
+                (business, object_id, next_revision, owner_id, manager_id, user_id),
             )
     except ForeignKeyViolation as exc:
         field = _REFERENCES.get(exc.diag.constraint_name or "")

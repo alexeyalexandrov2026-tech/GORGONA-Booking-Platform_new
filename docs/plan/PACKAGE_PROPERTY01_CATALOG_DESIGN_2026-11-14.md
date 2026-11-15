@@ -16,7 +16,7 @@ The first backend slice of [PROPERTY-01](PACKAGE_PROPERTY01_PLAN_2026-11-14.md) 
   `GET /objects/{id}` returns the public catalog fields, `GET /objects/{id}/history`
   returns private revisions to authorized company-wide members, and `PUT /objects/{id}`
   writes one revision and its audit entry. A retry with the same idempotency key returns the
-  exact revision it wrote, from an identifier-only receipt. Concurrent writes serialize per
+  exact revision it wrote, including after module disablement, from an identifier-only receipt. Concurrent writes serialize per
   object and a stale revision receives 409. Tenant and branch scope are enforced in PostgreSQL.
 - The module depends on counterparties. It is registered as implemented and waits for package
   acceptance before enablement. Migration 0112 adds catalog tables without modifying earlier
