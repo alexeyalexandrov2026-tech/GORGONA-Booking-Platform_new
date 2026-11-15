@@ -174,6 +174,10 @@ K_TABLES = {
     "rental_damage_charges",
     "rental_damage_charge_marks",
     "rental_refunds",
+    # PROPERTY-01 (0112): the internal catalog and its version history.
+    "property_objects",
+    "property_revisions",
+    "property_parties",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

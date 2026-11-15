@@ -175,6 +175,10 @@ K_TABLES = {
     "rental_damage_charges",
     "rental_damage_charge_marks",
     "rental_refunds",
+    # PROPERTY-01 (0112): the internal catalog and its version history.
+    "property_objects",
+    "property_revisions",
+    "property_parties",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
