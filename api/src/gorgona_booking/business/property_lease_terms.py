@@ -75,6 +75,10 @@ class LeaseReleasedError(ConflictError):
     code = "PROPERTY_LEASE_RELEASED"
 
 
+class LeaseMoveInConflictError(ConflictError):
+    code = "PROPERTY_LEASE_MOVE_IN_CONFLICT"
+
+
 async def term_history(
     conn: RuntimeConnection, business: UUID, lease_id: UUID, before: int | None, limit: int
 ) -> LeaseTermHistory:
@@ -146,6 +150,10 @@ async def record_term(
                 raise LeaseTermRevisionError("The lease term has changed") from exc
             case "property_lease_term_closed":
                 raise LeaseReleasedError("The lease has already been released") from exc
+            case "property_lease_term_move_in":
+                raise LeaseMoveInConflictError(
+                    "The term cannot end before a recorded move-in"
+                ) from exc
             case "property_lease_term_source":
                 raise InvalidReferenceError(
                     "Select the current agreement version for this term change",

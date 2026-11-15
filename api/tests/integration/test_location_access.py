@@ -471,6 +471,7 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (114, "-- Property showing branch scope:"),
                 (115, "-- Property lease company scope:"),
                 (116, "-- Property lease term company scope:"),
+                (117, "-- Property move-in company scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker

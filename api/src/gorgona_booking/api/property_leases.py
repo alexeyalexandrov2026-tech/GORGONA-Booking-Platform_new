@@ -10,6 +10,7 @@ from gorgona_booking.api.property_catalog import _access
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import property_lease_terms as terms
 from gorgona_booking.business import property_leases as leases
+from gorgona_booking.business import property_move_in as move_in
 
 router = APIRouter(prefix="/v1/businesses/{business_id}/property/leases", tags=["property"])
 
@@ -75,6 +76,35 @@ async def post_term(
 ) -> terms.LeaseTermView:
     async with _access(business_id, request, principal, Permission.PROPERTY_MANAGE) as access:
         return await terms.record_term(
+            access.conn,
+            business_id,
+            lease_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/{lease_id}/move-in")
+async def get_move_in(
+    business_id: UUID, lease_id: UUID, request: Request, principal: CurrentPrincipal
+) -> move_in.MoveInView:
+    async with _access(business_id, request, principal, Permission.PROPERTY_MANAGE) as access:
+        return await move_in.get_move_in(access.conn, business_id, lease_id)
+
+
+@router.put("/{lease_id}/move-in")
+async def put_move_in(
+    business_id: UUID,
+    lease_id: UUID,
+    body: move_in.MoveInInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> move_in.MoveInView:
+    async with _access(business_id, request, principal, Permission.PROPERTY_MANAGE) as access:
+        return await move_in.record_move_in(
             access.conn,
             business_id,
             lease_id,

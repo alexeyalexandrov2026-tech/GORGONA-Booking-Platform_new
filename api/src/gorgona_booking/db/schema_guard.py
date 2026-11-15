@@ -500,6 +500,15 @@ begin
         raise exception using errcode = 'check_violation',
             message = 'the current term follows its next recorded event';
     end if;
+    if exists (
+        select 1 from gba.property_move_ins m
+        where m.tenant_id = new.tenant_id and m.lease_id = new.id
+          and m.moved_in_on > new.occupied_through
+    ) then
+        raise exception using errcode = 'check_violation',
+            constraint = 'property_lease_term_move_in',
+            message = 'the last day cannot precede a recorded move-in';
+    end if;
     return new;
 end;
 """
@@ -610,7 +619,119 @@ begin
 end;
 """
 
+_PROPERTY_MOVE_IN_VALIDATION_SOURCE = """
+declare
+    lease_term record;
+begin
+    if pg_catalog.current_setting('transaction_isolation') <> 'read committed' then
+        raise exception using errcode = 'serialization_failure',
+            message = 'move-in requires a read committed transaction';
+    end if;
+    perform pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtextextended('gba:counterparties:' || new.tenant_id::text, 0));
+    select l.term_revision, l.starts_on, coalesce(l.occupied_through, l.ends_on) as ends_on,
+           (pg_catalog.now() at time zone branch.timezone)::date as local_day
+    into lease_term
+    from gba.property_leases l
+    join gba.property_objects o on o.tenant_id = l.tenant_id and o.id = l.object_id
+    join gba.locations branch on branch.tenant_id = o.tenant_id and branch.id = o.location_id
+    where l.tenant_id = new.tenant_id and l.id = new.lease_id;
+    if not found then
+        raise exception using errcode = 'check_violation', constraint = 'property_move_in_lease',
+            message = 'a move-in belongs to a recorded lease';
+    end if;
+    if new.term_revision <> lease_term.term_revision then
+        raise exception using errcode = 'check_violation', constraint = 'property_move_in_revision',
+            message = 'a move-in uses the current term revision';
+    end if;
+    if new.moved_in_on not between lease_term.starts_on and lease_term.ends_on
+       or new.moved_in_on > lease_term.local_day then
+        raise exception using errcode = 'check_violation', constraint = 'property_move_in_day',
+            message = 'a move-in records a day of the lease up through the current local day';
+    end if;
+    if not exists (
+        select 1 from gba.document_versions d
+        where d.tenant_id = new.tenant_id and d.document_id = new.report_id
+          and d.revision = new.report_revision and d.category = 'report'
+          and not d.archived and d.file_id is not null
+    ) then
+        raise exception using errcode = 'check_violation', constraint = 'property_move_in_report',
+            message = 'a move-in requires a stored condition report';
+    end if;
+    return new;
+end;
+"""
+_PROPERTY_MOVE_IN_PHOTO_VALIDATION_SOURCE = """
+begin
+    if not exists (
+        select 1 from gba.property_move_ins m
+        where m.tenant_id = new.tenant_id and m.lease_id = new.lease_id
+          and m.creation_xid = pg_current_xact_id() and new.position <= m.photo_count
+    ) then
+        raise exception using errcode = 'check_violation',
+            constraint = 'property_move_in_photo_parent',
+            message = 'photos are written with their move-in report';
+    end if;
+    if not exists (
+        select 1 from gba.document_versions d
+        join gba.document_files f on f.tenant_id = d.tenant_id and f.id = d.file_id
+        where d.tenant_id = new.tenant_id and d.document_id = new.document_id
+          and d.revision = new.document_revision and not d.archived
+          and f.media_type in ('image/png', 'image/jpeg')
+    ) then
+        raise exception using errcode = 'check_violation', constraint = 'property_move_in_photo',
+            message = 'a move-in photo refers to a stored PNG or JPEG document';
+    end if;
+    return new;
+end;
+"""
+_PROPERTY_MOVE_IN_PHOTOS_COMPLETE_SOURCE = """
+begin
+    if (
+        select count(*) from gba.property_move_in_photos p
+        where p.tenant_id = new.tenant_id and p.lease_id = new.lease_id
+    ) <> new.photo_count then
+        raise exception using errcode = 'check_violation',
+            constraint = 'property_move_in_photos_complete',
+            message = 'a move-in keeps all of its photos';
+    end if;
+    return null;
+end;
+"""
+
 _OCCUPANCY_TRIGGERS = (
+    (
+        "property_move_ins",
+        "property_move_ins_agreement_period",
+        7,
+        "gba.validate_property_move_in()",
+        "",
+        _PROPERTY_MOVE_IN_VALIDATION_SOURCE,
+    ),
+    (
+        "property_move_in_photos",
+        "property_move_in_photos_validate",
+        7,
+        "gba.validate_property_move_in_photo()",
+        "",
+        _PROPERTY_MOVE_IN_PHOTO_VALIDATION_SOURCE,
+    ),
+    (
+        "property_move_ins",
+        "property_move_ins_immutable",
+        27,
+        "gba.reject_agreement_mutation()",
+        "",
+        _AGREEMENT_IMMUTABILITY_SOURCE,
+    ),
+    (
+        "property_move_in_photos",
+        "property_move_in_photos_immutable",
+        27,
+        "gba.reject_agreement_mutation()",
+        "",
+        _AGREEMENT_IMMUTABILITY_SOURCE,
+    ),
     (
         "property_leases",
         "property_leases_agreement_source",
@@ -754,6 +875,8 @@ _PROPERTY_TABLES = (
     "property_showing_cancellations",
     "property_leases",
     "property_lease_term_events",
+    "property_move_ins",
+    "property_move_in_photos",
 )
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
@@ -761,7 +884,12 @@ _MODULE_TRIGGERS = (
     *[
         (table, f"{table}_require_module", "property")
         for table in _PROPERTY_TABLES
-        if table not in ("property_showing_cancellations", "property_lease_term_events")
+        if table
+        not in (
+            "property_showing_cancellations",
+            "property_lease_term_events",
+            "property_move_in_photos",
+        )
     ],
     *[(table, f"{table}_require_module", "counterparties") for table in _COUNTERPARTY_TABLES],
     *[(table, f"{table}_require_module", "documents") for table in _DOCUMENT_TABLES],
@@ -838,6 +966,8 @@ _DEFINITIONS = [
     ],
     _company_only("property_parties", "property_parties_unrestricted_scope", "*"),
     _company_only("property_leases", "property_leases_unrestricted_scope", "*"),
+    _company_only("property_move_ins", "property_move_ins_unrestricted_scope", "*"),
+    _company_only("property_move_in_photos", "property_move_in_photos_unrestricted_scope", "*"),
     _company_only(
         "property_lease_term_events", "property_lease_term_events_unrestricted_scope", "*"
     ),
@@ -1035,6 +1165,19 @@ and exists (
       and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
       and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
 )
+and exists (
+    select 1 from pg_catalog.pg_trigger t
+    join pg_catalog.pg_proc f on f.oid = t.tgfoid
+    where t.tgrelid = pg_catalog.to_regclass('gba.property_move_ins')
+      and t.tgname = 'property_move_ins_photos_complete'
+      and t.tgtype = 5 and t.tgenabled = 'O' and not t.tgisinternal
+      and t.tgconstraint <> 0 and t.tgdeferrable and t.tginitdeferred
+      and t.tgqual is null and t.tgnargs = 0
+      and f.oid = pg_catalog.to_regprocedure('gba.complete_property_move_in_photos()')
+      and not f.prosecdef and f.proconfig is null and f.provolatile = 'v'
+      and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
+      and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
+)
 """
 
 
@@ -1054,6 +1197,7 @@ async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
         parameters += [table, trigger, kind, function, columns, _compact(source)]
     parameters.append(_compact(_RESERVATION_ALLOCATED_SOURCE))
     parameters.append(_compact(CHECK_PROPERTY_SHOWING_ALLOCATED_SOURCE))
+    parameters.append(_compact(_PROPERTY_MOVE_IN_PHOTOS_COMPLETE_SOURCE))
     parameters.extend(LEDGER_PARAMETERS)
     parameters.extend(FINANCIAL_PARAMETERS)
     row = await (
