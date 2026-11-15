@@ -1,5 +1,19 @@
 # GORGONA — реестр реализации
 
+### PROPERTY-01 signed lease term changes (2026-11-15)
+
+Source `6e9f55f46d7c69685e047a61387977fdaa5385f6` on `codex/package-property-01-lease-terms`. Migration 0116 records signed extensions and explicit release,
+keeps the original registration, and applies exclusion to the current term. A conflicting
+extension rolls back its event and receipt. Early release keeps the last occupied day inclusive
+or frees the entire period before it starts. The original command and history replay remain stable.
+
+VM PostgreSQL 18.6 focused 163 passed in 277.39s (0:04:37). API unit 877 passed in 50.71s. Ruff check, Ruff format,
+mypy and diff checks passed. The initial broader run found one failure in the old-schema
+fixture copy (162 passed). The replay of the fixture with a shortened lease now preserves only
+legacy-compatible ranges. The 0115 upgrade preserves prior facts and checksums.
+[Evidence](evidence/2026-11-15-property-lease-terms/CHECKS.json). Next is 3c move-in with condition evidence.
+[Successor handoff](NEXT_AGENT_PROPERTY01_LEASE_TERMS_2026-11-15.md).
+
 ### PROPERTY-01 signed unit lease registration (2026-11-15)
 
 Source `01077e96c36d58b0d652edd95b6bdeca5f581149` on `codex/package-property-01-leases`. Migration 0115 registers a property unit with the exact
