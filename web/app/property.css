@@ -24,3 +24,23 @@
   align-items: center;
   gap: 12px;
 }
+
+.property-operation-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 8px 16px;
+}
+
+.property-operation-fields label,
+.property-operation-fields input,
+.property-operation-fields select,
+.property-operation-fields textarea {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.property-operation-fields textarea {
+  display: block;
+  width: 100%;
+  min-height: 5rem;
+}

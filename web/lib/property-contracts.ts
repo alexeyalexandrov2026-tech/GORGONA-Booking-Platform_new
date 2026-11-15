@@ -40,7 +40,72 @@ export type PropertyRevision = z.infer<typeof propertyRevisionSchema>;
 export type PropertyList = z.infer<typeof propertyListSchema>;
 export type PropertyHistory = z.infer<typeof propertyHistorySchema>;
 
+const listingStates = ["draft", "published", "withdrawn"] as const;
+export type ListingState = (typeof listingStates)[number];
+
+export const listingViewSchema = z.strictObject({
+  schema_version: z.literal(1),
+  object_id: id,
+  location_id: id,
+  kind: z.enum(PROPERTY_KINDS),
+  revision,
+  state: z.enum(listingStates),
+  headline: z.string().min(1).max(120),
+  description: z.string().max(4000).nullable(),
+  monthly_rent: z.number().int().min(1).max(1_000_000_000_000),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  available_from: z.iso.date(),
+  recorded_at: instant,
+});
+const listingRevisionSchema = listingViewSchema.extend({ recorded_by: id });
+export const showingViewSchema = z.strictObject({
+  schema_version: z.literal(1),
+  showing_id: id,
+  object_id: id,
+  location_id: id,
+  host_resource_id: id.nullable(),
+  starts_at: instant,
+  ends_at: instant,
+  recorded_at: instant,
+  cancelled_at: instant.nullable(),
+  status: z.enum(["active", "cancelled"]),
+});
+const showingListSchema = z.strictObject({
+  schema_version: z.literal(1),
+  items: z.array(showingViewSchema),
+  next_cursor: id.nullable(),
+});
+
+export type ListingView = z.infer<typeof listingViewSchema>;
+export type ListingRevision = z.infer<typeof listingRevisionSchema>;
+export type ShowingView = z.infer<typeof showingViewSchema>;
+export type ShowingList = z.infer<typeof showingListSchema>;
+export type ListingBody = Pick<
+  ListingView,
+  | "schema_version"
+  | "state"
+  | "headline"
+  | "description"
+  | "monthly_rent"
+  | "currency"
+  | "available_from"
+> & { expected_revision: number };
+export type ShowingBody = Pick<
+  ShowingView,
+  "schema_version" | "object_id" | "host_resource_id" | "starts_at" | "ends_at"
+> & { prospect_id: string };
+
 const routes: [RegExp, string[], z.ZodType][] = [
+  [/^\/property\/listings\/[0-9a-f-]{36}$/i, ["GET"], listingViewSchema],
+  [/^\/property\/listings\/[0-9a-f-]{36}$/i, ["PUT"], listingRevisionSchema],
+  [/^\/property\/showings$/, ["GET"], showingListSchema],
+  [/^\/property\/showings\/[0-9a-f-]{36}$/i, ["PUT"], showingViewSchema],
+  [
+    /^\/property\/showings\/[0-9a-f-]{36}\/cancel$/i,
+    ["POST"],
+    showingViewSchema,
+  ],
+
   [/^\/property\/objects$/, ["GET"], propertyListSchema],
   [/^\/property\/objects\/[0-9a-f-]{36}$/i, ["GET"], propertyViewSchema],
   [/^\/property\/objects\/[0-9a-f-]{36}$/i, ["PUT"], propertyRevisionSchema],

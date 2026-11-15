@@ -226,6 +226,48 @@ test("an owner builds the catalog, keeps and clears parties and meets a stale re
   await expect(history(page).getByRole("row")).toHaveCount(6);
 });
 
+test("an owner publishes a listing and schedules and cancels a showing", async ({
+  page,
+}, testInfo) => {
+  const unit = `FAKE unit ${testInfo.project.name}`;
+  await signIn(page, "owner");
+  await openProperty(page);
+  await catalog(page).getByRole("button", { name: unit, exact: true }).click();
+
+  const listing = page.getByRole("form", { name: "Edit listing" });
+  await listing
+    .getByLabel("Headline")
+    .fill(`FAKE listing ${testInfo.project.name}`);
+  await listing.getByLabel("Monthly rent").fill("1250.50");
+  await listing.getByLabel("Currency").fill("USD");
+  await listing.getByLabel("Available from").fill("2032-01-10");
+  await listing.getByLabel("Listing status").selectOption("published");
+  await listing.getByRole("button", { name: "Save listing" }).click();
+  await expect(notice(page, "Listing saved as revision 1.")).toBeVisible();
+  await expect(page.getByText("1250.50 USD", { exact: true })).toBeVisible();
+
+  const form = page.getByRole("form", { name: "Schedule showing" });
+  await form.getByLabel("Prospect").selectOption({ label: "FAKE Owner" });
+  await form.getByLabel("Host").selectOption({ index: 1 });
+  await form.getByLabel("Starts").fill("2032-01-12T10:00");
+  await form.getByLabel("Ends").fill("2032-01-12T11:00");
+  await form.getByRole("button", { name: "Schedule showing" }).click();
+  await expect(notice(page, "Showing scheduled.")).toBeVisible();
+  const showing = page
+    .getByRole("region", { name: "Showings table" })
+    .getByRole("row")
+    .filter({ hasText: "Active" });
+  await expect(showing).toContainText("2032-01-12 10:00");
+  await form.getByRole("button", { name: "Schedule showing" }).click();
+  await expect(form.getByRole("alert")).toContainText("already taken");
+  await accessible(page, testInfo, "showing-conflict");
+  await showing.getByRole("button", { name: "Cancel showing" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(notice(page, "Showing cancelled.")).toBeVisible();
+  await expect(form.getByRole("alert")).toHaveCount(0);
+  await accessible(page, testInfo, "showing-cancelled");
+});
+
 test("a branch manager reads the branch without history or edit controls", async ({
   page,
 }, testInfo) => {
@@ -251,6 +293,15 @@ test("a branch manager reads the branch without history or edit controls", async
   await expect(fact(page, "Owner")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "History" })).toHaveCount(0);
   await expect(screen(page).getByRole("form")).toHaveCount(0);
+  await expect(
+    page.getByText(`FAKE listing ${testInfo.project.name}`, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Showings table" }),
+  ).toContainText("Cancelled");
+  await expect(
+    page.getByRole("button", { name: "Cancel showing" }),
+  ).toHaveCount(0);
   expect(historyReads).toEqual([]);
   await accessible(page, testInfo, "property-branch-detail");
 });

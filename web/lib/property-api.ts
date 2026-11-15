@@ -3,6 +3,12 @@
 // answer is the same request (ADR-0030).
 import { ManagementApiError, managementFetch } from "./management-api";
 import type {
+  ListingBody,
+  ListingRevision,
+  ListingView,
+  ShowingBody,
+  ShowingList,
+  ShowingView,
   PropertyBody,
   PropertyHistory,
   PropertyList,
@@ -67,24 +73,87 @@ export async function fetchHistory(
 }
 
 const pending = new Map<string, string>();
-export async function saveProperty(
-  business: string,
-  id: string,
-  body: PropertyBody,
-): Promise<PropertyRevision> {
-  const path = `${base(business)}/${id}`;
+async function mutate<T>(
+  path: string,
+  method: "PUT" | "POST",
+  body: unknown,
+): Promise<T> {
   const payload = JSON.stringify(body);
-  const signature = `${path} ${payload}`;
+  const signature = `${method} ${path} ${payload}`;
   let key = pending.get(signature);
   if (!key) {
     key = crypto.randomUUID();
     pending.set(signature, key);
   }
-  const result = await managementFetch<PropertyRevision>(path, {
-    method: "PUT",
+  const result = await managementFetch<T>(path, {
+    method,
     body: payload,
     headers: { "Idempotency-Key": key },
   });
   pending.delete(signature);
   return result;
 }
+
+export const saveProperty = (
+  business: string,
+  id: string,
+  body: PropertyBody,
+) => mutate<PropertyRevision>(`${base(business)}/${id}`, "PUT", body);
+
+const operations = (business: string) => `/v1/businesses/${business}/property`;
+
+export async function fetchListing(
+  business: string,
+  objectId: string,
+): Promise<ListingView | null> {
+  try {
+    return await managementFetch<ListingView>(
+      `${operations(business)}/listings/${objectId}`,
+    );
+  } catch (error) {
+    if (error instanceof ManagementApiError && error.status === 404)
+      return null;
+    throw error;
+  }
+}
+
+export const saveListing = (
+  business: string,
+  objectId: string,
+  body: ListingBody,
+) =>
+  mutate<ListingRevision>(
+    `${operations(business)}/listings/${objectId}`,
+    "PUT",
+    body,
+  );
+
+export async function fetchShowings(
+  business: string,
+  objectId: string,
+): Promise<ShowingView[]> {
+  const path = `${operations(business)}/showings`;
+  const items: ShowingView[] = [];
+  let after: string | null = null;
+  do {
+    const page: ShowingList = await managementFetch(
+      after ? `${path}?after=${encodeURIComponent(after)}` : path,
+    );
+    items.push(
+      ...page.items.filter((showing) => showing.object_id === objectId),
+    );
+    after = page.next_cursor;
+  } while (after !== null);
+  return items;
+}
+
+export const createShowing = (
+  business: string,
+  id: string,
+  body: ShowingBody,
+) => mutate<ShowingView>(`${operations(business)}/showings/${id}`, "PUT", body);
+
+export const cancelShowing = (business: string, id: string) =>
+  mutate<ShowingView>(`${operations(business)}/showings/${id}/cancel`, "POST", {
+    schema_version: 1,
+  });

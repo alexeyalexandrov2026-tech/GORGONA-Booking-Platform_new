@@ -159,3 +159,49 @@ test("company-wide owners and managers manage; a branch member only reads", () =
   ).toBe(false);
   expect(canReadProperty(undefined)).toBe(false);
 });
+
+test("operations parse strict listing and schedule projections", () => {
+  const path = `/v1/businesses/${uuid(1)}/property`;
+  const listing = {
+    schema_version: 1,
+    object_id: uuid(2),
+    location_id: uuid(3),
+    kind: "unit",
+    revision: 1,
+    state: "published",
+    headline: "FAKE listing",
+    description: null,
+    monthly_rent: 125050,
+    currency: "USD",
+    available_from: "2032-01-10",
+    recorded_at: "2031-06-01T10:00:00Z",
+  };
+  const listingRead = managementResponseSchema(
+    `${path}/listings/${uuid(2)}`,
+    "GET",
+  );
+  expect(listingRead?.safeParse(listing).success).toBe(true);
+  expect(
+    listingRead?.safeParse({ ...listing, monthly_rent: 1.5 }).success,
+  ).toBe(false);
+  const showing = {
+    schema_version: 1,
+    showing_id: uuid(4),
+    object_id: uuid(2),
+    location_id: uuid(3),
+    host_resource_id: null,
+    starts_at: "2032-01-12T15:00:00Z",
+    ends_at: "2032-01-12T16:00:00Z",
+    recorded_at: "2031-06-01T10:00:00Z",
+    cancelled_at: null,
+    status: "active",
+  };
+  const showingWrite = managementResponseSchema(
+    `${path}/showings/${uuid(4)}`,
+    "PUT",
+  );
+  expect(showingWrite?.safeParse(showing).success).toBe(true);
+  expect(
+    showingWrite?.safeParse({ ...showing, prospect_id: uuid(5) }).success,
+  ).toBe(false);
+});

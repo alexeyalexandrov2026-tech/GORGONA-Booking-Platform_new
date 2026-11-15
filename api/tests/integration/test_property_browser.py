@@ -193,6 +193,26 @@ def test_property_catalog_real_browser(
                 (4, f"{name} final", owner_id, None, owner.user_id),
                 (5, name, owner_id, None, owner.user_id),
             ], project
+            listing = owner_conn.execute(
+                "select headline, state, monthly_rent, currency "
+                "from gba.property_listing_revisions where object_id = %s",
+                (unit[0],),
+            ).fetchall()
+            assert listing == [(f"FAKE listing {project}", "published", 125050, "USD")]
+            showings = owner_conn.execute(
+                "select s.prospect_id, s.host_resource_id, count(a.id) "
+                "from gba.property_showings s join gba.property_showing_cancellations c "
+                "on (s.tenant_id, s.id) = (c.tenant_id, c.showing_id) "
+                "join gba.resource_allocations a on a.tenant_id = s.tenant_id "
+                "and a.source_kind = 'property_showing' and a.source_id = s.id "
+                "where s.object_id = %s and a.state = 'released' "
+                "group by s.prospect_id, s.host_resource_id",
+                (unit[0],),
+            ).fetchall()
+            assert len(showings) == 1, project
+            assert str(showings[0][0]) == owner_id
+            assert showings[0][1] in (world.artist_a1, world.artist_a2)
+            assert showings[0][2] == 2
             stale = owner_conn.execute(
                 "select count(*) from gba.property_revisions where name = %s",
                 (f"{name} stale",),
