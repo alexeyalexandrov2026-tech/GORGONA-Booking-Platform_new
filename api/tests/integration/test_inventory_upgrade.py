@@ -179,6 +179,9 @@ K_TABLES = {
     "property_objects",
     "property_revisions",
     "property_parties",
+    # PROPERTY-01 (0113): listings of catalog objects.
+    "property_listings",
+    "property_listing_revisions",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

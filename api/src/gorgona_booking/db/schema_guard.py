@@ -392,7 +392,9 @@ _LEDGER_TABLES = (
     "ledger_period_events",
 )
 _PROPERTY_CATALOG_TABLES = ("property_objects", "property_revisions")
-_PROPERTY_TABLES = (*_PROPERTY_CATALOG_TABLES, "property_parties")
+_PROPERTY_LISTING_TABLES = ("property_listings", "property_listing_revisions")
+_PROPERTY_BRANCH_TABLES = (*_PROPERTY_CATALOG_TABLES, *_PROPERTY_LISTING_TABLES)
+_PROPERTY_TABLES = (*_PROPERTY_BRANCH_TABLES, "property_parties")
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
 _MODULE_TRIGGERS = (
@@ -464,11 +466,11 @@ _DEFINITIONS = [
     _definition("audit_events", _NO_LOCATION, command="r"),
     *[
         _definition(table, f"({_NO_LOCATION} OR (location_id = gba.current_location_id()))")
-        for table in _PROPERTY_CATALOG_TABLES
+        for table in _PROPERTY_BRANCH_TABLES
     ],
     *[
         _company_only(table, f"{table}_unrestricted_insert", "a")
-        for table in _PROPERTY_CATALOG_TABLES
+        for table in _PROPERTY_BRANCH_TABLES
     ],
     _company_only("property_parties", "property_parties_unrestricted_scope", "*"),
     *[

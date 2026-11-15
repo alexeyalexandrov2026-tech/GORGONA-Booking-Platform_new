@@ -178,6 +178,9 @@ K_TABLES = {
     "property_objects",
     "property_revisions",
     "property_parties",
+    # PROPERTY-01 (0113): listings of catalog objects.
+    "property_listings",
+    "property_listing_revisions",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
