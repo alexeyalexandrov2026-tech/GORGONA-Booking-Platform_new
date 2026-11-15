@@ -1,5 +1,19 @@
 # GORGONA — реестр реализации
 
+### PROPERTY-01 move-in report (2026-11-15)
+
+Source `41be1caabe50fe92e77f67f2350b46d3bd3e2276` on `codex/package-property-01-move-in`. Migration 0117 records one private move-in report per lease.
+The actual local date and reviewed lease revision determine eligibility. The report and each
+photo name a specific ADR-0020 version. PostgreSQL requires the complete photo set before
+commit. A lease release cannot remove a previously recorded day of possession.
+
+VM PostgreSQL 18.6 focused 172 passed in 241.48s (0:04:01). API unit 877 passed in 27.76s. Ruff, mypy and Git checks passed.
+Verified refusal after a concurrent release with an observed waiter, the opposite order,
+retry after a bad photo and populated 0116 upgrade. The existing Property screen passed
+eight Chromium scenarios on desktop and mobile (34.7s). [Evidence](evidence/2026-11-15-property-move-in/CHECKS.json).
+Next is the company operations UI for registration, terms and move-in.
+[Successor handoff](NEXT_AGENT_PROPERTY01_MOVE_IN_2026-11-15.md).
+
 ### PROPERTY-01 signed lease term changes (2026-11-15)
 
 Source `6e9f55f46d7c69685e047a61387977fdaa5385f6` on `codex/package-property-01-lease-terms`. Migration 0116 records signed extensions and explicit release,
