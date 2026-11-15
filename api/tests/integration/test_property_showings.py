@@ -1,7 +1,7 @@
 """Authenticated showings use the shared PostgreSQL occupancy."""
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid7
 
 import httpx
@@ -13,6 +13,7 @@ from gorgona_booking.booking.models import SlotConflictError
 from gorgona_booking.booking.service import BookingService
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction
 from tests.integration.seed import FakeUser
+from tests.integration.test_customer_api import selection
 from tests.integration.test_property_catalog import Catalog
 from tests.integration.test_property_listings import (
     catalog,
@@ -237,3 +238,38 @@ async def test_unaccepted_module_refuses_showings(catalog: Catalog) -> None:
     refused = await book(catalog, uuid7(), str(uuid7()))
     assert refused.status_code == 409, refused.text
     assert refused.json()["error"]["code"] == "MODULE_NOT_READY"
+
+
+async def test_showing_removes_availability_until_cancelled(enabled: Catalog) -> None:
+    query = {**selection(enabled.world), "resource_id": str(enabled.world.artist_a1)}
+
+    async def offered() -> list[str]:
+        response = await enabled.client.post(
+            f"http://{enabled.world.a.host}/v1/customer/availability", json=query
+        )
+        assert response.status_code == 200, response.text
+        return [slot["start_at"] for slot in response.json()["slots"]]
+
+    before = await offered()
+    assert before
+    first = datetime.fromisoformat(before[0])
+    target = await unit(enabled)
+    prospect = await enabled.counterparty()
+    saved = await book(
+        enabled,
+        target,
+        prospect,
+        enabled.world.artist_a1,
+        starts_at=first.isoformat(),
+        ends_at=(first + timedelta(hours=1)).isoformat(),
+    )
+    assert saved.is_success, saved.text
+    assert before[0] not in await offered()
+    endpoint = url(enabled, UUID(saved.json()["showing_id"]))
+    cancelled = await enabled.client.post(
+        f"{endpoint}/cancel",
+        json={"schema_version": 1},
+        headers={**enabled.headers, "Idempotency-Key": str(uuid7())},
+    )
+    assert cancelled.is_success, cancelled.text
+    assert before[0] in await offered()
