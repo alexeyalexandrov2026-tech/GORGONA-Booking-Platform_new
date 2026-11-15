@@ -142,7 +142,7 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                     ("gba." + table,),
                 )
             }
-            columns = [
+            source_columns = [
                 row[0]
                 for row in before.execute(
                     "select attname from pg_catalog.pg_attribute "
@@ -150,8 +150,8 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                     "and not attisdropped and attgenerated='' order by attnum",
                     ("gba." + table,),
                 ).fetchall()
-                if row[0] in kept
             ]
+            columns = [column for column in source_columns if column in kept]
             names = sql.SQL(",").join(sql.Identifier(column) for column in columns)
             # Historical upgrade fixtures exercise their own earlier schemas.
             # I1 rows cannot be represented there; omit staff and their dependent
@@ -243,6 +243,16 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                     predicate = sql.SQL(" where {}").format(rental)
                 else:
                     predicate = sql.SQL("{} and {}").format(predicate, rental)
+            # Migration 0115 excludes the original lease terms. A shortened term can now
+            # coexist with a newer lease that occupies days the original term included.
+            if (
+                target_version[0] == 115
+                and table == "property_leases"
+                and ("occupied_through" in source_columns)
+            ):
+                predicate = sql.SQL(
+                    " where t.occupied_through is null or t.occupied_through >= t.ends_on"
+                )
             query = sql.SQL("select {} from {} t{}").format(
                 names, sql.Identifier("gba", table), predicate
             )

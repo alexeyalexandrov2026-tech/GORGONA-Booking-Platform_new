@@ -421,7 +421,8 @@ end;
 
 _PROPERTY_LEASE_EXCLUSION = (
     "EXCLUDE USING gist (tenant_id WITH =, object_id WITH =, "
-    "daterange(starts_on, ends_on, '[]'::text) WITH &&)"
+    "daterange(starts_on, GREATEST(starts_on, (COALESCE(occupied_through, ends_on) + 1)), "
+    "'[)'::text) WITH &&)"
 )
 _PROPERTY_LEASE_VALIDATION_SOURCE = """
 begin
@@ -472,10 +473,147 @@ begin
 end;
 """
 
+_PROPERTY_LEASE_TERM_GUARD_SOURCE = """
+begin
+    if tg_op = 'INSERT' then
+        if new.term_revision <> 1 or new.occupied_through is not null then
+            raise exception using errcode = 'check_violation',
+                message = 'a lease starts with the registered term';
+        end if;
+        return new;
+    end if;
+    if tg_op = 'DELETE' or
+       (new.tenant_id, new.id, new.object_id, new.agreement_id, new.agreement_revision,
+        new.starts_on, new.ends_on, new.recorded_by, new.recorded_at)
+        is distinct from
+       (old.tenant_id, old.id, old.object_id, old.agreement_id, old.agreement_revision,
+        old.starts_on, old.ends_on, old.recorded_by, old.recorded_at) then
+        raise exception using errcode = 'check_violation',
+            message = 'original lease registrations are kept unchanged';
+    end if;
+    if new.term_revision::bigint <> old.term_revision::bigint + 1 or not exists (
+        select 1 from gba.property_lease_term_events e
+        where e.tenant_id = new.tenant_id and e.lease_id = new.id
+          and e.revision = new.term_revision and e.occupied_through = new.occupied_through
+          and e.creation_xid = pg_current_xact_id()
+    ) then
+        raise exception using errcode = 'check_violation',
+            message = 'the current term follows its next recorded event';
+    end if;
+    return new;
+end;
+"""
+_PROPERTY_LEASE_TERM_VALIDATION_SOURCE = """
+declare
+    lease gba.property_leases%rowtype;
+    previous gba.property_lease_term_events%rowtype;
+    agreement_version gba.agreement_versions%rowtype;
+begin
+    if pg_catalog.current_setting('transaction_isolation') <> 'read committed' then
+        raise exception using errcode = 'serialization_failure',
+            message = 'lease term changes require a read committed transaction';
+    end if;
+    perform pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtextextended('gba:counterparties:' || new.tenant_id::text, 0));
+
+    -- Like the optional-module gate, order new commitments against configuration publication.
+    if new.action = 'extend' then
+        perform pg_catalog.pg_advisory_xact_lock_shared(
+            pg_catalog.hashtextextended('gba:business-configuration:' || new.tenant_id::text, 0));
+        if not exists (
+            select 1 from gba.business_module_states s
+            where s.tenant_id = new.tenant_id and s.module_id = 'property' and s.enabled
+        ) then
+            raise exception using errcode = 'GBM01',
+                message = 'the property module is disabled for this business';
+        end if;
+    end if;
+
+    select l.* into lease from gba.property_leases l
+    where l.tenant_id = new.tenant_id and l.id = new.lease_id;
+    if not found then
+        raise exception using errcode = 'check_violation', constraint = 'property_lease_term_lease',
+            message = 'a lease term change requires an existing lease';
+    end if;
+    if new.revision::bigint <> lease.term_revision::bigint + 1 then
+        raise exception using errcode = 'check_violation',
+            constraint = 'property_lease_term_sequence',
+            message = 'a lease term change follows the current revision';
+    end if;
+    select e.* into previous from gba.property_lease_term_events e
+    where e.tenant_id = lease.tenant_id and e.lease_id = lease.id
+      and e.revision = lease.term_revision;
+    if previous.action = 'release' then
+        raise exception using errcode = 'check_violation',
+            constraint = 'property_lease_term_closed',
+            message = 'a released lease keeps its last recorded term';
+    end if;
+
+    select v.* into agreement_version from gba.agreement_versions v
+    where v.tenant_id = lease.tenant_id and v.agreement_id = lease.agreement_id
+      and v.revision = new.agreement_revision
+      and v.revision > coalesce(previous.agreement_revision, lease.agreement_revision)
+      and v.attestation = 'signed_outside_platform'
+      and not exists (
+          select 1 from gba.agreement_versions later
+          where later.tenant_id = v.tenant_id and later.agreement_id = v.agreement_id
+            and later.revision > v.revision and later.state <> 'draft'
+      );
+    if not found then
+        raise exception using errcode = 'check_violation',
+            constraint = 'property_lease_term_source',
+            message = 'a term change uses the current signed agreement version';
+    end if;
+
+    if new.action = 'extend' then
+        if agreement_version.state <> 'agreed'
+           or agreement_version.effective_from is distinct from lease.starts_on
+           or agreement_version.effective_until is null
+           or agreement_version.effective_until <= coalesce(lease.occupied_through, lease.ends_on)
+           or agreement_version.effective_until > date '9999-12-31'
+           or not exists (
+              select 1 from gba.document_versions d
+              where d.tenant_id = lease.tenant_id and d.document_id = agreement_version.document_id
+                and d.revision = agreement_version.document_revision
+                and d.category = 'agreement' and not d.archived and d.file_id is not null
+           ) then
+            raise exception using errcode = 'check_violation',
+                constraint = 'property_lease_term_source',
+                message = 'an extension requires a later signed end date and its stored file';
+        end if;
+        new.occupied_through := agreement_version.effective_until;
+    else
+        if agreement_version.state <> 'terminated'
+           or agreement_version.terminated_on not between
+               date '0001-01-01' and date '9999-12-31' then
+            raise exception using errcode = 'check_violation',
+                constraint = 'property_lease_term_source',
+                message = 'a release requires the recorded agreement termination';
+        end if;
+        new.occupied_through := least(
+            agreement_version.terminated_on, coalesce(lease.occupied_through, lease.ends_on));
+    end if;
+    new.agreement_id := lease.agreement_id;
+    return new;
+end;
+"""
+_PROPERTY_LEASE_TERM_APPLY_SOURCE = """
+begin
+    update gba.property_leases
+    set term_revision = new.revision, occupied_through = new.occupied_through
+    where tenant_id = new.tenant_id and id = new.lease_id;
+    if not found then
+        raise exception using errcode = 'check_violation',
+            message = 'a recorded event must advance its lease';
+    end if;
+    return null;
+end;
+"""
+
 _OCCUPANCY_TRIGGERS = (
     (
         "property_leases",
-        "property_leases_validate_input",
+        "property_leases_agreement_source",
         7,
         "gba.validate_property_lease()",
         "",
@@ -483,7 +621,31 @@ _OCCUPANCY_TRIGGERS = (
     ),
     (
         "property_leases",
-        "property_leases_immutable",
+        "property_leases_guard_term",
+        31,
+        "gba.guard_property_lease_term()",
+        "",
+        _PROPERTY_LEASE_TERM_GUARD_SOURCE,
+    ),
+    (
+        "property_lease_term_events",
+        "property_lease_term_events_validate",
+        7,
+        "gba.validate_property_lease_term_event()",
+        "",
+        _PROPERTY_LEASE_TERM_VALIDATION_SOURCE,
+    ),
+    (
+        "property_lease_term_events",
+        "property_lease_term_events_apply",
+        5,
+        "gba.apply_property_lease_term_event()",
+        "",
+        _PROPERTY_LEASE_TERM_APPLY_SOURCE,
+    ),
+    (
+        "property_lease_term_events",
+        "property_lease_term_events_immutable",
         27,
         "gba.reject_agreement_mutation()",
         "",
@@ -591,6 +753,7 @@ _PROPERTY_TABLES = (
     "property_parties",
     "property_showing_cancellations",
     "property_leases",
+    "property_lease_term_events",
 )
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
@@ -598,7 +761,7 @@ _MODULE_TRIGGERS = (
     *[
         (table, f"{table}_require_module", "property")
         for table in _PROPERTY_TABLES
-        if table != "property_showing_cancellations"
+        if table not in ("property_showing_cancellations", "property_lease_term_events")
     ],
     *[(table, f"{table}_require_module", "counterparties") for table in _COUNTERPARTY_TABLES],
     *[(table, f"{table}_require_module", "documents") for table in _DOCUMENT_TABLES],
@@ -675,6 +838,9 @@ _DEFINITIONS = [
     ],
     _company_only("property_parties", "property_parties_unrestricted_scope", "*"),
     _company_only("property_leases", "property_leases_unrestricted_scope", "*"),
+    _company_only(
+        "property_lease_term_events", "property_lease_term_events_unrestricted_scope", "*"
+    ),
     _definition(
         "property_showing_cancellations",
         f"({_NO_LOCATION} OR "
@@ -824,7 +990,7 @@ and exists (
     where t.oid is null or t.tgtype <> required.trigger_type or t.tgenabled <> 'O'
        or t.tgisinternal or t.tgqual is not null or t.tgconstraint <> 0 or t.tgnargs <> 0
        or f.oid is distinct from pg_catalog.to_regprocedure(required.function_name)
-       or f.prosecdef or f.proconfig is not null
+       or f.prosecdef or f.proconfig is not null or f.provolatile <> 'v'
        or f.prolang <> (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
        or regexp_replace(f.prosrc, '[[:space:]]', '', 'g') <> required.source
        -- An UPDATE OF list on other columns would skip the status changes.

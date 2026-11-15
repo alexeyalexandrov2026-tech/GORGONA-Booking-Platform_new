@@ -184,6 +184,7 @@ K_TABLES = {
     "property_showing_resources",
     "property_showings",
     "property_leases",
+    "property_lease_term_events",
     "property_showing_cancellations",
 }
 previous_stock_database = previous_admission_database
