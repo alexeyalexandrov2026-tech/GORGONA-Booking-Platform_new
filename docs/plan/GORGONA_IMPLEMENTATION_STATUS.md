@@ -1,5 +1,18 @@
 # GORGONA — реестр реализации
 
+### PROPERTY-01 authenticated showings (2026-11-15)
+
+Source `f267857c311a18f48ccf27149d13dde3969b85be` on `codex/package-property-01-showings`.
+Migration 0114 adds internal showing creation, scoped schedule reads and cancellation.
+The object and optional bookable host use shared PostgreSQL occupancy. Booking and showing
+conflict in both command orders, the resource lock has an observed waiter, and cancellation
+releases all allocations. Legacy upgrade tests and Workforce schema checks cover the new
+source. The module remains implemented pending package acceptance.
+
+VM focused 75 passed in 99.42 s. Ruff check, Ruff format and mypy passed across 546 Python files.
+[Evidence](evidence/2026-11-15-property-showings/CHECKS.json).
+The next slice is the internal listings and showings screen. Production remains unverified.
+
 ## Current checkpoint — 2026-11-15: PROPERTY-01 internal catalog backend
 
 Source `8f993e30cf020abdb67b4deaa9f2c64bebb33d7f` on `codex/package-property-01-catalog`. Migration 0112 adds the parcel, building and unit catalog with append-only revisions, private owner and manager history, and tenant and branch isolation. The same mutation key replays its original revision even after module disablement. Missing party fields retain their existing values and explicit null clears the named role. The schema guard fails closed on catalog tenant-policy drift. PostgreSQL verifies concurrent revision conflict and upgrade from a populated 0111. Legacy upgrade tests account for the three new empty catalog tables. The Visit Desk now offers a keyboard-focusable Materials used table, verified on desktop and mobile. The module is implemented and awaits enablement. The next work is the internal catalog screen with browser accessibility and mobile evidence.
