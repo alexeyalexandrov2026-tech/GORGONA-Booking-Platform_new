@@ -194,11 +194,15 @@ async def test_damaged_workforce_schema_refuses_reads_and_writes(
         change = (
             "alter table gba.resource_allocations drop constraint resource_allocations_source_kind"
         )
+        approved = owner_conn.execute(
+            "select pg_get_constraintdef(oid) from pg_constraint "
+            "where conrelid='gba.resource_allocations'::regclass "
+            "and conname='resource_allocations_source_kind'"
+        ).fetchone()
+        assert approved is not None
         restore = (
             "alter table gba.resource_allocations add constraint "
-            "resource_allocations_source_kind check (source_kind in "
-            "('booking','reservation','shift','trip_assignment','rental_assignment',"
-            "'rental_block'))"  # M2 (0075), R3a (0098), R3b (0099)
+            "resource_allocations_source_kind " + str(approved[0])
         )
     elif damage == "policy":
         change = (
