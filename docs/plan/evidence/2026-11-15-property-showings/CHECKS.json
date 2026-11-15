@@ -126,5 +126,108 @@
     "production",
     "showings UI",
     "public storefront"
-  ]
+  ],
+  "compatibility": {
+    "source": "239ede0550d0a4f46f442e521601db0683ef659f",
+    "passed": "56 passed in 101.90s, including 6 Property catalog Chromium cases"
+  },
+  "review_fix": {
+    "source": "40e4a4761556ebaafe0c7ae60717f47e692dd66a",
+    "finding": "Customer and staff availability omitted confirmed showing allocations.",
+    "baseline": "availability-red-3: 1 expected failure with the occupied slot offered",
+    "focused": "32 passed in 51.16s",
+    "commands": [
+      {
+        "name": "initdb",
+        "command": [
+          "/usr/lib/postgresql/18/bin/initdb",
+          "-D",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/data",
+          "-U",
+          "gba_superuser",
+          "--pwfile=/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/init-password.tmp",
+          "--auth=scram-sha-256",
+          "--locale=C",
+          "--encoding=UTF8",
+          "--data-checksums"
+        ],
+        "cwd": "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 1.05,
+        "log_sha256": "5715e9f6f0e02d4403bd119a6d0b4f56f48a91a11921c9e40f812d076b67600b"
+      },
+      {
+        "name": "pg-start",
+        "command": [
+          "/usr/lib/postgresql/18/bin/pg_ctl",
+          "start",
+          "-D",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/data",
+          "-l",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/server.log",
+          "-w",
+          "-o",
+          "-p 47941 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green"
+        ],
+        "cwd": "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 0.12,
+        "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+      },
+      {
+        "name": "focused",
+        "command": [
+          "/home/gorgona/gorgona/api/.venv/bin/python",
+          "-m",
+          "pytest",
+          "-p",
+          "no:cacheprovider",
+          "--basetemp",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/focused-tmp",
+          "-q",
+          "-ra",
+          "--tb=short",
+          "--capture=tee-sys",
+          "--junitxml=/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/focused.xml",
+          "tests/integration/test_property_showings.py",
+          "tests/integration/test_customer_api.py",
+          "tests/integration/test_resource_reservations.py"
+        ],
+        "cwd": "/home/gorgona/gorgona/api",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 53.0,
+        "log_sha256": "148f30f91e1e25464d87bae3b545cdd5427ab8662b7f245129ea36e8789e68cb"
+      },
+      {
+        "name": "pg-stop",
+        "command": [
+          "/usr/lib/postgresql/18/bin/pg_ctl",
+          "stop",
+          "-D",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/data",
+          "-m",
+          "fast",
+          "-w"
+        ],
+        "cwd": "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green",
+        "exit_code": 0,
+        "required": false,
+        "seconds": 0.11,
+        "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+      }
+    ],
+    "source_sha256": {
+      "api/src/gorgona_booking/customer/queries.py": "536d3a6758cbc03f7a9bbdbefcf6bdaacd5310507936e4e398ed32b52b308e8d",
+      "api/tests/integration/test_property_showings.py": "61d7477a94c14290830a9fa2f0b89ab09b8af0b8073c234193caf6c76876db71"
+    },
+    "static": {
+      "ruff_check": 0,
+      "ruff_format_check": 0,
+      "mypy": 0,
+      "python_files": 546
+    }
+  }
 }

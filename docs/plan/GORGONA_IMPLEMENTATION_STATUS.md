@@ -10,6 +10,7 @@ releases all allocations. Legacy upgrade tests and Workforce schema checks cover
 source. The module remains implemented pending package acceptance.
 
 VM focused 75 passed in 99.42 s. Ruff check, Ruff format and mypy passed across 546 Python files.
+Independent review follow-up `40e4a4761556ebaafe0c7ae60717f47e692dd66a` includes showings in staff and customer availability. The slot disappears after creation and returns after cancellation. VM follow-up 32 passed in 51.16s. Compatibility 56 passed including the existing Property catalog browser checks.
 [Evidence](evidence/2026-11-15-property-showings/CHECKS.json).
 The next slice is the internal listings and showings screen. Production remains unverified.
 
