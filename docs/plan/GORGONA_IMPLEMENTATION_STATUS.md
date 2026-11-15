@@ -1,5 +1,20 @@
 # GORGONA — реестр реализации
 
+### PROPERTY-01 internal listings and showings screen (2026-11-15)
+
+Source `1d325c0ecdcd7f40aa65adbdd37fe367b02d1d97` on `codex/package-property-01-operations-screen`. The existing Property
+detail now shows the listing and schedule. Company-wide owners/managers may edit the listing,
+schedule a showing, assign an eligible host and cancel. Branch-scoped users read the existing
+server projection. The UI uses exact minor units, branch wall time, strict API contracts and
+idempotent command retries. No database migration in this slice.
+
+VM focused 18 passed in 92.47s (0:01:32). Chromium 8 passed over desktop and mobile, with axe and database
+read-back. Static checks and web build passed. The Workforce schema-damage fixture captures
+the exact original constraint before testing fail-closed behavior. Its prior restore failed on
+existing showing allocations. The follow-up showing and Workforce suite reports 42 passed in 56.38s.
+[Evidence](evidence/2026-11-15-property-operations-screen/CHECKS.json).
+Public storefront, inquiry and application decisions remain tracked in the PROPERTY-01 plan.
+
 ### PROPERTY-01 authenticated showings (2026-11-15)
 
 Source `f267857c311a18f48ccf27149d13dde3969b85be` on `codex/package-property-01-showings`.
