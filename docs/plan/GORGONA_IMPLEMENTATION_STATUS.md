@@ -1,5 +1,21 @@
 # GORGONA — реестр реализации
 
+### PROPERTY-01 signed unit lease registration (2026-11-15)
+
+Source `01077e96c36d58b0d652edd95b6bdeca5f581149` on `codex/package-property-01-leases`. Migration 0115 registers a property unit with the exact
+current agreed revision and its stored signed document from ADR-0020. It keeps inclusive
+civil dates and excludes overlapping possession of the same unit. Routes, SQL policies and
+the module gate restrict registrations to the company-wide workflow. The receipt replays the
+same record. The module continues to await package acceptance.
+
+VM PostgreSQL 18.6 focused 148 passed in 224.90s (0:03:44). API unit 877 passed in 48.43s.
+Ruff check, Ruff format and mypy passed. The first signed lease test failed with 404 before
+implementation. Independent review found a stale transaction snapshot risk. The final
+migration requires READ COMMITTED and the disposable database check verifies the refusal
+at repeatable read. Migration 0115 was applied to a populated 0114 with existing agreements,
+document files and property rows preserved. [Evidence](evidence/2026-11-15-property-leases/CHECKS.json).
+The next slice handles signed extensions and early release. [Successor handoff](NEXT_AGENT_PROPERTY01_LEASES_2026-11-15.md).
+
 ### PROPERTY-01 internal listings and showings screen (2026-11-15)
 
 Source `1d325c0ecdcd7f40aa65adbdd37fe367b02d1d97` on `codex/package-property-01-operations-screen`. The existing Property
