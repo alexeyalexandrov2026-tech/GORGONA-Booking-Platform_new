@@ -231,6 +231,44 @@ begin
                 message = 'a rental block hold is released by its release';
         end if;
     end if;
+    if exists (
+        select 1 from gba.resources r where r.tenant_id = new.tenant_id
+          and r.id = new.resource_id and r.kind = 'property_object'
+          and new.source_kind <> 'property_showing'
+    ) then
+        raise exception using errcode = '23514',
+            message = 'a property object resource is reserved only for showings';
+    end if;
+    if new.source_kind = 'property_showing' then
+        if tg_op = 'INSERT' and not exists (
+            select 1 from gba.property_showings s join gba.resources r on r.tenant_id = s.tenant_id
+             where s.tenant_id = new.tenant_id and s.id = new.source_id
+               and r.id = new.resource_id and r.location_id = s.location_id and r.is_active
+               and ((s.object_resource_id = r.id and r.kind = 'property_object')
+                    or (s.host_resource_id = r.id and r.kind = 'artist'))
+               and s.creation_xid = pg_current_xact_id()
+               and new.during = tstzrange(s.starts_at, s.ends_at, '[)') and new.state = 'confirmed'
+        ) then
+            raise exception using errcode = '23514', message = 'an allocation follows its showing';
+        end if;
+        if tg_op = 'UPDATE' and new.state = 'released' and not exists (
+            select 1 from gba.property_showing_cancellations c
+             where c.tenant_id = new.tenant_id and c.showing_id = new.source_id
+               and c.creation_xid = pg_current_xact_id()
+        ) then
+            raise exception using errcode = '23514',
+                message = 'a showing release requires cancellation';
+        end if;
+        if tg_op = 'INSERT' and exists (
+            select 1 from gba.booking_allocations a
+             where a.tenant_id = new.tenant_id and a.resource_id = new.resource_id
+               and a.booking_status in ('HOLD', 'CONFIRMED') and a.during && new.during
+        ) then
+            raise exception using errcode = 'exclusion_violation',
+                constraint = 'resource_allocations_no_overlap',
+                message = 'the resource is booked in this interval';
+        end if;
+    end if;
     return new;
 end;
 """
@@ -325,6 +363,62 @@ _OCCUPANCY_CONSTRAINT = (
 # occupancy triggers: row guards (BEFORE INSERT OR UPDATE OR DELETE, 31), the booking
 # mirror (AFTER INSERT OR UPDATE OF booking_status, 21), the reservation release
 # (AFTER UPDATE OF status, 17) and the booking-module gate on reservations (7).
+GUARD_PROPERTY_SHOWING_RESOURCE_SOURCE = """
+begin
+    if not exists (
+        select 1 from gba.resources r
+        where r.tenant_id = new.tenant_id and r.id = new.resource_id
+          and r.location_id = new.location_id and r.kind = 'property_object' and r.is_active
+    ) then
+        raise exception using errcode = '23514',
+            message = 'a showing object has its branch resource';
+    end if;
+    return new;
+end;
+"""
+
+KEEP_PROPERTY_RESOURCE_IDENTITY_SOURCE = """
+begin
+    if (old.kind = 'property_object' or new.kind = 'property_object') and
+       (old.tenant_id, old.id, old.location_id, old.kind, old.is_active) is distinct from
+       (new.tenant_id, new.id, new.location_id, new.kind, new.is_active) then
+        raise exception using errcode = '23514', message = 'a property resource keeps its identity';
+    end if;
+    return new;
+end;
+"""
+
+RELEASE_PROPERTY_SHOWING_SOURCE = """
+declare
+    released integer;
+    expected integer;
+begin
+    select case when s.host_resource_id is null then 1 else 2 end into strict expected
+    from gba.property_showings s where s.tenant_id = new.tenant_id and s.id = new.showing_id;
+    update gba.resource_allocations set state = 'released'
+    where tenant_id = new.tenant_id and source_kind = 'property_showing'
+      and source_id = new.showing_id and state = 'confirmed';
+    get diagnostics released = row_count;
+    if released <> expected then
+        raise exception using errcode = '23514', message = 'cancellation releases all allocations';
+    end if;
+    return null;
+end;
+"""
+
+CHECK_PROPERTY_SHOWING_ALLOCATED_SOURCE = """
+begin
+    if (
+        select count(*) from gba.resource_allocations a
+        where a.tenant_id = new.tenant_id and a.source_kind = 'property_showing'
+          and a.source_id = new.id
+    ) <> (case when new.host_resource_id is null then 1 else 2 end) then
+        raise exception using errcode = '23514', message = 'a showing requires all its allocations';
+    end if;
+    return null;
+end;
+"""
+
 _OCCUPANCY_TRIGGERS = (
     (
         "resource_allocations",
@@ -366,6 +460,30 @@ _OCCUPANCY_TRIGGERS = (
         "",
         _BOOKING_MODULE_SOURCE,
     ),
+    (
+        "property_showing_resources",
+        "property_showing_resources_guard",
+        7,
+        "gba.guard_property_showing_resource()",
+        "",
+        GUARD_PROPERTY_SHOWING_RESOURCE_SOURCE,
+    ),
+    (
+        "resources",
+        "resources_keep_property_identity",
+        19,
+        "gba.keep_property_resource_identity()",
+        "",
+        KEEP_PROPERTY_RESOURCE_IDENTITY_SOURCE,
+    ),
+    (
+        "property_showing_cancellations",
+        "property_showing_cancellations_release",
+        5,
+        "gba.release_property_showing()",
+        "",
+        RELEASE_PROPERTY_SHOWING_SOURCE,
+    ),
 )
 _COUNTERPARTY_TABLES = (
     "counterparties",
@@ -393,12 +511,25 @@ _LEDGER_TABLES = (
 )
 _PROPERTY_CATALOG_TABLES = ("property_objects", "property_revisions")
 _PROPERTY_LISTING_TABLES = ("property_listings", "property_listing_revisions")
-_PROPERTY_BRANCH_TABLES = (*_PROPERTY_CATALOG_TABLES, *_PROPERTY_LISTING_TABLES)
-_PROPERTY_TABLES = (*_PROPERTY_BRANCH_TABLES, "property_parties")
+_PROPERTY_SHOWING_TABLES = ("property_showing_resources", "property_showings")
+_PROPERTY_BRANCH_TABLES = (
+    *_PROPERTY_CATALOG_TABLES,
+    *_PROPERTY_LISTING_TABLES,
+    *_PROPERTY_SHOWING_TABLES,
+)
+_PROPERTY_TABLES = (
+    *_PROPERTY_BRANCH_TABLES,
+    "property_parties",
+    "property_showing_cancellations",
+)
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
 _MODULE_TRIGGERS = (
-    *[(table, f"{table}_require_module", "property") for table in _PROPERTY_TABLES],
+    *[
+        (table, f"{table}_require_module", "property")
+        for table in _PROPERTY_TABLES
+        if table != "property_showing_cancellations"
+    ],
     *[(table, f"{table}_require_module", "counterparties") for table in _COUNTERPARTY_TABLES],
     *[(table, f"{table}_require_module", "documents") for table in _DOCUMENT_TABLES],
     *[(table, f"{table}_require_module", "finance") for table in _LEDGER_TABLES],
@@ -473,6 +604,14 @@ _DEFINITIONS = [
         for table in _PROPERTY_BRANCH_TABLES
     ],
     _company_only("property_parties", "property_parties_unrestricted_scope", "*"),
+    _definition(
+        "property_showing_cancellations",
+        f"({_NO_LOCATION} OR "
+        f"{_parent('property_showing_cancellations', 'property_showings', 's', 'showing_id')})",
+    ),
+    _company_only(
+        "property_showing_cancellations", "property_showing_cancellations_unrestricted_insert", "a"
+    ),
     *[
         (
             table,
@@ -621,7 +760,7 @@ and exists (
 )
 """.replace(
     "__OCCUPANCY_TRIGGERS__",
-    ", ".join("(%s, %s, %s::int, %s, %s, %s::text)" for _ in range(5)),
+    ", ".join("(%s, %s, %s::int, %s, %s, %s::text)" for _ in _OCCUPANCY_TRIGGERS),
 )
 
 
@@ -637,6 +776,19 @@ and exists (
       and t.tgconstraint <> 0 and t.tgdeferrable and t.tginitdeferred
       and t.tgqual is null and t.tgnargs = 0
       and f.oid = pg_catalog.to_regprocedure('gba.check_reservation_allocated()')
+      and not f.prosecdef and f.proconfig is null
+      and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
+      and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
+)
+and exists (
+    select 1 from pg_catalog.pg_trigger t
+    join pg_catalog.pg_proc f on f.oid = t.tgfoid
+    where t.tgrelid = pg_catalog.to_regclass('gba.property_showings')
+      and t.tgname = 'property_showings_allocated'
+      and t.tgtype = 5 and t.tgenabled = 'O' and not t.tgisinternal
+      and t.tgconstraint <> 0 and t.tgdeferrable and t.tginitdeferred
+      and t.tgqual is null and t.tgnargs = 0
+      and f.oid = pg_catalog.to_regprocedure('gba.check_property_showing_allocated()')
       and not f.prosecdef and f.proconfig is null
       and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
       and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
@@ -658,6 +810,7 @@ async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
     for table, trigger, kind, function, columns, source in _OCCUPANCY_TRIGGERS:
         parameters += [table, trigger, kind, function, columns, _compact(source)]
     parameters.append(_compact(_RESERVATION_ALLOCATED_SOURCE))
+    parameters.append(_compact(CHECK_PROPERTY_SHOWING_ALLOCATED_SOURCE))
     parameters.extend(LEDGER_PARAMETERS)
     parameters.extend(FINANCIAL_PARAMETERS)
     row = await (

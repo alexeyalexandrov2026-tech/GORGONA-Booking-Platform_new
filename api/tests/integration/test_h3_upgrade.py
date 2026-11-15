@@ -252,6 +252,15 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                 query = sql.SQL("select {} from ({}) t where t.tenant_id <> all ({})").format(
                     names, query, sql.SQL("{}::uuid[]").format(sql.Literal(provider_companies))
                 )
+            # PROPERTY-01 showings and their resources first exist in migration 0114.
+            if target_version[0] < 114 and table == "resources":
+                query = sql.SQL("select {} from ({}) t where t.kind <> 'property_object'").format(
+                    names, query
+                )
+            if target_version[0] < 114 and table == "resource_allocations":
+                query = sql.SQL(
+                    "select {} from ({}) t where t.source_kind <> 'property_showing'"
+                ).format(names, query)
             # M2: transport lanes and their trip holds cannot be represented before migration
             # 0075; nothing else refers to them there.
             if target_version[0] < 75 and table == "resources":

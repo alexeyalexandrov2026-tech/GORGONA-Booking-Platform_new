@@ -28,13 +28,12 @@ _FUNCTIONS = dict(
         re.DOTALL,
     )
 )
-# M2 (0075), R3a (0098) and R3b (0099) replace the shared occupancy guard again (trip and
-# rental assignments, rental blocks); approve the latest text.
+# Property showings (0114) extend the shared occupancy guard; approve the latest text.
 _FUNCTIONS.update(
     (name, body)
     for name, body in re.findall(
         _FUNCTION_PATTERN,
-        (_MIGRATIONS / "0099_rental_blocks.sql").read_text(encoding="utf-8"),
+        (_MIGRATIONS / "0114_property_showings.sql").read_text(encoding="utf-8"),
         re.DOTALL,
     )
     if name == "guard_resource_allocation"
@@ -355,14 +354,16 @@ _SHARED_CHECKS = {
         "resources",
         "resources_kind_valid",
     ): "((kind = ANY (ARRAY['artist'::text, 'chair'::text, 'room'::text, 'staff'::text, "
-    "'equipment'::text, 'driver'::text, 'truck'::text, 'trailer'::text, 'rental_unit'::text])))",
+    "'equipment'::text, 'driver'::text, 'truck'::text, 'trailer'::text, "
+    "'rental_unit'::text, 'property_object'::text])))",
     # L1 (0066): equipment is a resource kind; M2 (0075): drivers, trucks and trailers too;
     # R3a (0098): rental units.
     (
         "resource_allocations",
         "resource_allocations_source_kind",
     ): "((source_kind = ANY (ARRAY['booking'::text, 'reservation'::text, 'shift'::text, "
-    "'trip_assignment'::text, 'rental_assignment'::text, 'rental_block'::text])))",
+    "'trip_assignment'::text, 'rental_assignment'::text, 'rental_block'::text, "
+    "'property_showing'::text])))",
     # M2 (0075), R3a (0098), R3b (0099)
 }
 
