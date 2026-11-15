@@ -83,6 +83,11 @@ test("a visit is completed and its materials are written off", async ({
   await expect(uses.getByRole("row", { name: /FAKE dye/ })).toContainText(
     "3.0",
   );
+  const materialRegion = desk.getByRole("region", {
+    name: "Materials used table",
+  });
+  await materialRegion.focus();
+  await expect(materialRegion).toBeFocused();
   await accessible(page, testInfo, "completed");
 
   // With inventory off the desk shows no write-off form, only a plain line.
