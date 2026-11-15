@@ -1,0 +1,26 @@
+/* PROPERTY-01 (catalog screen); the shared management styles do the rest. */
+.property-screen section {
+  margin-top: 28px;
+}
+.property-screen form {
+  margin-top: 12px;
+}
+.property-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px 24px;
+  margin: 12px 0 0;
+}
+.property-facts dt {
+  font-weight: 600;
+}
+.property-facts dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+.property-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}

@@ -1,0 +1,154 @@
+import { z } from "zod";
+
+// PROPERTY-01 (catalog screen): strict response contracts of the internal catalog routes, the
+// command body the screen sends and who sees which part of the screen. Times arrive in UTC.
+const id = z.uuid();
+const instant = z.iso.datetime({ offset: true });
+const revision = z.number().int().positive();
+
+export const PROPERTY_KINDS = ["parcel", "building", "unit"] as const;
+export type PropertyKind = (typeof PROPERTY_KINDS)[number];
+
+export const propertyViewSchema = z.strictObject({
+  schema_version: z.literal(1),
+  object_id: id,
+  location_id: id,
+  kind: z.enum(PROPERTY_KINDS),
+  name: z.string().min(1).max(200),
+  parent_id: id.nullable(),
+  revision,
+  recorded_at: instant,
+});
+export const propertyRevisionSchema = propertyViewSchema.extend({
+  recorded_by: id,
+  owner_id: id.nullable(),
+  manager_id: id.nullable(),
+});
+export const propertyListSchema = z.strictObject({
+  schema_version: z.literal(1),
+  items: z.array(propertyViewSchema),
+  next_cursor: id.nullable(),
+});
+export const propertyHistorySchema = z.strictObject({
+  schema_version: z.literal(1),
+  items: z.array(propertyRevisionSchema),
+  next_cursor: revision.nullable(),
+});
+
+export type PropertyView = z.infer<typeof propertyViewSchema>;
+export type PropertyRevision = z.infer<typeof propertyRevisionSchema>;
+export type PropertyList = z.infer<typeof propertyListSchema>;
+export type PropertyHistory = z.infer<typeof propertyHistorySchema>;
+
+const routes: [RegExp, string[], z.ZodType][] = [
+  [/^\/property\/objects$/, ["GET"], propertyListSchema],
+  [/^\/property\/objects\/[0-9a-f-]{36}$/i, ["GET"], propertyViewSchema],
+  [/^\/property\/objects\/[0-9a-f-]{36}$/i, ["PUT"], propertyRevisionSchema],
+  [
+    /^\/property\/objects\/[0-9a-f-]{36}\/history$/i,
+    ["GET"],
+    propertyHistorySchema,
+  ],
+];
+
+export function propertyResponseSchema(
+  suffix: string,
+  method: string,
+): z.ZodType | null {
+  const path = suffix.split("?")[0] ?? "";
+  for (const [pattern, methods, schema] of routes)
+    if (pattern.test(path) && methods.includes(method)) return schema;
+  return null;
+}
+
+type Member = {
+  role: string;
+  status: string;
+  location_id?: string | null;
+  delegation?: unknown;
+};
+
+/** Active owners and managers read the catalog of the branches they serve; delegates do not.
+ * The server still decides every read; this only avoids a screen it refuses. */
+export function canReadProperty(member: Member | undefined): boolean {
+  return (
+    member?.status === "active" &&
+    !member.delegation &&
+    ["owner", "manager"].includes(member.role)
+  );
+}
+
+/** Writes and the private owner and manager history belong to company-wide owners and
+ * managers (`property.manage`); a branch-scoped member sees catalog fields only. */
+export function canManageProperty(member: Member | undefined): boolean {
+  return canReadProperty(member) && member?.location_id == null;
+}
+
+/** A party select keeps the current value, clears it or names a counterparty. */
+export const KEEP_PARTY = "";
+export const NO_PARTY = "none";
+
+/** Omitted keeps the stored party; null clears only that role (the server's contract). */
+export function partyField(
+  choice: string,
+  isNew: boolean,
+): string | null | undefined {
+  if (choice === KEEP_PARTY) return undefined;
+  if (choice === NO_PARTY) return isNew ? undefined : null;
+  return choice;
+}
+
+export type PropertyBody = {
+  schema_version: 1;
+  expected_revision: number;
+  location_id: string;
+  kind: PropertyKind;
+  name: string;
+  parent_id: string | null;
+  owner_id?: string | null;
+  manager_id?: string | null;
+};
+
+export function propertyBody(input: {
+  expectedRevision: number;
+  locationId: string;
+  kind: PropertyKind;
+  name: string;
+  parentId: string;
+  owner: string;
+  manager: string;
+}): PropertyBody {
+  const isNew = input.expectedRevision === 0;
+  const body: PropertyBody = {
+    schema_version: 1,
+    expected_revision: input.expectedRevision,
+    location_id: input.locationId,
+    kind: input.kind,
+    name: input.name.trim(),
+    parent_id: input.kind === "parcel" ? null : input.parentId || null,
+  };
+  const owner = partyField(input.owner, isNew);
+  if (owner !== undefined) body.owner_id = owner;
+  const manager = partyField(input.manager, isNew);
+  if (manager !== undefined) body.manager_id = manager;
+  return body;
+}
+
+/** Who can be the parent: a building names a parcel, a unit names a building, both in the
+ * same branch; a parcel has none. An object is never its own parent. */
+export function parentOptions(
+  items: PropertyView[],
+  kind: PropertyKind,
+  locationId: string,
+  self?: string,
+): PropertyView[] {
+  const wanted =
+    kind === "building" ? "parcel" : kind === "unit" ? "building" : null;
+  if (!wanted || !locationId) return [];
+  return items.filter(
+    (item) =>
+      item.kind === wanted &&
+      item.location_id === locationId &&
+      item.object_id !== self,
+  );
+}

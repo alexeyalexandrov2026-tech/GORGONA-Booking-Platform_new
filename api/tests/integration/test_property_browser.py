@@ -1,0 +1,200 @@
+"""PROPERTY-01: the internal catalog screen in a real browser (desktop and mobile; FAKE data only).
+
+docs/plan/PACKAGE_PROPERTY01_SCREEN_DESIGN_2026-11-15.md. Actual OIDC/PKCE, Chromium and
+PostgreSQL. Only a fixture stands in for the package acceptance (the registry stays implemented).
+The business, its modules and parties are seeded through the routes; the browser builds the
+catalog, keeps and clears parties and meets a stale revision as a company-wide owner, then reads as
+a branch manager and as the manager of an empty branch. The database is read back.
+"""
+
+import os
+import shutil
+import subprocess
+from pathlib import Path
+from typing import Any, cast
+from uuid import uuid7
+
+import httpx
+import psycopg
+import pytest
+from fastapi import HTTPException
+
+from gorgona_booking.business import modules
+from gorgona_booking.business.readiness_registry import Readiness
+from gorgona_booking.db.provisioning import add_membership, owner_tenant_transaction
+from tests.integration.booking_support import BookingWorld
+from tests.integration.conftest import ProvisionedDatabase
+from tests.integration.live_server import free_port, live_server
+from tests.integration.seed import FakeUser, seed_other_branch, seed_user
+from tests.integration.test_counterparties import card
+from tests.integration.test_i4_browser import _SignedIn
+from tests.integration.test_management_browser import _browser_env, _management_app, _provider
+from tests.support.fake_idp import FakeIdp
+
+PROJECTS = ("desktop", "mobile")
+ENABLED = ["booking_resources", "counterparties", "property"]
+
+
+def test_property_catalog_real_browser(
+    world: BookingWorld,
+    owner_conn: psycopg.Connection,
+    test_database: ProvisionedDatabase,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if os.environ.get("GBA_REQUIRE_BROWSER") != "1":
+        pytest.skip("BLOCKED: property browser requires GBA_REQUIRE_BROWSER=1")
+    web = Path(__file__).resolve().parents[3] / "web"
+    assert (web / "out/property/index.html").exists(), "build web first"
+    npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
+    assert npm is not None
+    monkeypatch.setitem(
+        modules.MODULES_BY_ID,
+        "property",
+        modules.MODULES_BY_ID["property"].model_copy(
+            update={"enableable": True, "readiness": Readiness.TECHNICALLY_VERIFIED}
+        ),
+    )
+    tenant, home = world.a.tenant_id, world.a.location_id
+    hidden_branch, _ = seed_other_branch(owner_conn, world.a)
+    empty_branch, _ = seed_other_branch(owner_conn, world.a)
+    assert len({home, hidden_branch, empty_branch}) == 3
+    with owner_tenant_transaction(owner_conn, tenant):
+        found = owner_conn.execute("select name from gba.locations where id = %s", (home,))
+        branch_name = cast(tuple[str], found.fetchone())[0]
+    app_port, idp_port = free_port(), free_port()
+    origin, issuer = f"http://127.0.0.1:{app_port}", f"http://127.0.0.1:{idp_port}"
+    people = {
+        "owner": seed_user(owner_conn, "property-owner", issuer=issuer),
+        "branch": seed_user(owner_conn, "property-branch", issuer=issuer),
+        "empty": seed_user(owner_conn, "property-empty", issuer=issuer),
+    }
+    for name, role, location in (
+        ("owner", "owner", None),
+        ("branch", "manager", home),
+        ("empty", "manager", empty_branch),
+    ):
+        add_membership(
+            owner_conn,
+            tenant_id=tenant,
+            user_id=people[name].user_id,
+            role=role,
+            location_id=location,
+        )
+    idp = FakeIdp()
+    signed_in = _SignedIn(people)
+    provider, verifier = _provider(issuer, origin, idp, cast(FakeUser, signed_in))
+
+    @provider.post("/fixture/user/{name}")
+    async def switch(name: str) -> dict[str, str]:
+        if name not in people:
+            raise HTTPException(404, "Unknown FAKE person")
+        signed_in.name = name
+        return {"user": name}
+
+    app = _management_app(test_database, verifier, issuer, web)
+    env = {**_browser_env(origin, issuer), "GBA_PROPERTY_BRANCH": branch_name}
+    owner = people["owner"]
+    headers = idp.bearer(owner.subject, email=owner.email, iss=issuer)
+    business = f"/v1/businesses/{tenant}"
+    party: dict[str, str] = {}
+    with live_server(provider, idp_port), live_server(app, app_port):
+
+        def call(method: str, path: str, body: object = None) -> dict[str, Any]:
+            result = httpx.request(
+                method,
+                f"{origin}{path}",
+                json=body,
+                headers={**headers, "Idempotency-Key": str(uuid7())},
+                timeout=15,
+            )
+            assert result.status_code == 200, result.text
+            answer: dict[str, Any] = result.json()
+            return answer
+
+        call("PUT", f"{business}/profile", {"expected_revision": 0, "industry_ids": [22]})
+        version = call(
+            "PUT",
+            f"{business}/configuration/draft",
+            {"expected_version": 0, "profile_revision": 1, "module_ids": ENABLED},
+        )["version"]
+        for step, revision in (("validate", 1), ("publish", 2)):
+            call(
+                "POST",
+                f"{business}/configuration/versions/{version}/{step}",
+                {"expected_revision": revision},
+            )
+        for role in ("Owner", "Manager"):
+            party[role] = str(uuid7())
+            call(
+                "PUT",
+                f"{business}/counterparties/{party[role]}",
+                card(display_name=f"FAKE {role}", roles=["partner"]),
+            )
+        call(
+            "PUT",
+            f"{business}/property/objects/{uuid7()}",
+            {
+                "schema_version": 1,
+                "expected_revision": 0,
+                "location_id": str(hidden_branch),
+                "kind": "parcel",
+                "name": "FAKE hidden parcel",
+            },
+        )
+        result = subprocess.run(  # noqa: S603 - fixed repository script, located npm
+            [npm, "run", "test:management:property"],
+            cwd=web,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=1200,
+            check=False,
+        )
+        snapshots = "".join(
+            f"\n--- {path.parent.name}\n" + path.read_text(encoding="utf-8")
+            for path in sorted((web / "test-results").glob("*/error-context.md"))
+        )
+        assert result.returncode == 0, result.stdout + result.stderr + snapshots
+        print(result.stdout)  # noqa: T201 - actual browser evidence in pytest -s
+
+    owner_id, manager_id = party["Owner"], party["Manager"]
+
+    def latest(name: str) -> tuple[Any, ...]:
+        row = owner_conn.execute(
+            "select v.object_id, v.kind, v.location_id, v.parent_id from "
+            "gba.property_revisions v where v.name = %s and v.revision = "
+            "(select max(revision) from gba.property_revisions r "
+            "where r.object_id = v.object_id)",
+            (name,),
+        ).fetchone()
+        assert row is not None, name
+        return tuple(row)
+
+    with owner_tenant_transaction(owner_conn, tenant):
+        for project in PROJECTS:
+            parcel = latest(f"FAKE parcel {project}")
+            building = latest(f"FAKE building {project}")
+            unit = latest(f"FAKE unit {project}")
+            assert parcel[1:] == ("parcel", home, None)
+            assert building[1:] == ("building", home, parcel[0])
+            assert unit[1:] == ("unit", home, building[0])
+            revisions = owner_conn.execute(
+                "select v.revision, v.name, p.owner_id::text, p.manager_id::text, p.recorded_by "
+                "from gba.property_revisions v join gba.property_parties p "
+                "using (tenant_id, object_id, revision) where v.object_id = %s "
+                "order by v.revision",
+                (unit[0],),
+            ).fetchall()
+            name = f"FAKE unit {project}"
+            assert [tuple(r) for r in revisions] == [
+                (1, name, owner_id, manager_id, owner.user_id),
+                (2, f"{name} renamed", owner_id, manager_id, owner.user_id),
+                (3, f"{name} renamed", owner_id, None, owner.user_id),
+                (4, f"{name} final", owner_id, None, owner.user_id),
+                (5, name, owner_id, None, owner.user_id),
+            ], project
+            stale = owner_conn.execute(
+                "select count(*) from gba.property_revisions where name = %s",
+                (f"{name} stale",),
+            ).fetchone()
+            assert stale == (0,), project

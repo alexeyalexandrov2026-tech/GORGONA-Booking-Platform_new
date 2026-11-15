@@ -3,6 +3,7 @@ import { ledgerResponseSchema } from "./ledger-contracts";
 import { inventoryResponseSchema } from "./inventory-contracts";
 import { transportResponseSchema } from "./transport-contracts";
 import { constructionResponseSchema } from "./construction-contracts";
+import { propertyResponseSchema } from "./property-contracts";
 import { rentalResponseSchema } from "./rental-contracts";
 import {
   creditSchema,
@@ -399,6 +400,8 @@ export function managementResponseSchema(
     if (construction) return construction;
     const rental = rentalResponseSchema(business[1] ?? "", method);
     if (rental) return rental;
+    const property = propertyResponseSchema(business[1] ?? "", method);
+    if (property) return property;
     if (business[1] === "" && method === "GET") return businessSchema;
     if (business[1] === "/industry-catalog" && method === "GET")
       return industryCatalogSchema;
