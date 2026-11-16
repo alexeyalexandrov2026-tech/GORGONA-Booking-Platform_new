@@ -18,6 +18,7 @@ export default function ConstructionPage() {
           <ConstructionScreen
             key={`${me.user_id}:${salonId}`}
             businessId={salonId}
+            companyWide={member.location_id === null}
           />
         ) : (
           <div className="mgmt-empty">

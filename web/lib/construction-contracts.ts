@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { invoiceSchema } from "./financial-contracts";
+import { minorUnits } from "./ledger-contracts";
 
 // O7a (package O): strict response contracts of the O1-O2 construction routes (projects, estimate
 // versions, the proposal, the contract and change orders). Times arrive in UTC; money in minor units
@@ -380,6 +382,170 @@ export const costLinkListSchema = z
 export type CostLink = z.infer<typeof costLinkSchema>;
 export type CostLinkList = z.infer<typeof costLinkListSchema>;
 
+export const retainageRateSchema = z
+  .strictObject({
+    schema_version: z.literal(1),
+    project_id: id,
+    revision: version,
+    rate_bp: z.int().min(0).max(5000),
+    recorded_at: instant.nullable(),
+  })
+  .refine((v) =>
+    v.revision === 0
+      ? v.rate_bp === 0 && v.recorded_at === null
+      : v.recorded_at !== null,
+  );
+
+const billingMoney = {
+  billed_to_date_minor: total,
+  this_period_minor: total.min(1),
+  retained_minor: total,
+  due_minor: total.min(1),
+};
+const billingItem = {
+  ...billingMoney,
+  number: z.int().positive(),
+  period_end: z.iso.date(),
+};
+const documentState = z.enum(["draft", "issued"]);
+const billingSummary = z
+  .strictObject({
+    ...billingItem,
+    invoice_state: documentState,
+    retainage_state: documentState.nullable(),
+  })
+  .refine(
+    (v) =>
+      v.this_period_minor - v.retained_minor === v.due_minor &&
+      v.retained_minor > 0 === (v.retainage_state !== null),
+  );
+export const payApplicationListSchema = z
+  .strictObject({
+    schema_version: z.literal(1),
+    project_id: id,
+    currency,
+    contract_minor: total,
+    billed_to_date_minor: total,
+    retained_minor: total,
+    due_minor: total,
+    remaining_minor: total,
+    items: z.array(billingSummary),
+  })
+  .refine((v) => {
+    let billed = 0;
+    let retained = 0;
+    let period = "";
+    for (const [index, item] of v.items.entries()) {
+      if (
+        item.number !== index + 1 ||
+        item.period_end <= period ||
+        item.billed_to_date_minor - billed !== item.this_period_minor
+      )
+        return false;
+      billed = item.billed_to_date_minor;
+      retained += item.retained_minor;
+      period = item.period_end;
+    }
+    return (
+      billed === v.billed_to_date_minor &&
+      retained === v.retained_minor &&
+      billed - retained === v.due_minor &&
+      v.contract_minor - billed === v.remaining_minor
+    );
+  });
+
+const billingQuantity = z.string().regex(/^(0|[1-9]\d{0,8})(\.\d{1,4})?$/);
+const payLine = z
+  .strictObject({
+    change_order: changeOrder,
+    position,
+    phase: text(64),
+    description: text(500),
+    unit: text(16),
+    quantity: billingQuantity,
+    contract_minor: total,
+    completed: billingQuantity,
+    value_to_date_minor: total,
+    previous_minor: total,
+    this_period_minor: signed,
+  })
+  .refine(
+    (v) => v.value_to_date_minor - v.previous_minor === v.this_period_minor,
+  );
+export const payApplicationSchema = z
+  .strictObject({
+    schema_version: z.literal(1),
+    project_id: id,
+    currency,
+    ...billingItem,
+    rate_revision: version.min(1).nullable(),
+    rate_bp: z.int().min(0).max(5000),
+    previous_billed_minor: total,
+    lines: z.array(payLine).min(1),
+    invoice: invoiceSchema,
+    retainage: invoiceSchema.nullable(),
+    recorded_at: instant,
+  })
+  .refine((v) => {
+    const { invoice, retainage } = v;
+    return (
+      v.billed_to_date_minor - v.previous_billed_minor ===
+        v.this_period_minor &&
+      v.this_period_minor - v.retained_minor === v.due_minor &&
+      (v.rate_revision !== null || v.rate_bp === 0) &&
+      (BigInt(v.this_period_minor) * BigInt(v.rate_bp)) / 10000n ===
+        BigInt(v.retained_minor) &&
+      new Set(v.lines.map((line) => `${line.change_order}:${line.position}`))
+        .size === v.lines.length &&
+      v.lines.reduce((sum, line) => sum + line.value_to_date_minor, 0) ===
+        v.billed_to_date_minor &&
+      invoice.direction === "receivable" &&
+      invoice.kind === "invoice" &&
+      invoice.currency === v.currency &&
+      minorUnits(invoice.total, invoice.minor_units) === BigInt(v.due_minor) &&
+      (retainage
+        ? retainage.kind === "manual_accrual" &&
+          retainage.direction === "receivable" &&
+          retainage.book_id === invoice.book_id &&
+          retainage.business_id === invoice.business_id &&
+          retainage.counterparty_id === invoice.counterparty_id &&
+          retainage.currency === v.currency &&
+          retainage.due_date === null &&
+          retainage.control_account_id !== invoice.control_account_id &&
+          minorUnits(retainage.total, retainage.minor_units) ===
+            BigInt(v.retained_minor)
+        : v.retained_minor === 0)
+    );
+  });
+
+export type RetainageRate = z.infer<typeof retainageRateSchema>;
+export type PayApplicationList = z.infer<typeof payApplicationListSchema>;
+export type PayApplication = z.infer<typeof payApplicationSchema>;
+
+const billingRoute =
+  /^\/construction\/projects\/([0-9a-f-]{36})\/(retainage|pay-applications)(?:\/(\d+))?$/i;
+
+function billingResponseSchema(
+  suffix: string,
+  method: string,
+): z.ZodType | null {
+  const match = billingRoute.exec(suffix);
+  if (!match) return null;
+  const [, projectId, kind, number] = match;
+  if (kind === "retainage")
+    return !number && (method === "GET" || method === "PUT")
+      ? retainageRateSchema.refine((v) => v.project_id === projectId)
+      : null;
+  if (!number && method === "GET")
+    return payApplicationListSchema.refine((v) => v.project_id === projectId);
+  if (method === (number ? "GET" : "POST"))
+    return payApplicationSchema.refine(
+      (v) =>
+        v.project_id === projectId && (!number || v.number === Number(number)),
+    );
+  return null;
+}
+
 const costRoute =
   /^\/construction\/projects\/([0-9a-f-]{36})\/costs(?:\/(\d+)(\/reversal)?)?$/i;
 
@@ -442,6 +608,8 @@ export function constructionResponseSchema(
 ): z.ZodType | null {
   const cost = costResponseSchema(suffix, method);
   if (cost) return cost;
+  const billing = billingResponseSchema(suffix, method);
+  if (billing) return billing;
   for (const [pattern, methods, schema] of routes)
     if (pattern.test(suffix) && methods.includes(method)) return schema;
   return null;

@@ -45,7 +45,9 @@ test("billing responses bind rates, totals and periods to the selected project",
   for (const method of ["GET", "PUT"]) {
     const schema = managementResponseSchema(`${path}/retainage`, method);
     expect(schema.safeParse(rate).success).toBe(true);
-    expect(schema.safeParse({ ...rate, project_id: uuid(3) }).success).toBe(false);
+    expect(schema.safeParse({ ...rate, project_id: uuid(3) }).success).toBe(
+      false,
+    );
     expect(schema.safeParse({ ...rate, rate_bp: 5001 }).success).toBe(false);
   }
   const application = {
@@ -71,10 +73,108 @@ test("billing responses bind rates, totals and periods to the selected project",
   };
   const schema = managementResponseSchema(`${path}/pay-applications`, "GET");
   expect(schema.safeParse(list).success).toBe(true);
-  expect(schema.safeParse({ ...list, project_id: uuid(3) }).success).toBe(false);
-  expect(schema.safeParse({ ...list, remaining_minor: 15001 }).success).toBe(false);
-  expect(schema.safeParse({ ...list, items: [application, application] }).success).toBe(false);
-  expect(schema.safeParse({ ...list, items: [{ ...application, retainage_state: null }] }).success).toBe(false);
+  expect(schema.safeParse({ ...list, project_id: uuid(3) }).success).toBe(
+    false,
+  );
+  expect(schema.safeParse({ ...list, remaining_minor: 15001 }).success).toBe(
+    false,
+  );
+  expect(
+    schema.safeParse({ ...list, items: [application, application] }).success,
+  ).toBe(false);
+  expect(
+    schema.safeParse({
+      ...list,
+      items: [{ ...application, retainage_state: null }],
+    }).success,
+  ).toBe(false);
+});
+
+test("pay application history survives a change to the current contract line", () => {
+  const projectId = uuid(2);
+  const invoice = {
+    schema_version: 1,
+    business_id: business,
+    book_id: uuid(3),
+    document_id: uuid(4),
+    kind: "invoice",
+    revision: 1,
+    state: "draft",
+    direction: "receivable",
+    counterparty_id: uuid(5),
+    counterparty_revision: 1,
+    currency: "USD",
+    minor_units: 2,
+    invoice_date: "2026-10-01",
+    due_date: null,
+    control_account_id: uuid(6),
+    title: "FAKE pay application",
+    number: "FAKE-PA",
+    lines: [
+      {
+        line_id: uuid(7),
+        counter_account_id: uuid(8),
+        description: "FAKE work",
+        amount: "100.00",
+      },
+    ],
+    total: "100.00",
+    entry_id: null,
+    obligation_id: null,
+    issued_on: null,
+    attestation: null,
+    created_at: "2026-10-01T12:00:00Z",
+  };
+  const line = {
+    change_order: null,
+    position: 1,
+    phase: "FAKE framing",
+    description: "FAKE work removed after billing",
+    unit: "sheet",
+    quantity: "0.0000",
+    contract_minor: 0,
+    completed: "4.0000",
+    value_to_date_minor: 10000,
+    previous_minor: 0,
+    this_period_minor: 10000,
+  };
+  const detail = {
+    schema_version: 1,
+    project_id: projectId,
+    currency: "USD",
+    number: 1,
+    period_end: "2026-10-01",
+    rate_revision: null,
+    rate_bp: 0,
+    previous_billed_minor: 0,
+    billed_to_date_minor: 10000,
+    this_period_minor: 10000,
+    retained_minor: 0,
+    due_minor: 10000,
+    lines: [line],
+    invoice,
+    retainage: null,
+    recorded_at: "2026-10-01T12:00:00Z",
+  };
+  const path = `${base}/projects/${projectId}/pay-applications`;
+  const schema = managementResponseSchema(`${path}/1`, "GET");
+  expect(schema.safeParse(detail).success).toBe(true);
+  expect(managementResponseSchema(path, "POST").safeParse(detail).success).toBe(
+    true,
+  );
+  expect(
+    managementResponseSchema(`${path}/2`, "GET").safeParse(detail).success,
+  ).toBe(false);
+  expect(
+    schema.safeParse({
+      ...detail,
+      lines: [{ ...line, this_period_minor: 9000 }],
+    }).success,
+  ).toBe(false);
+  expect(
+    schema.safeParse({ ...detail, invoice: { ...invoice, total: "50.00" } })
+      .success,
+  ).toBe(false);
 });
 
 const project = {

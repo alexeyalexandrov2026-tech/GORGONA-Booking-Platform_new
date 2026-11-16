@@ -44,6 +44,7 @@ import {
 import { ChangeOrders } from "./construction-changes";
 import { BudgetPanel, Commitments } from "./construction-budget";
 import { ConstructionCosts } from "./construction-costs";
+import { ConstructionBilling } from "./construction-billing";
 import {
   DailyReports,
   ProgressPanel,
@@ -76,7 +77,13 @@ function upsert(list: Project[], item: Project): Project[] {
     : [...list, item];
 }
 
-export function ConstructionScreen({ businessId }: { businessId: string }) {
+export function ConstructionScreen({
+  businessId,
+  companyWide,
+}: {
+  businessId: string;
+  companyWide: boolean;
+}) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [parties, setParties] = useState<Party[]>([]);
   const [locations, setLocations] = useState<LocationItem[]>([]);
@@ -206,6 +213,7 @@ export function ConstructionScreen({ businessId }: { businessId: string }) {
           key={selected.project_id}
           businessId={businessId}
           project={selected}
+          companyWide={companyWide}
           customerName={customerName(selected.customer_id)}
           branchName={branchName(selected.location_id)}
           parties={parties}
@@ -470,6 +478,7 @@ async function loadProject(
 function ProjectPage({
   businessId,
   project,
+  companyWide,
   customerName,
   branchName,
   parties,
@@ -479,6 +488,7 @@ function ProjectPage({
 }: {
   businessId: string;
   project: Project;
+  companyWide: boolean;
   customerName: string;
   branchName: string;
   parties: Party[];
@@ -652,6 +662,13 @@ function ProjectPage({
                 progress={state.execution.progress}
                 measurements={state.execution.measurements}
                 onChanged={refresh}
+              />
+              <ConstructionBilling
+                key={`billing:${businessId}:${id}:${companyWide}`}
+                business={businessId}
+                project={project}
+                companyWide={companyWide}
+                places={places}
               />
             </>
           )}

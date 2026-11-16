@@ -14,7 +14,10 @@ import type {
   DailyReport,
   DailyReportList,
   Measurement,
+  PayApplication,
+  PayApplicationList,
   Progress,
+  RetainageRate,
   Schedule,
   Estimate,
   EstimateList,
@@ -394,4 +397,89 @@ export const reverseCost = (
       schema_version: 1,
       reason,
     },
+  );
+
+export type PayApplicationBody = {
+  schema_version: 1;
+  period_end: string;
+  book_id: string;
+  receivable_account_id: string;
+  revenue_account_id: string;
+  retainage_account_id: string;
+  invoice_date: string;
+  due_date: string | null;
+  number: string;
+  title: string;
+};
+
+export const fetchRetainageRate = (business: string, project: string) =>
+  managementFetch<RetainageRate>(`${projectPath(business, project)}/retainage`);
+
+export const saveRetainageRate = (
+  business: string,
+  project: string,
+  revision: number,
+  rate: number,
+) =>
+  command<RetainageRate>(`${projectPath(business, project)}/retainage`, "PUT", {
+    schema_version: 1,
+    expected_revision: revision,
+    rate_bp: rate,
+  });
+
+export async function fetchPayApplications(business: string, project: Project) {
+  const result = await managementFetch<PayApplicationList>(
+    `${projectPath(business, project.project_id)}/pay-applications`,
+  );
+  if (result.currency !== project.currency)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unexpected billing currency.",
+    );
+  return result;
+}
+
+function scopedApplication(
+  business: string,
+  project: Project,
+  result: PayApplication,
+) {
+  if (
+    result.invoice.business_id !== business ||
+    result.invoice.counterparty_id !== project.customer_id ||
+    result.currency !== project.currency
+  )
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unexpected project billing record.",
+    );
+  return result;
+}
+
+export const fetchPayApplication = async (
+  business: string,
+  project: Project,
+  number: number,
+) =>
+  scopedApplication(
+    business,
+    project,
+    await managementFetch<PayApplication>(
+      `${projectPath(business, project.project_id)}/pay-applications/${number}`,
+    ),
+  );
+
+export const createPayApplication = async (
+  business: string,
+  project: Project,
+  body: PayApplicationBody,
+) =>
+  scopedApplication(
+    business,
+    project,
+    await command<PayApplication>(
+      `${projectPath(business, project.project_id)}/pay-applications`,
+      "POST",
+      body,
+    ),
   );
