@@ -268,7 +268,7 @@ test("an owner publishes a listing and schedules and cancels a showing", async (
   await accessible(page, testInfo, "showing-cancelled");
 });
 
-test("an owner registers a unit lease, retries the term and records move-in", async ({
+test("an owner registers a unit lease, extends it, records move-in and releases it", async ({
   page,
 }, testInfo) => {
   const project = testInfo.project.name;
@@ -279,6 +279,7 @@ test("an owner registers a unit lease, retries the term and records move-in", as
     counterparty_id: string;
     counterparty: string;
     move_in_on: string;
+    release_on: string;
     decoy_title: string;
     projects: Record<
       string,
@@ -397,8 +398,9 @@ test("an owner registers a unit lease, retries the term and records move-in", as
   const otherExtend = other.getByRole("button", { name: "Extend term" });
   await expect(otherExtend).toBeVisible();
 
+  const terms = /\/property\/leases\/[0-9a-f-]+\/terms$/;
   const keys: string[] = [];
-  await page.route(/\/property\/leases\/[0-9a-f-]+\/terms$/, async (route) => {
+  await page.route(terms, async (route) => {
     if (route.request().method() !== "POST") return route.continue();
     keys.push(route.request().headers()["idempotency-key"] ?? "");
     if (keys.length === 1) await route.abort("failed");
@@ -442,6 +444,78 @@ test("an owner registers a unit lease, retries the term and records move-in", as
   await lease.getByRole("button", { name: "Download photo 1" }).click();
   expect((await photoDownload).suggestedFilename().length).toBeGreaterThan(0);
   await accessible(page, testInfo, "property-lease");
+
+  // Release on the move-in day itself: the inclusive boundary keeps that day occupied.
+  await api("POST", `${business}/agreements/${spec.agreement_id}/terminate`, {
+    schema_version: 1,
+    expected_revision: 4,
+    terminated_on: data.release_on,
+  });
+  await page.getByRole("button", { name: "Close property" }).click();
+  await catalog(page).getByRole("button", { name: unit, exact: true }).click();
+  const release = lease.getByRole("form", { name: "Release term" });
+  await expect(release).toContainText(
+    `Expected term revision 2. Version 5, ending ${data.release_on}.`,
+  );
+  await expect(lease.getByRole("button", { name: "Extend term" })).toHaveCount(
+    0,
+  );
+  const second = await page.context().newPage();
+  await signIn(second, "owner", false);
+  await openProperty(second);
+  await catalog(second)
+    .getByRole("button", { name: unit, exact: true })
+    .click();
+  const secondRelease = second.getByRole("button", { name: "Release term" });
+  await expect(secondRelease).toBeVisible();
+
+  await page.unroute(terms);
+  const releaseKeys: string[] = [];
+  await page.route(terms, async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    releaseKeys.push(route.request().headers()["idempotency-key"] ?? "");
+    if (releaseKeys.length === 1) await route.abort("failed");
+    else await route.continue();
+  });
+  const releaseButton = release.getByRole("button", { name: "Release term" });
+  await releaseButton.click();
+  await expect(release.getByRole("alert")).toContainText("Retry safely");
+  await releaseButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(notice(page, "Term saved as revision 3.")).toBeVisible();
+  expect(releaseKeys).toEqual([releaseKeys[0], releaseKeys[0]]);
+  await expect(lease.getByRole("form", { name: "Release term" })).toHaveCount(
+    0,
+  );
+  const terms3 = lease.getByRole("table", { name: "Term history" });
+  await expect(terms3.locator("tbody tr")).toHaveCount(3);
+  const released = terms3.locator("tbody tr").first();
+  await expect(released.getByRole("rowheader")).toHaveText("3");
+  await expect(released).toContainText("Released");
+  await expect(released).toContainText(data.release_on);
+  await expect(terms3.locator("tbody tr").nth(1)).toContainText("Extended");
+  await expect(terms3.locator("tbody tr").nth(1)).toContainText("2027-06-30");
+  await expect(
+    lease.locator(".property-facts div").filter({
+      has: page.getByText("Action", { exact: true }),
+    }),
+  ).toContainText("Released");
+  await expect(
+    lease.locator(".property-facts div").filter({
+      has: page.getByText("Moved in", { exact: true }),
+    }),
+  ).toContainText(data.move_in_on);
+
+  await secondRelease.click();
+  await expect(
+    second
+      .getByRole("region", { name: "Unit lease", exact: true })
+      .getByRole("alert"),
+  ).toContainText("The lease term changed");
+  await expect(secondRelease).toBeDisabled();
+  await expect(second.getByText("Term saved as revision 4.")).toHaveCount(0);
+  await second.close();
+  await accessible(page, testInfo, "property-lease-released");
 });
 
 test("a branch manager reads the branch without history or edit controls", async ({

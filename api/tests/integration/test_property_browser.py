@@ -314,6 +314,7 @@ def test_property_catalog_real_browser(
                 "counterparty_id": tenant_party,
                 "counterparty": "FAKE Tenant",
                 "move_in_on": move_in_day,
+                "release_on": move_in_day,
                 "decoy_title": "FAKE decoy lease",
                 "projects": projects,
             }
@@ -413,8 +414,8 @@ def test_property_catalog_real_browser(
                 f"FAKE unit lease {project}",
                 date(2026, 1, 1),
                 date(2026, 12, 31),
-                2,
-                date(2027, 6, 30),
+                3,
+                date.fromisoformat(move_in_day),
                 date.fromisoformat(move_in_day),
                 2,
                 1,
@@ -425,7 +426,7 @@ def test_property_catalog_real_browser(
                 "where l.object_id = %s order by e.revision",
                 (unit[0],),
             ).fetchall()
-            assert [tuple(row) for row in events] == [(2, "extend")], project
+            assert [tuple(row) for row in events] == [(2, "extend"), (3, "release")], project
             overlap = owner_conn.execute(
                 "select count(*) from gba.property_leases l "
                 "join gba.agreement_versions v on v.tenant_id = l.tenant_id "
