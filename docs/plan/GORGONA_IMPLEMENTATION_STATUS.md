@@ -1,5 +1,35 @@
 # GORGONA — реестр реализации
 
+### PROPERTY-01 lease release in the browser (2026-11-15)
+
+Source `2f8aaf6b68bc2cc82bfa4548f9d17162c9de70e8` on `codex/package-property-01-lease-release`, stacked on the lease screen.
+Test-only: no schema, API or screen change and no migration. The Property browser scenario now
+terminates the signed agreement on the move-in day and releases the term on the screen. An
+aborted request retries with the same key, a second tab meets the revision conflict, and the
+history keeps the extension under the release. PostgreSQL stores revision 3 with the move-in day
+as the inclusive last day of possession, and the move-in report remains.
+
+Box run (not `gorgona-dev`, which stays stopped) on PostgreSQL 18.7: the base `e79f11a` passed the
+lease, term and move-in suites (25 passed in 40.86s) and the browser (1 passed in 49.56s, 10 Playwright
+passed). With release, the browser passed (1 passed in 53.87s, 10 Playwright passed in 47.0s).
+Static checks, 179 web unit tests and the web build passed.
+[Evidence](evidence/2026-11-15-property-lease-release/CHECKS.json).
+[Successor handoff](NEXT_AGENT_PROPERTY01_LEASE_RELEASE_2026-11-15.md).
+
+### PROPERTY-01 unit lease on the Property screen (2026-11-15)
+
+Source `e79f11a8b35ea3052da5cee4f9cd1180652b91f9` on `codex/package-property-01-lease-screen`. Recorded after the fact from its
+[handoff](NEXT_AGENT_PROPERTY01_LEASE_SCREEN_2026-11-15.md); the slice has no evidence folder of its own.
+`GET /property/leases` accepts an optional `object_id`. Without it, the company list is
+unchanged. The selected unit shows the original contract, current term, history and move-in
+report to company-wide owners and managers, and records registration, term changes and move-in.
+Branch members neither see nor request it. No migration.
+
+VM PostgreSQL 18: 25 passed in 55.67s; browser desktop and mobile 1 passed in 58.21s; seven screen
+contract checks, Ruff, ESLint, Prettier, `tsc --noEmit` and `git diff --check` passed.
+[CI 43784742809](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/43784742809) passed.
+The release path was then covered by the next slice.
+
 ### PROPERTY-01 move-in report (2026-11-15)
 
 Source `41be1caabe50fe92e77f67f2350b46d3bd3e2276` on `codex/package-property-01-move-in`. Migration 0117 records one private move-in report per lease.
