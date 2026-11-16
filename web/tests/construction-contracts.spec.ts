@@ -32,6 +32,95 @@ const uuid = (n: number) =>
   `00000000-0000-4000-8000-${n.toString().padStart(12, "0")}`;
 const business = uuid(1);
 const base = `/v1/businesses/${business}/construction`;
+test("acceptance history binds signed scopes and releases to the right project", () => {
+  const projectId = uuid(2);
+  const path = `${base}/projects/${projectId}/acceptances`;
+  const phase = {
+    schema_version: 1,
+    project_id: projectId,
+    number: 1,
+    scope: "phase",
+    phase: "Framing",
+    accepted_on: "2026-10-01",
+    signatory: "FAKE signatory",
+    source: "paper",
+    note: null,
+    warranty_starts_on: null,
+    warranty_ends_on: null,
+    recorded_at: "2026-10-02T12:00:00Z",
+    release: {
+      released_on: "2026-10-01",
+      amount_minor: 2500,
+      note: null,
+      recorded_at: "2026-10-02T12:01:00Z",
+    },
+  };
+  const final = {
+    ...phase,
+    number: 2,
+    scope: "final",
+    phase: null,
+    accepted_on: "2026-10-02",
+    warranty_starts_on: "2026-10-02",
+    warranty_ends_on: "2027-10-02",
+    release: null,
+  };
+  const list = {
+    schema_version: 1,
+    project_id: projectId,
+    currency: "USD",
+    retained_minor: 3100,
+    released_minor: 2500,
+    held_minor: 600,
+    phases: [
+      {
+        phase: "Framing",
+        finished: true,
+        open_items: 0,
+        billed_in_full: true,
+        retained_minor: 2500,
+        acceptance: 1,
+        released_minor: 2500,
+      },
+    ],
+    final,
+    items: [phase, final],
+  };
+  const schema = managementResponseSchema(path, "GET");
+  expect(schema.safeParse(list).success).toBe(true);
+  expect(schema.safeParse({ ...list, held_minor: 601 }).success).toBe(false);
+  expect(
+    schema.safeParse({
+      ...list,
+      items: [phase, { ...final, project_id: uuid(3) }],
+    }).success,
+  ).toBe(false);
+  expect(
+    schema.safeParse({
+      ...list,
+      phases: [{ ...list.phases[0], acceptance: 2 }],
+    }).success,
+  ).toBe(false);
+  expect(managementResponseSchema(path, "POST").safeParse(final).success).toBe(
+    true,
+  );
+  const detail = managementResponseSchema(`${path}/1`, "GET");
+  expect(detail.safeParse(phase).success).toBe(true);
+  expect(detail.safeParse(final).success).toBe(false);
+  expect(detail.safeParse({ ...phase, source: "platform" }).success).toBe(
+    false,
+  );
+  const release = managementResponseSchema(`${path}/1/release`, "POST");
+  expect(release.safeParse(phase).success).toBe(true);
+  expect(release.safeParse({ ...phase, release: null }).success).toBe(false);
+  expect(
+    release.safeParse({
+      ...phase,
+      release: { ...phase.release, released_on: "2026-09-30" },
+    }).success,
+  ).toBe(false);
+});
+
 test("billing responses bind rates, totals and periods to the selected project", () => {
   const projectId = uuid(2);
   const path = `${base}/projects/${projectId}`;
