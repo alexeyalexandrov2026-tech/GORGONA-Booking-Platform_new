@@ -32,6 +32,53 @@ const uuid = (n: number) =>
   `00000000-0000-4000-8000-${n.toString().padStart(12, "0")}`;
 const business = uuid(1);
 const base = `/v1/businesses/${business}/construction`;
+test("reconciliation keeps a signed difference and binds money to the requested project", () => {
+  const projectId = uuid(2);
+  const result = {
+    schema_version: 1,
+    project_id: projectId,
+    currency: "USD",
+    contract_minor: 31007,
+    completed_minor: 29000,
+    budget_minor: 20000,
+    committed_minor: 8000,
+    actual_minor: 6500,
+    warranty_repair_minor: 2500,
+    billed_minor: 31007,
+    retained_minor: 3100,
+    due_minor: 27907,
+    released_minor: 0,
+    held_minor: 3100,
+    due_paid_minor: 10000,
+    due_credited_minor: 700,
+    retainage_paid_minor: 1500,
+    retainage_credited_minor: 0,
+    unissued_documents: 0,
+    contract_minus_billed_minor: 0,
+    completed_minus_billed_minor: -2007,
+    billed_minus_settled_minor: 18807,
+    retainage_settled_before_release_minor: 1500,
+    budget_minus_actual_minor: 13500,
+    contract_minus_actual_minor: 24507,
+    claims: { open: 1, repaired: 0, closed: 0, rejected: 0 },
+  };
+  const schema = managementResponseSchema(
+    `${base}/projects/${projectId}/reconciliation`,
+    "GET",
+  );
+  expect(schema.safeParse(result).success).toBe(true);
+  expect(schema.safeParse({ ...result, project_id: uuid(3) }).success).toBe(
+    false,
+  );
+  expect(
+    schema.safeParse({ ...result, billed_minus_settled_minor: 0 }).success,
+  ).toBe(false);
+  expect(
+    schema.safeParse({ ...result, claims: { ...result.claims, cancelled: 0 } })
+      .success,
+  ).toBe(false);
+});
+
 test("acceptance history binds signed scopes and releases to the right project", () => {
   const projectId = uuid(2);
   const path = `${base}/projects/${projectId}/acceptances`;
