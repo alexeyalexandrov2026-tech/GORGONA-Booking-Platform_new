@@ -75,6 +75,9 @@ test("warranty history preserves ordered transitions and excludes reversed costs
   };
   const schema = managementResponseSchema(`${path}/1`, "GET");
   expect(schema.safeParse(detail).success).toBe(true);
+  expect(schema.safeParse({ ...detail, title: "🧱".repeat(70) }).success).toBe(
+    true,
+  );
   expect(schema.safeParse({ ...detail, repair_minor: 3400 }).success).toBe(
     false,
   );

@@ -10,6 +10,12 @@ import type {
 } from "./construction-acceptance-contracts";
 import type { Reconciliation } from "./construction-reconciliation-contracts";
 import type {
+  WarrantyClaim,
+  WarrantyClaimBody,
+  WarrantyEventBody,
+  WarrantyList,
+} from "./construction-warranty-contracts";
+import type {
   Budget,
   ChangeOrder,
   ChangeOrderList,
@@ -537,3 +543,57 @@ export async function fetchReconciliation(business: string, project: Project) {
     );
   return result;
 }
+
+const warrantyPath = (business: string, project: string) =>
+  `${projectPath(business, project)}/warranty-claims`;
+
+export async function fetchWarrantyClaims(business: string, project: Project) {
+  const result = await managementFetch<WarrantyList>(
+    warrantyPath(business, project.project_id),
+  );
+  if (result.currency !== project.currency)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unexpected warranty currency.",
+    );
+  return result;
+}
+
+export const fetchWarrantyClaim = (
+  business: string,
+  project: string,
+  number: number,
+) =>
+  managementFetch<WarrantyClaim>(
+    `${warrantyPath(business, project)}/${number}`,
+  );
+
+export const createWarrantyClaim = (
+  business: string,
+  project: string,
+  body: WarrantyClaimBody,
+) => command<WarrantyClaim>(warrantyPath(business, project), "POST", body);
+
+export const moveWarrantyClaim = (
+  business: string,
+  project: string,
+  number: number,
+  body: WarrantyEventBody,
+) =>
+  command<WarrantyClaim>(
+    `${warrantyPath(business, project)}/${number}/events`,
+    "POST",
+    body,
+  );
+
+export const assignWarrantyRepair = (
+  business: string,
+  project: string,
+  number: number,
+  cost: number,
+) =>
+  command<WarrantyClaim>(
+    `${warrantyPath(business, project)}/${number}/repairs`,
+    "POST",
+    { schema_version: 1, cost_link: cost },
+  );

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { constructionAcceptanceResponseSchema } from "./construction-acceptance-contracts";
 import { reconciliationSchema } from "./construction-reconciliation-contracts";
+import { warrantyResponseSchema } from "./construction-warranty-contracts";
 import { invoiceSchema } from "./financial-contracts";
 import { minorUnits } from "./ledger-contracts";
 
@@ -622,6 +623,8 @@ export function constructionResponseSchema(
     return reconciliationSchema.refine(
       (value) => value.project_id === reconciliation[1],
     );
+  const warranty = warrantyResponseSchema(suffix, method);
+  if (warranty) return warranty;
   for (const [pattern, methods, schema] of routes)
     if (pattern.test(suffix) && methods.includes(method)) return schema;
   return null;

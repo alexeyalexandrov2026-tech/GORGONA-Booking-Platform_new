@@ -47,6 +47,7 @@ import { ConstructionCosts } from "./construction-costs";
 import { ConstructionBilling } from "./construction-billing";
 import { ConstructionAcceptance } from "./construction-acceptance";
 import { ConstructionReconciliation } from "./construction-reconciliation";
+import { ConstructionWarranty } from "./construction-warranty";
 import {
   DailyReports,
   ProgressPanel,
@@ -688,6 +689,16 @@ function ProjectPage({
                 places={places}
                 projectRevision={reportRevision}
                 onFinalRecorded={closeBilling}
+                onChanged={refreshReports}
+              />
+              <ConstructionWarranty
+                business={businessId}
+                project={project}
+                places={places}
+                projectRevision={reportRevision}
+                phases={state.execution.budget.phases.map(
+                  (phase) => phase.phase,
+                )}
                 onChanged={refreshReports}
               />
               {companyWide && (
