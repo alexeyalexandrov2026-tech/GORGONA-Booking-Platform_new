@@ -43,6 +43,7 @@ import {
 } from "./construction-estimates";
 import { ChangeOrders } from "./construction-changes";
 import { BudgetPanel, Commitments } from "./construction-budget";
+import { ConstructionCosts } from "./construction-costs";
 import {
   DailyReports,
   ProgressPanel,
@@ -612,6 +613,15 @@ function ProjectPage({
                 places={places}
                 budget={state.execution.budget}
               />
+              <ConstructionCosts
+                key={`${businessId}:${id}`}
+                business={businessId}
+                project={project}
+                budget={state.execution.budget}
+                places={places}
+                onChanged={refresh}
+              />
+
               <Commitments
                 businessId={businessId}
                 project={project}

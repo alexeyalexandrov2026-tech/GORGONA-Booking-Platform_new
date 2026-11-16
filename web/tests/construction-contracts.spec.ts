@@ -444,3 +444,75 @@ test("every O3a and O4a response the screens read has a strict contract", () => 
       schema,
     );
 });
+
+test("actual costs validate source fields, response identity, and the reversal", () => {
+  const path = `${base}/projects/${project.project_id}/costs`;
+  const cost = {
+    schema_version: 1,
+    project_id: project.project_id,
+    number: 1,
+    kind: "stock_write_off",
+    change_order: null,
+    position: 1,
+    amount_minor: 4500,
+    currency: "USD",
+    note: null,
+    attempt: 1,
+    stock_document_id: uuid(8),
+    stock_line_no: 1,
+    book_id: null,
+    document_id: null,
+    document_revision: null,
+    line_id: null,
+    time_entry_id: null,
+    time_entry_revision: null,
+    worked_microseconds: null,
+    rate_per_hour_minor: null,
+    linked_at: "2026-11-16T10:00:00Z",
+    reversal: null,
+  };
+  const list = {
+    schema_version: 1,
+    project_id: project.project_id,
+    items: [cost],
+  };
+  const read = managementResponseSchema(path, "GET");
+  expect(read.safeParse(list).success).toBe(true);
+  expect(
+    read.safeParse({ ...list, items: [{ ...cost, project_id: uuid(99) }] })
+      .success,
+  ).toBe(false);
+  expect(read.safeParse({ ...list, items: [cost, cost] }).success).toBe(false);
+  expect(
+    read.safeParse({ ...list, items: [{ ...cost, stock_line_no: null }] })
+      .success,
+  ).toBe(false);
+  expect(
+    read.safeParse({ ...list, items: [{ ...cost, book_id: uuid(12) }] })
+      .success,
+  ).toBe(false);
+  expect(managementResponseSchema(path, "POST").safeParse(cost).success).toBe(
+    true,
+  );
+  const reverse = managementResponseSchema(`${path}/1/reversal`, "POST");
+  expect(
+    reverse.safeParse({
+      ...cost,
+      reversal: {
+        reason: "Wrong budget line",
+        reversed_at: "2026-11-16T10:15:00Z",
+      },
+    }).success,
+  ).toBe(true);
+  expect(reverse.safeParse(cost).success).toBe(false);
+  expect(
+    reverse.safeParse({
+      ...cost,
+      number: 2,
+      reversal: {
+        reason: "Wrong budget line",
+        reversed_at: "2026-11-16T10:15:00Z",
+      },
+    }).success,
+  ).toBe(false);
+});

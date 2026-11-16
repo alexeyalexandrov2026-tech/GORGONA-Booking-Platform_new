@@ -9,6 +9,8 @@ import type {
   Commitment,
   CommitmentSummary,
   Contract,
+  CostLink,
+  CostLinkList,
   DailyReport,
   DailyReportList,
   Measurement,
@@ -352,4 +354,44 @@ export const recordMeasurement = (
     `${projectPath(business, project)}/progress`,
     "POST",
     body,
+  );
+
+export type CostFact =
+  | {
+      kind: "stock_write_off";
+      stock_document_id: string;
+      stock_line_no: number;
+    }
+  | { kind: "payable"; book_id: string; document_id: string; line_id: string }
+  | { kind: "time_entry"; time_entry_id: string };
+
+type CostInput =
+  | Exclude<CostFact, { kind: "time_entry" }>
+  | (Extract<CostFact, { kind: "time_entry" }> & {
+      rate_per_hour_minor: number;
+    });
+export type CostBody = CostInput & {
+  schema_version: 1;
+  change_order: number | null;
+  position: number;
+  note: string | null;
+};
+
+export const fetchCostLinks = (business: string, project: string) =>
+  managementFetch<CostLinkList>(`${projectPath(business, project)}/costs`);
+export const linkCost = (business: string, project: string, body: CostBody) =>
+  command<CostLink>(`${projectPath(business, project)}/costs`, "POST", body);
+export const reverseCost = (
+  business: string,
+  project: string,
+  number: number,
+  reason: string,
+) =>
+  command<CostLink>(
+    `${projectPath(business, project)}/costs/${number}/reversal`,
+    "POST",
+    {
+      schema_version: 1,
+      reason,
+    },
   );

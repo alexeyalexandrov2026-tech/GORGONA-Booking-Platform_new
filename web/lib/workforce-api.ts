@@ -221,16 +221,21 @@ export async function fetchLocationSetting(
   exact(result.location_id, location);
   return result;
 }
-export async function fetchTimeEntries(business: string, own: boolean) {
-  const result = await every((after) =>
-    read(
-      timeListSchema,
-      `${base(business)}/${own ? "my-time-entries" : "time-entries"}${cursor(after)}`,
-    ),
+export async function fetchTimeEntriesPage(
+  business: string,
+  own: boolean,
+  after?: string,
+) {
+  const result = await read(
+    timeListSchema,
+    `${base(business)}/${own ? "my-time-entries" : "time-entries"}${cursor(after)}`,
   );
   owned(business, result.items);
   return result;
 }
+
+export const fetchTimeEntries = (business: string, own: boolean) =>
+  every((after) => fetchTimeEntriesPage(business, own, after));
 export async function fetchTimeHistory(
   business: string,
   entry: string,

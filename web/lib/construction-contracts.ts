@@ -308,6 +308,102 @@ export type ChangeOrder = z.infer<typeof changeOrderSchema>;
 export type ChangeOrderList = z.infer<typeof changeOrderListSchema>;
 export type Contract = z.infer<typeof contractSchema>;
 
+export const costKindSchema = z.enum([
+  "stock_write_off",
+  "payable",
+  "time_entry",
+]);
+export type CostKind = z.infer<typeof costKindSchema>;
+
+export const costLinkSchema = z
+  .strictObject({
+    schema_version: z.literal(1),
+    project_id: id,
+    number: z.number().int().positive(),
+    kind: costKindSchema,
+    change_order: changeOrder,
+    position,
+    amount_minor: z.number().int().positive(),
+    currency,
+    note: text(500).nullable(),
+    attempt: z.number().int().positive(),
+    stock_document_id: id.nullable(),
+    stock_line_no: z.number().int().min(1).max(100).nullable(),
+    book_id: id.nullable(),
+    document_id: id.nullable(),
+    document_revision: z.number().int().positive().nullable(),
+    line_id: id.nullable(),
+    time_entry_id: id.nullable(),
+    time_entry_revision: z.number().int().positive().nullable(),
+    worked_microseconds: z.number().int().positive().nullable(),
+    rate_per_hour_minor: z.number().int().min(1).max(1_000_000_000).nullable(),
+    linked_at: instant,
+    reversal: z
+      .strictObject({ reason: text(500), reversed_at: instant })
+      .nullable(),
+  })
+  .refine((value) => {
+    const fields: Record<CostKind, unknown[]> = {
+      stock_write_off: [value.stock_document_id, value.stock_line_no],
+      payable: [
+        value.book_id,
+        value.document_id,
+        value.document_revision,
+        value.line_id,
+      ],
+      time_entry: [
+        value.time_entry_id,
+        value.time_entry_revision,
+        value.worked_microseconds,
+        value.rate_per_hour_minor,
+      ],
+    };
+    return Object.entries(fields).every(([kind, group]) =>
+      group.every((field) => (field !== null) === (kind === value.kind)),
+    );
+  }, "Inconsistent cost source.");
+
+export const costLinkListSchema = z
+  .strictObject({
+    schema_version: z.literal(1),
+    project_id: id,
+    items: z.array(costLinkSchema),
+  })
+  .refine(
+    (value) =>
+      value.items.every((item) => item.project_id === value.project_id) &&
+      new Set(value.items.map((item) => item.number)).size ===
+        value.items.length,
+    "Inconsistent project costs.",
+  );
+
+export type CostLink = z.infer<typeof costLinkSchema>;
+export type CostLinkList = z.infer<typeof costLinkListSchema>;
+
+const costRoute =
+  /^\/construction\/projects\/([0-9a-f-]{36})\/costs(?:\/(\d+)(\/reversal)?)?$/i;
+
+function costResponseSchema(suffix: string, method: string): z.ZodType | null {
+  const match = costRoute.exec(suffix);
+  if (!match) return null;
+  const [, projectId, number, reversal] = match;
+  if (!number && method === "GET") {
+    return costLinkListSchema.refine((value) => value.project_id === projectId);
+  }
+  if (
+    (!number && method === "POST") ||
+    (number && method === (reversal ? "POST" : "GET"))
+  ) {
+    return costLinkSchema.refine(
+      (value) =>
+        value.project_id === projectId &&
+        (!number || value.number === Number(number)) &&
+        (!reversal || value.reversal !== null),
+    );
+  }
+  return null;
+}
+
 const project = /^\/construction\/projects\/[0-9a-f-]{36}$/i;
 const nested = (tail: string) =>
   new RegExp(`^/construction/projects/[0-9a-f-]{36}${tail}$`, "i");
@@ -344,6 +440,8 @@ export function constructionResponseSchema(
   suffix: string,
   method: string,
 ): z.ZodType | null {
+  const cost = costResponseSchema(suffix, method);
+  if (cost) return cost;
   for (const [pattern, methods, schema] of routes)
     if (pattern.test(suffix) && methods.includes(method)) return schema;
   return null;
