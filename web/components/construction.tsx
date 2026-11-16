@@ -46,6 +46,7 @@ import { BudgetPanel, Commitments } from "./construction-budget";
 import { ConstructionCosts } from "./construction-costs";
 import { ConstructionBilling } from "./construction-billing";
 import { ConstructionAcceptance } from "./construction-acceptance";
+import { ConstructionReconciliation } from "./construction-reconciliation";
 import {
   DailyReports,
   ProgressPanel,
@@ -501,14 +502,14 @@ function ProjectPage({
   const [state, setState] = useState<Loaded | null>(null);
   const [shown, setShown] = useState<Estimate | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [acceptanceRevision, setAcceptanceRevision] = useState(0);
+  const [reportRevision, setReportRevision] = useState(0);
   const [billingClosed, setBillingClosed] = useState(false);
   const places = currencyPlaces(project.currency) ?? 2;
   const id = project.project_id;
   const closeBilling = useCallback(() => setBillingClosed(true), []);
 
-  const refreshAcceptances = useCallback(
-    () => setAcceptanceRevision((revision) => revision + 1),
+  const refreshReports = useCallback(
+    () => setReportRevision((revision) => revision + 1),
     [],
   );
   const apply = useCallback(
@@ -516,9 +517,9 @@ function ProjectPage({
       onChange(fresh);
       setState(loaded);
       setShown(loaded.latest);
-      refreshAcceptances();
+      refreshReports();
     },
-    [onChange, refreshAcceptances],
+    [onChange, refreshReports],
   );
 
   useEffect(() => {
@@ -679,15 +680,24 @@ function ProjectPage({
                 companyWide={companyWide}
                 places={places}
                 billingClosed={billingClosed}
-                onBilled={refreshAcceptances}
+                onBilled={refreshReports}
               />
               <ConstructionAcceptance
                 business={businessId}
                 project={project}
                 places={places}
-                projectRevision={acceptanceRevision}
+                projectRevision={reportRevision}
                 onFinalRecorded={closeBilling}
+                onChanged={refreshReports}
               />
+              {companyWide && (
+                <ConstructionReconciliation
+                  business={businessId}
+                  project={project}
+                  places={places}
+                  projectRevision={reportRevision}
+                />
+              )}
             </>
           )}
         </>

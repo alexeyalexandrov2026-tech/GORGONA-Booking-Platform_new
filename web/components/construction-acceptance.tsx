@@ -31,12 +31,14 @@ export function ConstructionAcceptance({
   places,
   projectRevision,
   onFinalRecorded,
+  onChanged,
 }: {
   business: string;
   project: Project;
   places: number;
   projectRevision: number;
   onFinalRecorded: () => void;
+  onChanged: () => void;
 }) {
   const heading = useId();
   const id = project.project_id;
@@ -91,6 +93,7 @@ export function ConstructionAcceptance({
       if (result.scope === "final") onFinalRecorded();
       setNotice(message);
       reload();
+      onChanged();
     } catch (failure) {
       setWriteError({
         message: refusal(failure),

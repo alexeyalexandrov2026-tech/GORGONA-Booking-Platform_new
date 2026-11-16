@@ -8,6 +8,7 @@ import type {
   AcceptanceList,
   AcceptanceReleaseBody,
 } from "./construction-acceptance-contracts";
+import type { Reconciliation } from "./construction-reconciliation-contracts";
 import type {
   Budget,
   ChangeOrder,
@@ -524,3 +525,15 @@ export const releaseAcceptanceRetainage = (
     "POST",
     body,
   );
+
+export async function fetchReconciliation(business: string, project: Project) {
+  const result = await managementFetch<Reconciliation>(
+    `${projectPath(business, project.project_id)}/reconciliation`,
+  );
+  if (result.currency !== project.currency)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unexpected reconciliation currency.",
+    );
+  return result;
+}

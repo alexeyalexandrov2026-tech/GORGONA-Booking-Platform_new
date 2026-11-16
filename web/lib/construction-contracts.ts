@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { constructionAcceptanceResponseSchema } from "./construction-acceptance-contracts";
+import { reconciliationSchema } from "./construction-reconciliation-contracts";
 import { invoiceSchema } from "./financial-contracts";
 import { minorUnits } from "./ledger-contracts";
 
@@ -571,6 +572,9 @@ function costResponseSchema(suffix: string, method: string): z.ZodType | null {
   return null;
 }
 
+const reconciliationRoute =
+  /^\/construction\/projects\/([0-9a-f-]{36})\/reconciliation$/i;
+
 const project = /^\/construction\/projects\/[0-9a-f-]{36}$/i;
 const nested = (tail: string) =>
   new RegExp(`^/construction/projects/[0-9a-f-]{36}${tail}$`, "i");
@@ -613,6 +617,11 @@ export function constructionResponseSchema(
   if (billing) return billing;
   const acceptance = constructionAcceptanceResponseSchema(suffix, method);
   if (acceptance) return acceptance;
+  const reconciliation = reconciliationRoute.exec(suffix);
+  if (reconciliation && method === "GET")
+    return reconciliationSchema.refine(
+      (value) => value.project_id === reconciliation[1],
+    );
   for (const [pattern, methods, schema] of routes)
     if (pattern.test(suffix) && methods.includes(method)) return schema;
   return null;
