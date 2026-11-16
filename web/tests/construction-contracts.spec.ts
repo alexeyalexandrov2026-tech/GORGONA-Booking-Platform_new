@@ -32,6 +32,51 @@ const uuid = (n: number) =>
   `00000000-0000-4000-8000-${n.toString().padStart(12, "0")}`;
 const business = uuid(1);
 const base = `/v1/businesses/${business}/construction`;
+test("billing responses bind rates, totals and periods to the selected project", () => {
+  const projectId = uuid(2);
+  const path = `${base}/projects/${projectId}`;
+  const rate = {
+    schema_version: 1,
+    project_id: projectId,
+    revision: 0,
+    rate_bp: 0,
+    recorded_at: null,
+  };
+  for (const method of ["GET", "PUT"]) {
+    const schema = managementResponseSchema(`${path}/retainage`, method);
+    expect(schema.safeParse(rate).success).toBe(true);
+    expect(schema.safeParse({ ...rate, project_id: uuid(3) }).success).toBe(false);
+    expect(schema.safeParse({ ...rate, rate_bp: 5001 }).success).toBe(false);
+  }
+  const application = {
+    number: 1,
+    period_end: "2026-10-01",
+    billed_to_date_minor: 10000,
+    this_period_minor: 10000,
+    retained_minor: 1000,
+    due_minor: 9000,
+    invoice_state: "draft",
+    retainage_state: "draft",
+  };
+  const list = {
+    schema_version: 1,
+    project_id: projectId,
+    currency: "USD",
+    contract_minor: 25000,
+    billed_to_date_minor: 10000,
+    retained_minor: 1000,
+    due_minor: 9000,
+    remaining_minor: 15000,
+    items: [application],
+  };
+  const schema = managementResponseSchema(`${path}/pay-applications`, "GET");
+  expect(schema.safeParse(list).success).toBe(true);
+  expect(schema.safeParse({ ...list, project_id: uuid(3) }).success).toBe(false);
+  expect(schema.safeParse({ ...list, remaining_minor: 15001 }).success).toBe(false);
+  expect(schema.safeParse({ ...list, items: [application, application] }).success).toBe(false);
+  expect(schema.safeParse({ ...list, items: [{ ...application, retainage_state: null }] }).success).toBe(false);
+});
+
 const project = {
   project_id: uuid(2),
   revision: 1,
