@@ -33,19 +33,25 @@ test("records, repairs, reopens and closes a claim with one actual cost assignme
     name: "Warranty claims",
     exact: true,
   });
-  await warranty.getByRole("button", { name: "New warranty claim" }).click();
+  await warranty
+    .getByRole("button", { name: "New warranty claim" })
+    .press("Enter");
   const newClaim = warranty.getByRole("form", { name: "New warranty claim" });
-  await newClaim
-    .getByRole("textbox", { name: "Claim title" })
-    .fill("FAKE cracked tile");
-  await newClaim
-    .getByRole("textbox", { name: "Reported by" })
-    .fill("FAKE homeowner");
+  const title = newClaim.getByRole("textbox", { name: "Claim title" });
+  await title.focus();
+  await page.keyboard.type("FAKE cracked tile");
+  await page.keyboard.press("Tab");
+  await expect(
+    newClaim.getByRole("textbox", { name: "Reported by" }),
+  ).toBeFocused();
+  await page.keyboard.type("FAKE homeowner");
   await newClaim.getByLabel("Reported on").fill(fixture.reported);
   await newClaim
     .getByRole("combobox", { name: "Claim phase" })
     .selectOption("Finishes");
-  await newClaim.getByRole("button", { name: "Record warranty claim" }).click();
+  await newClaim
+    .getByRole("button", { name: "Record warranty claim" })
+    .press("Enter");
 
   const detail = warranty.getByRole("region", {
     name: "Warranty claim 1",

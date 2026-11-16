@@ -130,6 +130,15 @@ test("closes one billing period and shows its separate FIN-03 drafts", async ({
 
   const branch = await browser.newPage();
   try {
+    const reconciliationRequests: string[] = [];
+    branch.on("request", (request) => {
+      if (
+        request
+          .url()
+          .includes(`/construction/projects/${fixture.project}/reconciliation`)
+      )
+        reconciliationRequests.push(request.method());
+    });
     expect(
       (await branch.request.post(`${issuer}/fixture/user/branch`)).ok(),
     ).toBe(true);
@@ -161,6 +170,10 @@ test("closes one billing period and shows its separate FIN-03 drafts", async ({
     await expect(
       rateOnly.getByRole("textbox", { name: "Retainage percent" }),
     ).toHaveValue("12.50");
+    await expect(
+      branch.getByRole("region", { name: "Project reconciliation" }),
+    ).toHaveCount(0);
+    expect(reconciliationRequests).toEqual([]);
   } finally {
     await branch.close();
   }

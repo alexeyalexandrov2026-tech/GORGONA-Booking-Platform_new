@@ -53,7 +53,7 @@ test("records phase and final acceptance and releases each amount exactly once",
   ).toBeVisible();
   await acceptance
     .getByRole("button", { name: "Record acceptance for Framing" })
-    .click();
+    .press("Enter");
   const phase = acceptance.getByRole("form", { name: "Accept Framing" });
   await phase.getByLabel("Acceptance date").fill(fixture.too_early);
   await phase
@@ -63,10 +63,10 @@ test("records phase and final acceptance and releases each amount exactly once",
     .getByRole("combobox", { name: "Acceptance source" })
     .selectOption("paper");
   const save = phase.getByRole("button", { name: "Save acceptance" });
-  await save.click();
+  await save.press("Enter");
   await expect(acceptance.getByRole("alert")).toBeVisible();
   await phase.getByLabel("Acceptance date").fill(fixture.accept_phase);
-  await save.click();
+  await save.press("Enter");
   const records = acceptance.getByRole("table", { name: "Acceptance records" });
   await expect(records).toContainText("FAKE Site Owner");
 
