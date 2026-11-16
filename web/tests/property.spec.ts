@@ -268,14 +268,193 @@ test("an owner publishes a listing and schedules and cancels a showing", async (
   await accessible(page, testInfo, "showing-cancelled");
 });
 
+test("an owner registers a unit lease, retries the term and records move-in", async ({
+  page,
+}, testInfo) => {
+  const project = testInfo.project.name;
+  const raw = process.env.GBA_PROPERTY_FIXTURE;
+  if (!raw) throw new Error("GBA_PROPERTY_FIXTURE is missing");
+  const data = JSON.parse(raw) as {
+    business_id: string;
+    counterparty_id: string;
+    counterparty: string;
+    move_in_on: string;
+    decoy_title: string;
+    projects: Record<
+      string,
+      {
+        lease_title: string;
+        agreement_id: string;
+        overlap_title: string;
+        report_title: string;
+        photo_title: string;
+        extension_document_id: string;
+      }
+    >;
+  };
+  const spec = data.projects[project];
+  if (!spec) throw new Error(`No lease fixture for ${project}`);
+  const unit = `FAKE unit ${project}`;
+  const lease = page.getByRole("region", { name: "Unit lease", exact: true });
+  const lists: string[] = [];
+  let token = "";
+  page.on("request", (request) => {
+    const authorization = request.headers().authorization;
+    if (authorization?.startsWith("Bearer ")) token = authorization;
+    if (
+      request.method() === "GET" &&
+      /\/property\/leases\?/.test(request.url())
+    )
+      lists.push(new URL(request.url()).search);
+  });
+  await signIn(page, "owner");
+  await openProperty(page);
+  await catalog(page).getByRole("button", { name: unit, exact: true }).click();
+  const register = lease.getByRole("form", { name: "Register lease" });
+  await expect(register).toBeVisible();
+  expect(lists.length).toBeGreaterThan(0);
+  expect(lists.every((query) => query.includes("object_id="))).toBe(true);
+  await expect(lease.getByText(data.decoy_title, { exact: true })).toHaveCount(
+    0,
+  );
+
+  await register
+    .getByRole("combobox", { name: "Counterparty", exact: true })
+    .selectOption({ label: data.counterparty });
+  await register
+    .getByRole("combobox", { name: "Contract", exact: true })
+    .selectOption({ label: spec.lease_title });
+  await expect(register).toContainText("Version 2, signed 2026-10-01");
+  await register.getByRole("button", { name: "Register lease" }).click();
+  await expect(notice(page, "Lease registered.")).toBeVisible();
+  await expect(
+    lease.locator("dd").filter({ hasText: spec.lease_title }),
+  ).toBeVisible();
+  await expect(
+    lease.getByText("2026-12-31", { exact: true }).first(),
+  ).toBeVisible();
+  const contractDownload = page.waitForEvent("download");
+  await lease
+    .getByRole("button", { name: "Download original contract" })
+    .click();
+  expect((await contractDownload).suggestedFilename().length).toBeGreaterThan(
+    0,
+  );
+
+  await register
+    .getByRole("combobox", { name: "Counterparty", exact: true })
+    .selectOption({ label: data.counterparty });
+  await register
+    .getByRole("combobox", { name: "Contract", exact: true })
+    .selectOption({ label: spec.overlap_title });
+  await register.getByRole("button", { name: "Register lease" }).click();
+  await expect(register.getByRole("alert")).toContainText("already covers");
+  await expect(
+    lease.locator("dd").filter({ hasText: spec.lease_title }),
+  ).toBeVisible();
+
+  if (!token.startsWith("Bearer ")) throw new Error("Missing access token");
+  const business = `/v1/businesses/${data.business_id}`;
+  async function api(method: string, path: string, body: unknown) {
+    const response = await page.request.fetch(path, {
+      method,
+      data: body,
+      headers: {
+        Authorization: token,
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+    });
+    const payload = await response.text();
+    expect(response.ok(), payload).toBeTruthy();
+    return JSON.parse(payload) as unknown;
+  }
+  await api("PUT", `${business}/agreements/${spec.agreement_id}`, {
+    schema_version: 1,
+    expected_revision: 2,
+    counterparty_id: data.counterparty_id,
+    title: spec.lease_title,
+    number: `FAKE-${project}-ext`,
+    summary: "FAKE signed extension",
+    effective_from: "2026-01-01",
+    effective_until: "2027-06-30",
+  });
+  await api("POST", `${business}/agreements/${spec.agreement_id}/agree`, {
+    schema_version: 1,
+    expected_revision: 3,
+    signed_on: "2026-10-01",
+    attestation: "signed_outside_platform",
+    document: { document_id: spec.extension_document_id, revision: 1 },
+  });
+  await page.getByRole("button", { name: "Close property" }).click();
+  await catalog(page).getByRole("button", { name: unit, exact: true }).click();
+  const extend = lease.getByRole("button", { name: "Extend term" });
+  await expect(extend).toBeVisible();
+  const other = await page.context().newPage();
+  await signIn(other, "owner", false);
+  await openProperty(other);
+  await catalog(other).getByRole("button", { name: unit, exact: true }).click();
+  const otherExtend = other.getByRole("button", { name: "Extend term" });
+  await expect(otherExtend).toBeVisible();
+
+  const keys: string[] = [];
+  await page.route(/\/property\/leases\/[0-9a-f-]+\/terms$/, async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    keys.push(route.request().headers()["idempotency-key"] ?? "");
+    if (keys.length === 1) await route.abort("failed");
+    else await route.continue();
+  });
+  await extend.click();
+  await expect(lease.getByRole("alert")).toContainText("Retry safely");
+  await extend.focus();
+  await page.keyboard.press("Enter");
+  await expect(notice(page, "Term saved as revision 2.")).toBeVisible();
+  expect(keys).toEqual([keys[0], keys[0]]);
+
+  await otherExtend.click();
+  await expect(
+    other
+      .getByRole("region", { name: "Unit lease", exact: true })
+      .getByRole("alert"),
+  ).toContainText("The lease term changed");
+  await expect(otherExtend).toBeDisabled();
+  await expect(other.getByText("Term saved as revision 3.")).toHaveCount(0);
+  await other.close();
+
+  const moveIn = lease.getByRole("form", { name: "Record move-in" });
+  await moveIn.getByLabel("Move-in date").fill(data.move_in_on);
+  await moveIn
+    .getByRole("combobox", { name: "Report", exact: true })
+    .selectOption({ label: spec.report_title });
+  await moveIn
+    .getByRole("combobox", { name: "Report version", exact: true })
+    .selectOption({ label: "Version 1" });
+  await moveIn
+    .getByRole("combobox", { name: "Photo 1", exact: true })
+    .selectOption({ label: spec.photo_title });
+  await moveIn
+    .getByRole("combobox", { name: "Photo 1 version", exact: true })
+    .selectOption({ label: "Version 1" });
+  await moveIn.getByRole("button", { name: "Record move-in" }).click();
+  await expect(notice(page, "Move-in recorded.")).toBeVisible();
+  await expect(lease.getByText(data.move_in_on, { exact: true })).toBeVisible();
+  const photoDownload = page.waitForEvent("download");
+  await lease.getByRole("button", { name: "Download photo 1" }).click();
+  expect((await photoDownload).suggestedFilename().length).toBeGreaterThan(0);
+  await accessible(page, testInfo, "property-lease");
+});
+
 test("a branch manager reads the branch without history or edit controls", async ({
   page,
 }, testInfo) => {
   const unit = `FAKE unit ${testInfo.project.name}`;
   const historyReads: string[] = [];
+  const leaseReads: string[] = [];
   page.on("request", (request) => {
     if (/\/property\/objects\/[0-9a-f-]{36}\/history/.test(request.url()))
       historyReads.push(request.url());
+    if (request.url().includes("/property/leases"))
+      leaseReads.push(request.url());
   });
   await signIn(page, "branch");
   await openProperty(page);
@@ -303,6 +482,10 @@ test("a branch manager reads the branch without history or edit controls", async
     page.getByRole("button", { name: "Cancel showing" }),
   ).toHaveCount(0);
   expect(historyReads).toEqual([]);
+  await expect(
+    page.getByRole("heading", { name: "Lease", exact: true }),
+  ).toHaveCount(0);
+  expect(leaseReads).toEqual([]);
   await accessible(page, testInfo, "property-branch-detail");
 });
 

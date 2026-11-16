@@ -95,7 +95,96 @@ export type ShowingBody = Pick<
   "schema_version" | "object_id" | "host_resource_id" | "starts_at" | "ends_at"
 > & { prospect_id: string };
 
+const day = z.iso.date();
+const documentReferenceSchema = z.strictObject({
+  document_id: id,
+  revision,
+});
+export const leaseViewSchema = z.strictObject({
+  schema_version: z.literal(1),
+  lease_id: id,
+  object_id: id,
+  agreement_id: id,
+  agreement_revision: revision,
+  document_id: id,
+  document_revision: revision,
+  signed_on: day,
+  starts_on: day,
+  ends_on: day,
+  recorded_at: instant,
+});
+export const leaseListSchema = z.strictObject({
+  schema_version: z.literal(1),
+  items: z.array(leaseViewSchema),
+  next_cursor: id.nullable(),
+});
+export const leaseTermSchema = z.strictObject({
+  schema_version: z.literal(1),
+  lease_id: id,
+  revision,
+  action: z.enum(["register", "extend", "release"]),
+  agreement_revision: revision,
+  document_id: id.nullable(),
+  document_revision: revision.nullable(),
+  terminated_on: day.nullable(),
+  starts_on: day,
+  ends_on: day.nullable(),
+  recorded_at: instant,
+});
+export const leaseTermHistorySchema = z.strictObject({
+  schema_version: z.literal(1),
+  items: z.array(leaseTermSchema),
+  next_before: revision.nullable(),
+});
+export const moveInSchema = z.strictObject({
+  schema_version: z.literal(1),
+  lease_id: id,
+  term_revision: revision,
+  moved_in_on: day,
+  report: documentReferenceSchema,
+  photos: z.array(documentReferenceSchema).min(1).max(50),
+  recorded_by: id,
+  recorded_at: instant,
+});
+export type LeaseView = z.infer<typeof leaseViewSchema>;
+export type LeaseList = z.infer<typeof leaseListSchema>;
+export type LeaseTerm = z.infer<typeof leaseTermSchema>;
+export type LeaseTermHistory = z.infer<typeof leaseTermHistorySchema>;
+export type MoveInView = z.infer<typeof moveInSchema>;
+export type LeaseRegistration = {
+  schema_version: 1;
+  object_id: string;
+  agreement_id: string;
+  agreement_revision: number;
+};
+export type LeaseTermCommand = {
+  schema_version: 1;
+  action: "extend" | "release";
+  expected_revision: number;
+  agreement_revision: number;
+};
+export type MoveInCommand = {
+  schema_version: 1;
+  term_revision: number;
+  moved_in_on: string;
+  report: { document_id: string; revision: number };
+  photos: { document_id: string; revision: number }[];
+};
+
 const routes: [RegExp, string[], z.ZodType][] = [
+  [/^\/property\/leases$/i, ["GET"], leaseListSchema],
+  [
+    /^\/property\/leases\/[0-9a-f-]{36}\/terms$/i,
+    ["GET"],
+    leaseTermHistorySchema,
+  ],
+  [/^\/property\/leases\/[0-9a-f-]{36}\/terms$/i, ["POST"], leaseTermSchema],
+  [
+    /^\/property\/leases\/[0-9a-f-]{36}\/move-in$/i,
+    ["GET", "PUT"],
+    moveInSchema,
+  ],
+  [/^\/property\/leases\/[0-9a-f-]{36}$/i, ["GET", "PUT"], leaseViewSchema],
   [/^\/property\/listings\/[0-9a-f-]{36}$/i, ["GET"], listingViewSchema],
   [/^\/property\/listings\/[0-9a-f-]{36}$/i, ["PUT"], listingRevisionSchema],
   [/^\/property\/showings$/, ["GET"], showingListSchema],

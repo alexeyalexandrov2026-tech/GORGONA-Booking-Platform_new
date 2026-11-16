@@ -17,10 +17,14 @@ router = APIRouter(prefix="/v1/businesses/{business_id}/property/leases", tags=[
 
 @router.get("")
 async def list_leases(
-    business_id: UUID, request: Request, principal: CurrentPrincipal, after: UUID | None = None
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    after: UUID | None = None,
+    object_id: UUID | None = None,
 ) -> leases.LeaseList:
     async with _access(business_id, request, principal, Permission.PROPERTY_MANAGE) as access:
-        return await leases.list_leases(access.conn, business_id, after)
+        return await leases.list_leases(access.conn, business_id, after, object_id)
 
 
 @router.get("/{lease_id}")

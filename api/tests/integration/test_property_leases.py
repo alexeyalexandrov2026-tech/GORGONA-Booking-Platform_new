@@ -108,6 +108,44 @@ async def test_register_signed_unit_lease(
     assert (denied.status_code, denied.json()["error"]["code"]) == (409, "MODULE_DISABLED")
 
 
+async def test_unit_filter_keeps_the_company_list(enabled: Catalog, agreements: Agreements) -> None:
+    document = (await agreements.create(file_id=await agreements.stored()))["document_id"]
+    first_unit, second_unit = await unit(enabled), await unit(enabled)
+    first_id, second_id = uuid7(), uuid7()
+    first_contract = await signed(agreements, document)
+    second_contract = await signed(agreements, document)
+    assert (await register(enabled, first_id, lease_body(first_unit, first_contract))).is_success
+    assert (await register(enabled, second_id, lease_body(second_unit, second_contract))).is_success
+
+    selected = await enabled.client.get(
+        leases(enabled), headers=enabled.headers, params={"object_id": str(first_unit)}
+    )
+    assert selected.status_code == 200, selected.text
+    page = selected.json()
+    assert [item["lease_id"] for item in page["items"]] == [str(first_id)]
+    assert page["next_cursor"] is None
+    later = await enabled.client.get(
+        leases(enabled),
+        headers=enabled.headers,
+        params={"object_id": str(first_unit), "after": str(first_id)},
+    )
+    assert later.json() == {"schema_version": 1, "items": [], "next_cursor": None}
+    missing = await enabled.client.get(
+        leases(enabled), headers=enabled.headers, params={"object_id": str(uuid7())}
+    )
+    assert missing.json()["items"] == []
+    everything = await enabled.client.get(leases(enabled), headers=enabled.headers)
+    assert {item["lease_id"] for item in everything.json()["items"]} == {
+        str(first_id),
+        str(second_id),
+    }
+    branch = enabled.member("manager", enabled.world.a.location_id)
+    denied = await enabled.client.get(
+        leases(enabled), headers=branch, params={"object_id": str(first_unit)}
+    )
+    assert denied.status_code == 403
+
+
 async def test_term_boundaries_and_one_registration_per_agreement(
     enabled: Catalog, agreements: Agreements
 ) -> None:

@@ -60,12 +60,18 @@ class LeaseOverlapError(ConflictError):
     code = "PROPERTY_LEASE_OVERLAP"
 
 
-async def list_leases(conn: RuntimeConnection, business: UUID, after: UUID | None) -> LeaseList:
+async def list_leases(
+    conn: RuntimeConnection,
+    business: UUID,
+    after: UUID | None,
+    object_id: UUID | None = None,
+) -> LeaseList:
+    """Page company leases. An object id limits the page to that unit and keeps cursor order."""
     async with conn.cursor(row_factory=class_row(LeaseView)) as cur:
         await cur.execute(
-            f"{_SELECT} where l.tenant_id = %s and (%s::uuid is null or l.id > %s)"
-            " order by l.id limit %s",
-            (business, after, after, PAGE + 1),
+            f"{_SELECT} where l.tenant_id = %s and (%s::uuid is null or l.object_id = %s)"
+            " and (%s::uuid is null or l.id > %s) order by l.id limit %s",
+            (business, object_id, object_id, after, after, PAGE + 1),
         )
         rows = await cur.fetchall()
     items = rows[:PAGE]

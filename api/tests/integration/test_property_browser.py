@@ -7,12 +7,16 @@ catalog, keeps and clears parties and meets a stale revision as a company-wide o
 a branch manager and as the manager of an empty branch. The database is read back.
 """
 
+import json
 import os
 import shutil
 import subprocess
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import quote
 from uuid import uuid7
+from zoneinfo import ZoneInfo
 
 import httpx
 import psycopg
@@ -26,13 +30,15 @@ from tests.integration.booking_support import BookingWorld
 from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.live_server import free_port, live_server
 from tests.integration.seed import FakeUser, seed_other_branch, seed_user
+from tests.integration.test_agreements import draft
 from tests.integration.test_counterparties import card
 from tests.integration.test_i4_browser import _SignedIn
 from tests.integration.test_management_browser import _browser_env, _management_app, _provider
 from tests.support.fake_idp import FakeIdp
+from tests.unit.test_file_validation import pdf, png
 
 PROJECTS = ("desktop", "mobile")
-ENABLED = ["booking_resources", "counterparties", "property"]
+ENABLED = ["booking_resources", "counterparties", "documents", "property"]
 
 
 def test_property_catalog_real_browser(
@@ -141,6 +147,177 @@ def test_property_catalog_real_browser(
                 "name": "FAKE hidden parcel",
             },
         )
+
+        tenant_party = str(uuid7())
+        call(
+            "PUT",
+            f"{business}/counterparties/{tenant_party}",
+            card(display_name="FAKE Tenant", roles=["partner"]),
+        )
+        other_party = str(uuid7())
+        call(
+            "PUT",
+            f"{business}/counterparties/{other_party}",
+            card(display_name="FAKE Other tenant", roles=["partner"]),
+        )
+
+        def upload(name: str, data: bytes, media: str) -> str:
+            file_id = str(uuid7())
+            response = httpx.put(
+                f"{origin}{business}/document-files/{file_id}",
+                content=data,
+                headers={
+                    **headers,
+                    "Idempotency-Key": str(uuid7()),
+                    "Content-Type": media,
+                    "X-File-Name": quote(name),
+                },
+                timeout=30,
+            )
+            assert response.status_code == 200, response.text
+            return file_id
+
+        def make_document(title: str, category: str, file_id: str) -> str:
+            document_id = str(uuid7())
+            saved = call(
+                "PUT",
+                f"{business}/documents/{document_id}",
+                {
+                    "schema_version": 1,
+                    "expected_revision": 0,
+                    "title": title,
+                    "category": category,
+                    "valid_from": None,
+                    "valid_until": None,
+                    "archived": False,
+                    "file_id": file_id,
+                },
+            )
+            assert saved["document_id"] == document_id
+            return document_id
+
+        def make_contract(title: str, document_id: str, party: str, number: str) -> str:
+            subject = str(uuid7())
+            call(
+                "PUT",
+                f"{business}/agreements/{subject}",
+                draft(party, title=title, number=number, summary="FAKE lease term"),
+            )
+            agreed = call(
+                "POST",
+                f"{business}/agreements/{subject}/agree",
+                {
+                    "schema_version": 1,
+                    "expected_revision": 1,
+                    "signed_on": "2026-10-01",
+                    "attestation": "signed_outside_platform",
+                    "document": {"document_id": document_id, "revision": 1},
+                },
+            )
+            assert agreed["revision"] == 2, agreed
+            return subject
+
+        projects: dict[str, dict[str, str]] = {}
+        for project_name in PROJECTS:
+            lease_document = make_document(
+                f"FAKE lease file {project_name}",
+                "agreement",
+                upload(f"FAKE Lease {project_name}.pdf", pdf(), "application/pdf"),
+            )
+            overlap_document = make_document(
+                f"FAKE overlap file {project_name}",
+                "agreement",
+                upload(f"FAKE Overlap {project_name}.pdf", pdf(), "application/pdf"),
+            )
+            extension_document = make_document(
+                f"FAKE extension file {project_name}",
+                "agreement",
+                upload(f"FAKE Extension {project_name}.pdf", pdf(), "application/pdf"),
+            )
+            make_document(
+                f"FAKE condition report {project_name}",
+                "report",
+                upload(f"FAKE Report {project_name}.pdf", pdf(), "application/pdf"),
+            )
+            make_document(
+                f"FAKE condition photo {project_name}",
+                "other",
+                upload(f"FAKE Photo {project_name}.png", png(), "image/png"),
+            )
+            projects[project_name] = {
+                "lease_title": f"FAKE unit lease {project_name}",
+                "agreement_id": make_contract(
+                    f"FAKE unit lease {project_name}",
+                    lease_document,
+                    tenant_party,
+                    f"FAKE-{project_name}-L",
+                ),
+                "overlap_title": f"FAKE overlapping lease {project_name}",
+                "report_title": f"FAKE condition report {project_name}",
+                "photo_title": f"FAKE condition photo {project_name}",
+                "extension_document_id": extension_document,
+            }
+            make_contract(
+                f"FAKE overlapping lease {project_name}",
+                overlap_document,
+                tenant_party,
+                f"FAKE-{project_name}-O",
+            )
+        decoy_document = make_document(
+            "FAKE decoy file",
+            "agreement",
+            upload("FAKE Decoy lease.pdf", pdf(), "application/pdf"),
+        )
+        decoy_agreement = make_contract(
+            "FAKE decoy lease", decoy_document, other_party, "FAKE-DECOY"
+        )
+        building_id = str(uuid7())
+        call(
+            "PUT",
+            f"{business}/property/objects/{building_id}",
+            {
+                "schema_version": 1,
+                "expected_revision": 0,
+                "location_id": str(home),
+                "kind": "building",
+                "name": "FAKE other building",
+                "parent_id": None,
+            },
+        )
+        other_unit = str(uuid7())
+        call(
+            "PUT",
+            f"{business}/property/objects/{other_unit}",
+            {
+                "schema_version": 1,
+                "expected_revision": 0,
+                "location_id": str(home),
+                "kind": "unit",
+                "name": "FAKE other unit",
+                "parent_id": building_id,
+            },
+        )
+        call(
+            "PUT",
+            f"{business}/property/leases/{uuid7()}",
+            {
+                "schema_version": 1,
+                "object_id": other_unit,
+                "agreement_id": decoy_agreement,
+                "agreement_revision": 2,
+            },
+        )
+        move_in_day = datetime.now(ZoneInfo("America/New_York")).date().isoformat()
+        env["GBA_PROPERTY_FIXTURE"] = json.dumps(
+            {
+                "business_id": str(tenant),
+                "counterparty_id": tenant_party,
+                "counterparty": "FAKE Tenant",
+                "move_in_on": move_in_day,
+                "decoy_title": "FAKE decoy lease",
+                "projects": projects,
+            }
+        )
         result = subprocess.run(  # noqa: S603 - fixed repository script, located npm
             [npm, "run", "test:management:property"],
             cwd=web,
@@ -218,3 +395,42 @@ def test_property_catalog_real_browser(
                 (f"{name} stale",),
             ).fetchone()
             assert stale == (0,), project
+
+            lease_row = owner_conn.execute(
+                "select v.title, l.starts_on, l.ends_on, l.term_revision, l.occupied_through, "
+                "m.moved_in_on, m.term_revision, "
+                "(select count(*) from gba.property_move_in_photos p "
+                "where p.tenant_id = l.tenant_id and p.lease_id = l.id) "
+                "from gba.property_leases l "
+                "join gba.agreement_versions v on v.tenant_id = l.tenant_id "
+                "and v.agreement_id = l.agreement_id and v.revision = l.agreement_revision "
+                "left join gba.property_move_ins m "
+                "on m.tenant_id = l.tenant_id and m.lease_id = l.id "
+                "where l.object_id = %s",
+                (unit[0],),
+            ).fetchone()
+            assert lease_row == (
+                f"FAKE unit lease {project}",
+                date(2026, 1, 1),
+                date(2026, 12, 31),
+                2,
+                date(2027, 6, 30),
+                date.fromisoformat(move_in_day),
+                2,
+                1,
+            ), project
+            events = owner_conn.execute(
+                "select e.revision, e.action from gba.property_lease_term_events e "
+                "join gba.property_leases l on l.tenant_id = e.tenant_id and l.id = e.lease_id "
+                "where l.object_id = %s order by e.revision",
+                (unit[0],),
+            ).fetchall()
+            assert [tuple(row) for row in events] == [(2, "extend")], project
+            overlap = owner_conn.execute(
+                "select count(*) from gba.property_leases l "
+                "join gba.agreement_versions v on v.tenant_id = l.tenant_id "
+                "and v.agreement_id = l.agreement_id and v.revision = l.agreement_revision "
+                "where v.title = %s",
+                (f"FAKE overlapping lease {project}",),
+            ).fetchone()
+            assert overlap == (0,), project

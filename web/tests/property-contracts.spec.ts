@@ -205,3 +205,76 @@ test("operations parse strict listing and schedule projections", () => {
     showingWrite?.safeParse({ ...showing, prospect_id: uuid(5) }).success,
   ).toBe(false);
 });
+
+test("lease, term and move-in responses stay strict", () => {
+  const path = `/v1/businesses/${uuid(1)}/property`;
+  const lease = {
+    schema_version: 1,
+    lease_id: uuid(8),
+    object_id: uuid(2),
+    agreement_id: uuid(9),
+    agreement_revision: 2,
+    document_id: uuid(10),
+    document_revision: 1,
+    signed_on: "2026-10-01",
+    starts_on: "2026-01-01",
+    ends_on: "2026-12-31",
+    recorded_at: "2031-06-01T10:00:00Z",
+  };
+  const list = { schema_version: 1, items: [lease], next_cursor: null };
+  expect(
+    managementResponseSchema(
+      `${path}/leases?object_id=${uuid(2)}`,
+      "GET",
+    ).parse(list),
+  ).toEqual(list);
+  expect(
+    managementResponseSchema(`${path}/leases/${uuid(8)}`, "PUT").parse(lease),
+  ).toEqual(lease);
+  expect(
+    managementResponseSchema(`${path}/leases/${uuid(8)}`, "GET").safeParse({
+      ...lease,
+      title: "FAKE",
+    }).success,
+  ).toBe(false);
+  const term = {
+    schema_version: 1,
+    lease_id: uuid(8),
+    revision: 2,
+    action: "extend",
+    agreement_revision: 4,
+    document_id: uuid(11),
+    document_revision: 1,
+    terminated_on: null,
+    starts_on: "2026-01-01",
+    ends_on: "2027-06-30",
+    recorded_at: "2031-06-02T10:00:00Z",
+  };
+  const history = { schema_version: 1, items: [term], next_before: null };
+  expect(
+    managementResponseSchema(`${path}/leases/${uuid(8)}/terms`, "GET").parse(
+      history,
+    ),
+  ).toEqual(history);
+  expect(
+    managementResponseSchema(`${path}/leases/${uuid(8)}/terms`, "POST").parse(
+      term,
+    ),
+  ).toEqual(term);
+  const moveIn = {
+    schema_version: 1,
+    lease_id: uuid(8),
+    term_revision: 2,
+    moved_in_on: "2026-11-15",
+    report: { document_id: uuid(12), revision: 1 },
+    photos: [{ document_id: uuid(13), revision: 1 }],
+    recorded_by: uuid(4),
+    recorded_at: "2031-06-02T10:00:00Z",
+  };
+  const recorded = managementResponseSchema(
+    `${path}/leases/${uuid(8)}/move-in`,
+    "PUT",
+  );
+  expect(recorded.parse(moveIn)).toEqual(moveIn);
+  expect(recorded.safeParse({ ...moveIn, photos: [] }).success).toBe(false);
+});

@@ -3,9 +3,17 @@
 // answer is the same request (ADR-0030).
 import { ManagementApiError, managementFetch } from "./management-api";
 import type {
+  LeaseList,
+  LeaseRegistration,
+  LeaseTerm,
+  LeaseTermCommand,
+  LeaseTermHistory,
+  LeaseView,
   ListingBody,
   ListingRevision,
   ListingView,
+  MoveInCommand,
+  MoveInView,
   ShowingBody,
   ShowingList,
   ShowingView,
@@ -157,3 +165,84 @@ export const cancelShowing = (business: string, id: string) =>
   mutate<ShowingView>(`${operations(business)}/showings/${id}/cancel`, "POST", {
     schema_version: 1,
   });
+
+const leaseBase = (business: string) =>
+  `/v1/businesses/${business}/property/leases`;
+
+/** Leases of one unit. Omitting the unit on the server still returns the company list. */
+export async function fetchLeases(
+  business: string,
+  objectId: string,
+): Promise<LeaseView[]> {
+  const all: LeaseView[] = [];
+  let after = "";
+  for (;;) {
+    const query = new URLSearchParams({ object_id: objectId });
+    if (after) query.set("after", after);
+    const page = await managementFetch<LeaseList>(
+      `${leaseBase(business)}?${query}`,
+    );
+    all.push(...page.items);
+    if (!page.next_cursor) return all;
+    after = page.next_cursor;
+  }
+}
+
+export const registerLease = (
+  business: string,
+  leaseId: string,
+  body: LeaseRegistration,
+) => mutate<LeaseView>(`${leaseBase(business)}/${leaseId}`, "PUT", body);
+
+export async function fetchTermHistory(
+  business: string,
+  leaseId: string,
+): Promise<LeaseTerm[]> {
+  const all: LeaseTerm[] = [];
+  let before = 0;
+  for (;;) {
+    const page = await managementFetch<LeaseTermHistory>(
+      `${leaseBase(business)}/${leaseId}/terms${before ? `?before=${before}` : ""}`,
+    );
+    all.push(...page.items);
+    if (page.next_before === null) return all;
+    before = page.next_before;
+  }
+}
+
+export const recordTerm = (
+  business: string,
+  leaseId: string,
+  body: LeaseTermCommand,
+) => mutate<LeaseTerm>(`${leaseBase(business)}/${leaseId}/terms`, "POST", body);
+
+export async function fetchMoveIn(
+  business: string,
+  leaseId: string,
+): Promise<MoveInView | null> {
+  try {
+    return await managementFetch<MoveInView>(
+      `${leaseBase(business)}/${leaseId}/move-in`,
+    );
+  } catch (error) {
+    if (error instanceof ManagementApiError && error.status === 404)
+      return null;
+    throw error;
+  }
+}
+
+export const recordMoveIn = (
+  business: string,
+  leaseId: string,
+  body: MoveInCommand,
+) =>
+  mutate<MoveInView>(`${leaseBase(business)}/${leaseId}/move-in`, "PUT", body);
+
+/** A stale term is reloaded. The failed command is not repeated with a new revision. */
+export function termConflict(error: unknown): boolean {
+  return (
+    error instanceof ManagementApiError &&
+    (error.code === "PROPERTY_LEASE_REVISION_CONFLICT" ||
+      error.code === "PROPERTY_LEASE_MOVE_IN_CONFLICT")
+  );
+}

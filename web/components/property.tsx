@@ -6,6 +6,7 @@
 // object id and Idempotency-Key until it succeeds (ADR-0030); a stale revision is never retried
 // silently, the member reloads the property and applies the change again.
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
+import { PropertyLease } from "./property-lease";
 import { PropertyOperations } from "./property-operations";
 import { businessDateTime } from "../lib/business-time";
 import { fetchCounterparties } from "../lib/counterparty-api";
@@ -461,6 +462,14 @@ function PropertyDetail({
                 onReload={() => setReads((n) => n + 1)}
               />
             </>
+          )}
+          {canManage && view.kind === "unit" && (
+            <PropertyLease
+              businessId={businessId}
+              objectId={view.object_id}
+              parties={parties}
+              timezone={zone(view.location_id)}
+            />
           )}
         </>
       )}
