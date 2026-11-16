@@ -107,9 +107,8 @@ test("acceptance history binds signed scopes and releases to the right project",
   const detail = managementResponseSchema(`${path}/1`, "GET");
   expect(detail.safeParse(phase).success).toBe(true);
   expect(detail.safeParse(final).success).toBe(false);
-  expect(detail.safeParse({ ...phase, source: "platform" }).success).toBe(
-    false,
-  );
+  expect(detail.safeParse({ ...phase, source: "platform" }).success).toBe(true);
+  expect(detail.safeParse({ ...phase, source: "unknown" }).success).toBe(false);
   const release = managementResponseSchema(`${path}/1/release`, "POST");
   expect(release.safeParse(phase).success).toBe(true);
   expect(release.safeParse({ ...phase, release: null }).success).toBe(false);

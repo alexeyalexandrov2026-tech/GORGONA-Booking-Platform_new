@@ -3,6 +3,12 @@
 // retry after a lost answer is the same request (as on the transport screens, ADR-0030).
 import { ManagementApiError, managementFetch } from "./management-api";
 import type {
+  Acceptance,
+  AcceptanceBody,
+  AcceptanceList,
+  AcceptanceReleaseBody,
+} from "./construction-acceptance-contracts";
+import type {
   Budget,
   ChangeOrder,
   ChangeOrderList,
@@ -482,4 +488,39 @@ export const createPayApplication = async (
       "POST",
       body,
     ),
+  );
+
+export async function fetchAcceptances(business: string, project: Project) {
+  const result = await managementFetch<AcceptanceList>(
+    `${projectPath(business, project.project_id)}/acceptances`,
+  );
+  if (result.currency !== project.currency)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unexpected acceptance currency.",
+    );
+  return result;
+}
+
+export const recordAcceptance = (
+  business: string,
+  project: string,
+  body: AcceptanceBody,
+) =>
+  command<Acceptance>(
+    `${projectPath(business, project)}/acceptances`,
+    "POST",
+    body,
+  );
+
+export const releaseAcceptanceRetainage = (
+  business: string,
+  project: string,
+  number: number,
+  body: AcceptanceReleaseBody,
+) =>
+  command<Acceptance>(
+    `${projectPath(business, project)}/acceptances/${number}/release`,
+    "POST",
+    body,
   );

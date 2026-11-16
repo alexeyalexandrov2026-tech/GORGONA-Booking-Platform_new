@@ -25,11 +25,15 @@ export function ConstructionBilling({
   project,
   companyWide,
   places,
+  billingClosed,
+  onBilled,
 }: {
   business: string;
   project: Project;
   companyWide: boolean;
   places: number;
+  billingClosed: boolean;
+  onBilled: () => void;
 }) {
   const heading = useId();
   const id = project.project_id;
@@ -38,7 +42,11 @@ export function ConstructionBilling({
     list: PayApplicationList | null;
   } | null>(null);
   const [detail, setDetail] = useState<PayApplication>();
-  const [mode, setMode] = useState<"rate" | "application" | null>(null);
+  const [requestedMode, setMode] = useState<"rate" | "application" | null>(
+    null,
+  );
+  const mode =
+    billingClosed && requestedMode === "application" ? null : requestedMode;
   const [attempt, setAttempt] = useState(0);
   const [readError, setReadError] = useState("");
   const [actionError, setActionError] = useState("");
@@ -101,7 +109,7 @@ export function ConstructionBilling({
   }
 
   async function create(body: PayApplicationBody) {
-    if (busy || !view?.list) return;
+    if (busy || !view?.list || billingClosed) return;
     setBusy(true);
     setActionError("");
     try {
@@ -109,6 +117,7 @@ export function ConstructionBilling({
       setDetail(application);
       setStatus(`Pay application ${application.number} saved.`);
       reload();
+      onBilled();
     } catch (failure) {
       setActionError(refusal(failure));
     } finally {
@@ -218,7 +227,7 @@ export function ConstructionBilling({
               >
                 Edit retainage rate
               </button>
-              {list && (
+              {list && !billingClosed && (
                 <button
                   type="button"
                   onClick={() => open("application")}
@@ -229,6 +238,7 @@ export function ConstructionBilling({
               )}
             </div>
           )}
+          {list && billingClosed && <p>Final acceptance closed billing.</p>}
           {mode === "rate" && (
             <form
               className="mgmt-form"

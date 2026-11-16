@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { constructionAcceptanceResponseSchema } from "./construction-acceptance-contracts";
 import { invoiceSchema } from "./financial-contracts";
 import { minorUnits } from "./ledger-contracts";
 
@@ -610,6 +611,8 @@ export function constructionResponseSchema(
   if (cost) return cost;
   const billing = billingResponseSchema(suffix, method);
   if (billing) return billing;
+  const acceptance = constructionAcceptanceResponseSchema(suffix, method);
+  if (acceptance) return acceptance;
   for (const [pattern, methods, schema] of routes)
     if (pattern.test(suffix) && methods.includes(method)) return schema;
   return null;
