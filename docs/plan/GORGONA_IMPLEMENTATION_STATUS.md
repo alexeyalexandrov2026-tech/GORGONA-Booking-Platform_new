@@ -1,5 +1,16 @@
 # GORGONA — реестр реализации
 
+### PROPERTY-01 access to every Property route (2026-11-15)
+
+Source `2b124b52a0908268ccb4878a55ed1cada80fa091` on `codex/package-property-01-access`. Test-only, no schema, API or screen change.
+`test_property_access.py` ties a 19-route matrix to the OpenAPI paths. Another company, members
+without property rights and platform support are refused everywhere and write nothing. Branch
+managers read six routes of their own branch. Suspended and revoked members are refused,
+including replays of their earlier keys, and keep authorship of what they recorded.
+Box PostgreSQL 18.7: 4 passed in 13.20s, Property and identity 83 passed in 99.40s, unit 877 passed.
+A box full run had 3 failures outside Property, recorded in the evidence. GitHub CI decides.
+[Evidence](evidence/2026-11-15-property-access/CHECKS.json). [Handoff](NEXT_AGENT_PROPERTY01_ACCESS_2026-11-15.md).
+
 ### PROPERTY-01 lease release in the browser (2026-11-15)
 
 Source `2f8aaf6b68bc2cc82bfa4548f9d17162c9de70e8` on `codex/package-property-01-lease-release`, stacked on the lease screen.

@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "source_commit": "2b124b52a0908268ccb4878a55ed1cada80fa091",
+  "base": "adbc7e048f17c11632410f8fbea1234cc3f3babf",
+  "run_host": "Grok Bot box (Debian 13, 8 CPU); not gorgona-dev",
+  "source_sha256": {
+    "api/tests/integration/test_property_access.py": "5562b5ff601c6428ccf0d5eec32c4b9d8dac99c49d33c252c6db46adf935d98f",
+    "docs/plan/PACKAGE_PROPERTY01_ACCESS_DESIGN_2026-11-15.md": "4c51179cdef24fff70fca9e877492a907b6750fbea57f83027d89ed8f3aca689"
+  },
+  "versions": {
+    "python": "3.14.10",
+    "pytest": "9.1.1",
+    "psycopg": "3.3.6",
+    "ruff": "0.16.9",
+    "mypy": "2.3.1",
+    "fastapi": "0.142.1",
+    "postgres": "18.7 (pgdg13 binaries)"
+  },
+  "checks": {
+    "access": {
+      "status": "PASS",
+      "command": "uv run pytest tests/integration/test_property_access.py -q",
+      "outcome": "4 passed in 13.20s"
+    },
+    "mutation": {
+      "status": "FAIL",
+      "expected": true,
+      "outcome": "With the object history route switched to property.read the branch matrix failed (history answered 200 instead of 403); the route was restored"
+    },
+    "focused": {
+      "status": "PASS",
+      "command": "uv run pytest tests/integration/test_property_*.py (13 files) test_delegations.py test_invitations_api.py -q",
+      "outcome": "83 passed in 99.40s",
+      "log_sha256": "5529a537c7306f245b252eeed846a9fe48ccd4dda1723b30bfec8141ba5ef7c1"
+    },
+    "unit": {
+      "status": "PASS",
+      "command": "uv run pytest tests/unit -q",
+      "outcome": "877 passed in 21.32s",
+      "log_sha256": "eec445e7a862544c85138801d4ca7d7b4e5dd25bb8023e158e93d5ff44a711c4"
+    },
+    "static": {
+      "status": "PASS",
+      "commands": [
+        "uv run ruff format --check .",
+        "uv run ruff check .",
+        "uv run mypy",
+        "git diff --check"
+      ],
+      "outcome": "557 files formatted, Ruff clean, mypy clean on 557 files"
+    },
+    "full-box": {
+      "status": "FAIL",
+      "commit": "2f8aaf6b68bc2cc82bfa4548f9d17162c9de70e8",
+      "command": "uv run pytest -q",
+      "outcome": "3 failed, 2920 passed, 4 skipped in 3600.65s outside Property: test_r6b_rental_usage::test_cards_meters_and_extensions expects a UTC wall-clock string and the box runs in America/New_York; test_stock_documents_browser [documents] and [pagination] not analysed. No container gate (no Docker on the box). GitHub CI is the authority.",
+      "log_sha256": "dd1f851d9de0b26bfaa01ed7ecb542ef3b079382233c93446a92431c08b4ec88"
+    }
+  }
+}
