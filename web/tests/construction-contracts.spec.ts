@@ -32,6 +32,95 @@ const uuid = (n: number) =>
   `00000000-0000-4000-8000-${n.toString().padStart(12, "0")}`;
 const business = uuid(1);
 const base = `/v1/businesses/${business}/construction`;
+test("warranty history preserves ordered transitions and excludes reversed costs from totals", () => {
+  const projectId = uuid(2);
+  const path = `${base}/projects/${projectId}/warranty-claims`;
+  const recorded = "2026-10-02T12:00:00Z";
+  const detail = {
+    schema_version: 1,
+    project_id: projectId,
+    number: 1,
+    title: "FAKE tile",
+    description: null,
+    phase: "Finishes",
+    location: null,
+    reported_by: "FAKE customer",
+    raised_on: "2026-10-02",
+    state: "open",
+    events: [
+      { sequence: 1, state: "repaired", note: null, recorded_at: recorded },
+      {
+        sequence: 2,
+        state: "open",
+        note: "FAKE reopened",
+        recorded_at: recorded,
+      },
+    ],
+    repairs: [
+      {
+        cost_link: 1,
+        amount_minor: 2500,
+        reversed: false,
+        recorded_at: recorded,
+      },
+      {
+        cost_link: 2,
+        amount_minor: 900,
+        reversed: true,
+        recorded_at: recorded,
+      },
+    ],
+    repair_minor: 2500,
+    recorded_at: recorded,
+  };
+  const schema = managementResponseSchema(`${path}/1`, "GET");
+  expect(schema.safeParse(detail).success).toBe(true);
+  expect(schema.safeParse({ ...detail, repair_minor: 3400 }).success).toBe(
+    false,
+  );
+  expect(
+    schema.safeParse({ ...detail, events: detail.events.toReversed() }).success,
+  ).toBe(false);
+  expect(
+    schema.safeParse({
+      ...detail,
+      events: [{ ...detail.events[0], state: "closed" }],
+      state: "closed",
+    }).success,
+  ).toBe(false);
+  expect(
+    managementResponseSchema(`${path}/1/events`, "POST").safeParse(detail)
+      .success,
+  ).toBe(true);
+  expect(
+    managementResponseSchema(`${path}/2/repairs`, "POST").safeParse(detail)
+      .success,
+  ).toBe(false);
+  const list = {
+    schema_version: 1,
+    project_id: projectId,
+    currency: "USD",
+    warranty_starts_on: "2026-10-01",
+    warranty_ends_on: "2027-10-01",
+    repair_minor: 2500,
+    items: [
+      {
+        number: 1,
+        title: detail.title,
+        phase: detail.phase,
+        raised_on: detail.raised_on,
+        state: detail.state,
+        repair_minor: 2500,
+      },
+    ],
+  };
+  const listSchema = managementResponseSchema(path, "GET");
+  expect(listSchema.safeParse(list).success).toBe(true);
+  expect(
+    listSchema.safeParse({ ...list, warranty_starts_on: null }).success,
+  ).toBe(false);
+});
+
 test("reconciliation keeps a signed difference and binds money to the requested project", () => {
   const projectId = uuid(2);
   const result = {
