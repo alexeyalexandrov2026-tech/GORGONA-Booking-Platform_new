@@ -73,6 +73,53 @@ test("customer proposal responses stay scoped and expose customer prices only", 
   });
 });
 
+test("customer change answers bind the project and change number and refuse internal prices", () => {
+  const project = uuid(2);
+  const path = `${base}/projects/${project}/change-orders/2/customer-answer/${uuid(3)}`;
+  const line = {
+    position: 1,
+    action: "remove",
+    contract_position: 1,
+    description: "FAKE removed scope",
+    phase: "Framing",
+    quantity: "2.0000",
+    unit: "sheet",
+    unit_price_minor: 2500,
+    price_minor: -5000,
+  };
+  const change = {
+    schema_version: 1,
+    project_id: project,
+    number: 2,
+    customer_generation: 1,
+    title: "FAKE scope change",
+    reason: "FAKE request",
+    currency: "USD",
+    days_delta: -2,
+    price_minor: -5000,
+    state: "proposed",
+    decided_at: null,
+    lines: [line],
+  };
+  const read = managementResponseSchema(path, "GET");
+  expect(read.parse(change)).toEqual(change);
+  for (const invalid of [
+    { ...change, project_id: uuid(4) },
+    { ...change, number: 3 },
+    { ...change, state: "approved" },
+    { ...change, lines: [{ ...line, unit_cost_minor: 1500 }] },
+  ])
+    expect(read.safeParse(invalid).success).toBe(false);
+  const answer = managementResponseSchema(path, "POST");
+  expect(answer.safeParse(change).success).toBe(false);
+  const rejected = {
+    ...change,
+    state: "rejected",
+    decided_at: "2026-11-17T15:00:00Z",
+  };
+  expect(answer.parse(rejected)).toEqual(rejected);
+});
+
 test("warranty history preserves ordered transitions and excludes reversed costs from totals", () => {
   const projectId = uuid(2);
   const path = `${base}/projects/${projectId}/warranty-claims`;

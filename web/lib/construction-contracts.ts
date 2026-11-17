@@ -64,6 +64,54 @@ const customerProposalSchema = z.strictObject({
 
 export type CustomerProposal = z.infer<typeof customerProposalSchema>;
 
+const customerChangeSchema = z
+  .strictObject({
+    schema_version: z.literal(1),
+    project_id: id,
+    number: z.number().int().min(1).max(100_000),
+    customer_generation: z.number().int().positive(),
+    title: text(200),
+    reason: text(1000).nullable(),
+    currency,
+    days_delta: z.number().int().min(-3650).max(3650),
+    price_minor: signed,
+    state: z.enum(["proposed", "approved", "rejected", "withdrawn"]),
+    decided_at: instant.nullable(),
+    lines: z
+      .array(
+        z
+          .strictObject({
+            position: z.number().int().min(1).max(200),
+            action: z.enum(["add", "remove"]),
+            contract_position: z.number().int().min(1).max(500).nullable(),
+            description: text(500),
+            phase: text(64),
+            quantity,
+            unit: text(16),
+            unit_price_minor: unitAmount,
+            price_minor: signed,
+          })
+          .refine((line) =>
+            line.action === "add"
+              ? line.contract_position === null && line.price_minor >= 0
+              : line.contract_position !== null && line.price_minor <= 0,
+          ),
+      )
+      .min(1)
+      .max(200),
+  })
+  .refine(
+    (change) => (change.state === "proposed") === (change.decided_at === null),
+  );
+
+export type CustomerChange = z.infer<typeof customerChangeSchema>;
+export type CustomerChangeAnswer = {
+  schema_version: 1;
+  decision: "approved" | "rejected";
+  expected_customer_generation: number;
+  note: string | null;
+};
+
 export const projectSchema = z.strictObject({
   project_id: id,
   revision: z.number().int().positive(),
@@ -618,6 +666,8 @@ const reconciliationRoute =
   /^\/construction\/projects\/([0-9a-f-]{36})\/reconciliation$/i;
 const customerProposalRoute =
   /^\/construction\/projects\/([0-9a-f-]{36})\/customer-proposal\/[0-9a-f-]{36}$/i;
+const customerChangeRoute =
+  /^\/construction\/projects\/([0-9a-f-]{36})\/change-orders\/(\d+)\/customer-answer\/[0-9a-f-]{36}$/i;
 
 const project = /^\/construction\/projects\/[0-9a-f-]{36}$/i;
 const nested = (tail: string) =>
@@ -655,6 +705,16 @@ export function constructionResponseSchema(
   suffix: string,
   method: string,
 ): z.ZodType | null {
+  const customerChange = customerChangeRoute.exec(suffix);
+  if (customerChange && (method === "GET" || method === "POST"))
+    return customerChangeSchema.refine(
+      (value) =>
+        value.project_id === customerChange[1] &&
+        value.number === Number(customerChange[2]) &&
+        (method === "GET" ||
+          value.state === "approved" ||
+          value.state === "rejected"),
+    );
   const proposal = customerProposalRoute.exec(suffix);
   if (proposal && (method === "GET" || method === "POST"))
     return customerProposalSchema.refine(

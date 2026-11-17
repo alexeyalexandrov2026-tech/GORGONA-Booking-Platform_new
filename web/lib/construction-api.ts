@@ -26,6 +26,8 @@ import type {
   CostLinkList,
   CustomerProposal,
   CustomerProposalLink,
+  CustomerChange,
+  CustomerChangeAnswer,
   DailyReport,
   DailyReportList,
   Measurement,
@@ -151,6 +153,22 @@ export const acceptCustomerProposal = (
     signatory,
     note: note || null,
   });
+
+const customerChangePath = (link: CustomerProposalLink, number: number) =>
+  `${projectPath(link.business, link.project)}/change-orders/${number}/customer-answer/${link.grant}`;
+
+export const fetchCustomerChange = (
+  link: CustomerProposalLink,
+  number: number,
+  signal: AbortSignal,
+) =>
+  managementFetch<CustomerChange>(customerChangePath(link, number), { signal });
+
+export const answerCustomerChange = (
+  link: CustomerProposalLink,
+  number: number,
+  body: CustomerChangeAnswer,
+) => command<CustomerChange>(customerChangePath(link, number), "POST", body);
 
 export type ProjectBody = {
   schema_version: 1;

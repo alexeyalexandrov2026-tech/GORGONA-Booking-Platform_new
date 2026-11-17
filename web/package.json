@@ -48,7 +48,7 @@
     "test:management:stock-documents": "playwright test tests/stock-documents.spec.ts --max-failures=1"
   },
   "dependencies": {
-    "next": "16.4.2",
+    "next": "16.4.6",
     "oidc-client-ts": "3.5.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -61,7 +61,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.4.2",
+    "eslint-config-next": "16.4.6",
     "prettier": "3.9.9",
     "typescript": "6.0.3"
   }

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
-import { signIn } from "../../../lib/auth";
 import {
   acceptCustomerProposal,
   fetchCustomerProposal,
@@ -17,7 +16,11 @@ import {
   formatMinor,
   quantityText,
 } from "../../../lib/construction-rules";
-import { ManagementApiError } from "../../../lib/management-api";
+import {
+  CustomerAccessFeedback,
+  customerFailure,
+  type CustomerProblem,
+} from "./access";
 
 export function CustomerProposalPage() {
   const params = useSearchParams();
@@ -38,46 +41,6 @@ export function CustomerProposalPage() {
   );
 }
 
-type Problem = {
-  message: string;
-  needsSignIn?: boolean;
-  needsReload?: boolean;
-  hideProposal?: boolean;
-};
-
-function failure(error: unknown, submitting: boolean): Problem {
-  if (error instanceof ManagementApiError) {
-    if (error.status === 401 || error.code === "AUTHENTICATION_REQUIRED")
-      return {
-        message: "Sign in to view and accept this proposal.",
-        needsSignIn: true,
-        hideProposal: true,
-      };
-    if (error.status === 403 || error.status === 404)
-      return {
-        message: "This proposal is unavailable for your account.",
-        hideProposal: true,
-      };
-    if (error.status === 409)
-      return {
-        message:
-          "The proposal could not be accepted. Reload it before trying again.",
-        needsReload: true,
-        hideProposal: true,
-      };
-  }
-  return submitting
-    ? {
-        message:
-          "We could not confirm your acceptance. Try again to check whether it was received.",
-      }
-    : {
-        message: "We could not load the proposal.",
-        needsReload: true,
-        hideProposal: true,
-      };
-}
-
 function Proposal({
   reference: { business, project, grant },
   returnPath,
@@ -86,12 +49,11 @@ function Proposal({
   returnPath: string;
 }) {
   const [proposal, setProposal] = useState<CustomerProposal | null>(null);
-  const [problem, setProblem] = useState<Problem | null>(null);
+  const [problem, setProblem] = useState<CustomerProblem | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [signatory, setSignatory] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
-  const [signingIn, setSigningIn] = useState(false);
   const result = useRef<HTMLParagraphElement>(null);
   const focusResult = useRef(false);
 
@@ -102,7 +64,8 @@ function Proposal({
         if (!request.signal.aborted) setProposal(data);
       },
       (error: unknown) => {
-        if (!request.signal.aborted) setProblem(failure(error, false));
+        if (!request.signal.aborted)
+          setProblem(customerFailure(error, false, "proposal"));
       },
     );
     return () => request.abort();
@@ -114,20 +77,6 @@ function Proposal({
       focusResult.current = false;
     }
   }, [proposal]);
-
-  async function authenticate() {
-    setSigningIn(true);
-    try {
-      await signIn(returnPath);
-    } catch {
-      setProblem({
-        message: "Sign-in could not start. Try again.",
-        needsSignIn: true,
-      });
-    } finally {
-      setSigningIn(false);
-    }
-  }
 
   async function accept(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -144,8 +93,8 @@ function Proposal({
       focusResult.current = true;
       setProposal(accepted);
     } catch (error) {
-      const refusal = failure(error, true);
-      if (refusal.hideProposal) setProposal(null);
+      const refusal = customerFailure(error, true, "proposal");
+      if (refusal.hideDocument) setProposal(null);
       setProblem(refusal);
     } finally {
       setSaving(false);
@@ -160,31 +109,14 @@ function Proposal({
     <>
       {!proposal && !problem && <p role="status">Loading proposal…</p>}
       {problem && (
-        <div>
-          <p role={problem.needsSignIn ? "status" : "alert"}>
-            {problem.message}
-          </p>
-          {problem.needsSignIn && (
-            <button
-              type="button"
-              disabled={signingIn}
-              onClick={() => void authenticate()}
-            >
-              {signingIn ? "Starting sign-in…" : "Sign in"}
-            </button>
-          )}
-          {problem.needsReload && (
-            <button
-              type="button"
-              onClick={() => {
-                setProblem(null);
-                setAttempt(attempt + 1);
-              }}
-            >
-              Reload proposal
-            </button>
-          )}
-        </div>
+        <CustomerAccessFeedback
+          problem={problem}
+          returnPath={returnPath}
+          onReload={() => {
+            setProblem(null);
+            setAttempt(attempt + 1);
+          }}
+        />
       )}
       {proposal && (
         <>

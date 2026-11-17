@@ -25,7 +25,7 @@
   gap: 1rem;
 }
 
-.customer-proposal-form input,
+.customer-proposal-form input:not([type="radio"]),
 .customer-proposal-form textarea {
   display: block;
   width: 100%;
@@ -39,4 +39,17 @@
 
 .customer-proposal-form button {
   justify-self: start;
+}
+
+.customer-proposal-form fieldset {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid var(--muted);
+}
+
+.customer-proposal-form fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
 }

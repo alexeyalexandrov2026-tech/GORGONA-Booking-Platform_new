@@ -2,11 +2,12 @@
 
 from uuid import uuid7
 
+import psycopg
 import pytest
 from psycopg.errors import CheckViolation
 
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction
-from tests.integration.seed import FakeUser
+from tests.integration.seed import FakeUser, seed_other_branch
 from tests.integration.test_delegations import Parties, owner_a, owner_b, parties
 from tests.integration.test_o1_construction_estimates import accepted, client, idp, manager_a
 from tests.integration.test_o2_construction_contract import add, change, signed
@@ -17,7 +18,12 @@ pytestmark = pytest.mark.anyio
 
 
 async def test_customer_change_answer_uses_exact_grant_and_records_its_proof(
-    billing: Billing, parties: Parties, owner_a: FakeUser, owner_b: FakeUser, app_pool: RuntimePool
+    billing: Billing,
+    parties: Parties,
+    owner_a: FakeUser,
+    owner_b: FakeUser,
+    app_pool: RuntimePool,
+    owner_conn: psycopg.Connection,
 ) -> None:
     c = billing.c
     project = await signed(c)
@@ -34,6 +40,27 @@ async def test_customer_change_answer_uses_exact_grant_and_records_its_proof(
     assert linked.status_code == 200, linked.text
     for _ in range(2):
         assert (await change(c, project, [add()], days=2)).status_code == 200
+    headers = parties.headers(owner_b)
+    away, _ = seed_other_branch(owner_conn, c.world.a)
+    wrong_branch_grant = await parties.active_grant(
+        owner_a,
+        owner_b,
+        [owner_b],
+        permissions=["construction.customer_answer"],
+        location_id=str(away),
+    )
+    wrong_branch = f"{path}/1/customer-answer/{wrong_branch_grant}"
+    assert (await c.get(wrong_branch, headers)).status_code == 404
+    assert (
+        await c.send(
+            "POST",
+            wrong_branch,
+            {"decision": "approved", "expected_customer_generation": 1},
+            headers,
+        )
+    ).status_code == 404
+    revoked_branch = await parties.act(owner_a, billing.tenant, wrong_branch_grant, "revoke", 2)
+    assert revoked_branch.status_code == 200, revoked_branch.text
     grant = await parties.active_grant(
         owner_a,
         owner_b,
@@ -42,7 +69,6 @@ async def test_customer_change_answer_uses_exact_grant_and_records_its_proof(
         location_id=str(c.world.a.location_id),
     )
     granted = f"{path}/1/customer-answer/{grant}"
-    headers = parties.headers(owner_b)
     get = await c.get(granted, headers)
     assert get.status_code == 200, get.text
     assert get.json()["state"] == "proposed"
