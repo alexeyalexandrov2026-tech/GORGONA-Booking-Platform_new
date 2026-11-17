@@ -127,9 +127,16 @@ class DecisionInput(Strict):
         return self
 
 
+class CustomerDecisionInput(Strict):
+    schema_version: Literal[1]
+    decision: Literal["approved", "rejected"]
+    expected_customer_generation: int = Field(ge=1)
+    note: str | None = Field(default=None, min_length=1, max_length=1000)
+
+
 class ChangeLineView(BaseModel):
     position: int
-    action: str
+    action: Literal["add", "remove"]
     contract_position: int | None
     kind: str
     description: str
@@ -442,6 +449,62 @@ class CustomerProposalLine(BaseModel):
     price_minor: int
 
 
+class CustomerChangeLine(CustomerProposalLine):
+    action: Literal["add", "remove"]
+    contract_position: int | None
+
+
+class CustomerChangeView(BaseModel):
+    schema_version: Literal[1] = 1
+    project_id: UUID
+    number: int
+    customer_generation: int
+    title: str
+    reason: str | None
+    currency: str
+    days_delta: int
+    price_minor: int
+    state: str
+    decided_at: datetime | None
+    lines: list[CustomerChangeLine]
+
+
+async def load_customer_change(
+    conn: RuntimeConnection, project_id: UUID, number: int, delegation: DelegationScope
+) -> CustomerChangeView:
+    await lock_project(conn, project_id)
+    customer = await require_customer_company(conn, project_id, delegation.servicer_business_id)
+    change = await load_change_order(conn, project_id, number)
+    if change is None:
+        raise NotFoundError("Change order not found", project_id=str(project_id), number=number)
+    return CustomerChangeView(
+        project_id=project_id,
+        number=number,
+        customer_generation=customer.customer_generation,
+        title=change.title,
+        reason=change.reason,
+        currency=change.currency,
+        days_delta=change.days_delta,
+        price_minor=change.price_minor,
+        state=change.state,
+        decided_at=change.decided_at,
+        lines=[
+            CustomerChangeLine(
+                position=line.position,
+                action=line.action,
+                contract_position=line.contract_position,
+                description=line.description,
+                phase=line.phase,
+                quantity=line.quantity,
+                unit=line.unit,
+                unit_price_minor=line.unit_price_minor,
+                price_minor=line.price_minor,
+            )
+            for line in change.lines
+        ],
+    )
+
+
 class CustomerProposalView(BaseModel):
     schema_version: Literal[1] = 1
     project_id: UUID
@@ -610,18 +673,40 @@ async def decide(
     user_id: UUID,
     actor: str,
     key: str,
-    body: DecisionInput,
+    body: DecisionInput | CustomerDecisionInput,
+    delegation: DelegationScope | None = None,
 ) -> ChangeOrderView:
     """Record the one decision of a proposed change order (decision 4)."""
     await require_construction(conn, business)
-    scope = IdempotencyScope(business, actor, "construction.change_order_decision", key)
-    fingerprint = request_fingerprint(f"{project_id}:{number}", body)
+    target = f"{project_id}:{number}"
+    source: Source | Literal["platform"] | None
+    if isinstance(body, CustomerDecisionInput):
+        if delegation is None:
+            raise ValueError("A customer answer requires delegation")
+        await lock_project(conn, project_id)
+        customer = await require_customer_company(conn, project_id, delegation.servicer_business_id)
+        if body.expected_customer_generation != customer.customer_generation:
+            raise ConstructionRevisionConflictError(
+                "The customer assignment has changed",
+                customer_generation=customer.customer_generation,
+            )
+        source = "platform"
+        operation = "construction.customer_change_decision"
+        target = f"{target}:{delegation.grant_id}"
+    else:
+        if delegation is not None:
+            raise ValueError("An employee's record cannot carry customer delegation")
+        source = body.source
+        operation = "construction.change_order_decision"
+    scope = IdempotencyScope(business, actor, operation, key)
+    fingerprint = request_fingerprint(target, body)
     stored = await idempotency.claim(conn, scope, fingerprint)
     if stored is not None:
         if stored.request_hash != fingerprint:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return await _stored_change(conn, project_id, stored.body)
-    await lock_project(conn, project_id)
+    if delegation is None:
+        await lock_project(conn, project_id)
     current = await load_change_order(conn, project_id, number)
     if current is None:
         raise NotFoundError("Change order not found", project_id=str(project_id), number=number)
@@ -633,13 +718,26 @@ async def decide(
         async with module_writes(CONSTRUCTION_MODULE), conn.transaction():
             await conn.execute(
                 "insert into gba.construction_change_order_decisions (tenant_id, project_id, "
-                "number, decision, source, note, decided_by) "
-                "values (%s, %s, %s, %s, %s, %s, %s)",
-                (business, project_id, number, body.decision, body.source, body.note, user_id),
+                "number, decision, source, note, decided_by, "
+                "customer_company_id, customer_grant_id) "
+                "values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    business,
+                    project_id,
+                    number,
+                    body.decision,
+                    source,
+                    body.note,
+                    user_id,
+                    delegation.servicer_business_id if delegation else None,
+                    delegation.grant_id if delegation else None,
+                ),
             )
     except UniqueViolation as exc:
         raise ConstructionChangeOrderDecidedError("The change order is already decided") from exc
     except CheckViolation as exc:
+        if exc.diag.constraint_name == "construction_change_decision_customer_scope":
+            raise PermissionDeniedError("Customer grant does not authorize this project") from exc
         if exc.diag.constraint_name == "construction_change_order_decisions_scope_check":
             raise ConstructionScopeExceededError(
                 "Approving it would remove more than the contract line holds"

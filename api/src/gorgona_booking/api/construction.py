@@ -452,6 +452,51 @@ async def post_change_order_decision(
         )
 
 
+@router.get("/projects/{project_id}/change-orders/{number}/customer-answer/{grant_id}")
+async def get_customer_change(
+    business_id: UUID,
+    project_id: UUID,
+    number: Number,
+    grant_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> contracts.CustomerChangeView:
+    async with _customer_grant(request, principal, business_id, grant_id) as access:
+        assert access.delegation is not None  # noqa: S101 - enforced by _customer_grant
+        return await contracts.load_customer_change(
+            access.conn, project_id, number, access.delegation
+        )
+
+
+@router.post("/projects/{project_id}/change-orders/{number}/customer-answer/{grant_id}")
+async def post_customer_change_answer(
+    business_id: UUID,
+    project_id: UUID,
+    number: Number,
+    grant_id: UUID,
+    body: contracts.CustomerDecisionInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> contracts.CustomerChangeView:
+    async with _customer_grant(request, principal, business_id, grant_id) as access:
+        assert access.delegation is not None  # noqa: S101 - enforced by _customer_grant
+        await contracts.decide(
+            access.conn,
+            business_id,
+            project_id,
+            number,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+            delegation=access.delegation,
+        )
+        return await contracts.load_customer_change(
+            access.conn, project_id, number, access.delegation
+        )
+
+
 @router.get("/projects/{project_id}/budget")
 async def get_budget(
     business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
