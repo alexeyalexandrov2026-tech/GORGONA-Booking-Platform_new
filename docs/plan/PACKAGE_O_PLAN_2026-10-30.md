@@ -88,11 +88,16 @@ no second stock and no second time-keeping: it links to those facts.
 | O7 | Screens: projects, estimate editor, change orders, budget, daily reports, pay applications, reconciliation; real browser desktop and mobile |
 | O8 | Acceptance: BUILD-01 and O-01..O-10; independent review only with the owner's consent; readiness only on the owner's word |
 
-## Acceptance (all NOT TESTED)
+## Acceptance criteria
+
+Clarification recorded on 2026-11-17 follows accepted ADR-0035. Disabling construction
+refuses writes while preserving authorized history reads under tenant and branch scope.
+O-01 below reflects that accepted decision. Current check outcomes are recorded in
+`GORGONA_IMPLEMENTATION_STATUS.md`. Readiness remains an owner decision.
 
 | id | Requirement |
 |---|---|
-| O-01 | The module cannot be enabled before acceptance; every route refuses when it is off; company and branch scope and direct SQL refusals hold |
+| O-01 | The module cannot be enabled before acceptance; writes refuse when it is off and authorized history reads remain available under company and branch scope; runtime direct SQL refusals hold |
 | O-02 | Estimate versions are insert-only; a proposal is frozen; totals are derived |
 | O-03 | Acceptance freezes the original contract; a change order never rewrites it; the current sum = original + approved changes |
 | O-04 | Two racing approvals of one change order (or approval vs withdrawal) leave one outcome with an observed wait |
