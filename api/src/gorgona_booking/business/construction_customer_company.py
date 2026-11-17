@@ -134,3 +134,12 @@ async def save_customer_company(
         raise
     await idempotency.complete(conn, scope, 200, {"project_id": str(project_id)})
     return await load_customer_company(conn, project_id)
+
+
+async def require_customer_company(
+    conn: RuntimeConnection, project_id: UUID, servicer_business_id: UUID
+) -> CustomerCompanyView:
+    view = await load_customer_company(conn, project_id)
+    if view.company_id != servicer_business_id:
+        raise NotFoundError("Project not found", project_id=str(project_id))
+    return view

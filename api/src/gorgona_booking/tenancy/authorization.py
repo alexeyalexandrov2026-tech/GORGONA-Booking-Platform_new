@@ -74,6 +74,7 @@ async def authorized_tenant(
     exclusive: str | None = None,
     allow_location_scope: bool = False,
     allow_delegation: bool = False,
+    delegation_id: UUID | None = None,
 ) -> AsyncIterator[TenantAccess]:
     """Yield a connection scoped to `salon_id` only if `principal` may use `permission`.
 
@@ -87,6 +88,8 @@ async def authorized_tenant(
     `allow_delegation` admits an employee of a servicing business under an active grant.
     A grant may be limited to one location, so only location-scoped handlers may opt in.
     """
+    if delegation_id is not None and not allow_delegation:
+        raise ValueError("The handler must allow delegation to select a grant")
     if allow_delegation and not allow_location_scope:
         raise ValueError("Delegated handlers must support location scope")
     async with pool.connection() as conn, conn.transaction():
@@ -104,6 +107,7 @@ async def authorized_tenant(
             permission,
             allow_location_scope=allow_location_scope,
             allow_delegation=allow_delegation,
+            delegation_id=delegation_id,
         )
         if access.location_id is not None:
             await assert_location_scope_ready(conn)
@@ -122,6 +126,7 @@ async def _authorize(
     *,
     allow_location_scope: bool,
     allow_delegation: bool = False,
+    delegation_id: UUID | None = None,
 ) -> TenantAccess:
     # FOR SHARE: a concurrent suspend/revoke waits until this request finishes.
     membership = await (
@@ -155,7 +160,11 @@ async def _authorize(
     elif (
         tenant is not None
         and allow_delegation
-        and (delegated := await _delegated_access(conn, principal, salon_id, permission, tenant[0]))
+        and (
+            delegated := await _delegated_access(
+                conn, principal, salon_id, permission, tenant[0], delegation_id
+            )
+        )
         is not None
     ):
         return delegated
@@ -181,6 +190,7 @@ async def _delegated_access(
     salon_id: UUID,
     permission: Permission,
     tenant_status: str,
+    delegation_id: UUID | None = None,
 ) -> TenantAccess | None:
     """Admit a named delegate of an active, unexpired grant; None if there is no grant.
 
@@ -197,8 +207,9 @@ async def _delegated_access(
             "on m.owner_tenant_id = g.owner_tenant_id and m.grant_id = g.id "
             "where g.owner_tenant_id = %s and m.user_id = %s and m.removed_at is null "
             "and g.status = 'active' and g.expires_at > pg_catalog.statement_timestamp() "
+            "and (%s::uuid is null or g.id = %s) "
             "order by g.id for share of g, m",
-            (salon_id, principal.user_id),
+            (salon_id, principal.user_id, delegation_id, delegation_id),
         )
     ).fetchall()
     if not grants:

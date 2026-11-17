@@ -307,6 +307,18 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                     "where g.owner_tenant_id = t.owner_tenant_id and g.id = t.grant_id "
                     "and g.permissions && " + transport_rights + ")"
                 ).format(names, query)
+            # Pre-0119 schemas cannot represent customer proposal grants or their delegates.
+            if target_version[0] < 119 and table == "delegation_grants":
+                query = sql.SQL(
+                    "select {} from ({}) t "
+                    "where not 'construction.customer_answer' = any(t.permissions)"
+                ).format(names, query)
+            if target_version[0] < 119 and table == "delegation_grant_members":
+                query = sql.SQL(
+                    "select {} from ({}) t where not exists (select 1 from gba.delegation_grants g "
+                    "where g.owner_tenant_id = t.owner_tenant_id and g.id = t.grant_id "
+                    "and 'construction.customer_answer' = any(g.permissions))"
+                ).format(names, query)
             cursor = before.execute(query)
             assert cursor.description is not None
             json_columns = {

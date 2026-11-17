@@ -81,7 +81,7 @@ def test_duplicate_delegates_are_rejected() -> None:
         )
 
 
-def test_only_booking_and_dispatch_work_is_delegable() -> None:
+def test_delegable_permissions_are_limited_to_named_actions() -> None:
     # ADR-0031: a carrier's dispatcher works by transport action; fleet registration never.
     assert {
         Permission.BOOKING_READ,
@@ -94,6 +94,7 @@ def test_only_booking_and_dispatch_work_is_delegable() -> None:
         Permission.TRANSPORT_EVENTS,
         # N4: a carrier company's answers to the tenders addressed to it.
         Permission.TRANSPORT_TENDER,
+        Permission.CONSTRUCTION_CUSTOMER_ANSWER,
     } == DELEGABLE_PERMISSIONS
     for never in (
         Permission.BUSINESS_READ,
@@ -106,6 +107,7 @@ def test_only_booking_and_dispatch_work_is_delegable() -> None:
         Permission.READINESS_READ,
         Permission.TRANSPORT_MANAGE,
         Permission.TRANSPORT_BROKER,
+        Permission.CONSTRUCTION_APPROVE,
     ):
         assert never not in DELEGABLE_PERMISSIONS
     # Every delegable permission is one a servicer role can hold; the role still limits it.
@@ -129,7 +131,7 @@ def test_delegated_handlers_must_support_location_scope() -> None:
         asyncio.run(misuse())
 
 
-def test_delegated_routes_are_exactly_the_booking_workspace() -> None:
+def test_delegated_routes_are_limited_to_the_booking_and_customer_workspaces() -> None:
     # Any new delegated route needs an explicit review; settings, clients, audit and
     # staff/catalog changes stay with the owner business.
     delegated = {
@@ -153,4 +155,14 @@ def test_delegated_routes_are_exactly_the_booking_workspace() -> None:
             'get("/salons/{salon_id}/staff/{resource_id}/schedule"',
             'get("/salons/{salon_id}/bookings/{booking_id}"',
         }
+    }
+    assert {
+        block.split(")", 1)[0]
+        for block in (Path(salons.__file__).parent / "construction.py")
+        .read_text(encoding="utf-8")
+        .split("@router.")[1:]
+        if "async with _customer_grant(" in block
+    } == {
+        'get("/projects/{project_id}/customer-proposal/{grant_id}"',
+        'post("/projects/{project_id}/customer-proposal/{grant_id}"',
     }

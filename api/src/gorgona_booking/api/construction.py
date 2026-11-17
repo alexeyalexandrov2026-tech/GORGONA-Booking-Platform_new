@@ -101,7 +101,11 @@ from gorgona_booking.business.construction_warranty import (
 )
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
-from gorgona_booking.tenancy.authorization import TenantAccess, authorized_tenant
+from gorgona_booking.tenancy.authorization import (
+    PermissionDeniedError,
+    TenantAccess,
+    authorized_tenant,
+)
 
 router = APIRouter(prefix="/v1/businesses/{business_id}/construction", tags=["construction"])
 Version = Annotated[int, Path(ge=1, le=100_000)]
@@ -128,6 +132,26 @@ async def _access(
         allow_location_scope=allow_location_scope,
         request_id=get_request_id(request),
     ) as access:
+        await assert_location_scope_ready(access.conn)
+        yield access
+
+
+@asynccontextmanager
+async def _customer_grant(
+    request: Request, principal: CurrentPrincipal, business_id: UUID, grant_id: UUID
+) -> AsyncIterator[TenantAccess]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.CONSTRUCTION_CUSTOMER_ANSWER,
+        allow_location_scope=True,
+        allow_delegation=True,
+        delegation_id=grant_id,
+        request_id=get_request_id(request),
+    ) as access:
+        if access.delegation is None:
+            raise PermissionDeniedError("Only the customer's delegate can answer here")
         await assert_location_scope_ready(access.conn)
         yield access
 
@@ -171,6 +195,44 @@ async def put_customer_company(
             key=idempotency_key,
             body=body,
         )
+
+
+@router.get("/projects/{project_id}/customer-proposal/{grant_id}")
+async def get_customer_proposal(
+    business_id: UUID,
+    project_id: UUID,
+    grant_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> contracts.CustomerProposalView:
+    async with _customer_grant(request, principal, business_id, grant_id) as access:
+        assert access.delegation is not None  # noqa: S101 - enforced by _customer_grant
+        return await contracts.load_customer_proposal(access.conn, project_id, access.delegation)
+
+
+@router.post("/projects/{project_id}/customer-proposal/{grant_id}")
+async def post_customer_acceptance(
+    business_id: UUID,
+    project_id: UUID,
+    grant_id: UUID,
+    body: contracts.CustomerContractInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> contracts.CustomerProposalView:
+    async with _customer_grant(request, principal, business_id, grant_id) as access:
+        assert access.delegation is not None  # noqa: S101 - enforced by _customer_grant
+        await contracts.accept(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+            delegation=access.delegation,
+        )
+        return await contracts.load_customer_proposal(access.conn, project_id, access.delegation)
 
 
 @router.get("/projects")

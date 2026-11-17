@@ -20,6 +20,7 @@ from gorgona_booking.booking.models import IdempotencyKeyReusedError
 from gorgona_booking.business.construction import (
     ConstructionContractExistsError,
     ConstructionEstimateStaleError,
+    ConstructionRevisionConflictError,
     LineInput,
     LineView,
     Strict,
@@ -31,9 +32,11 @@ from gorgona_booking.business.construction import (
     request_fingerprint,
     require_construction,
 )
+from gorgona_booking.business.construction_customer_company import require_customer_company
 from gorgona_booking.business.module_gate import CONSTRUCTION_MODULE, module_writes
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import ConflictError, InvalidReferenceError, NotFoundError
+from gorgona_booking.tenancy.authorization import DelegationScope, PermissionDeniedError
 
 
 class ConstructionNotProposedError(ConflictError):
@@ -79,6 +82,14 @@ class ContractInput(Strict):
     version: int = Field(ge=1, le=100_000)
     signatory: str = Field(min_length=1, max_length=200)
     source: Source
+    note: str | None = Field(default=None, min_length=1, max_length=1000)
+
+
+class CustomerContractInput(Strict):
+    schema_version: Literal[1]
+    version: int = Field(ge=1, le=100_000)
+    expected_customer_generation: int = Field(ge=1)
+    signatory: str = Field(min_length=1, max_length=200)
     note: str | None = Field(default=None, min_length=1, max_length=1000)
 
 
@@ -343,18 +354,37 @@ async def accept(
     user_id: UUID,
     actor: str,
     key: str,
-    body: ContractInput,
+    body: ContractInput | CustomerContractInput,
+    delegation: DelegationScope | None = None,
 ) -> ContractView:
     """Record the customer's acceptance of the latest proposal: the original contract (1-2)."""
     await require_construction(conn, business)
-    scope = IdempotencyScope(business, actor, "construction.contract", key)
+    if isinstance(body, CustomerContractInput):
+        if delegation is None:
+            raise ValueError("A customer answer requires delegation")
+        await lock_project(conn, project_id)
+        customer = await require_customer_company(conn, project_id, delegation.servicer_business_id)
+        if body.expected_customer_generation != customer.customer_generation:
+            raise ConstructionRevisionConflictError(
+                "The customer assignment has changed",
+                customer_generation=customer.customer_generation,
+            )
+        source = "platform"
+        operation = "construction.customer_contract"
+    else:
+        if delegation is not None:
+            raise ValueError("An employee's record cannot carry customer delegation")
+        source = body.source
+        operation = "construction.contract"
+    scope = IdempotencyScope(business, actor, operation, key)
     fingerprint = request_fingerprint(str(project_id), body)
     stored = await idempotency.claim(conn, scope, fingerprint)
     if stored is not None:
         if stored.request_hash != fingerprint:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return await _stored_contract(conn, project_id)
-    await lock_project(conn, project_id)
+    if delegation is None:
+        await lock_project(conn, project_id)
     if await has_contract(conn, project_id):
         raise ConstructionContractExistsError("The project already has a contract")
     estimate = await load_estimate(conn, project_id, body.version)
@@ -373,20 +403,25 @@ async def accept(
         async with module_writes(CONSTRUCTION_MODULE), conn.transaction():
             await conn.execute(
                 "insert into gba.construction_contracts (tenant_id, project_id, version, "
-                "signatory, source, note, recorded_by) values (%s, %s, %s, %s, %s, %s, %s)",
+                "signatory, source, note, recorded_by, customer_company_id, customer_grant_id) "
+                "values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     business,
                     project_id,
                     body.version,
                     body.signatory,
-                    body.source,
+                    source,
                     body.note,
                     user_id,
+                    delegation.servicer_business_id if delegation else None,
+                    delegation.grant_id if delegation else None,
                 ),
             )
     except UniqueViolation as exc:
         raise ConstructionContractExistsError("The project already has a contract") from exc
     except CheckViolation as exc:
+        if exc.diag.constraint_name == "construction_customer_proof_scope":
+            raise PermissionDeniedError("Customer grant does not authorize this project") from exc
         if exc.diag.constraint_name == "construction_contracts_proposal_check":
             raise ConstructionEstimateStaleError(
                 "Only the latest proposed estimate version becomes the contract"
@@ -395,6 +430,61 @@ async def accept(
     view = await _stored_contract(conn, project_id)
     await idempotency.complete(conn, scope, 200, {"project_id": str(project_id)})
     return view
+
+
+class CustomerProposalLine(BaseModel):
+    position: int
+    description: str
+    phase: str
+    quantity: Decimal
+    unit: str
+    unit_price_minor: int
+    price_minor: int
+
+
+class CustomerProposalView(BaseModel):
+    schema_version: Literal[1] = 1
+    project_id: UUID
+    version: int
+    customer_generation: int
+    currency: str
+    proposed_at: datetime
+    price_total_minor: int
+    accepted: bool
+    lines: list[CustomerProposalLine]
+
+
+async def load_customer_proposal(
+    conn: RuntimeConnection, project_id: UUID, delegation: DelegationScope
+) -> CustomerProposalView:
+    await lock_project(conn, project_id)
+    customer = await require_customer_company(conn, project_id, delegation.servicer_business_id)
+    contract = await _contract_row(conn, project_id)
+    version = int(contract[0]) if contract is not None else await latest_version(conn, project_id)
+    estimate = await load_estimate(conn, project_id, version)
+    if estimate is None or estimate.proposed_at is None:
+        raise NotFoundError("No current proposal", project_id=str(project_id))
+    return CustomerProposalView(
+        project_id=project_id,
+        version=version,
+        customer_generation=customer.customer_generation,
+        currency=estimate.currency,
+        proposed_at=estimate.proposed_at,
+        price_total_minor=estimate.price_total_minor,
+        accepted=contract is not None,
+        lines=[
+            CustomerProposalLine(
+                position=line.position,
+                description=line.description,
+                phase=line.phase,
+                quantity=line.quantity,
+                unit=line.unit,
+                unit_price_minor=line.unit_price_minor,
+                price_minor=line.price_minor,
+            )
+            for line in estimate.lines
+        ],
+    )
 
 
 async def _next_number(conn: RuntimeConnection, project_id: UUID) -> int:
