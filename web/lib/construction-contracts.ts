@@ -23,6 +23,47 @@ const currency = z.string().regex(/^[A-Z]{3}$/);
 const kind = z.enum(["material", "labor", "equipment", "subcontract", "other"]);
 const source = z.enum(["platform", "paper", "email"]);
 
+export const customerProposalLinkSchema = z
+  .strictObject({
+    business: id,
+    project: id,
+    grant: id,
+  })
+  .transform(({ business, project, grant }) => ({
+    business: business.toLowerCase(),
+    project: project.toLowerCase(),
+    grant: grant.toLowerCase(),
+  }));
+
+export type CustomerProposalLink = z.output<typeof customerProposalLinkSchema>;
+
+const customerProposalSchema = z.strictObject({
+  schema_version: z.literal(1),
+  project_id: id,
+  version: version.positive(),
+  customer_generation: z.number().int().positive(),
+  currency,
+  proposed_at: instant,
+  price_total_minor: total,
+  accepted: z.boolean(),
+  lines: z
+    .array(
+      z.strictObject({
+        position: z.number().int().min(1).max(500),
+        description: text(500),
+        phase: text(64),
+        quantity,
+        unit: text(16),
+        unit_price_minor: unitAmount,
+        price_minor: total,
+      }),
+    )
+    .min(1)
+    .max(500),
+});
+
+export type CustomerProposal = z.infer<typeof customerProposalSchema>;
+
 export const projectSchema = z.strictObject({
   project_id: id,
   revision: z.number().int().positive(),
@@ -575,6 +616,8 @@ function costResponseSchema(suffix: string, method: string): z.ZodType | null {
 
 const reconciliationRoute =
   /^\/construction\/projects\/([0-9a-f-]{36})\/reconciliation$/i;
+const customerProposalRoute =
+  /^\/construction\/projects\/([0-9a-f-]{36})\/customer-proposal\/[0-9a-f-]{36}$/i;
 
 const project = /^\/construction\/projects\/[0-9a-f-]{36}$/i;
 const nested = (tail: string) =>
@@ -612,6 +655,13 @@ export function constructionResponseSchema(
   suffix: string,
   method: string,
 ): z.ZodType | null {
+  const proposal = customerProposalRoute.exec(suffix);
+  if (proposal && (method === "GET" || method === "POST"))
+    return customerProposalSchema.refine(
+      (value) =>
+        value.project_id === proposal[1] &&
+        (method === "GET" || value.accepted),
+    );
   const cost = costResponseSchema(suffix, method);
   if (cost) return cost;
   const billing = billingResponseSchema(suffix, method);

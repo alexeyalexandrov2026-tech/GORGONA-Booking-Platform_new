@@ -32,6 +32,47 @@ const uuid = (n: number) =>
   `00000000-0000-4000-8000-${n.toString().padStart(12, "0")}`;
 const business = uuid(1);
 const base = `/v1/businesses/${business}/construction`;
+
+test("customer proposal responses stay scoped and expose customer prices only", () => {
+  const project = uuid(2);
+  const path = `${base}/projects/${project}/customer-proposal/${uuid(3)}`;
+  const line = {
+    position: 1,
+    description: "FAKE scope",
+    phase: "Framing",
+    quantity: "10.0000",
+    unit: "sheet",
+    unit_price_minor: 2500,
+    price_minor: 25000,
+  };
+  const proposal = {
+    schema_version: 1,
+    project_id: project,
+    version: 1,
+    customer_generation: 1,
+    currency: "USD",
+    proposed_at: "2026-11-16T15:00:00Z",
+    price_total_minor: 25000,
+    accepted: false,
+    lines: [line],
+  };
+  const read = managementResponseSchema(path, "GET");
+  const accept = managementResponseSchema(path, "POST");
+  expect(read.parse(proposal)).toEqual(proposal);
+  expect(read.safeParse({ ...proposal, project_id: uuid(4) }).success).toBe(
+    false,
+  );
+  expect(
+    read.safeParse({ ...proposal, lines: [{ ...line, unit_cost_minor: 1500 }] })
+      .success,
+  ).toBe(false);
+  expect(accept.safeParse(proposal).success).toBe(false);
+  expect(accept.parse({ ...proposal, accepted: true })).toEqual({
+    ...proposal,
+    accepted: true,
+  });
+});
+
 test("warranty history preserves ordered transitions and excludes reversed costs from totals", () => {
   const projectId = uuid(2);
   const path = `${base}/projects/${projectId}/warranty-claims`;

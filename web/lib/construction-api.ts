@@ -24,6 +24,8 @@ import type {
   Contract,
   CostLink,
   CostLinkList,
+  CustomerProposal,
+  CustomerProposalLink,
   DailyReport,
   DailyReportList,
   Measurement,
@@ -123,6 +125,32 @@ async function command<T>(
   pending.delete(signature);
   return result;
 }
+
+const customerProposalPath = ({
+  business,
+  project,
+  grant,
+}: CustomerProposalLink) =>
+  `${projectPath(business, project)}/customer-proposal/${grant}`;
+
+export const fetchCustomerProposal = (
+  link: CustomerProposalLink,
+  signal: AbortSignal,
+) => managementFetch<CustomerProposal>(customerProposalPath(link), { signal });
+
+export const acceptCustomerProposal = (
+  link: CustomerProposalLink,
+  proposal: CustomerProposal,
+  signatory: string,
+  note: string,
+) =>
+  command<CustomerProposal>(customerProposalPath(link), "POST", {
+    schema_version: 1,
+    version: proposal.version,
+    expected_customer_generation: proposal.customer_generation,
+    signatory,
+    note: note || null,
+  });
 
 export type ProjectBody = {
   schema_version: 1;

@@ -10,8 +10,8 @@ export default function Callback() {
   useEffect(() => {
     let active = true;
     completeSignIn()
-      .then(() => {
-        if (active) router.replace("/overview/");
+      .then((returnPath) => {
+        if (active) router.replace(returnPath);
       })
       .catch(() => {
         if (active) setFailed(true);
