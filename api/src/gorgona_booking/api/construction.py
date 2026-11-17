@@ -1014,6 +1014,43 @@ async def post_acceptance(
         )
 
 
+@router.get("/projects/{project_id}/customer-acceptance/{grant_id}")
+async def get_customer_acceptance_review(
+    business_id: UUID,
+    project_id: UUID,
+    grant_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> acceptance.CustomerAcceptanceReview:
+    async with _customer_grant(request, principal, business_id, grant_id) as access:
+        assert access.delegation is not None  # noqa: S101 - enforced by _customer_grant
+        return await acceptance.customer_review(access.conn, project_id, access.delegation)
+
+
+@router.post("/projects/{project_id}/customer-acceptance/{grant_id}")
+async def post_customer_work_acceptance(
+    business_id: UUID,
+    project_id: UUID,
+    grant_id: UUID,
+    body: acceptance.CustomerAcceptanceInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> acceptance.CustomerAcceptanceReceipt:
+    async with _customer_grant(request, principal, business_id, grant_id) as access:
+        assert access.delegation is not None  # noqa: S101 - enforced by _customer_grant
+        return await acceptance.record_customer_acceptance(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+            delegation=access.delegation,
+        )
+
+
 @router.post("/projects/{project_id}/acceptances/{number}/release")
 async def post_retainage_release(
     business_id: UUID,

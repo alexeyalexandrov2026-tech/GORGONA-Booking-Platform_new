@@ -35,6 +35,7 @@ from gorgona_booking.business.construction_contracts import (
     ConstructionNoContractError,
     Source,
 )
+from gorgona_booking.business.construction_customer_company import require_customer_company
 from gorgona_booking.business.construction_progress import (
     ConstructionFutureDateError,
     SiteDate,
@@ -47,6 +48,7 @@ from gorgona_booking.business.construction_progress import (
 from gorgona_booking.business.module_gate import CONSTRUCTION_MODULE, module_writes
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import ConflictError, DomainError, InvalidReferenceError, NotFoundError
+from gorgona_booking.tenancy.authorization import DelegationScope, PermissionDeniedError
 
 Scope = Literal["phase", "final"]
 Label = Annotated[str, Field(min_length=1, max_length=64), AfterValidator(one_line)]
@@ -87,13 +89,12 @@ def ten_years_after(day: date) -> date:
         return day.replace(year=day.year + 10, day=28)
 
 
-class AcceptanceInput(Strict):
+class AcceptanceTerms(Strict):
     schema_version: Literal[1]
     scope: Scope
     phase: Label | None = None
     accepted_on: SiteDate
     signatory: Signatory
-    source: Source
     note: Remark | None = None
     warranty_ends_on: SiteDate | None = None
 
@@ -108,6 +109,15 @@ class AcceptanceInput(Strict):
         ):
             raise ValueError("the warranty ends after the acceptance and within 10 years of it")
         return self
+
+
+class AcceptanceInput(AcceptanceTerms):
+    source: Source
+
+
+class CustomerAcceptanceInput(AcceptanceTerms):
+    expected_customer_generation: int = Field(ge=1)
+    expected_review_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
 class ReleaseInput(Strict):
@@ -159,6 +169,62 @@ class AcceptanceList(BaseModel):
     phases: list[PhaseAcceptanceView]
     final: AcceptanceView | None
     items: list[AcceptanceView]
+
+
+class CustomerAcceptanceFact(BaseModel):
+    number: int
+    scope: Scope
+    phase: str | None
+    accepted_on: date
+    signatory: str
+    source: Literal["platform", "paper", "email"]
+    warranty_ends_on: date | None
+    recorded_at: datetime
+
+
+class CustomerAcceptanceReceipt(CustomerAcceptanceFact):
+    schema_version: Literal[1] = 1
+    project_id: UUID
+    note: str | None
+    review_hash: str
+
+
+class CustomerAcceptanceLine(BaseModel):
+    change_order: int | None
+    position: int
+    description: str
+    phase: str
+    quantity: Decimal
+    unit: str
+    unit_price_minor: int
+    price_minor: int
+    completed_quantity: Decimal
+    measured_on: date | None
+
+
+class CustomerAcceptancePhase(BaseModel):
+    phase: str
+    finished: bool
+    open_items: int
+    billed_in_full: bool
+
+
+class CustomerAcceptanceReviewData(BaseModel):
+    schema_version: Literal[1] = 1
+    project_id: UUID
+    customer_generation: int
+    customer_company_revision: int
+    currency: str
+    site_today: date
+    fully_billed: bool
+    open_items: int
+    lines: list[CustomerAcceptanceLine]
+    phases: list[CustomerAcceptancePhase]
+    accepted: list[CustomerAcceptanceFact]
+
+
+class CustomerAcceptanceReview(CustomerAcceptanceReviewData):
+    review_hash: str
 
 
 @dataclass(frozen=True)
@@ -371,6 +437,93 @@ async def list_acceptances(conn: RuntimeConnection, project_id: UUID) -> Accepta
     )
 
 
+def _customer_fact(view: AcceptanceView) -> CustomerAcceptanceFact:
+    return CustomerAcceptanceFact.model_validate(
+        view.model_dump(include=set(CustomerAcceptanceFact.model_fields))
+    )
+
+
+async def customer_review(
+    conn: RuntimeConnection, project_id: UUID, delegation: DelegationScope
+) -> CustomerAcceptanceReview:
+    """The customer-visible work and readiness, kept stable by the project row lock."""
+    await lock_project(conn, project_id)
+    customer = await require_customer_company(conn, project_id, delegation.servicer_business_id)
+    await check_contract(conn, project_id)
+    state = await _state(conn, project_id)
+    rows = await (await conn.execute(_HEAD + "order by a.number", (project_id,))).fetchall()
+    data = CustomerAcceptanceReviewData(
+        project_id=project_id,
+        customer_generation=customer.customer_generation,
+        customer_company_revision=customer.revision,
+        currency=await project_currency(conn, project_id),
+        site_today=await site_today(conn, project_id),
+        fully_billed=state.billed() == sum(int(line["contract_minor"]) for line in state.lines),
+        open_items=state.blocking(None),
+        lines=[
+            CustomerAcceptanceLine(
+                change_order=line["change_order"],
+                position=line["position"],
+                description=line["description"],
+                phase=line["phase"],
+                quantity=line["quantity"],
+                unit=line["unit"],
+                unit_price_minor=line["unit_price_minor"],
+                price_minor=line["contract_minor"],
+                completed_quantity=state.measured.get(
+                    (line["change_order"], line["position"]), (None, Decimal(0))
+                )[1],
+                measured_on=state.measured.get(
+                    (line["change_order"], line["position"]), (None, Decimal(0))
+                )[0],
+            )
+            for line in state.lines
+        ],
+        phases=[
+            CustomerAcceptancePhase(
+                phase=phase,
+                finished=not state.unfinished(phase),
+                open_items=state.blocking(phase),
+                billed_in_full=state.billed_in_full(phase),
+            )
+            for phase in state.phases()
+        ],
+        accepted=[_customer_fact(_view(project_id, row)) for row in rows],
+    )
+    return CustomerAcceptanceReview(
+        **data.model_dump(), review_hash=request_fingerprint(str(project_id), data)
+    )
+
+
+async def record_customer_acceptance(
+    conn: RuntimeConnection,
+    business: UUID,
+    project_id: UUID,
+    *,
+    user_id: UUID,
+    actor: str,
+    key: str,
+    body: CustomerAcceptanceInput,
+    delegation: DelegationScope,
+) -> CustomerAcceptanceReceipt:
+    view = await record_acceptance(
+        conn,
+        business,
+        project_id,
+        user_id=user_id,
+        actor=actor,
+        key=key,
+        body=body,
+        delegation=delegation,
+    )
+    return CustomerAcceptanceReceipt(
+        **_customer_fact(view).model_dump(),
+        project_id=project_id,
+        note=view.note,
+        review_hash=body.expected_review_hash,
+    )
+
+
 async def _stored(
     conn: RuntimeConnection, project_id: UUID, body: dict[str, object]
 ) -> AcceptanceView:
@@ -387,6 +540,8 @@ async def _stored(
 def _refused_acceptance(exc: CheckViolation) -> Exception | None:
     """The database's answer to an acceptance it refused, as the error the client sees."""
     name = exc.diag.constraint_name
+    if name == "construction_acceptance_customer_scope":
+        return PermissionDeniedError("Customer grant does not authorize this project")
     if name == "construction_acceptances_sequence_check":
         return ConstructionRevisionConflictError("The project's acceptances changed; try again")
     if name == "construction_acceptances_accepted_check":
@@ -412,18 +567,42 @@ async def record_acceptance(
     user_id: UUID,
     actor: str,
     key: str,
-    body: AcceptanceInput,
+    body: AcceptanceInput | CustomerAcceptanceInput,
+    delegation: DelegationScope | None = None,
 ) -> AcceptanceView:
     """Record the customer's acceptance of a phase or of the whole project (decisions 2-6)."""
     await require_construction(conn, business)
-    scope = IdempotencyScope(business, actor, "construction.acceptance", key)
-    fingerprint = request_fingerprint(str(project_id), body)
+    target = str(project_id)
+    source: Source | Literal["platform"]
+    if isinstance(body, CustomerAcceptanceInput):
+        if delegation is None:
+            raise ValueError("A customer acceptance requires delegation")
+        await lock_project(conn, project_id)
+        customer = await require_customer_company(conn, project_id, delegation.servicer_business_id)
+        if body.expected_customer_generation != customer.customer_generation:
+            raise ConstructionRevisionConflictError("The customer assignment changed")
+        source = "platform"
+        operation = "construction.customer_acceptance"
+        target = f"{target}:{delegation.grant_id}"
+    else:
+        if delegation is not None:
+            raise ValueError("An employee's record cannot carry customer delegation")
+        source = body.source
+        operation = "construction.acceptance"
+    scope = IdempotencyScope(business, actor, operation, key)
+    fingerprint = request_fingerprint(target, body)
     stored = await idempotency.claim(conn, scope, fingerprint)
     if stored is not None:
         if stored.request_hash != fingerprint:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return await _stored(conn, project_id, stored.body)
-    await lock_project(conn, project_id)
+    if isinstance(body, CustomerAcceptanceInput):
+        assert delegation is not None  # noqa: S101 - checked before idempotency
+        review = await customer_review(conn, project_id, delegation)
+        if review.review_hash != body.expected_review_hash:
+            raise ConstructionRevisionConflictError("The work changed since it was reviewed")
+    else:
+        await lock_project(conn, project_id)
     if not await has_contract(conn, project_id):
         raise ConstructionNoContractError("An acceptance needs a contract")
     earlier = await (
@@ -468,8 +647,9 @@ async def record_acceptance(
         async with module_writes(CONSTRUCTION_MODULE), conn.transaction():
             await conn.execute(
                 "insert into gba.construction_acceptances (tenant_id, project_id, number, scope, "
-                "phase, accepted_on, signatory, source, note, warranty_ends_on, recorded_by) "
-                "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "phase, accepted_on, signatory, source, note, warranty_ends_on, recorded_by, "
+                "customer_company_id, customer_grant_id, customer_review_hash) "
+                "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     business,
                     project_id,
@@ -478,10 +658,15 @@ async def record_acceptance(
                     body.phase,
                     body.accepted_on,
                     body.signatory,
-                    body.source,
+                    source,
                     body.note,
                     body.warranty_ends_on,
                     user_id,
+                    delegation.servicer_business_id if delegation else None,
+                    delegation.grant_id if delegation else None,
+                    body.expected_review_hash
+                    if isinstance(body, CustomerAcceptanceInput)
+                    else None,
                 ),
             )
     except UniqueViolation as exc:

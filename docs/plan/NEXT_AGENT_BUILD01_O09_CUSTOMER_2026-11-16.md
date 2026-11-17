@@ -1,7 +1,9 @@
 # Передача следующему агенту GORGONA BUILD-01 O-09
 
 Рабочая копия `C:/Users/alexa/.codex/worktrees/package-o8-customer-answer`.
-Текущая ветка `codex/package-o9-customer-change-screen` от
+Текущая ветка `codex/package-o9-customer-acceptance` от
+`917989cb75cd77996f6179a919759eb2aedbbc24`
+(`codex/package-o9-customer-change-screen`). API изменения договора
 `98e1064555232ac879b3a2a4acdbe8a4b874614d`
 (`codex/package-o9-customer-change-answer`). Исходный экран предложения
 `6e7dcee510ea4efac2a15c0d6f781cd9485bd85e`
@@ -16,12 +18,13 @@
 
 ## Готовый запрос для продолжения
 
-> Продолжи O-09 в указанной рабочей копии. Проверь CI точного SHA экрана
-> изменения договора и разбери обнаруженные сбои. Затем реализуй ответы
-> клиента на приёмку через действующий grant. Используй существующие
-> ограничения приёмки этапов и завершённых работ, биллинга и гарантийного
-> периода. Проверь компанию, филиал, текущую привязку заказчика, данные
-> принимаемого объёма и повтор после потери ответа. Сохрани
+> Продолжи O-09 в указанной рабочей копии. Проверь CI точного SHA API
+> клиентской приёмки. Подключи экран к GET/POST
+> `/projects/{project_id}/customer-acceptance/{grant_id}`.
+> Покажи объём и готовность работ, выбор этапа или финальной приёмки,
+> даты, подписанта и гарантийный период. Передавай полученный review_hash
+> с ответом, сохраняй его и тело при повторе после потери ответа.
+> Проверь устаревший hash, замечания, отзыв доступа и запись в БД. Сохрани
 > неделегируемость construction.approve. Продолжи операторскую выдачу
 > клиентских ссылок в рамках плана.
 > Записывай точные SHA, результаты проверок и процент по реестру сценариев.
@@ -31,6 +34,13 @@
 
 ## Что уже проверено
 
+- PASS: 60 проверок за 112,02 с на PostgreSQL 18.7 для приёмки через grant,
+  миграции 0121, прежней приёмки, гарантии, филиалов и обновлений старой
+  схемы. 877 API unit-тестов за 31,59 с, Ruff, формат и mypy на 569 файлах.
+  Повторная авторизация предшествует возврату старой квитанции. Новый
+  ответ сверяет review_hash с актуальным объёмом под блокировкой проекта.
+  Независимый обзор выявил пропущенный общий счётчик замечаний в hash,
+  исправление проверено тестом и повторным обзором.
 - PASS: 8 интеграционных проверок за 108,41 с на PostgreSQL 18.7,
   включая Chromium desktop/mobile для исходного предложения и изменения
   договора, прежние сценарии управления и дополнительный отказ по grant
@@ -59,7 +69,7 @@
 - PASS: обязательные для этого изменения Ruff, mypy, web typecheck, lint,
   формат, 186 web unit-тестов и повторная статическая сборка на 31 страницу.
 - NOT TESTED: production, реальный IdP и выдача ссылок из операторского
-  экрана. Ответы клиента на приёмку остаются открытыми.
+  экрана. Клиентский экран приёмки остаётся открытым.
   Полный CI надо сверить по текущему SHA. BUILD-01 остаётся открытым.
 
 ## Повтор проверок
@@ -71,6 +81,7 @@
 ```text
 uv run pytest -q tests/integration/test_location_access.py tests/integration/test_o2_construction_contract.py tests/integration/test_o8_construction_customer_answer.py tests/integration/test_o8_construction_customer_company.py tests/integration/test_o9_customer_change_answer.py tests/integration/test_o9_customer_proposal_browser.py tests/integration/test_o9_customer_change_browser.py
 uv run pytest -q tests/integration/test_h3_upgrade.py tests/integration/test_inventory_upgrade.py tests/integration/test_stock_upgrade.py
+uv run pytest -q tests/integration/test_o9_customer_acceptance.py tests/integration/test_o6a_construction_acceptance.py tests/integration/test_o6b_construction_warranty.py
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
