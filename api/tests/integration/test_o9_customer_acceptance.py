@@ -6,10 +6,18 @@ import pytest
 from psycopg.errors import CheckViolation
 
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction
+from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.seed import FakeUser
 from tests.integration.test_delegations import Parties, owner_a, owner_b, parties
+from tests.integration.test_l8b2_finance_races import race
 from tests.integration.test_o1_construction_estimates import accepted, client, idp, manager_a
-from tests.integration.test_o4a_construction_execution import TWO_LINES, ago, measure, signed_at
+from tests.integration.test_o4a_construction_execution import (
+    LOCK,
+    TWO_LINES,
+    ago,
+    measure,
+    signed_at,
+)
 from tests.integration.test_o4b_construction_quality import move, raise_item
 from tests.integration.test_o5_construction_billing import Billing, billing, pay
 from tests.integration.test_o6a_construction_acceptance import later
@@ -160,3 +168,73 @@ async def test_customer_acceptance_checks_review_and_live_grant_before_write_and
     assert revoked.status_code == 200, revoked.text
     assert (await c.get(path, headers)).status_code == 403
     assert (await c.send("POST", path, final, headers, final_key)).status_code == 403
+
+
+@pytest.mark.parametrize("same_key", [False, True])
+async def test_customer_acceptance_serializes_concurrent_answers_and_replays(
+    billing: Billing,
+    parties: Parties,
+    owner_a: FakeUser,
+    owner_b: FakeUser,
+    app_pool: RuntimePool,
+    test_database: ProvisionedDatabase,
+    same_key: bool,
+) -> None:
+    c = billing.c
+    project = await signed_at(c, TWO_LINES)
+    measured = await measure(c, project, 1, "10", ago(2))
+    assert measured.status_code == 200, measured.text
+    linked = await c.send(
+        "PUT",
+        f"/projects/{project}/customer-company",
+        {
+            "expected_revision": 0,
+            "expected_customer_generation": 1,
+            "company_id": str(c.world.b.tenant_id),
+        },
+    )
+    assert linked.status_code == 200, linked.text
+    grant = await parties.active_grant(
+        owner_a,
+        owner_b,
+        [owner_b],
+        permissions=["construction.customer_answer"],
+        location_id=str(c.world.a.location_id),
+    )
+    headers = parties.headers(owner_b)
+    path = f"/projects/{project}/customer-acceptance/{grant}"
+    review = await c.get(path, headers)
+    assert review.status_code == 200, review.text
+    body = {
+        "scope": "phase",
+        "phase": "Framing",
+        "accepted_on": ago(1),
+        "signatory": "FAKE concurrent customer",
+        "expected_customer_generation": 1,
+        "expected_review_hash": review.json()["review_hash"],
+    }
+    key = str(uuid7())
+    answers = await race(
+        app_pool,
+        test_database,
+        billing.tenant,
+        LOCK,
+        project,
+        [
+            c.send("POST", path, body, headers, key),
+            c.send("POST", path, body, headers, key if same_key else str(uuid7())),
+        ],
+    )
+    assert sorted(answer.status_code for answer in answers) == (
+        [200, 200] if same_key else [200, 409]
+    ), [answer.text for answer in answers]
+    if same_key:
+        assert answers[0].json() == answers[1].json()
+    async with tenant_transaction(app_pool, billing.tenant) as conn:
+        rows = await (
+            await conn.execute(
+                "select count(*) from gba.construction_acceptances where project_id=%s",
+                (project,),
+            )
+        ).fetchone()
+        assert rows == (1,)

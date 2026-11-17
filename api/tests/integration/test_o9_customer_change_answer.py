@@ -7,10 +7,12 @@ import pytest
 from psycopg.errors import CheckViolation
 
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction
+from tests.integration.conftest import ProvisionedDatabase
 from tests.integration.seed import FakeUser, seed_other_branch
 from tests.integration.test_delegations import Parties, owner_a, owner_b, parties
+from tests.integration.test_l8b2_finance_races import race
 from tests.integration.test_o1_construction_estimates import accepted, client, idp, manager_a
-from tests.integration.test_o2_construction_contract import add, change, signed
+from tests.integration.test_o2_construction_contract import LOCK, add, change, decide, signed
 from tests.integration.test_o5_construction_billing import Billing, billing
 
 __all__ = ["accepted", "billing", "client", "idp", "manager_a", "owner_a", "owner_b", "parties"]
@@ -138,3 +140,68 @@ async def test_customer_change_answer_uses_exact_grant_and_records_its_proof(
     assert revoked.status_code == 200, revoked.text
     assert (await c.get(granted, headers)).status_code == 403
     assert (await c.send("POST", granted, answer, headers, key)).status_code == 403
+
+
+async def test_delegated_approval_racing_staff_withdrawal_records_one_outcome(
+    billing: Billing,
+    parties: Parties,
+    owner_a: FakeUser,
+    owner_b: FakeUser,
+    app_pool: RuntimePool,
+    test_database: ProvisionedDatabase,
+) -> None:
+    c = billing.c
+    project = await signed(c)
+    linked = await c.send(
+        "PUT",
+        f"/projects/{project}/customer-company",
+        {
+            "expected_revision": 0,
+            "expected_customer_generation": 1,
+            "company_id": str(c.world.b.tenant_id),
+        },
+    )
+    assert linked.status_code == 200, linked.text
+    proposed = await change(c, project, [add()])
+    assert proposed.status_code == 200, proposed.text
+    grant = await parties.active_grant(
+        owner_a,
+        owner_b,
+        [owner_b],
+        permissions=["construction.customer_answer"],
+        location_id=str(c.world.a.location_id),
+    )
+    answers = await race(
+        app_pool,
+        test_database,
+        billing.tenant,
+        LOCK,
+        project,
+        [
+            c.send(
+                "POST",
+                f"/projects/{project}/change-orders/1/customer-answer/{grant}",
+                {"decision": "approved", "expected_customer_generation": 1},
+                parties.headers(owner_b),
+            ),
+            decide(c, project, 1, "withdrawn"),
+        ],
+    )
+    assert sorted(answer.status_code for answer in answers) == [200, 409], [
+        answer.text for answer in answers
+    ]
+    (winner,) = [answer.json()["state"] for answer in answers if answer.status_code == 200]
+    async with tenant_transaction(app_pool, billing.tenant) as conn:
+        rows = await (
+            await conn.execute(
+                "select decision, source, customer_company_id, customer_grant_id "
+                "from gba.construction_change_order_decisions where project_id=%s",
+                (project,),
+            )
+        ).fetchall()
+        expected = (
+            ("approved", "platform", c.world.b.tenant_id, grant)
+            if winner == "approved"
+            else ("withdrawn", None, None, None)
+        )
+        assert rows == [expected]
