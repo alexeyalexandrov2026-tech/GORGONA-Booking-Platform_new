@@ -120,6 +120,55 @@ test("customer change answers bind the project and change number and refuse inte
   expect(answer.parse(rejected)).toEqual(rejected);
 });
 
+test("customer work review and receipt keep scope, identity and proof without staff costs", () => {
+  const project = uuid(2);
+  const path = `${base}/projects/${project}/customer-acceptance/${uuid(3)}`;
+  const review = {
+    schema_version: 1,
+    project_id: project,
+    customer_generation: 1,
+    customer_company_revision: 1,
+    currency: "USD",
+    site_today: "2026-11-17",
+    fully_billed: true,
+    open_items: 0,
+    lines: [],
+    phases: [],
+    accepted: [],
+    review_hash: "a".repeat(64),
+  };
+  const read = managementResponseSchema(path, "GET");
+  expect(read.parse(review)).toEqual(review);
+  expect(read.safeParse({ ...review, project_id: uuid(4) }).success).toBe(
+    false,
+  );
+  expect(read.safeParse({ ...review, cost_minor: 15000 }).success).toBe(false);
+  expect(read.safeParse({ ...review, review_hash: "invalid" }).success).toBe(
+    false,
+  );
+  const receipt = {
+    schema_version: 1,
+    project_id: project,
+    number: 1,
+    scope: "phase",
+    phase: "Framing",
+    accepted_on: "2026-11-17",
+    signatory: "FAKE customer",
+    source: "platform",
+    note: null,
+    warranty_ends_on: null,
+    recorded_at: "2026-11-17T15:00:00Z",
+    review_hash: review.review_hash,
+  };
+  const accepted = managementResponseSchema(path, "POST");
+  expect(accepted.parse(receipt)).toEqual(receipt);
+  expect(accepted.safeParse({ ...receipt, phase: null }).success).toBe(false);
+  expect(accepted.safeParse({ ...receipt, source: "paper" }).success).toBe(
+    false,
+  );
+  expect(accepted.safeParse({ ...receipt, release: null }).success).toBe(false);
+});
+
 test("warranty history preserves ordered transitions and excludes reversed costs from totals", () => {
   const projectId = uuid(2);
   const path = `${base}/projects/${projectId}/warranty-claims`;

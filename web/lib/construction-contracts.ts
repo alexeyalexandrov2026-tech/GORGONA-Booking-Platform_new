@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { constructionAcceptanceResponseSchema } from "./construction-acceptance-contracts";
+import { customerAcceptanceResponseSchema } from "./construction-customer-acceptance-contracts";
 import { reconciliationSchema } from "./construction-reconciliation-contracts";
 import { warrantyResponseSchema } from "./construction-warranty-contracts";
 import { invoiceSchema } from "./financial-contracts";
@@ -705,6 +706,8 @@ export function constructionResponseSchema(
   suffix: string,
   method: string,
 ): z.ZodType | null {
+  const customerAcceptance = customerAcceptanceResponseSchema(suffix, method);
+  if (customerAcceptance) return customerAcceptance;
   const customerChange = customerChangeRoute.exec(suffix);
   if (customerChange && (method === "GET" || method === "POST"))
     return customerChangeSchema.refine(

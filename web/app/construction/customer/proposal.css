@@ -26,6 +26,7 @@
 }
 
 .customer-proposal-form input:not([type="radio"]),
+.customer-proposal-form select,
 .customer-proposal-form textarea {
   display: block;
   width: 100%;

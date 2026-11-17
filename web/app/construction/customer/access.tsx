@@ -14,7 +14,7 @@ export type CustomerProblem = {
 export function customerFailure(
   error: unknown,
   submitting: boolean,
-  document: "proposal" | "change order",
+  document: "proposal" | "change order" | "work acceptance",
 ): CustomerProblem {
   if (error instanceof ManagementApiError) {
     if (error.status === 401 || error.code === "AUTHENTICATION_REQUIRED")

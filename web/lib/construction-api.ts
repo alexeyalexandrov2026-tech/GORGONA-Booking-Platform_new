@@ -10,6 +10,11 @@ import type {
 } from "./construction-acceptance-contracts";
 import type { Reconciliation } from "./construction-reconciliation-contracts";
 import type {
+  CustomerWorkAnswer,
+  CustomerWorkReceipt,
+  CustomerWorkReview,
+} from "./construction-customer-acceptance-contracts";
+import type {
   WarrantyClaim,
   WarrantyClaimBody,
   WarrantyEventBody,
@@ -111,6 +116,7 @@ async function command<T>(
   path: string,
   method: string,
   body: unknown,
+  matchesRequest?: (result: T) => boolean,
 ): Promise<T> {
   const payload = JSON.stringify(body);
   const signature = `${method} ${path} ${payload}`;
@@ -124,6 +130,11 @@ async function command<T>(
     body: payload,
     headers: { "Idempotency-Key": key },
   });
+  if (matchesRequest && !matchesRequest(result))
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "The response does not match the submitted request.",
+    );
   pending.delete(signature);
   return result;
 }
@@ -169,6 +180,32 @@ export const answerCustomerChange = (
   number: number,
   body: CustomerChangeAnswer,
 ) => command<CustomerChange>(customerChangePath(link, number), "POST", body);
+
+const customerWorkPath = (link: CustomerProposalLink) =>
+  `${projectPath(link.business, link.project)}/customer-acceptance/${link.grant}`;
+
+export const fetchCustomerWorkReview = (
+  link: CustomerProposalLink,
+  signal: AbortSignal,
+) => managementFetch<CustomerWorkReview>(customerWorkPath(link), { signal });
+
+export const acceptCustomerWork = (
+  link: CustomerProposalLink,
+  body: CustomerWorkAnswer,
+) =>
+  command<CustomerWorkReceipt>(
+    customerWorkPath(link),
+    "POST",
+    body,
+    (receipt) =>
+      receipt.scope === body.scope &&
+      receipt.phase === body.phase &&
+      receipt.review_hash === body.expected_review_hash &&
+      receipt.accepted_on === body.accepted_on &&
+      receipt.signatory === body.signatory &&
+      receipt.note === body.note &&
+      receipt.warranty_ends_on === body.warranty_ends_on,
+  );
 
 export type ProjectBody = {
   schema_version: 1;
