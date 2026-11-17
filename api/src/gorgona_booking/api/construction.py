@@ -18,6 +18,7 @@ from gorgona_booking.business import construction_billing as billing
 from gorgona_booking.business import construction_budget as budget
 from gorgona_booking.business import construction_contracts as contracts
 from gorgona_booking.business import construction_costs as costs
+from gorgona_booking.business import construction_customer_company as customer_company
 from gorgona_booking.business import construction_daily_reports as reports
 from gorgona_booking.business import construction_progress as progress
 from gorgona_booking.business import construction_quality as quality
@@ -116,17 +117,60 @@ async def _access(
     principal: CurrentPrincipal,
     business_id: UUID,
     permission: Permission = Permission.CONSTRUCTION_READ,
+    *,
+    allow_location_scope: bool = True,
 ) -> AsyncIterator[TenantAccess]:
     async with authorized_tenant(
         runtime_pool(request),
         principal,
         business_id,
         permission,
-        allow_location_scope=True,
+        allow_location_scope=allow_location_scope,
         request_id=get_request_id(request),
     ) as access:
         await assert_location_scope_ready(access.conn)
         yield access
+
+
+@router.get("/projects/{project_id}/customer-company")
+async def get_customer_company(
+    business_id: UUID, project_id: UUID, request: Request, principal: CurrentPrincipal
+) -> customer_company.CustomerCompanyView:
+    async with _access(
+        request,
+        principal,
+        business_id,
+        Permission.CONSTRUCTION_APPROVE,
+        allow_location_scope=False,
+    ) as access:
+        return await customer_company.load_customer_company(access.conn, project_id)
+
+
+@router.put("/projects/{project_id}/customer-company")
+async def put_customer_company(
+    business_id: UUID,
+    project_id: UUID,
+    body: customer_company.CustomerCompanyInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> customer_company.CustomerCompanyView:
+    async with _access(
+        request,
+        principal,
+        business_id,
+        Permission.CONSTRUCTION_APPROVE,
+        allow_location_scope=False,
+    ) as access:
+        return await customer_company.save_customer_company(
+            access.conn,
+            business_id,
+            project_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
 
 
 @router.get("/projects")
