@@ -1,6 +1,14 @@
 import { expect, test } from "@playwright/test";
 import { managementResponseSchema } from "../lib/management-contracts";
 import {
+  delegationSchema,
+  delegatedBusinessSchema,
+} from "../lib/delegation-contracts";
+import {
+  customerDocumentLinks,
+  customerGrantMatches,
+} from "../lib/construction-customer-access";
+import {
   budgetSchema,
   changeOrderListSchema,
   changeOrderSchema,
@@ -167,6 +175,113 @@ test("customer work review and receipt keep scope, identity and proof without st
     false,
   );
   expect(accepted.safeParse({ ...receipt, release: null }).success).toBe(false);
+});
+
+test("project customer-company history is scoped and requires ordered revisions", () => {
+  const project = uuid(2);
+  const path = `${base}/projects/${project}/customer-company`;
+  const company = {
+    schema_version: 1,
+    project_id: project,
+    customer_id: uuid(4),
+    customer_generation: 1,
+    revision: 0,
+    company_id: null,
+    versions: [],
+  };
+  for (const method of ["GET", "PUT"]) {
+    const schema = managementResponseSchema(path, method);
+    expect(schema.parse(company)).toEqual(company);
+    expect(schema.safeParse({ ...company, project_id: uuid(5) }).success).toBe(
+      false,
+    );
+    expect(schema.safeParse({ ...company, revision: 1 }).success).toBe(false);
+  }
+});
+
+test("customer links require the live grant of the linked company and project branch", () => {
+  const company = uuid(3);
+  const location = uuid(4);
+  const permissions = [
+    "booking.read",
+    "booking.write",
+    "catalog.read",
+    "staff.read",
+    "transport.read",
+    "transport.plan",
+    "transport.assign",
+    "transport.events",
+    "construction.customer_answer",
+  ];
+  const grant = delegationSchema.parse({
+    schema_version: 1,
+    grant_id: uuid(5),
+    owner_business_id: business,
+    owner_name: "FAKE builder",
+    servicer_business_id: company,
+    servicer_name: "FAKE customer",
+    permissions,
+    location_id: location,
+    expires_at: "2099-01-01T00:00:00Z",
+    status: "active",
+    expired: false,
+    revision: 2,
+    revoked_by_side: null,
+    delegates: [
+      {
+        user_id: uuid(6),
+        display_name: "FAKE delegate",
+        added_at: "2026-11-17T15:00:00Z",
+      },
+    ],
+    created_at: "2026-11-17T15:00:00Z",
+  });
+  expect(
+    delegatedBusinessSchema.safeParse({
+      business_id: business,
+      business_name: "FAKE builder",
+      grant_id: grant.grant_id,
+      servicer_business_id: company,
+      servicer_name: "FAKE customer",
+      permissions,
+      location_id: location,
+      expires_at: grant.expires_at,
+    }).success,
+  ).toBe(true);
+  const now = Date.parse("2026-11-17T15:00:00Z");
+  const matches = (candidate: typeof grant) =>
+    customerGrantMatches(candidate, business, company, location, now);
+  expect(matches(grant)).toBe(true);
+  expect(matches({ ...grant, location_id: null })).toBe(true);
+  for (const changed of [
+    { ...grant, owner_business_id: uuid(7) },
+    { ...grant, servicer_business_id: uuid(7) },
+    { ...grant, location_id: uuid(7) },
+    { ...grant, permissions: [] },
+    { ...grant, expired: true },
+    { ...grant, expires_at: "2026-11-17T14:59:59Z" },
+    { ...grant, delegates: [] },
+    { ...grant, status: "revoked" as const },
+    { ...grant, status: "pending" as const },
+  ])
+    expect(matches(changed)).toBe(false);
+  const links = customerDocumentLinks(
+    { business, project: uuid(2), grant: grant.grant_id },
+    [1, 2],
+  );
+  expect(
+    new URL(links.proposal, "https://platform.example.test").searchParams.get(
+      "grant",
+    ),
+  ).toBe(grant.grant_id);
+  expect(
+    links.changes.map((item) =>
+      new URL(item.href, "https://platform.example.test").searchParams.get(
+        "number",
+      ),
+    ),
+  ).toEqual(["1", "2"]);
+  expect(links.acceptance).toContain("/construction/customer/acceptance/");
 });
 
 test("warranty history preserves ordered transitions and excludes reversed costs from totals", () => {

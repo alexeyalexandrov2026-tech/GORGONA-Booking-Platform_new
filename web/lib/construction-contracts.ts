@@ -38,6 +38,38 @@ export const customerProposalLinkSchema = z
 
 export type CustomerProposalLink = z.output<typeof customerProposalLinkSchema>;
 
+const customerCompanySchema = z
+  .strictObject({
+    schema_version: z.literal(1),
+    project_id: id,
+    customer_id: id,
+    customer_generation: z.number().int().positive(),
+    revision: z.number().int().nonnegative(),
+    company_id: id.nullable(),
+    versions: z.array(
+      z.strictObject({
+        revision: z.number().int().positive(),
+        customer_id: id,
+        company_id: id.nullable(),
+        recorded_at: instant,
+      }),
+    ),
+  })
+  .refine(
+    (value) =>
+      value.versions.length === value.revision &&
+      value.versions.every((entry, index) => entry.revision === index + 1) &&
+      (value.revision > 0 || value.company_id === null),
+  );
+
+export type CustomerCompany = z.infer<typeof customerCompanySchema>;
+export type CustomerCompanyBody = {
+  schema_version: 1;
+  expected_revision: number;
+  expected_customer_generation: number;
+  company_id: string | null;
+};
+
 const customerProposalSchema = z.strictObject({
   schema_version: z.literal(1),
   project_id: id,
@@ -669,6 +701,8 @@ const customerProposalRoute =
   /^\/construction\/projects\/([0-9a-f-]{36})\/customer-proposal\/[0-9a-f-]{36}$/i;
 const customerChangeRoute =
   /^\/construction\/projects\/([0-9a-f-]{36})\/change-orders\/(\d+)\/customer-answer\/[0-9a-f-]{36}$/i;
+const customerCompanyRoute =
+  /^\/construction\/projects\/([0-9a-f-]{36})\/customer-company$/i;
 
 const project = /^\/construction\/projects\/[0-9a-f-]{36}$/i;
 const nested = (tail: string) =>
@@ -706,6 +740,11 @@ export function constructionResponseSchema(
   suffix: string,
   method: string,
 ): z.ZodType | null {
+  const company = customerCompanyRoute.exec(suffix);
+  if (company && (method === "GET" || method === "PUT"))
+    return customerCompanySchema.refine(
+      (value) => value.project_id === company[1],
+    );
   const customerAcceptance = customerAcceptanceResponseSchema(suffix, method);
   if (customerAcceptance) return customerAcceptance;
   const customerChange = customerChangeRoute.exec(suffix);

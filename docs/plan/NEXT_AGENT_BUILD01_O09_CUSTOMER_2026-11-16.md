@@ -1,8 +1,10 @@
 # Передача следующему агенту GORGONA BUILD-01 O-09
 
 Рабочая копия `C:/Users/alexa/.codex/worktrees/package-o8-customer-answer`.
-Текущая ветка `codex/package-o9-customer-acceptance-screen` от
-`6a6cd8c` (`codex/package-o9-customer-acceptance`).
+Текущая ветка `codex/package-o9-customer-access` от
+`9f12e96a9e266c3a6bdd639cd5db7a2f61aa899b`
+(`codex/package-o9-customer-acceptance-screen`).
+API клиентской приёмки `6a6cd8c` (`codex/package-o9-customer-acceptance`).
 Экран изменения договора `917989cb75cd77996f6179a919759eb2aedbbc24`
 (`codex/package-o9-customer-change-screen`). API изменения договора
 `98e1064555232ac879b3a2a4acdbe8a4b874614d`
@@ -19,15 +21,14 @@
 
 ## Готовый запрос для продолжения
 
-> Продолжи O-09 в указанной рабочей копии. Проверь CI точного SHA экрана
-> клиентской приёмки и разбери сбои. Следующим шагом подключи к служебному
-> экрану проекта существующие GET/PUT customer-company, выбор разрешённого
-> grant и получение ссылок на исходное предложение, изменение договора и
-> приёмку. Используй существующий API делегирования и его ограничения
-> компании, филиала и прав, сверяй актуальную привязку перед выдачей ссылки.
-> Проверь служебный и клиентский сценарии в реальном браузере и PostgreSQL.
-> Сохрани неделегируемость construction.approve и разделение клиентских цен
-> и внутренних затрат. Затем закрой оставшиеся критерии O-09/O-10.
+> Продолжи пакет O в указанной рабочей копии. Проверь CI точного SHA
+> операторского доступа и разбери сбои. Прогони общий целевой набор O1–O9
+> с обязательными PostgreSQL и Chromium, включая прежние служебные экраны.
+> Сверь критерии O-01–O-10 с актуальными доказательствами и принятым
+> ADR-0035. Историческая таблица O8 отражает состояние 16 ноября.
+> Подготовь итоговую приёмку пакета с точными SHA и границами CI,
+> сохранив неделегируемость construction.approve, изоляцию компаний и
+> разделение клиентских цен и внутренних затрат.
 > Записывай точные SHA, результаты проверок и процент по реестру сценариев.
 > Цель выпуска охватывает все 39 направлений. Публикация допустима на
 > рабочей ветке для CI. PR, merge, production, миграции production и
@@ -35,6 +36,13 @@
 
 ## Что уже проверено
 
+- PASS: операторский доступ в Chromium desktop/mobile, 2 сценария за
+  22,6 с, целевой pytest 38 PASS за 43,32 с. Сохранение привязки с
+  потерянным ответом не добавляет вторую ревизию. Девять прав проходят
+  issue и accept. Клиент использует все три вида полученных ссылок.
+  После отзыва grant повторная подготовка ссылок получает отказ.
+  API unit 878 PASS, web unit 190 PASS, сборка и статические проверки
+  прошли. Лимит прав согласован с существующей миграцией 0119.
 - PASS: клиентский экран приёмки на desktop/mobile, 2 Chromium-сценария
   за 10,0 с, 1 pytest за 23,10 с. Устаревший hash, потеря ответа,
   подменённый hash квитанции, равные три ключа и тела повтора, редактирование
@@ -76,9 +84,8 @@
   осталась одна запись с правильными grant и подписантом.
 - PASS: обязательные для этого изменения Ruff, mypy, web typecheck, lint,
   формат, 186 web unit-тестов и повторная статическая сборка на 31 страницу.
-- NOT TESTED: production, реальный IdP и выдача ссылок из операторского
-  экрана. Операторская привязка компании и выдача клиентских ссылок
-  остаются открытыми.
+- NOT TESTED: production и реальный IdP. Общий итоговый набор пакета O и CI текущего
+  SHA нужно проверить перед приёмкой.
   Полный CI надо сверить по текущему SHA. BUILD-01 остаётся открытым.
 
 ## Повтор проверок
@@ -92,6 +99,7 @@ uv run pytest -q tests/integration/test_location_access.py tests/integration/tes
 uv run pytest -q tests/integration/test_h3_upgrade.py tests/integration/test_inventory_upgrade.py tests/integration/test_stock_upgrade.py
 uv run pytest -q tests/integration/test_o9_customer_acceptance.py tests/integration/test_o6a_construction_acceptance.py tests/integration/test_o6b_construction_warranty.py
 uv run pytest -q tests/integration/test_o9_customer_acceptance_browser.py tests/integration/test_o7c2_construction_acceptance_browser.py
+uv run pytest -q tests/integration/test_o9_customer_access_browser.py tests/integration/test_o8_construction_customer_company.py tests/integration/test_delegations.py
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy

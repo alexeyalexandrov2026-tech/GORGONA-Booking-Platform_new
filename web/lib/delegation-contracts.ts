@@ -22,7 +22,7 @@ export const delegationSchema = z
     owner_name: z.string().min(1),
     servicer_business_id: z.uuid(),
     servicer_name: z.string().min(1).nullable(),
-    permissions: z.array(delegablePermissionSchema).min(1).max(8),
+    permissions: z.array(delegablePermissionSchema).min(1).max(9),
     location_id: z.uuid().nullable(),
     expires_at: instant,
     status: z.enum(["pending", "active", "declined", "revoked"]),
@@ -68,7 +68,7 @@ export const delegatedBusinessSchema = z.strictObject({
   grant_id: z.uuid(),
   servicer_business_id: z.uuid(),
   servicer_name: z.string().nullable(),
-  permissions: z.array(delegablePermissionSchema).min(1).max(8),
+  permissions: z.array(delegablePermissionSchema).min(1).max(9),
   location_id: z.uuid().nullable(),
   expires_at: instant,
 });
@@ -132,6 +132,6 @@ export function describeAccess(permissions: DelegablePermission[]): string {
       `Transport: ${transport.map((p) => TRANSPORT_WORDS[p]).join(", ")}`,
     );
   if (permissions.includes("construction.customer_answer"))
-    parts.push("Accept construction proposals");
+    parts.push("Answer construction documents");
   return parts.join("; ");
 }

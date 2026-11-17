@@ -57,6 +57,26 @@ def test_terms_are_canonical() -> None:
     assert body.permissions == ("booking.read", "booking.write")
 
 
+def test_combined_booking_transport_and_customer_access_fits_the_current_database_limit() -> None:
+    permissions = [
+        "booking.read",
+        "booking.write",
+        "catalog.read",
+        "staff.read",
+        "transport.read",
+        "transport.plan",
+        "transport.assign",
+        "transport.events",
+        "construction.customer_answer",
+    ]
+    body = DelegationIssue.model_validate({**_ISSUE, "permissions": permissions})
+    assert body.permissions == tuple(sorted(permissions))
+    with pytest.raises(ValidationError):
+        DelegationIssue.model_validate(
+            {**_ISSUE, "permissions": [*permissions, "transport.tender"]}
+        )
+
+
 @pytest.mark.parametrize(
     "changes",
     [

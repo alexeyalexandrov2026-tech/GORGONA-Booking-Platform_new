@@ -48,6 +48,7 @@ import { ConstructionBilling } from "./construction-billing";
 import { ConstructionAcceptance } from "./construction-acceptance";
 import { ConstructionReconciliation } from "./construction-reconciliation";
 import { ConstructionWarranty } from "./construction-warranty";
+import { ConstructionCustomerAccess } from "./construction-customer-access";
 import {
   DailyReports,
   ProgressPanel,
@@ -574,6 +575,9 @@ function ProjectPage({
         <button type="button" onClick={() => onEdit(project)}>
           Edit project
         </button>
+        <button type="button" onClick={() => void refresh("Project reloaded.")}>
+          Reload project
+        </button>
       </div>
       {error && (
         <p className="error" role="alert">
@@ -587,6 +591,18 @@ function ProjectPage({
       )}
       {state && (
         <>
+          {companyWide && (
+            <ConstructionCustomerAccess
+              key={`customer:${id}:${project.revision}:${state.contract?.version ?? 0}:${state.orders.length}`}
+              business={businessId}
+              project={project}
+              hasProposal={
+                state.latest?.proposed_at != null || state.contract !== null
+              }
+              hasContract={state.contract !== null}
+              changes={state.orders.map((order) => order.number)}
+            />
+          )}
           <Estimates
             businessId={businessId}
             project={project}

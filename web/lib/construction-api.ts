@@ -33,6 +33,8 @@ import type {
   CustomerProposalLink,
   CustomerChange,
   CustomerChangeAnswer,
+  CustomerCompany,
+  CustomerCompanyBody,
   DailyReport,
   DailyReportList,
   Measurement,
@@ -145,6 +147,22 @@ const customerProposalPath = ({
   grant,
 }: CustomerProposalLink) =>
   `${projectPath(business, project)}/customer-proposal/${grant}`;
+
+export const fetchCustomerCompany = (business: string, project: string) =>
+  managementFetch<CustomerCompany>(
+    `${projectPath(business, project)}/customer-company`,
+  );
+
+export const saveCustomerCompany = (
+  business: string,
+  project: string,
+  body: CustomerCompanyBody,
+) =>
+  command<CustomerCompany>(
+    `${projectPath(business, project)}/customer-company`,
+    "PUT",
+    body,
+  );
 
 export const fetchCustomerProposal = (
   link: CustomerProposalLink,
