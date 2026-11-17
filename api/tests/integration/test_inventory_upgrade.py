@@ -189,6 +189,8 @@ K_TABLES = {
     "property_move_ins",
     "property_move_in_photos",
     "property_showing_cancellations",
+    # BUILD-01 (0118): project customer-company association history.
+    "construction_customer_companies",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

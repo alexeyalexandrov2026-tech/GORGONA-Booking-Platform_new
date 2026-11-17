@@ -477,6 +477,15 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                     marker
                 )[2]
                 owner_conn.execute(scope[scope.index("\n") :].encode("utf-8"))
+            # 0118 checks the branch scope on INSERT in its combined tenant policy.
+            customer_company = next(m.sql for m in load_migrations() if m.version == 118)
+            policy = re.search(
+                r"create policy construction_customer_company_tenant\b.*?;",
+                customer_company,
+                re.DOTALL,
+            )
+            assert policy is not None
+            owner_conn.execute(policy.group().encode("utf-8"))
             admission = next(m.sql for m in load_migrations() if m.version == 31)
             policies = re.findall(
                 r"create policy provider_admission_\w+_unrestricted_scope\b.*?;",
