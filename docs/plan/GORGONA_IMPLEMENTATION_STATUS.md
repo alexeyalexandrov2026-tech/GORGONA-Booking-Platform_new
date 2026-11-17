@@ -1,5 +1,18 @@
 # GORGONA — реестр реализации
 
+### BUILD-01 O-09. Исправление CI API изменения договора, 17 ноября
+
+CI экрана исходного предложения `6e7dcee` прошёл.
+[Результат](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44019373237)
+CI `c08f3a8` выявил пропущенные GET/POST изменения договора в списке
+разрешённых делегированных маршрутов и коллизию `tenant_hosts_pkey`
+в нагрузочной проверке. Перечень маршрутов обновлён. Нагрузочный тест
+использует существующий уникальный hostname своей компании через
+поддерживаемый параметр `--host`, сохраняя loopback-адрес сервера.
+На PostgreSQL 18.7 прошли 27 проверок за 10,40 с. Ruff и формат прошли
+с кодом 0. Полный CI исправления ожидается.
+[Предыдущий сбой](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44020180542)
+
 ### BUILD-01 O-09. Ответ клиента на изменение договора
 
 Ветка `codex/package-o9-customer-change-answer` от `6e7dcee`. Клиентский
