@@ -93,6 +93,7 @@ export function Delegations({
   // M6b: transport actions a carrier's dispatcher may take; reading comes with any of them.
   const [transport, setTransport] = useState<DelegablePermission[]>([]);
   const [construction, setConstruction] = useState(false);
+  const [rental, setRental] = useState(false);
   const [locationId, setLocationId] = useState("");
   const [endsOn, setEndsOn] = useState("");
   const [pending, setPending] = useState<Command | null>(null);
@@ -211,11 +212,14 @@ export function Delegations({
         ? (["transport.read", ...transport] as DelegablePermission[])
         : []),
       ...(construction ? ["construction.customer_answer" as const] : []),
+      ...(rental ? ["rental.customer_answer" as const] : []),
     ];
     if (!permissions.length) {
-      setError(
-        "Choose at least one booking, transport or construction action.",
-      );
+      setError("Choose at least one delegated action.");
+      return;
+    }
+    if (permissions.length > 9) {
+      setError("Choose up to nine actions for each grant.");
       return;
     }
     void run({
@@ -504,6 +508,14 @@ export function Delegations({
                   Lets the customer&apos;s delegates answer proposals, change
                   orders and work acceptance.
                 </p>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={rental}
+                    onChange={(event) => setRental(event.target.checked)}
+                  />{" "}
+                  Accept rental proposals
+                </label>
                 <label htmlFor="delegation-location">Location</label>
                 <select
                   id="delegation-location"

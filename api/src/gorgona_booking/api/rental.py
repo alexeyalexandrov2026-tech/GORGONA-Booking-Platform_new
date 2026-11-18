@@ -2,9 +2,10 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Path, Request
 from pydantic import AwareDatetime
 
 from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
@@ -17,6 +18,9 @@ from gorgona_booking.business import rental_assignments as assignments
 from gorgona_booking.business import rental_blocks as blocks
 from gorgona_booking.business import rental_bookings as bookings
 from gorgona_booking.business import rental_charges as charges
+from gorgona_booking.business import rental_customer_answer as customer_answer
+from gorgona_booking.business import rental_customer_changes as customer_changes
+from gorgona_booking.business import rental_customer_company as customer_company
 from gorgona_booking.business import rental_extensions as extensions
 from gorgona_booking.business import rental_inspections as inspections
 from gorgona_booking.business import rental_rates as rates
@@ -73,6 +77,7 @@ from gorgona_booking.business.rental_security import (
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
 from gorgona_booking.tenancy.authorization import (
+    DelegationScope,
     PermissionDeniedError,
     TenantAccess,
     authorized_tenant,
@@ -87,17 +92,39 @@ async def _access(
     principal: CurrentPrincipal,
     business_id: UUID,
     permission: Permission = Permission.RENTAL_READ,
+    *,
+    allow_location_scope: bool = True,
 ) -> AsyncIterator[TenantAccess]:
     async with authorized_tenant(
         runtime_pool(request),
         principal,
         business_id,
         permission,
-        allow_location_scope=True,
+        allow_location_scope=allow_location_scope,
         request_id=get_request_id(request),
     ) as access:
         await assert_location_scope_ready(access.conn)
         yield access
+
+
+@asynccontextmanager
+async def _customer_grant(
+    request: Request, principal: CurrentPrincipal, business_id: UUID, grant_id: UUID
+) -> AsyncIterator[tuple[TenantAccess, DelegationScope]]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.RENTAL_CUSTOMER_ANSWER,
+        allow_location_scope=True,
+        allow_delegation=True,
+        delegation_id=grant_id,
+        request_id=get_request_id(request),
+    ) as access:
+        if access.delegation is None:
+            raise PermissionDeniedError("Only the customer's delegate can answer here")
+        await assert_location_scope_ready(access.conn)
+        yield access, access.delegation
 
 
 @router.get("/classes")
@@ -402,6 +429,147 @@ async def get_booking_quote(
     """R4a decision 4: quote a booking from the card in force when it was made."""
     async with _access(request, principal, business_id) as access:
         return await rates.quote_booking(access.conn, booking_id)
+
+
+@router.get("/bookings/{booking_id}/customer-company")
+async def get_customer_company(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> customer_company.CustomerCompanyView:
+    async with _access(
+        request, principal, business_id, Permission.RENTAL_MANAGE, allow_location_scope=False
+    ) as access:
+        return await customer_company.load_customer_company(access.conn, booking_id)
+
+
+@router.put("/bookings/{booking_id}/customer-company")
+async def put_customer_company(
+    business_id: UUID,
+    booking_id: UUID,
+    body: customer_company.CustomerCompanyInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> customer_company.CustomerCompanyView:
+    async with _access(
+        request, principal, business_id, Permission.RENTAL_MANAGE, allow_location_scope=False
+    ) as access:
+        return await customer_company.save_customer_company(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/bookings/{booking_id}/customer-proposal/{grant_id}")
+async def get_customer_proposal(
+    business_id: UUID,
+    booking_id: UUID,
+    grant_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> customer_answer.ProposalView | customer_answer.Receipt:
+    async with _customer_grant(request, principal, business_id, grant_id) as (access, delegation):
+        return await customer_answer.load_proposal(access.conn, business_id, booking_id, delegation)
+
+
+@router.post("/bookings/{booking_id}/customer-proposal/{grant_id}")
+async def post_customer_acceptance(
+    business_id: UUID,
+    booking_id: UUID,
+    grant_id: UUID,
+    body: customer_answer.CustomerAnswerInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> customer_answer.Receipt:
+    async with _customer_grant(request, principal, business_id, grant_id) as (access, delegation):
+        return await customer_answer.accept_proposal(
+            access.conn,
+            business_id,
+            booking_id,
+            delegation,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/bookings/{booking_id}/customer-changes")
+async def get_current_customer_change(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> customer_changes.Offer | None:
+    async with _access(
+        request, principal, business_id, Permission.RENTAL_MANAGE, allow_location_scope=False
+    ) as access:
+        return await customer_changes.current_offer(access.conn, booking_id)
+
+
+@router.put("/bookings/{booking_id}/customer-changes")
+async def put_customer_change(
+    business_id: UUID,
+    booking_id: UUID,
+    body: customer_changes.OfferInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> customer_changes.Offer:
+    async with _access(
+        request, principal, business_id, Permission.RENTAL_MANAGE, allow_location_scope=False
+    ) as access:
+        return await customer_changes.issue(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/bookings/{booking_id}/customer-changes/{revision}/{grant_id}")
+async def get_customer_change(
+    business_id: UUID,
+    booking_id: UUID,
+    revision: Annotated[int, Path(ge=1, le=2_147_483_647)],
+    grant_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> customer_changes.OfferForCustomer | customer_changes.ChangeReceipt:
+    async with _customer_grant(request, principal, business_id, grant_id) as (access, delegation):
+        return await customer_changes.read_for_customer(
+            access.conn, business_id, booking_id, revision, delegation
+        )
+
+
+@router.post("/bookings/{booking_id}/customer-changes/{revision}/{grant_id}")
+async def post_customer_change(
+    business_id: UUID,
+    booking_id: UUID,
+    revision: Annotated[int, Path(ge=1, le=2_147_483_647)],
+    grant_id: UUID,
+    body: customer_changes.ChangeAnswerInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> customer_changes.ChangeReceipt:
+    async with _customer_grant(request, principal, business_id, grant_id) as (access, delegation):
+        return await customer_changes.accept(
+            access.conn,
+            business_id,
+            booking_id,
+            revision,
+            delegation,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
 
 
 @router.get("/bookings/{booking_id}/agreement")

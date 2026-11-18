@@ -12,7 +12,11 @@ export default function RentalPage() {
         // The server decides; this only avoids showing a screen every request refuses. Rental
         // rights belong to owners and managers and are not delegable (R8a decision 1).
         return canManageRental(member) ? (
-          <RentalScreen key={`${me.user_id}:${salonId}`} businessId={salonId} />
+          <RentalScreen
+            key={`${me.user_id}:${salonId}`}
+            businessId={salonId}
+            canManageCustomerAccess={member?.location_id === null}
+          />
         ) : (
           <div className="mgmt-empty">
             <h1>Rental</h1>

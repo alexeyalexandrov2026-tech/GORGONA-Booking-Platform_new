@@ -5,6 +5,7 @@ the booking was made, with the chosen extras, the source, who accepted and when;
 next insert-only version with a reason over the same card and period.
 """
 
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Annotated, Literal, Self
 from uuid import UUID, uuid7
@@ -77,6 +78,20 @@ class AcceptInput(Strict):
 
 class ChangeInput(AcceptInput):
     reason: Reason
+
+
+@dataclass(frozen=True, slots=True)
+class PlatformAcceptance:
+    """Response metadata constructed only after verifying the customer's claim."""
+
+    accepted_by: str
+    accepted_at: datetime
+    company_id: UUID
+    grant_id: UUID
+    binding_revision: int
+    review_hash: str
+    offer_revision: int | None = None
+    source: Literal["platform"] = field(init=False, default="platform")
 
 
 class AgreementExtraView(BaseModel):
@@ -214,17 +229,21 @@ async def record_version(
     version: int,
     card: RateCardView,
     quote: QuoteView,
-    body: AcceptInput,
+    body: AcceptInput | PlatformAcceptance,
     reason: str | None,
     user_id: UUID,
 ) -> None:
     offered = {e.code: e for e in card.extras}
     counts = quote.counts
+    platform = body if isinstance(body, PlatformAcceptance) else None
     await conn.execute(
         "insert into gba.rental_agreement_versions (tenant_id, agreement_id, version, "
         "rate_card_id, starts_at, ends_at, month_count, week_count, day_count, hour_count, "
-        "rental_amount, rental_days, total, source, accepted_by, accepted_at, reason, recorded_by) "
-        "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+        "rental_amount, rental_days, total, source, accepted_by, accepted_at, reason, recorded_by, "
+        "customer_company_id, customer_grant_id, customer_binding_revision, customer_review_hash, "
+        "customer_change_offer_revision) "
+        "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+        "%s, %s, %s, %s, %s)",
         (
             business,
             agreement_id,
@@ -244,6 +263,11 @@ async def record_version(
             body.accepted_at,
             reason,
             user_id,
+            platform.company_id if platform else None,
+            platform.grant_id if platform else None,
+            platform.binding_revision if platform else None,
+            platform.review_hash if platform else None,
+            platform.offer_revision if platform else None,
         ),
     )
     for line in quote.extras:
@@ -266,6 +290,30 @@ async def record_version(
         )
 
 
+async def create_initial_agreement(
+    conn: RuntimeConnection,
+    business: UUID,
+    booking_id: UUID,
+    card: RateCardView,
+    quote: QuoteView,
+    body: AcceptInput | PlatformAcceptance,
+    user_id: UUID,
+) -> UUID:
+    """Insert version one using the same write path for offline and grant acceptance."""
+    agreement_id = uuid7()
+    try:
+        async with module_writes(RENTAL_MODULE), conn.transaction():
+            await conn.execute(
+                "insert into gba.rental_agreements (tenant_id, id, booking_id, created_by) "
+                "values (%s, %s, %s, %s)",
+                (business, agreement_id, booking_id, user_id),
+            )
+            await record_version(conn, business, agreement_id, 1, card, quote, body, None, user_id)
+    except UniqueViolation as exc:
+        raise RentalAgreementExistsError("The booking already has an agreement") from exc
+    return agreement_id
+
+
 async def accept(
     conn: RuntimeConnection,
     business: UUID,
@@ -285,25 +333,48 @@ async def accept(
         if stored.request_hash != request:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return await load_agreement(conn, booking_id)
+    await conn.execute("select gba.lock_rental_booking_class(%s, %s)", (business, booking_id))
     booking = await open_booking(conn, booking_id)
     if await _agreement_id(conn, booking_id) is not None:
         raise RentalAgreementExistsError("The booking already has an agreement")
     await check_time(conn, body.accepted_at)
     card = await in_force(conn, booking.class_id, booking.pickup_location_id, booking.booked_at)
     quote = priced(card, booking.starts_at, booking.ends_at, body.extras)
-    agreement_id = uuid7()
-    try:
-        async with module_writes(RENTAL_MODULE), conn.transaction():
-            await conn.execute(
-                "insert into gba.rental_agreements (tenant_id, id, booking_id, created_by) "
-                "values (%s, %s, %s, %s)",
-                (business, agreement_id, booking_id, user_id),
-            )
-            await record_version(conn, business, agreement_id, 1, card, quote, body, None, user_id)
-    except UniqueViolation as exc:
-        raise RentalAgreementExistsError("The booking already has an agreement") from exc
+    agreement_id = await create_initial_agreement(
+        conn, business, booking_id, card, quote, body, user_id
+    )
     await idempotency.complete(conn, scope, 200, {"agreement_id": str(agreement_id)})
     return await load_agreement(conn, booking_id)
+
+
+async def record_terms_change(
+    conn: RuntimeConnection,
+    business: UUID,
+    current: AgreementView,
+    card: RateCardView,
+    quote: QuoteView,
+    body: ChangeInput | PlatformAcceptance,
+    reason: str,
+    user_id: UUID,
+) -> None:
+    """Write a version using the unchanged booking period under the caller's class lock."""
+    try:
+        async with module_writes(RENTAL_MODULE), conn.transaction():
+            await record_version(
+                conn,
+                business,
+                current.agreement_id,
+                current.current_version + 1,
+                card,
+                quote,
+                body,
+                reason,
+                user_id,
+            )
+    except CheckViolation as exc:
+        if exc.diag.constraint_name == "rental_agreement_versions_settled_check":
+            raise RentalAgreementSettledError("The rental agreement is already settled") from exc
+        raise
 
 
 async def change(
@@ -334,22 +405,6 @@ async def change(
     if card is None:
         raise NotFoundError("Rate card not found", rate_card_id=str(latest.rate_card_id))
     quote = priced(card, latest.starts_at, latest.ends_at, body.extras)
-    try:
-        async with module_writes(RENTAL_MODULE), conn.transaction():
-            await record_version(
-                conn,
-                business,
-                current.agreement_id,
-                latest.version + 1,
-                card,
-                quote,
-                body,
-                body.reason,
-                user_id,
-            )
-    except CheckViolation as exc:
-        if exc.diag.constraint_name == "rental_agreement_versions_settled_check":
-            raise RentalAgreementSettledError("The rental agreement is already settled") from exc
-        raise
+    await record_terms_change(conn, business, current, card, quote, body, body.reason, user_id)
     await idempotency.complete(conn, scope, 200, {"agreement_id": str(current.agreement_id)})
     return await load_agreement(conn, booking_id)

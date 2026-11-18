@@ -190,6 +190,9 @@ K_TABLES = {
     "property_showing_cancellations",
     # BUILD-01 (0118): project customer-company association history.
     "construction_customer_companies",
+    # RENT-01 (0122): booking customer-company association history.
+    "rental_customer_companies",
+    "rental_customer_change_offers",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

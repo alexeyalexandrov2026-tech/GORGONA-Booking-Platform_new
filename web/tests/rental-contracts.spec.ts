@@ -185,7 +185,12 @@ const card = {
   meter_allowance_per_day: 100,
   excess_rate: 25,
   extras: [
-    { code: "SEAT", name: "FAKE child seat", price: 500, unit: "per_day" },
+    {
+      code: "child_seat",
+      name: "FAKE child seat",
+      price: 500,
+      unit: "per_day",
+    },
   ],
   created_at: at,
 };
@@ -202,6 +207,91 @@ const quote = {
   total: 10000,
   booking_id: uuid(5),
 };
+test("rental customer documents distinguish pending terms from receipts", () => {
+  const path = `${base}/bookings/${booking.booking_id}/customer-proposal/${uuid(12)}`;
+  const receipt = {
+    schema_version: 1,
+    status: "accepted",
+    booking_id: booking.booking_id,
+    agreement_id: uuid(11),
+    version: 1,
+    review_hash: "0".repeat(64),
+    accepted_at: at,
+  };
+  const pending = {
+    schema_version: 1,
+    status: "pending",
+    booking_id: booking.booking_id,
+    pickup_location_id: booking.pickup_location_id,
+    return_location_id: booking.return_location_id,
+    binding_revision: 1,
+    class_name: klass.name,
+    pickup: { name: "FAKE branch", timezone: "UTC" },
+    return_location: null,
+    quote,
+    review_hash: receipt.review_hash,
+  };
+  const view = managementResponseSchema(path, "GET");
+  expect(view.parse(pending)).toEqual(pending);
+  expect(view.parse(receipt)).toEqual(receipt);
+  expect(view.safeParse({ ...pending, note: "internal" }).success).toBe(false);
+  expect(view.safeParse({ ...receipt, review_hash: "unknown" }).success).toBe(
+    false,
+  );
+  const reply = managementResponseSchema(path, "POST");
+  expect(reply.parse(receipt)).toEqual(receipt);
+  expect(reply.safeParse(pending).success).toBe(false);
+});
+
+test("rental change routes validate public terms, receipts and extras", () => {
+  const staffPath = `${base}/bookings/${booking.booking_id}/customer-changes`;
+  const path = `${staffPath}/1/${uuid(12)}`;
+  const offer = {
+    schema_version: 1,
+    status: "pending",
+    booking_id: booking.booking_id,
+    revision: 1,
+    agreement_version: 1,
+    binding_revision: 1,
+    reason: "FAKE new seat",
+    review_hash: "0".repeat(64),
+    quote: {
+      ...quote,
+      total: 11_000,
+      extras: [{ code: "child_seat", quantity: 1, amount: 1_000 }],
+    },
+  };
+  const publicOffer = {
+    ...offer,
+    pickup_timezone: "UTC",
+    extra_names: { child_seat: "FAKE seat" },
+  };
+  const receipt = {
+    schema_version: 1,
+    status: "accepted",
+    booking_id: booking.booking_id,
+    agreement_id: uuid(11),
+    revision: 1,
+    agreement_version: 2,
+    review_hash: offer.review_hash,
+    accepted_at: at,
+  };
+  const read = managementResponseSchema(path, "GET");
+  expect(read.parse(publicOffer)).toEqual(publicOffer);
+  expect(read.parse(receipt)).toEqual(receipt);
+  expect(read.safeParse(offer).success).toBe(false);
+  expect(
+    read.safeParse({ ...publicOffer, review_hash: "changed" }).success,
+  ).toBe(false);
+  const write = managementResponseSchema(path, "POST");
+  expect(write.parse(receipt)).toEqual(receipt);
+  expect(write.safeParse(publicOffer).success).toBe(false);
+  expect(managementResponseSchema(staffPath, "GET").parse(null)).toBeNull();
+  expect(managementResponseSchema(staffPath, "PUT").parse(offer)).toEqual(
+    offer,
+  );
+});
+
 const agreement = {
   agreement_id: uuid(11),
   booking_id: uuid(5),
@@ -219,7 +309,7 @@ const agreement = {
       rental_days: 2,
       extras: [
         {
-          code: "SEAT",
+          code: "child_seat",
           name: "FAKE child seat",
           price: 500,
           unit: "per_day",
