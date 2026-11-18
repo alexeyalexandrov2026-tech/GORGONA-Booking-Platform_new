@@ -28,9 +28,8 @@ API клиентской приёмки `6a6cd8c` (`codex/package-o9-customer-ac
 > кода dc9ee75 прошёл. Сверь повторный CI ветки приёмки после изменения
 > тестового переключателя Workforce на `3ea5d28` и разбери сбои.
 > [Повторный CI](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44242186256)
-> Общий набор O1–O9
-> уже дал 97 PASS, три новые гонки
-> отдельно прошли. Открой PACKAGE_O_ACCEPTANCE_2026-11-17.md и доведи
+> Общий набор O1–O9 с тремя новыми гонками дал 100 PASS.
+> Открой PACKAGE_O_ACCEPTANCE_2026-11-17.md и доведи
 > запись O-10 до фактического результата полного CI.
 > Подготовь итоговую приёмку пакета с точными SHA и границами CI,
 > сохранив неделегируемость construction.approve, изоляцию компаний и
@@ -42,9 +41,9 @@ API клиентской приёмки `6a6cd8c` (`codex/package-o9-customer-ac
 
 ## Что уже проверено
 
-- PASS: все 33 файла O1–O9 одним набором, 97 тестов за 605,29 с, без
-  пропусков. Новые гонки в `b0807b8` отдельно проверены в наборе из пяти
-  тестов за 19,41 с. O-01 согласован с принятым ADR-0035.
+- PASS — на `c4a9c67` все 33 файла O1–O9 и дополнительные гонки одним
+  набором, 100 тестов за 539,46 с, без пропусков, exit 0. PostgreSQL 18.7
+  и Chromium были обязательными. O-01 согласован с принятым ADR-0035.
   [Текущая запись приёмки](PACKAGE_O_ACCEPTANCE_2026-11-17.md)
 - PASS: операторский доступ в Chromium desktop/mobile, 2 сценария за
   22,6 с, целевой pytest 38 PASS за 43,32 с. Сохранение привязки с
@@ -100,15 +99,38 @@ API клиентской приёмки `6a6cd8c` (`codex/package-o9-customer-ac
 Отдельное обновление транзитивных dev-зависимостей `1ccb684` находится
 на `codex/package-o-web-dev-dependencies`. Статические проверки, сборка и
 190 web unit-тестов прошли. Аудит production-зависимостей дал 0 находок.
-Полный аудит сообщил об оставшейся находке `picomatch` по 14 цепочкам.
+14 записей полного аудита сводятся к одной находке в `picomatch`.
 [Handoff зависимостей](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/blob/1ccb6846bafd1776cecdf7955e2ecfdf37e580b2/docs/plan/NEXT_AGENT_BUILD01_O09_CUSTOMER_2026-11-16.md)
 [CI зависимостей](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44243266269)
+
+## Результаты старого handoff PROPERTY-01
+
+- `codex/package-property-01-lease-release`, `adbc7e0` — полный CI
+  PASS, 2926 тестов и 1 пропуск за 4091,18 с.
+  [CI освобождения срока](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/43793355920)
+- `codex/package-property-01-access`, `21dc638` — полный CI
+  PASS, 2930 тестов и 1 пропуск за 3389,93 с. Этот коммит уже предок
+  текущей ветки приёмки BUILD-01.
+  [CI доступа](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/43799983687)
+
+Упомянутая в [старом handoff](NEXT_AGENT_PROPERTY01_ACCESS_2026-11-15.md)
+миграция 0118 уже занята. Последняя миграция в общей цепочке — 0121.
+Решения владельца по новым таблицам PROPERTY-01, витрине и учёту
+депозитов остаются открыты.
 
 ## Повтор проверок
 
 Собери web с `npm run build`. Используй локальную одноразовую PostgreSQL
 18 с `GBA_TEST_ADMIN_DSN`, `GBA_REQUIRE_POSTGRES=1` и
-`GBA_REQUIRE_BROWSER=1`. Секрет DSN держи вне Git и результатов. Из `api`:
+`GBA_REQUIRE_BROWSER=1`. Секрет DSN держи вне Git и результатов. В PowerShell
+из `api` общий пакет собирается из 33 файлов.
+
+```powershell
+$tests = @(rg --files tests/integration | Where-Object { $_ -match '[\\/]test_o[1-9].*\.py$' } | Sort-Object)
+uv run pytest -q -ra @tests
+```
+
+Для отдельных путей можно повторить меньшие наборы из `api`.
 
 ```text
 uv run pytest -q tests/integration/test_location_access.py tests/integration/test_o2_construction_contract.py tests/integration/test_o8_construction_customer_answer.py tests/integration/test_o8_construction_customer_company.py tests/integration/test_o9_customer_change_answer.py tests/integration/test_o9_customer_proposal_browser.py tests/integration/test_o9_customer_change_browser.py
