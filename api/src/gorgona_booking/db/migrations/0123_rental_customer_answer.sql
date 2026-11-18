@@ -24,11 +24,13 @@ alter table gba.rental_agreement_versions
             and customer_binding_revision is null and customer_review_hash is null)
     ) not valid;
 
--- The trigger returns no data and remains bound to the active tenant and recorded user.
--- It can examine the selected grant even when its runtime booking context is branch-scoped.
--- Lock the grant before the booking class, as the authorized handler does.
-create function gba.guard_rental_agreement_customer_proof() returns trigger
-language plpgsql security definer set search_path = pg_catalog as $$
+-- Authorization locks the active grant, checks its member and permission and applies its branch
+-- scope before this trigger runs, as for construction answers (0119). The foreign key ties the
+-- grant to its recipient company. The trigger runs with the caller's own row security: it binds
+-- the row to the active tenant, the recorded user and this moment, rechecks the grant and its
+-- delegate where the session can read them, takes the booking class lock and requires the
+-- booking's current customer binding; a branch-scoped caller sees only bookings of its branch.
+create function gba.guard_rental_agreement_customer_proof() returns trigger language plpgsql as $$
 declare
     visible_location uuid;
     current_booking uuid;
@@ -45,21 +47,25 @@ begin
             message = 'Customer grant does not authorize this booking';
     end if;
 
-    select g.location_id into visible_location
-    from gba.delegation_grants g
-    join gba.delegation_grant_members m
-      on (m.owner_tenant_id, m.grant_id, m.servicer_tenant_id)
-       = (g.owner_tenant_id, g.id, g.servicer_tenant_id)
-    where (g.owner_tenant_id, g.id, g.servicer_tenant_id)
-        = (new.tenant_id, new.customer_grant_id, new.customer_company_id)
-      and m.user_id = new.recorded_by and m.removed_at is null
-      and g.status = 'active' and g.expires_at > pg_catalog.clock_timestamp()
-      and 'rental.customer_answer' = any(g.permissions)
-    for share of g, m;
-    if not found then
-        raise exception using errcode = 'check_violation',
-            constraint = 'rental_agreement_customer_scope',
-            message = 'Customer grant does not authorize this booking';
+    -- Company-wide sessions can read the grant tables: require a live grant with
+    -- rental.customer_answer whose current delegate is the recording user. A branch-scoped
+    -- session cannot read them (0012); authorization has locked and checked the grant there.
+    if gba.current_location_id() is null then
+        select g.location_id into visible_location
+        from gba.delegation_grants g
+        join gba.delegation_grant_members m
+          on (m.owner_tenant_id, m.grant_id, m.servicer_tenant_id)
+           = (g.owner_tenant_id, g.id, g.servicer_tenant_id)
+        where (g.owner_tenant_id, g.id, g.servicer_tenant_id)
+            = (new.tenant_id, new.customer_grant_id, new.customer_company_id)
+          and m.user_id = new.recorded_by and m.removed_at is null
+          and g.status = 'active' and g.expires_at > pg_catalog.clock_timestamp()
+          and 'rental.customer_answer' = any(g.permissions);
+        if not found then
+            raise exception using errcode = 'check_violation',
+                constraint = 'rental_agreement_customer_scope',
+                message = 'Customer grant does not authorize this booking';
+        end if;
     end if;
 
     select a.booking_id into current_booking from gba.rental_agreements a

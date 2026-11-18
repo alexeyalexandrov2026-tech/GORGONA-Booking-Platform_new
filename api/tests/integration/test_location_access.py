@@ -466,6 +466,8 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (106, "-- Rental branch scope:"),
                 # R7b: damage charges, their marks and refunds (by the pickup branch).
                 (107, "-- Rental branch scope:"),
+                # R-09: rental problem reports (by the booking's pickup branch).
+                (125, "-- Rental branch scope:"),
                 (112, "-- Property branch scope:"),
                 (113, "-- Property branch scope:"),
                 (114, "-- Property showing branch scope:"),
@@ -486,6 +488,15 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
             )
             assert policy is not None
             owner_conn.execute(policy.group().encode("utf-8"))
+            # R-09: 0122 and 0124 check the branch scope on INSERT in their tenant policies.
+            for version, name in (
+                (122, "rental_customer_companies_tenant"),
+                (124, "rental_customer_change_offers_tenant"),
+            ):
+                rental_sql = next(m.sql for m in load_migrations() if m.version == version)
+                found = re.search(rf"create policy {name}\b.*?;", rental_sql, re.DOTALL)
+                assert found is not None, name
+                owner_conn.execute(found.group().encode("utf-8"))
             admission = next(m.sql for m in load_migrations() if m.version == 31)
             policies = re.findall(
                 r"create policy provider_admission_\w+_unrestricted_scope\b.*?;",

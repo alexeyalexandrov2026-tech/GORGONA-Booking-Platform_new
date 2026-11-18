@@ -36,11 +36,11 @@ create table gba.rental_problem_reports (
 );
 
 -- A report follows the earlier ones of its booking under the booking's class lock, on a booking that is
--- not cancelled, for a moment that has already happened. A platform report needs the recording user to be
--- a current member of a live grant with rental.customer_answer for this business, the booking's current
--- customer company and a visible branch, as the R-09 acceptance proof does (0123).
-create function gba.guard_rental_problem_report() returns trigger
-language plpgsql security definer set search_path = pg_catalog as $$
+-- not cancelled, for a moment that has already happened, recorded by the current user now. A platform
+-- report names the booking's current customer company and binding. Authorization has locked and checked
+-- the live grant and applied its branch scope (as in 0119 and 0123); the trigger runs with the caller's
+-- own row security, so a branch-scoped caller sees only bookings of the grant's branch.
+create function gba.guard_rental_problem_report() returns trigger language plpgsql as $$
 declare
     visible_location uuid;
 begin
@@ -73,22 +73,27 @@ begin
         return new;
     end if;
 
-    select g.location_id into visible_location
-    from gba.delegation_grants g
-    join gba.delegation_grant_members m
-      on (m.owner_tenant_id, m.grant_id, m.servicer_tenant_id)
-       = (g.owner_tenant_id, g.id, g.servicer_tenant_id)
-    where (g.owner_tenant_id, g.id, g.servicer_tenant_id)
-        = (new.tenant_id, new.grant_id, new.company_id)
-      and m.user_id = new.recorded_by and m.removed_at is null
-      and g.status = 'active' and g.expires_at > pg_catalog.clock_timestamp()
-      and 'rental.customer_answer' = any(g.permissions)
-    for share of g, m;
-    if not found then
-        raise exception using errcode = 'check_violation',
-            constraint = 'rental_problem_reports_customer_scope',
-            message = 'Customer grant does not authorize this booking';
+    -- Company-wide sessions can read the grant tables: require a live grant with
+    -- rental.customer_answer whose current delegate is the recording user. A branch-scoped
+    -- session cannot read them (0012); authorization has locked and checked the grant there.
+    if gba.current_location_id() is null then
+        select g.location_id into visible_location
+        from gba.delegation_grants g
+        join gba.delegation_grant_members m
+          on (m.owner_tenant_id, m.grant_id, m.servicer_tenant_id)
+           = (g.owner_tenant_id, g.id, g.servicer_tenant_id)
+        where (g.owner_tenant_id, g.id, g.servicer_tenant_id)
+            = (new.tenant_id, new.grant_id, new.company_id)
+          and m.user_id = new.recorded_by and m.removed_at is null
+          and g.status = 'active' and g.expires_at > pg_catalog.clock_timestamp()
+          and 'rental.customer_answer' = any(g.permissions);
+        if not found then
+            raise exception using errcode = 'check_violation',
+                constraint = 'rental_problem_reports_customer_scope',
+                message = 'Customer grant does not authorize this booking';
+        end if;
     end if;
+
     if not exists (
         select 1
         from gba.rental_bookings b
