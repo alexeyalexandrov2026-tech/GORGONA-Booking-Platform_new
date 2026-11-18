@@ -115,6 +115,7 @@ def test_delegable_permissions_are_limited_to_named_actions() -> None:
         # N4: a carrier company's answers to the tenders addressed to it.
         Permission.TRANSPORT_TENDER,
         Permission.CONSTRUCTION_CUSTOMER_ANSWER,
+        Permission.RENTAL_CUSTOMER_ANSWER,
     } == DELEGABLE_PERMISSIONS
     for never in (
         Permission.BUSINESS_READ,
@@ -128,6 +129,8 @@ def test_delegable_permissions_are_limited_to_named_actions() -> None:
         Permission.TRANSPORT_MANAGE,
         Permission.TRANSPORT_BROKER,
         Permission.CONSTRUCTION_APPROVE,
+        Permission.RENTAL_MANAGE,
+        Permission.RENTAL_APPROVE,
     ):
         assert never not in DELEGABLE_PERMISSIONS
     # Every delegable permission is one a servicer role can hold; the role still limits it.
@@ -189,4 +192,17 @@ def test_delegated_routes_are_limited_to_the_booking_and_customer_workspaces() -
         'post("/projects/{project_id}/change-orders/{number}/customer-answer/{grant_id}"',
         'get("/projects/{project_id}/customer-acceptance/{grant_id}"',
         'post("/projects/{project_id}/customer-acceptance/{grant_id}"',
+    }
+
+    assert {
+        block.split(")", 1)[0]
+        for block in (Path(salons.__file__).parent / "rental.py")
+        .read_text(encoding="utf-8")
+        .split("@router.")[1:]
+        if "async with _customer_grant(" in block
+    } == {
+        'get("/bookings/{booking_id}/customer-proposal/{grant_id}"',
+        'post("/bookings/{booking_id}/customer-proposal/{grant_id}"',
+        'get("/bookings/{booking_id}/customer-changes/{revision}/{grant_id}"',
+        'post("/bookings/{booking_id}/customer-changes/{revision}/{grant_id}"',
     }

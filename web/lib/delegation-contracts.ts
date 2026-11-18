@@ -13,6 +13,7 @@ export const delegablePermissionSchema = z.enum([
   "transport.events",
   "transport.tender",
   "construction.customer_answer",
+  "rental.customer_answer",
 ]);
 export const delegationSchema = z
   .strictObject({
@@ -110,7 +111,10 @@ const TRANSPORT_WORDS: Record<string, string> = {
 export function describeAccess(permissions: DelegablePermission[]): string {
   const booking = permissions
     .filter(
-      (p) => !p.startsWith("transport.") && !p.startsWith("construction."),
+      (p) =>
+        !p.startsWith("transport.") &&
+        !p.startsWith("construction.") &&
+        !p.startsWith("rental."),
     )
     .sort();
   const same = (level: DelegablePermission[]) =>
@@ -133,5 +137,7 @@ export function describeAccess(permissions: DelegablePermission[]): string {
     );
   if (permissions.includes("construction.customer_answer"))
     parts.push("Answer construction documents");
+  if (permissions.includes("rental.customer_answer"))
+    parts.push("Accept rental proposals");
   return parts.join("; ");
 }

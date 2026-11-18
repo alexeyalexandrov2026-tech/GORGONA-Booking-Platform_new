@@ -3,6 +3,7 @@ import { managementResponseSchema } from "../lib/management-contracts";
 import {
   delegationSchema,
   delegatedBusinessSchema,
+  describeAccess,
 } from "../lib/delegation-contracts";
 import {
   customerDocumentLinks,
@@ -248,6 +249,13 @@ test("customer links require the live grant of the linked company and project br
       expires_at: grant.expires_at,
     }).success,
   ).toBe(true);
+  const rentalGrant = delegationSchema.parse({
+    ...grant,
+    permissions: ["rental.customer_answer"],
+  });
+  expect(describeAccess(rentalGrant.permissions)).toBe(
+    "Accept rental proposals",
+  );
   const now = Date.parse("2026-11-17T15:00:00Z");
   const matches = (candidate: typeof grant) =>
     customerGrantMatches(candidate, business, company, location, now);

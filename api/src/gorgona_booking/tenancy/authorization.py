@@ -7,6 +7,7 @@ same transaction as the operation, so authorization and work cannot diverge.
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -45,6 +46,7 @@ class DelegationScope:
     grant_id: UUID
     servicer_business_id: UUID
     revision: int
+    expires_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -202,7 +204,8 @@ async def _delegated_access(
         return None
     grants = await (
         await conn.execute(
-            "select g.id, g.servicer_tenant_id, g.permissions, g.location_id, g.revision "
+            "select g.id, g.servicer_tenant_id, g.permissions, g.location_id, "
+            "g.revision, g.expires_at "
             "from gba.delegation_grants g join gba.delegation_grant_members m "
             "on m.owner_tenant_id = g.owner_tenant_id and m.grant_id = g.id "
             "where g.owner_tenant_id = %s and m.user_id = %s and m.removed_at is null "
@@ -226,7 +229,7 @@ async def _delegated_access(
     ).fetchone()
     if suspended is not None:
         raise PermissionDeniedError("Your access to this business is suspended")
-    for grant_id, servicer_id, permissions, location_id, revision in grants:
+    for grant_id, servicer_id, permissions, location_id, revision, expires_at in grants:
         if str(permission) not in permissions:
             continue
         # Membership rows are locked under their own company's context, then restored.
@@ -272,7 +275,7 @@ async def _delegated_access(
             None,
             "delegation",
             location_id,
-            DelegationScope(grant_id, servicer_id, revision),
+            DelegationScope(grant_id, servicer_id, revision, expires_at),
         )
     raise PermissionDeniedError("Your delegated access does not allow this action")
 

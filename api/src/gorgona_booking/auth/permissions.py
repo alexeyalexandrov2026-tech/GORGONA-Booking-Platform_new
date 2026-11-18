@@ -5,7 +5,7 @@ Roles come from server-side memberships and platform roles, never from token cla
 
 from enum import StrEnum
 
-PERMISSIONS_VERSION = 14
+PERMISSIONS_VERSION = 15
 
 
 class Permission(StrEnum):
@@ -48,6 +48,7 @@ class Permission(StrEnum):
     RENTAL_READ = "rental.read"
     RENTAL_MANAGE = "rental.manage"
     RENTAL_APPROVE = "rental.approve"
+    RENTAL_CUSTOMER_ANSWER = "rental.customer_answer"
     PROPERTY_READ = "property.read"
     PROPERTY_MANAGE = "property.manage"
     MEMBERS_MANAGE = "members.manage"
@@ -98,6 +99,7 @@ _MANAGER = _FRONT_DESK | {
     Permission.RENTAL_READ,
     Permission.RENTAL_MANAGE,
     Permission.RENTAL_APPROVE,
+    Permission.RENTAL_CUSTOMER_ANSWER,
     Permission.PROPERTY_READ,
     Permission.PROPERTY_MANAGE,
     Permission.MEMBERS_MANAGE,
@@ -136,7 +138,9 @@ TRANSPORT_DELEGABLE = frozenset(
     }
 )
 DELEGABLE_PERMISSIONS = (
-    BOOKING_DELEGABLE | TRANSPORT_DELEGABLE | {Permission.CONSTRUCTION_CUSTOMER_ANSWER}
+    BOOKING_DELEGABLE
+    | TRANSPORT_DELEGABLE
+    | {Permission.CONSTRUCTION_CUSTOMER_ANSWER, Permission.RENTAL_CUSTOMER_ANSWER}
 )
 
 # What a platform admin may do inside a salon it is not a member of: read-only support.

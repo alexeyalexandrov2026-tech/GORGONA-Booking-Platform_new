@@ -18,6 +18,7 @@ DelegablePermission = Literal[
     "transport.events",
     "transport.tender",
     "construction.customer_answer",
+    "rental.customer_answer",
 ]
 GrantStatus = Literal["pending", "active", "declined", "revoked"]
 

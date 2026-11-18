@@ -21,6 +21,16 @@ import type {
   RateCard,
   RateCardList,
   RentalClass,
+  RentalChangeDocument,
+  RentalChangeLink,
+  RentalChangeOffer,
+  RentalChangeOfferForCustomer,
+  RentalChangeReceipt,
+  RentalCustomerCompany,
+  RentalCustomerDocument,
+  RentalProposal,
+  RentalProposalLink,
+  RentalReceipt,
   Security,
   SecurityKind,
   SecurityMethod,
@@ -98,6 +108,212 @@ async function command<T>(
   });
   pending.delete(signature);
   return result;
+}
+
+const customerCompanyPath = (business: string, booking: string) =>
+  `${base(business)}/bookings/${booking}/customer-company`;
+
+export async function fetchRentalCustomerCompany(
+  business: string,
+  booking: string,
+) {
+  const binding = await managementFetch<RentalCustomerCompany>(
+    customerCompanyPath(business, booking),
+  );
+  if (binding.booking_id !== booking)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load this booking safely.",
+    );
+  return binding;
+}
+
+export type RentalCustomerCompanyBody = {
+  schema_version: 1;
+  expected_revision: number;
+  company_id: string | null;
+};
+
+export async function saveRentalCustomerCompany(
+  business: string,
+  booking: string,
+  body: RentalCustomerCompanyBody,
+) {
+  const binding = await command<RentalCustomerCompany>(
+    customerCompanyPath(business, booking),
+    "PUT",
+    body,
+  );
+  if (binding.booking_id !== booking)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to confirm this booking safely.",
+    );
+  return binding;
+}
+
+const rentalProposalPath = ({ business, booking, grant }: RentalProposalLink) =>
+  `${base(business)}/bookings/${booking}/customer-proposal/${grant}`;
+
+export async function fetchRentalProposal(
+  link: RentalProposalLink,
+  signal: AbortSignal,
+) {
+  const document = await managementFetch<RentalCustomerDocument>(
+    rentalProposalPath(link),
+    { signal },
+  );
+  if (document.booking_id !== link.booking)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to read this proposal safely.",
+    );
+  return document;
+}
+
+export async function acceptRentalProposal(
+  link: RentalProposalLink,
+  offer: RentalProposal,
+  signatory: string,
+) {
+  const receipt = await command<RentalReceipt>(
+    rentalProposalPath(link),
+    "POST",
+    {
+      schema_version: 1,
+      binding_revision: offer.binding_revision,
+      review_hash: offer.review_hash,
+      signatory,
+    },
+  );
+  if (
+    receipt.booking_id !== link.booking ||
+    receipt.review_hash !== offer.review_hash
+  )
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to confirm this response safely.",
+    );
+  return receipt;
+}
+
+const customerChangesPath = (business: string, booking: string) =>
+  `${base(business)}/bookings/${booking}/customer-changes`;
+
+export type RentalChangeOfferBody = {
+  schema_version: 1;
+  expected_previous_offer_revision: number;
+  expected_agreement_version: number;
+  expected_binding_revision: number;
+  period: { starts_at: string; ends_at: string } | null;
+  extras: { code: string; quantity: number }[];
+  reason: string;
+};
+
+export async function fetchLatestRentalChange(
+  business: string,
+  booking: string,
+) {
+  const offer = await managementFetch<RentalChangeOffer | null>(
+    customerChangesPath(business, booking),
+  );
+  if (offer && offer.booking_id !== booking)
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load this rental change safely.",
+    );
+  return offer;
+}
+
+export async function issueRentalChange(
+  business: string,
+  booking: string,
+  body: RentalChangeOfferBody,
+) {
+  const offer = await command<RentalChangeOffer>(
+    customerChangesPath(business, booking),
+    "PUT",
+    body,
+  );
+  if (
+    offer.booking_id !== booking ||
+    offer.revision !== body.expected_previous_offer_revision + 1 ||
+    offer.agreement_version !== body.expected_agreement_version ||
+    offer.binding_revision !== body.expected_binding_revision
+  )
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to confirm this rental change safely.",
+    );
+  return offer;
+}
+
+const rentalChangePath = ({
+  business,
+  booking,
+  revision,
+  grant,
+}: RentalChangeLink) =>
+  `${customerChangesPath(business, booking)}/${revision}/${grant}`;
+
+export function rentalChangeHref({
+  business,
+  booking,
+  revision,
+  grant,
+}: RentalChangeLink) {
+  return `/rental/customer/change/?${new URLSearchParams({
+    business,
+    booking,
+    revision: String(revision),
+    grant,
+  })}`;
+}
+
+export async function fetchRentalChange(
+  link: RentalChangeLink,
+  signal: AbortSignal,
+) {
+  const document = await managementFetch<RentalChangeDocument>(
+    rentalChangePath(link),
+    { signal },
+  );
+  if (
+    document.booking_id !== link.booking ||
+    document.revision !== link.revision
+  )
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to read this rental change safely.",
+    );
+  return document;
+}
+
+export async function acceptRentalChange(
+  link: RentalChangeLink,
+  offer: RentalChangeOfferForCustomer,
+  signatory: string,
+) {
+  const receipt = await command<RentalChangeReceipt>(
+    rentalChangePath(link),
+    "POST",
+    {
+      schema_version: 1,
+      review_hash: offer.review_hash,
+      signatory,
+    },
+  );
+  if (
+    receipt.booking_id !== link.booking ||
+    receipt.revision !== link.revision ||
+    receipt.review_hash !== offer.review_hash ||
+    receipt.agreement_version !== offer.agreement_version + 1
+  )
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to confirm this rental change safely.",
+    );
+  return receipt;
 }
 
 export type ClassBody = {

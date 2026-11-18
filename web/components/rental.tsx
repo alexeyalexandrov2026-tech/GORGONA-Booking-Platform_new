@@ -30,6 +30,7 @@ import type {
   Unit,
 } from "../lib/rental-contracts";
 import { AgreementAndSecurity, RateCardsSection } from "./rental-agreement";
+import { RentalCustomerAccess } from "./rental-customer-access";
 import { AfterTheAgreement } from "./rental-settlement";
 
 type Customer = { id: string; name: string };
@@ -177,7 +178,13 @@ function Choose<T>({
   );
 }
 
-export function RentalScreen({ businessId }: { businessId: string }) {
+export function RentalScreen({
+  businessId,
+  canManageCustomerAccess,
+}: {
+  businessId: string;
+  canManageCustomerAccess: boolean;
+}) {
   const [classes, setClasses] = useState<RentalClass[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -322,6 +329,7 @@ export function RentalScreen({ businessId }: { businessId: string }) {
               meterKind={klass(selected.class_id)?.meter_kind ?? "none"}
               branchName={branchName}
               customerName={customerName(selected.customer_id)}
+              canManageCustomerAccess={canManageCustomerAccess}
               onChange={bookingChanged}
               notify={setNotice}
             />
@@ -881,6 +889,7 @@ function BookingPage({
   meterKind,
   branchName,
   customerName,
+  canManageCustomerAccess,
   onChange,
   notify,
 }: {
@@ -893,6 +902,7 @@ function BookingPage({
   meterKind: MeterKind;
   branchName: (id: string) => string;
   customerName: string;
+  canManageCustomerAccess: boolean;
   onChange: (item: Booking) => void;
   notify: (text: string) => void;
 }) {
@@ -1020,6 +1030,13 @@ function BookingPage({
         zone={zone}
         notify={notify}
       />
+      {canManageCustomerAccess && !booking.cancellation && (
+        <RentalCustomerAccess
+          business={businessId}
+          booking={booking}
+          zone={zone}
+        />
+      )}
       {!booking.cancellation && (
         <>
           <form aria-label="Assign a unit" onSubmit={assign}>

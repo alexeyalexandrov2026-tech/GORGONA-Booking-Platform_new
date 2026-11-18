@@ -20,6 +20,8 @@ from gorgona_booking.business.rental import fingerprint, require_rental
 from gorgona_booking.business.rental_agreements import (
     AgreementView,
     ChangeInput,
+    PlatformAcceptance,
+    RentalAgreementSettledError,
     check_time,
     load_agreement,
     open_booking,
@@ -31,7 +33,7 @@ from gorgona_booking.business.rental_bookings import (
     RentalUnavailableError,
     release_current,
 )
-from gorgona_booking.business.rental_rates import load_card, priced
+from gorgona_booking.business.rental_rates import QuoteView, RateCardView, load_card, priced
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.errors import DatabaseUnavailableError, NotFoundError
 
@@ -47,6 +49,99 @@ class PeriodInput(ChangeInput):
         if self.ends_at <= self.starts_at or self.ends_at - self.starts_at > LONGEST:
             raise ValueError("a period ends after it starts and lasts at most 366 days")
         return self
+
+
+async def record_period_change(
+    conn: RuntimeConnection,
+    business: UUID,
+    booking_id: UUID,
+    current: AgreementView,
+    card: RateCardView,
+    quote: QuoteView,
+    body: PeriodInput | PlatformAcceptance,
+    reason: str,
+    user_id: UUID,
+) -> None:
+    """Move the period, the existing unit hold and the next version in one transaction."""
+    numbered = await (
+        await conn.execute(
+            "select coalesce(max(sequence), 1) + 1 from gba.rental_booking_periods "
+            "where booking_id = %s",
+            (booking_id,),
+        )
+    ).fetchone()
+    sequence = int(numbered[0]) if numbered else 2
+    held = await (
+        await conn.execute(
+            "select a.unit_id, u.resource_id from gba.rental_assignments a "
+            "join gba.rental_units u on u.tenant_id = a.tenant_id and u.id = a.unit_id "
+            "where a.booking_id = %s and not exists (select 1 "
+            "from gba.rental_assignment_releases l "
+            "where l.tenant_id = a.tenant_id and l.assignment_id = a.id)",
+            (booking_id,),
+        )
+    ).fetchone()
+    try:
+        async with module_writes(RENTAL_MODULE), conn.transaction():
+            await conn.execute(
+                "insert into gba.rental_booking_periods (tenant_id, booking_id, sequence, "
+                "starts_at, ends_at, recorded_by) values (%s, %s, %s, %s, %s, %s)",
+                (business, booking_id, sequence, quote.starts_at, quote.ends_at, user_id),
+            )
+            if held is not None:
+                await release_current(conn, business, booking_id, user_id, "replaced")
+                assignment_id = uuid7()
+                await conn.execute(
+                    "insert into gba.rental_assignments (tenant_id, id, booking_id, unit_id, "
+                    "starts_at, ends_at, assigned_by) values (%s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        business,
+                        assignment_id,
+                        booking_id,
+                        held[0],
+                        quote.starts_at,
+                        quote.ends_at,
+                        user_id,
+                    ),
+                )
+                await conn.execute(
+                    "insert into gba.resource_allocations (tenant_id, resource_id, source_kind, "
+                    "source_id, during, state) values (%s, %s, 'rental_assignment', %s, "
+                    "tstzrange(%s, %s, '[)'), 'confirmed')",
+                    (business, held[1], assignment_id, quote.starts_at, quote.ends_at),
+                )
+            await record_version(
+                conn,
+                business,
+                current.agreement_id,
+                current.current_version + 1,
+                card,
+                quote,
+                body,
+                reason,
+                user_id,
+            )
+            await conn.execute("set constraints all immediate")
+    except ExclusionViolation as exc:
+        unit = str(held[0]) if held is not None else ""
+        raise RentalUnitBusyError(
+            "The unit is held for an overlapping assignment or block", unit_id=unit
+        ) from exc
+    except CheckViolation as exc:
+        if exc.diag.constraint_name == "rental_agreement_versions_settled_check":
+            raise RentalAgreementSettledError("The rental agreement is already settled") from exc
+        if exc.diag.constraint_name == "rental_booking_handover_check":
+            raise RentalBookingHandedOverError("The booking has already been handed over") from exc
+        if exc.diag.constraint_name == "rental_feasibility_budget_check":
+            raise DatabaseUnavailableError("Rental availability could not be calculated") from exc
+        if exc.diag.constraint_name in (
+            "rental_booking_periods_availability_check",
+            "rental_period_feasibility_check",
+        ):
+            raise RentalUnavailableError(
+                "The change would leave a booking of the class without a unit"
+            ) from exc
+        raise
 
 
 async def change_period(
@@ -77,82 +172,8 @@ async def change_period(
     if card is None:
         raise NotFoundError("Rate card not found", rate_card_id=str(latest.rate_card_id))
     quote = priced(card, body.starts_at, body.ends_at, body.extras)
-    numbered = await (
-        await conn.execute(
-            "select coalesce(max(sequence), 1) + 1 from gba.rental_booking_periods "
-            "where booking_id = %s",
-            (booking_id,),
-        )
-    ).fetchone()
-    sequence = int(numbered[0]) if numbered else 2
-    held = await (
-        await conn.execute(
-            "select a.unit_id, u.resource_id from gba.rental_assignments a "
-            "join gba.rental_units u on u.tenant_id = a.tenant_id and u.id = a.unit_id "
-            "where a.booking_id = %s and not exists (select 1 "
-            "from gba.rental_assignment_releases l "
-            "where l.tenant_id = a.tenant_id and l.assignment_id = a.id)",
-            (booking_id,),
-        )
-    ).fetchone()
-    try:
-        async with module_writes(RENTAL_MODULE), conn.transaction():
-            await conn.execute(
-                "insert into gba.rental_booking_periods (tenant_id, booking_id, sequence, "
-                "starts_at, ends_at, recorded_by) values (%s, %s, %s, %s, %s, %s)",
-                (business, booking_id, sequence, body.starts_at, body.ends_at, user_id),
-            )
-            if held is not None:
-                await release_current(conn, business, booking_id, user_id, "replaced")
-                assignment_id = uuid7()
-                await conn.execute(
-                    "insert into gba.rental_assignments (tenant_id, id, booking_id, unit_id, "
-                    "starts_at, ends_at, assigned_by) values (%s, %s, %s, %s, %s, %s, %s)",
-                    (
-                        business,
-                        assignment_id,
-                        booking_id,
-                        held[0],
-                        body.starts_at,
-                        body.ends_at,
-                        user_id,
-                    ),
-                )
-                await conn.execute(
-                    "insert into gba.resource_allocations (tenant_id, resource_id, source_kind, "
-                    "source_id, during, state) values (%s, %s, 'rental_assignment', %s, "
-                    "tstzrange(%s, %s, '[)'), 'confirmed')",
-                    (business, held[1], assignment_id, body.starts_at, body.ends_at),
-                )
-            await record_version(
-                conn,
-                business,
-                current.agreement_id,
-                latest.version + 1,
-                card,
-                quote,
-                body,
-                body.reason,
-                user_id,
-            )
-            await conn.execute("set constraints all immediate")
-    except ExclusionViolation as exc:
-        unit = str(held[0]) if held is not None else ""
-        raise RentalUnitBusyError(
-            "The unit is held for an overlapping assignment or block", unit_id=unit
-        ) from exc
-    except CheckViolation as exc:
-        if exc.diag.constraint_name == "rental_booking_handover_check":
-            raise RentalBookingHandedOverError("The booking has already been handed over") from exc
-        if exc.diag.constraint_name == "rental_feasibility_budget_check":
-            raise DatabaseUnavailableError("Rental availability could not be calculated") from exc
-        if exc.diag.constraint_name in (
-            "rental_booking_periods_availability_check",
-            "rental_period_feasibility_check",
-        ):
-            raise RentalUnavailableError(
-                "The change would leave a booking of the class without a unit"
-            ) from exc
-        raise
+    await record_period_change(
+        conn, business, booking_id, current, card, quote, body, body.reason, user_id
+    )
     await idempotency.complete(conn, scope, 200, {"agreement_id": str(current.agreement_id)})
     return await load_agreement(conn, booking_id)

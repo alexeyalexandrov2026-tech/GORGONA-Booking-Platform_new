@@ -104,7 +104,7 @@ export type AssignmentList = z.infer<typeof assignmentListSchema>;
 
 // R8b (package R): rate cards (R4a), the quote and the agreement (R4b) and the security (R5a).
 const money = z.number().int().min(0);
-const code = z.string().regex(/^[A-Z0-9][A-Z0-9_-]{0,31}$/);
+const code = z.string().regex(/^[a-z][a-z0-9_]{0,39}$/);
 const counts = z.record(z.string(), z.number().int().min(0));
 
 export const rateCardSchema = z.strictObject({
@@ -155,6 +155,105 @@ export const quoteSchema = z.strictObject({
   total: money,
   booking_id: id.nullable(),
 });
+
+const proposalLocationSchema = z.strictObject({
+  name: text(200),
+  timezone: z.string().min(1),
+});
+const reviewHash = z.string().regex(/^[0-9a-f]{64}$/);
+const rentalProposalSchema = z.strictObject({
+  schema_version: z.literal(1),
+  status: z.literal("pending"),
+  booking_id: id,
+  pickup_location_id: id,
+  return_location_id: id,
+  binding_revision: revision,
+  class_name: text(200),
+  pickup: proposalLocationSchema,
+  return_location: proposalLocationSchema.nullable(),
+  quote: quoteSchema,
+  review_hash: reviewHash,
+});
+const rentalReceiptSchema = z.strictObject({
+  schema_version: z.literal(1),
+  status: z.literal("accepted"),
+  booking_id: id,
+  agreement_id: id,
+  version: z.literal(1),
+  review_hash: reviewHash,
+  accepted_at: instant,
+});
+const rentalCustomerDocumentSchema = z.discriminatedUnion("status", [
+  rentalProposalSchema,
+  rentalReceiptSchema,
+]);
+const customerCompanySchema = z.strictObject({
+  schema_version: z.literal(1),
+  booking_id: id,
+  customer_id: id,
+  revision: count,
+  company_id: id.nullable(),
+  versions: z.array(
+    z.strictObject({
+      revision,
+      company_id: id.nullable(),
+      recorded_at: instant,
+    }),
+  ),
+});
+export const rentalProposalLinkSchema = z.strictObject({
+  business: id,
+  booking: id,
+  grant: id,
+});
+export type RentalProposalLink = z.infer<typeof rentalProposalLinkSchema>;
+export type RentalProposal = z.infer<typeof rentalProposalSchema>;
+export type RentalReceipt = z.infer<typeof rentalReceiptSchema>;
+export type RentalCustomerDocument = z.infer<
+  typeof rentalCustomerDocumentSchema
+>;
+export type RentalCustomerCompany = z.infer<typeof customerCompanySchema>;
+
+const offerRevision = revision.max(2_147_483_647);
+const changeOfferSchema = z.strictObject({
+  schema_version: z.literal(1),
+  status: z.literal("pending"),
+  booking_id: id,
+  revision: offerRevision,
+  agreement_version: offerRevision,
+  binding_revision: offerRevision,
+  quote: quoteSchema,
+  reason: text(500),
+  review_hash: reviewHash,
+});
+const changeOfferForCustomerSchema = changeOfferSchema.extend({
+  pickup_timezone: z.string().min(1),
+  extra_names: z.record(code, text(200)),
+});
+const changeReceiptSchema = z.strictObject({
+  schema_version: z.literal(1),
+  status: z.literal("accepted"),
+  booking_id: id,
+  agreement_id: id,
+  revision: offerRevision,
+  agreement_version: offerRevision,
+  review_hash: reviewHash,
+  accepted_at: instant,
+});
+const changeDocumentSchema = z.discriminatedUnion("status", [
+  changeOfferForCustomerSchema,
+  changeReceiptSchema,
+]);
+export const rentalChangeLinkSchema = rentalProposalLinkSchema.extend({
+  revision: offerRevision,
+});
+export type RentalChangeLink = z.infer<typeof rentalChangeLinkSchema>;
+export type RentalChangeOffer = z.infer<typeof changeOfferSchema>;
+export type RentalChangeOfferForCustomer = z.infer<
+  typeof changeOfferForCustomerSchema
+>;
+export type RentalChangeReceipt = z.infer<typeof changeReceiptSchema>;
+export type RentalChangeDocument = z.infer<typeof changeDocumentSchema>;
 
 export const agreementVersionSchema = z.strictObject({
   version: revision,
@@ -388,6 +487,37 @@ const routes: [RegExp, string[], z.ZodType][] = [
   [nested(`/classes/${uuid}/rate-cards`), ["GET"], rateCardListSchema],
   [nested(`/classes/${uuid}/rate-cards`), ["POST"], rateCardSchema],
   [nested(`/bookings/${uuid}/quote`), ["GET"], quoteSchema],
+  [
+    nested(`/bookings/${uuid}/customer-company`),
+    ["GET", "PUT"],
+    customerCompanySchema,
+  ],
+  [
+    nested(`/bookings/${uuid}/customer-proposal/${uuid}`),
+    ["GET"],
+    rentalCustomerDocumentSchema,
+  ],
+  [
+    nested(`/bookings/${uuid}/customer-proposal/${uuid}`),
+    ["POST"],
+    rentalReceiptSchema,
+  ],
+  [
+    nested(`/bookings/${uuid}/customer-changes`),
+    ["GET"],
+    changeOfferSchema.nullable(),
+  ],
+  [nested(`/bookings/${uuid}/customer-changes`), ["PUT"], changeOfferSchema],
+  [
+    nested(`/bookings/${uuid}/customer-changes/[1-9][0-9]{0,9}/${uuid}`),
+    ["GET"],
+    changeDocumentSchema,
+  ],
+  [
+    nested(`/bookings/${uuid}/customer-changes/[1-9][0-9]{0,9}/${uuid}`),
+    ["POST"],
+    changeReceiptSchema,
+  ],
   [nested(`/bookings/${uuid}/agreement`), ["GET", "POST"], agreementSchema],
   [nested(`/bookings/${uuid}/security`), ["GET", "POST"], securitySchema],
   [nested(`/bookings/${uuid}/security/events`), ["POST"], securitySchema],
