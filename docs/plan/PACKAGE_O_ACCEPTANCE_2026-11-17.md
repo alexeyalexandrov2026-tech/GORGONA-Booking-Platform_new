@@ -1,5 +1,9 @@
 # Package O — технические проверки 17 ноября 2026
 
+**Техническая приёмка O-01–O-10 — PASS, 18 ноября 2026.**
+Все 100 тестов пакета прошли локально. Полный CI `3ea5d28`
+прошёл после изменения тестового переключателя Workforce.
+
 Рабочая копия `C:/Users/alexa/.codex/worktrees/package-o8-customer-answer`,
 ветка `codex/package-o-acceptance`. Производственный код
 `dc9ee75dbfb2c3cac0f5b29774f309ec59fe5519`. Дополнительные проверки
@@ -42,7 +46,7 @@ API выполнялся на Windows с настоящим PostgreSQL Debian 18
 | O-07 | Заявка рассчитывает стоимость выполненных работ за вычетом ранее выставленного. FIN-03 хранит черновик счёта и отдельное начисление удержания. Предел задаёт договор, на период одна заявка даже при гонке ([O5](../../api/tests/integration/test_o5_construction_billing.py)) |
 | O-08 | Удержание освобождается после приёмки, один раз на акт. Повтор и конкурентные операции сохраняют одну запись ([O6a](../../api/tests/integration/test_o6a_construction_acceptance.py), [сверка](../../api/tests/integration/test_o6b_construction_warranty.py)) |
 | O-09 | Отдельное право утверждения, связь с компанией клиента и доступ через действующий grant. Проверены область филиала, ответ, квитанция и отзыв ([привязка](../../api/tests/integration/test_o8_construction_customer_company.py), [предложение](../../api/tests/integration/test_o8_construction_customer_answer.py), [изменение](../../api/tests/integration/test_o9_customer_change_answer.py), [приёмка](../../api/tests/integration/test_o9_customer_acceptance.py)) |
-| O-10 | Desktop/mobile, axe и действия клавиатуры прошли локально. Полный CI кода операторского доступа прошёл. Ветка с дополнительными гонками ждёт [повторного CI](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44242186256) на `3ea5d28` после исправления тестового соединения Workforce |
+| O-10 | Desktop/mobile, axe и действия клавиатуры прошли локально. Полный [повторный CI](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44242186256) на `3ea5d28` завершился успешно после изменения тестового соединения Workforce |
 
 Уточнение O-01 следует принятому
 [ADR-0035](../adr/0035-construction-projects-and-estimates.md).
@@ -70,13 +74,21 @@ API выполнялся на Windows с настоящим PostgreSQL Debian 18
 соединение закрылось при POST в локальный тестовый маршрут переключения
 личности `/fixture/user/owner`. Запросы тестового переключателя теперь
 передают `Connection: close`, чтобы исключить повторное использование
-сокета из пула между переключениями. Полный CI исправления ожидается.
+сокета из пула между переключениями.
 [Первый CI ветки приёмки](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44172458415)
+
+Повторный CI на `3ea5d289d06f242b0754e85b4d60f78d35d61c7b`,
+задание `134592488370`, завершился 18 ноября в 06:23 UTC —
+2949 PASS, 1 skip за 4194,42 с, exit 0. Единственный пропуск —
+`test_tenant_site_embedding.py`, которому нужна настройка
+`GBA_REQUIRE_TENANT_SITE=1` для проверки внешнего сайта.
+Веб-сборка, образ, PostgreSQL 18, Ruff и mypy прошли в том же задании.
+[Повторный CI ветки приёмки](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44242186256)
 
 Независимые обзоры новых клиентских API и экранов выполнялись чтением
 исходников. Выявленные замечания исправлены и покрыты проверками.
 Reviewer отдельно тесты не запускал. Это ограниченные обзоры изменённых
-путей. Приёмка всего пакета и решение о readiness остаются отдельными.
+путей. Решение о readiness остаётся за владельцем.
 
 В полном аудите web dev-зависимостей остаются 15 находок — 6 moderate,
 9 high. Аудит production-зависимостей после обновления Next.js прошёл.
