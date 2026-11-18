@@ -26,7 +26,9 @@ API клиентской приёмки `6a6cd8c` (`codex/package-o9-customer-ac
 
 > Продолжи приёмку пакета O в указанной рабочей копии. Полный CI
 > кода dc9ee75 прошёл. Сверь повторный CI ветки приёмки после изменения
-> тестового переключателя Workforce и разбери сбои. Общий набор O1–O9
+> тестового переключателя Workforce на `3ea5d28` и разбери сбои.
+> [Повторный CI](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44242186256)
+> Общий набор O1–O9
 > уже дал 97 PASS, три новые гонки
 > отдельно прошли. Открой PACKAGE_O_ACCEPTANCE_2026-11-17.md и доведи
 > запись O-10 до фактического результата полного CI.
@@ -92,9 +94,15 @@ API клиентской приёмки `6a6cd8c` (`codex/package-o9-customer-ac
   осталась одна запись с правильными grant и подписантом.
 - PASS: обязательные для этого изменения Ruff, mypy, web typecheck, lint,
   формат, 186 web unit-тестов и повторная статическая сборка на 31 страницу.
-- NOT TESTED: production и реальный IdP. Результат полного CI текущей
-  ветки нужно проверить перед приёмкой.
-  Полный CI надо сверить по текущему SHA. BUILD-01 остаётся открытым.
+- NOT TESTED — production и реальный IdP. Итог повторного CI нужен для
+  записи O-10. BUILD-01 остаётся открытым.
+
+Отдельное обновление транзитивных dev-зависимостей `1ccb684` находится
+на `codex/package-o-web-dev-dependencies`. Статические проверки, сборка и
+190 web unit-тестов прошли. Аудит production-зависимостей дал 0 находок.
+Полный аудит сообщил об оставшейся находке `picomatch` по 14 цепочкам.
+[Handoff зависимостей](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/blob/1ccb6846bafd1776cecdf7955e2ecfdf37e580b2/docs/plan/NEXT_AGENT_BUILD01_O09_CUSTOMER_2026-11-16.md)
+[CI зависимостей](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44243266269)
 
 ## Повтор проверок
 
