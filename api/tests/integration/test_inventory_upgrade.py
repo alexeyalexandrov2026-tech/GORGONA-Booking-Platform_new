@@ -194,6 +194,8 @@ K_TABLES = {
     # RENT-01 (0122): booking customer-company association history.
     "rental_customer_companies",
     "rental_customer_change_offers",
+    # RENT-01 (0125): booking problem reports.
+    "rental_problem_reports",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

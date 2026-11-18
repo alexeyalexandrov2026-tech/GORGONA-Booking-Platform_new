@@ -23,6 +23,7 @@ from gorgona_booking.business import rental_customer_changes as customer_changes
 from gorgona_booking.business import rental_customer_company as customer_company
 from gorgona_booking.business import rental_extensions as extensions
 from gorgona_booking.business import rental_inspections as inspections
+from gorgona_booking.business import rental_problem_reports as problems
 from gorgona_booking.business import rental_rates as rates
 from gorgona_booking.business import rental_reconciliation as reconciliation
 from gorgona_booking.business import rental_security as securities
@@ -855,3 +856,67 @@ async def get_reconciliation(
     """R7c decisions 1-5: charged, paid, credited, refunded and secured, derived on read."""
     async with _access(request, principal, business_id) as access:
         return await reconciliation.load_reconciliation(access.conn, business_id, booking_id)
+
+
+@router.get("/bookings/{booking_id}/problems")
+async def get_problem_reports(
+    business_id: UUID, booking_id: UUID, request: Request, principal: CurrentPrincipal
+) -> problems.ProblemList:
+    async with _access(request, principal, business_id) as access:
+        return await problems.list_reports(access.conn, booking_id)
+
+
+@router.post("/bookings/{booking_id}/problems")
+async def post_problem_report(
+    business_id: UUID,
+    booking_id: UUID,
+    body: problems.StaffProblemInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> problems.ProblemReport:
+    async with _access(request, principal, business_id, Permission.RENTAL_MANAGE) as access:
+        return await problems.record_report(
+            access.conn,
+            business_id,
+            booking_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/bookings/{booking_id}/customer-problems/{grant_id}")
+async def get_customer_problem_reports(
+    business_id: UUID,
+    booking_id: UUID,
+    grant_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> problems.CustomerProblemList:
+    async with _customer_grant(request, principal, business_id, grant_id) as (access, delegation):
+        return await problems.customer_reports(access.conn, business_id, booking_id, delegation)
+
+
+@router.post("/bookings/{booking_id}/customer-problems/{grant_id}")
+async def post_customer_problem_report(
+    business_id: UUID,
+    booking_id: UUID,
+    grant_id: UUID,
+    body: problems.CustomerProblemInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> problems.ProblemReport:
+    async with _customer_grant(request, principal, business_id, grant_id) as (access, delegation):
+        return await problems.report_as_customer(
+            access.conn,
+            business_id,
+            booking_id,
+            delegation,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )

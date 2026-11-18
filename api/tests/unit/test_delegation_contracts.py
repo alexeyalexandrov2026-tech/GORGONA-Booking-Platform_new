@@ -205,4 +205,6 @@ def test_delegated_routes_are_limited_to_the_booking_and_customer_workspaces() -
         'post("/bookings/{booking_id}/customer-proposal/{grant_id}"',
         'get("/bookings/{booking_id}/customer-changes/{revision}/{grant_id}"',
         'post("/bookings/{booking_id}/customer-changes/{revision}/{grant_id}"',
+        'get("/bookings/{booking_id}/customer-problems/{grant_id}"',
+        'post("/bookings/{booking_id}/customer-problems/{grant_id}"',
     }

@@ -193,6 +193,8 @@ K_TABLES = {
     # RENT-01 (0122): booking customer-company association history.
     "rental_customer_companies",
     "rental_customer_change_offers",
+    # RENT-01 (0125): booking problem reports.
+    "rental_problem_reports",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
