@@ -1,7 +1,7 @@
 # Передача следующему агенту GORGONA BUILD-01 O-09
 
 Рабочая копия `C:/Users/alexa/.codex/worktrees/package-o8-customer-answer`.
-Текущая ветка `codex/package-o-acceptance`.
+Ветка приёмки `codex/package-o-acceptance`.
 Производственный код `dc9ee75dbfb2c3cac0f5b29774f309ec59fe5519`
 (`codex/package-o9-customer-access`).
 Дополнительные гонки `b0807b80dbda8b39bbcb0616b2ddcdd883e0355c`.
@@ -76,7 +76,8 @@ API клиентской приёмки `6a6cd8c` (`codex/package-o9-customer-ac
   187 web unit-тестов, typecheck, lint и формат прошли. Независимый
   read-only обзор исходников не выявил дефектов, reviewer тесты не запускал.
 - FAIL: полный `npm audit` вернул код 1 с 15 находками в dev-зависимостях
-  (6 moderate, 9 high). Это отдельная оставшаяся задача зависимостей.
+  (6 moderate, 9 high) на ветке приёмки. Результат отдельной ветки
+  с обновлением зависимостей приведён ниже.
 - PASS: 43 интеграционных проверки за 92,77 с на PostgreSQL 18.7 для
   ответа на изменение договора, миграции 0120 и прежних сценариев. Проверены
   одобрение, отказ, повтор, отказ по неверному или отозванному grant,
@@ -95,6 +96,28 @@ API клиентской приёмки `6a6cd8c` (`codex/package-o9-customer-ac
 - NOT TESTED: production и реальный IdP. Результат полного CI текущей
   ветки нужно проверить перед приёмкой.
   Полный CI надо сверить по текущему SHA. BUILD-01 остаётся открытым.
+
+## Отдельная ветка зависимостей
+
+`codex/package-o-web-dev-dependencies` в
+`C:/Users/alexa/.codex/worktrees/package-o-web-dev-dependencies`, база
+`3ea5d289d06f242b0754e85b4d60f78d35d61c7b`. `npm update typescript-eslint
+--package-lock-only --ignore-scripts` обновил транзитивные
+`typescript-eslint` с 8.71.0 до 8.73.0 и `minimatch` с 10.2.6 до 11.0.9.
+Манифест `web/package.json` не требует изменений.
+
+- **PASS** — `npm ci`, lint, typecheck, формат, 190 web unit-тестов за
+  6,1 с, сборка 33 страниц, аудит production-зависимостей (0 находок).
+- **FAIL** — полный аудит возвращает 14 записей high, exit 1. Все 14
+  связаны через цепочки зависимостей с одной оставшейся находкой в
+  `picomatch`. В официальном бюллетене исправленной версии пока нет.
+  [Бюллетень picomatch](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
+- Аудит больше не сообщает о находке в `minimatch`.
+  [Бюллетень minimatch](https://github.com/advisories/GHSA-g3hv-75wg-m249)
+
+Сначала сверить [повторный CI приёмки](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44242186256)
+на `3ea5d28`. Для обновления зависимостей сверить CI отдельной ветки
+и повторно проверить бюллетень `picomatch` перед следующим обновлением.
 
 ## Повтор проверок
 
