@@ -255,6 +255,50 @@ export type RentalChangeOfferForCustomer = z.infer<
 export type RentalChangeReceipt = z.infer<typeof changeReceiptSchema>;
 export type RentalChangeDocument = z.infer<typeof changeDocumentSchema>;
 
+// R-09 (RENT-01): problem reports on a booking. A customer company reports through its live grant
+// (source platform); the business records what came by phone, email or paper with the reporter.
+export const problemKinds = [
+  "breakdown",
+  "damage",
+  "accident",
+  "other",
+] as const;
+const problemReportSchema = z
+  .strictObject({
+    schema_version: z.literal(1),
+    booking_id: id,
+    number: offerRevision,
+    kind: z.enum(problemKinds),
+    description: text(2000),
+    occurred_at: instant,
+    source: z.enum(["platform", "phone", "email", "paper"]),
+    reported_by: text(200).nullable(),
+    company_id: id.nullable(),
+    recorded_at: instant,
+  })
+  .refine(
+    (report) =>
+      report.source === "platform"
+        ? report.reported_by === null && report.company_id !== null
+        : report.reported_by !== null && report.company_id === null,
+    "A platform report names the company; any other report names the reporter.",
+  );
+const problemListSchema = z.strictObject({
+  schema_version: z.literal(1),
+  booking_id: id,
+  items: z.array(problemReportSchema),
+});
+const customerProblemListSchema = problemListSchema
+  .extend({ binding_revision: offerRevision })
+  .refine(
+    (list) => list.items.every((item) => item.source === "platform"),
+    "A customer company sees only its own platform reports.",
+  );
+export type ProblemKind = (typeof problemKinds)[number];
+export type ProblemReport = z.infer<typeof problemReportSchema>;
+export type ProblemList = z.infer<typeof problemListSchema>;
+export type CustomerProblemList = z.infer<typeof customerProblemListSchema>;
+
 export const agreementVersionSchema = z.strictObject({
   version: revision,
   rate_card_id: id,
@@ -517,6 +561,18 @@ const routes: [RegExp, string[], z.ZodType][] = [
     nested(`/bookings/${uuid}/customer-changes/[1-9][0-9]{0,9}/${uuid}`),
     ["POST"],
     changeReceiptSchema,
+  ],
+  [nested(`/bookings/${uuid}/problems`), ["GET"], problemListSchema],
+  [nested(`/bookings/${uuid}/problems`), ["POST"], problemReportSchema],
+  [
+    nested(`/bookings/${uuid}/customer-problems/${uuid}`),
+    ["GET"],
+    customerProblemListSchema,
+  ],
+  [
+    nested(`/bookings/${uuid}/customer-problems/${uuid}`),
+    ["POST"],
+    problemReportSchema,
   ],
   [nested(`/bookings/${uuid}/agreement`), ["GET", "POST"], agreementSchema],
   [nested(`/bookings/${uuid}/security`), ["GET", "POST"], securitySchema],

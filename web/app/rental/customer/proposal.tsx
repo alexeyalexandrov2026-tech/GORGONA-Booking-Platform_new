@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { businessDateTime } from "../../../lib/business-time";
@@ -8,6 +9,7 @@ import { ManagementApiError } from "../../../lib/management-api";
 import {
   acceptRentalProposal,
   fetchRentalProposal,
+  rentalProblemsHref,
 } from "../../../lib/rental-api";
 import {
   rentalProposalLinkSchema,
@@ -127,6 +129,11 @@ function Proposal({
           Proposal accepted.
         </p>
         <p>Agreement reference: {document.agreement_id}</p>
+        <p>
+          <Link href={rentalProblemsHref({ business, booking, grant })}>
+            Report a problem with this rental
+          </Link>
+        </p>
       </>
     );
   const offer = document?.status === "pending" ? document : null;

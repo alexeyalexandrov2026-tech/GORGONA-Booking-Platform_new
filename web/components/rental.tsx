@@ -31,6 +31,7 @@ import type {
 } from "../lib/rental-contracts";
 import { AgreementAndSecurity, RateCardsSection } from "./rental-agreement";
 import { RentalCustomerAccess } from "./rental-customer-access";
+import { RentalProblemReports } from "./rental-problem-reports";
 import { AfterTheAgreement } from "./rental-settlement";
 
 type Customer = { id: string; name: string };
@@ -1029,6 +1030,11 @@ function BookingPage({
         booking={booking}
         zone={zone}
         notify={notify}
+      />
+      <RentalProblemReports
+        business={businessId}
+        booking={booking}
+        zone={zone}
       />
       {canManageCustomerAccess && !booking.cancellation && (
         <RentalCustomerAccess

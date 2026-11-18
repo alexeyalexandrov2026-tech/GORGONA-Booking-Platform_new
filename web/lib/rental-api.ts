@@ -31,6 +31,10 @@ import type {
   RentalProposal,
   RentalProposalLink,
   RentalReceipt,
+  CustomerProblemList,
+  ProblemKind,
+  ProblemList,
+  ProblemReport,
   Security,
   SecurityKind,
   SecurityMethod,
@@ -314,6 +318,122 @@ export async function acceptRentalChange(
       "Unable to confirm this rental change safely.",
     );
   return receipt;
+}
+
+const problemsPath = (business: string, booking: string) =>
+  `${base(business)}/bookings/${booking}/problems`;
+
+export type StaffProblemBody = {
+  schema_version: 1;
+  kind: ProblemKind;
+  description: string;
+  occurred_at: string;
+  source: "phone" | "email" | "paper";
+  reported_by: string;
+};
+
+export async function fetchProblemReports(business: string, booking: string) {
+  const list = await managementFetch<ProblemList>(
+    problemsPath(business, booking),
+  );
+  if (
+    list.booking_id !== booking ||
+    list.items.some((item) => item.booking_id !== booking)
+  )
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to load the problem reports safely.",
+    );
+  return list;
+}
+
+export async function recordProblemReport(
+  business: string,
+  booking: string,
+  body: StaffProblemBody,
+) {
+  const report = await command<ProblemReport>(
+    problemsPath(business, booking),
+    "POST",
+    body,
+  );
+  if (
+    report.booking_id !== booking ||
+    report.kind !== body.kind ||
+    report.source !== body.source
+  )
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to confirm this problem report safely.",
+    );
+  return report;
+}
+
+const customerProblemsPath = ({
+  business,
+  booking,
+  grant,
+}: RentalProposalLink) =>
+  `${base(business)}/bookings/${booking}/customer-problems/${grant}`;
+
+export function rentalProblemsHref({
+  business,
+  booking,
+  grant,
+}: RentalProposalLink) {
+  return `/rental/customer/problems/?${new URLSearchParams({
+    business,
+    booking,
+    grant,
+  })}`;
+}
+
+export type CustomerProblemBody = {
+  schema_version: 1;
+  binding_revision: number;
+  kind: ProblemKind;
+  description: string;
+  occurred_at: string;
+};
+
+export async function fetchCustomerProblems(
+  link: RentalProposalLink,
+  signal: AbortSignal,
+) {
+  const list = await managementFetch<CustomerProblemList>(
+    customerProblemsPath(link),
+    { signal },
+  );
+  if (
+    list.booking_id !== link.booking ||
+    list.items.some((item) => item.booking_id !== link.booking)
+  )
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to read these problem reports safely.",
+    );
+  return list;
+}
+
+export async function reportProblemAsCustomer(
+  link: RentalProposalLink,
+  body: CustomerProblemBody,
+) {
+  const report = await command<ProblemReport>(
+    customerProblemsPath(link),
+    "POST",
+    body,
+  );
+  if (
+    report.booking_id !== link.booking ||
+    report.kind !== body.kind ||
+    report.source !== "platform"
+  )
+    throw new ManagementApiError(
+      "INVALID_RESPONSE",
+      "Unable to confirm this problem report safely.",
+    );
+  return report;
 }
 
 export type ClassBody = {

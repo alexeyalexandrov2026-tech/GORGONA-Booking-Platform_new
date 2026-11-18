@@ -292,6 +292,63 @@ test("rental change routes validate public terms, receipts and extras", () => {
   );
 });
 
+test("rental problem report routes validate lists and reports", () => {
+  const staffPath = `${base}/bookings/${booking.booking_id}/problems`;
+  const customerPath = `${staffPath.replace("/problems", "/customer-problems")}/${uuid(12)}`;
+  const phone = {
+    schema_version: 1,
+    booking_id: booking.booking_id,
+    number: 1,
+    kind: "breakdown",
+    description: "FAKE flat tyre",
+    occurred_at: at,
+    source: "phone",
+    reported_by: "FAKE Renter",
+    company_id: null,
+    recorded_at: at,
+  };
+  const platform = {
+    ...phone,
+    number: 2,
+    kind: "damage",
+    source: "platform",
+    reported_by: null,
+    company_id: uuid(13),
+  };
+  const list = {
+    schema_version: 1,
+    booking_id: booking.booking_id,
+    items: [phone, platform],
+  };
+  const mine = { ...list, items: [platform], binding_revision: 1 };
+  expect(managementResponseSchema(staffPath, "GET").parse(list)).toEqual(list);
+  expect(managementResponseSchema(staffPath, "POST").parse(phone)).toEqual(
+    phone,
+  );
+  expect(managementResponseSchema(customerPath, "GET").parse(mine)).toEqual(
+    mine,
+  );
+  expect(
+    managementResponseSchema(customerPath, "POST").parse(platform),
+  ).toEqual(platform);
+  const write = managementResponseSchema(staffPath, "POST");
+  for (const broken of [
+    { ...phone, reported_by: null },
+    { ...phone, company_id: uuid(13) },
+    { ...platform, reported_by: "FAKE Renter" },
+    { ...platform, company_id: null },
+    { ...phone, kind: "flood" },
+    { ...phone, source: "fax" },
+    { ...phone, description: "" },
+    { ...phone, number: 0 },
+    { ...phone, grant_id: uuid(12) },
+  ])
+    expect(write.safeParse(broken).success).toBe(false);
+  const read = managementResponseSchema(customerPath, "GET");
+  expect(read.safeParse(list).success).toBe(false);
+  expect(read.safeParse({ ...mine, items: [phone] }).success).toBe(false);
+});
+
 const agreement = {
   agreement_id: uuid(11),
   booking_id: uuid(5),

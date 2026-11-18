@@ -14,6 +14,7 @@ import { fetchDelegations, ManagementApiError } from "../lib/management-api";
 import {
   fetchRentalCustomerCompany,
   refusal,
+  rentalProblemsHref,
   saveRentalCustomerCompany,
   type RentalCustomerCompanyBody,
 } from "../lib/rental-api";
@@ -310,6 +311,20 @@ function AccessForm({
                 <p>
                   <Link href={link}>Rental proposal link</Link> for the customer
                   delegate.
+                </p>
+              )}
+              {link && (
+                <p>
+                  <Link
+                    href={rentalProblemsHref({
+                      business,
+                      booking: bookingId,
+                      grant: grantId,
+                    })}
+                  >
+                    Problem report link
+                  </Link>{" "}
+                  for the same delegate.
                 </p>
               )}
               <RentalChangeOffers
