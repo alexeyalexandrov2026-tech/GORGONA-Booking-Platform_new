@@ -1,23 +1,104 @@
 {
   "schema_version": 1,
-  "recorded_utc": "2026-11-19T00:00:00+00:00",
-  "status": "PASS: RENT-01 R-09 customer answers through a rental grant",
-  "host": "gorgona-dev (Azure rg-gorgona-dev, PostgreSQL 18.7)",
+  "recorded_utc": "2026-11-20T06:54:25+00:00",
+  "status": "PASS: RENT-01 R-09 customer answers through a rental grant (including 0126 review fixes)",
+  "host": "gorgona-dev (Azure rg-gorgona-dev, Standard_D8as_v6, PostgreSQL 18.7)",
   "commits": [
-    {"commit": "19a285de8f7416acab44857ed3d5519151405c16", "tree": "50e27926c9ff1999d84c7e935951533b2b7ba2be", "migrations": ["0122", "0123", "0124"]},
-    {"commit": "2488ef9f4b911fae48138074dc37aae5f4323608", "tree": "34a9db4007759b90ecfc62fe778616609acb10fd", "migrations": ["0125"]},
-    {"commit": "efbcc1b3d355a73b03442f618407ee05666a8a18", "tree": "9ead801afbb0c0ba02cbdc57d090af32e19b2e06", "migrations": []},
-    {"commit": "1ea70088df52d5e47f2bae2520a46d2c41a7fd27", "tree": "1cab88d7cb5f30dcdbc41ca45c9b1977805dc8e7", "migrations": []}
+    {
+      "commit": "19a285de8f7416acab44857ed3d5519151405c16",
+      "tree": "50e27926c9ff1999d84c7e935951533b2b7ba2be",
+      "migrations": [
+        "0122",
+        "0123",
+        "0124"
+      ]
+    },
+    {
+      "commit": "2488ef9f4b911fae48138074dc37aae5f4323608",
+      "tree": "34a9db4007759b90ecfc62fe778616609acb10fd",
+      "migrations": [
+        "0125"
+      ]
+    },
+    {
+      "commit": "efbcc1b3d355a73b03442f618407ee05666a8a18",
+      "tree": "9ead801afbb0c0ba02cbdc57d090af32e19b2e06",
+      "migrations": []
+    },
+    {
+      "commit": "1ea70088df52d5e47f2bae2520a46d2c41a7fd27",
+      "tree": "1cab88d7cb5f30dcdbc41ca45c9b1977805dc8e7",
+      "migrations": []
+    },
+    {
+      "commit": "146c35f9742b8e8eeaf05e6a6f6451d90fddae12",
+      "tree": "94b5d4624d328a044ae774394fbf7cb3f56581b7",
+      "migrations": []
+    },
+    {
+      "commit": "13d4a8cd4412b158c05d88e785fb806af3cb3e28",
+      "tree": "2752dbe6558f7d7730022a0e55ddac1dae7999c2",
+      "migrations": [
+        "0126"
+      ]
+    }
   ],
   "vm_runs": [
-    {"name": "problem reports API before the fix", "tree": null, "result": "4 expected failures, 23 passed"},
-    {"name": "problem reports API", "tree": "34a9db4007759b90ecfc62fe778616609acb10fd", "result": "ruff, mypy; 41 passed"},
-    {"name": "problem screens, first run", "tree": "cb977f0b37abe2a57e41f51687d0fedfd29bc52c", "result": "web PASS; ruff E501 in one docstring"},
-    {"name": "problem screens", "tree": "9ead801afbb0c0ba02cbdc57d090af32e19b2e06", "result": "red contract as expected; web PASS; ruff, mypy; API 27 passed; browser 3 passed"},
-    {"name": "full suite at efbcc1b", "tree": "9ead801afbb0c0ba02cbdc57d090af32e19b2e06", "result": "14 failed, 2947 passed, 4 skipped"},
-    {"name": "CI fix, first attempt, ordered short run", "tree": "358400101ee6392e0dbfdde9f4c5d4985657d50a", "result": "35 passed, 1 failed (unnamed-actor database check)"},
-    {"name": "CI fix, ordered short run", "tree": "1cab88d7cb5f30dcdbc41ca45c9b1977805dc8e7", "result": "36 passed"},
-    {"name": "CI fix, full suite", "tree": "1cab88d7cb5f30dcdbc41ca45c9b1977805dc8e7", "result": "2960 passed, 4 skipped, 1 failed: test_l7a_catalog_browser on mobile (5 s wait); passed twice when rerun alone"}
+    {
+      "name": "problem reports API before the fix",
+      "tree": null,
+      "result": "4 expected failures, 23 passed"
+    },
+    {
+      "name": "problem reports API",
+      "tree": "34a9db4007759b90ecfc62fe778616609acb10fd",
+      "result": "ruff, mypy; 41 passed"
+    },
+    {
+      "name": "problem screens, first run",
+      "tree": "cb977f0b37abe2a57e41f51687d0fedfd29bc52c",
+      "result": "web PASS; ruff E501 in one docstring"
+    },
+    {
+      "name": "problem screens",
+      "tree": "9ead801afbb0c0ba02cbdc57d090af32e19b2e06",
+      "result": "red contract as expected; web PASS; ruff, mypy; API 27 passed; browser 3 passed"
+    },
+    {
+      "name": "full suite at efbcc1b",
+      "tree": "9ead801afbb0c0ba02cbdc57d090af32e19b2e06",
+      "result": "14 failed, 2947 passed, 4 skipped"
+    },
+    {
+      "name": "CI fix, first attempt, ordered short run",
+      "tree": "358400101ee6392e0dbfdde9f4c5d4985657d50a",
+      "result": "35 passed, 1 failed (unnamed-actor database check)"
+    },
+    {
+      "name": "CI fix, ordered short run",
+      "tree": "1cab88d7cb5f30dcdbc41ca45c9b1977805dc8e7",
+      "result": "36 passed"
+    },
+    {
+      "name": "CI fix, full suite",
+      "tree": "1cab88d7cb5f30dcdbc41ca45c9b1977805dc8e7",
+      "result": "2960 passed, 4 skipped, 1 failed: test_l7a_catalog_browser on mobile (5 s wait); passed twice when rerun alone"
+    },
+    {
+      "name": "review fixes red run",
+      "tree": null,
+      "result": "API 5 passed, 13 failed as expected; web rental-contracts 10 passed, 2 failed as expected"
+    },
+    {
+      "name": "review fixes first full suite",
+      "tree": "676752fa2942f7c3d2a7003276a93efa4ece4467",
+      "result": "static PASS (web unit 194 passed); targeted 18 passed; ordered short 53 passed; full 2967 passed, 4 skipped, 1 failed (test_guard_binds_one_parameter_per_placeholder: 103 != 99)"
+    },
+    {
+      "name": "review fixes final full suite",
+      "tree": "2752dbe6558f7d7730022a0e55ddac1dae7999c2",
+      "result": "static PASS (web unit 194 passed); targeted 18 passed; ordered short 53 passed; full 2968 passed, 4 skipped, 0 failed in 3182.52s"
+    }
   ],
   "vm_skips": [
     "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent",
@@ -26,8 +107,35 @@
     "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard"
   ],
   "github_actions": [
-    {"run": 44378780501, "commit": "19a285de8f7416acab44857ed3d5519151405c16", "conclusion": "failure", "result": "12 failed, 2948 passed, 1 skipped"},
-    {"run": 44384201291, "commit": "2488ef9f4b911fae48138074dc37aae5f4323608", "conclusion": "failure", "result": "13 failed, 2950 passed, 1 skipped"},
-    {"run": 44413721541, "commit": "1ea70088df52d5e47f2bae2520a46d2c41a7fd27", "conclusion": "success", "result": "counts not recorded: the log download failed"}
+    {
+      "run": 44378780501,
+      "commit": "19a285de8f7416acab44857ed3d5519151405c16",
+      "conclusion": "failure",
+      "result": "12 failed, 2948 passed, 1 skipped"
+    },
+    {
+      "run": 44384201291,
+      "commit": "2488ef9f4b911fae48138074dc37aae5f4323608",
+      "conclusion": "failure",
+      "result": "13 failed, 2950 passed, 1 skipped"
+    },
+    {
+      "run": 44413721541,
+      "commit": "1ea70088df52d5e47f2bae2520a46d2c41a7fd27",
+      "conclusion": "success",
+      "result": "counts not recorded: the log download failed"
+    },
+    {
+      "run": 44478464976,
+      "commit": "146c35f9742b8e8eeaf05e6a6f6451d90fddae12",
+      "conclusion": "success",
+      "result": "completed 2026-11-19T08:13:50Z"
+    },
+    {
+      "run": 44681375203,
+      "commit": "13d4a8cd4412b158c05d88e785fb806af3cb3e28",
+      "conclusion": "success",
+      "result": "completed 2026-11-20T06:24:20Z on branch codex/package-r09-review-fixes"
+    }
   ]
 }
