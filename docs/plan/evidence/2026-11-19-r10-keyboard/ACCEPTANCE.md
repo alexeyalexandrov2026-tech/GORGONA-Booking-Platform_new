@@ -1,6 +1,6 @@
 # R-10 keyboard accessibility of the rental screens on gorgona-dev
 
-**R-10 PASS on gorgona-dev.** The staff rental screens and the customer problem-report page are operated
+**R-10 PASS on gorgona-dev and in GitHub Actions ([run 44692411664](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44692411664)).** The staff rental screens and the customer problem-report page are operated
 by keyboard alone after sign-in on desktop and mobile Chromium viewports, with visible `:focus-visible`
 outlines on every stop, zero axe accessibility violations, and no horizontal overflow. This closes the
 keyboard coverage gap left in the [R9 acceptance record](../2026-11-13-r9-acceptance/ACCEPTANCE.md).
