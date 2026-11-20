@@ -121,6 +121,7 @@ export function RateCardsSection({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -225,7 +226,7 @@ export function RateCardsSection({
           />
         </label>
         <div className="mgmt-form-actions">
-          <button type="submit" disabled={busy}>
+          <button type="submit" aria-disabled={busy}>
             Save rate card
           </button>
         </div>
@@ -388,6 +389,7 @@ function AgreementPanel({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -495,7 +497,7 @@ function AgreementPanel({
                 />
               </label>
               <div className="mgmt-form-actions">
-                <button type="submit" disabled={busy}>
+                <button type="submit" aria-disabled={busy}>
                   Accept agreement
                 </button>
               </div>
@@ -554,6 +556,7 @@ function SecurityPanel({
 
   async function request(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -576,6 +579,7 @@ function SecurityPanel({
   async function record(event: React.FormEvent) {
     event.preventDefault();
     if (!security) return;
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -685,7 +689,7 @@ function SecurityPanel({
               />
             </label>
             <div className="mgmt-form-actions">
-              <button type="submit" disabled={busy}>
+              <button type="submit" aria-disabled={busy}>
                 Record event
               </button>
             </div>
@@ -716,7 +720,7 @@ function SecurityPanel({
             </select>
           </label>
           <div className="mgmt-form-actions">
-            <button type="submit" disabled={busy}>
+            <button type="submit" aria-disabled={busy}>
               Request security
             </button>
           </div>

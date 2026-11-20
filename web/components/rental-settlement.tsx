@@ -248,6 +248,7 @@ function InspectionsPanel({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -447,7 +448,7 @@ function InspectionsPanel({
             )}
           </fieldset>
           <div className="mgmt-form-actions">
-            <button type="submit" disabled={busy}>
+            <button type="submit" aria-disabled={busy}>
               {kind === "handover" ? "Record handover" : "Record return"}
             </button>
           </div>
@@ -588,6 +589,7 @@ function SettlementPanel({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -622,7 +624,7 @@ function SettlementPanel({
             setTerms={setTerms}
           />
           <div className="mgmt-form-actions">
-            <button type="submit" disabled={busy}>
+            <button type="submit" aria-disabled={busy}>
               Settle
             </button>
           </div>
@@ -670,6 +672,7 @@ function ChargesPanel({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -773,7 +776,7 @@ function ChargesPanel({
             setTerms={setTerms}
           />
           <div className="mgmt-form-actions">
-            <button type="submit" disabled={busy}>
+            <button type="submit" aria-disabled={busy}>
               Charge
             </button>
           </div>
@@ -824,6 +827,7 @@ function RefundsPanel({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -997,7 +1001,7 @@ function RefundsPanel({
           </>
         )}
         <div className="mgmt-form-actions">
-          <button type="submit" disabled={busy}>
+          <button type="submit" aria-disabled={busy}>
             Record refund
           </button>
         </div>

@@ -159,9 +159,13 @@ test("an owner runs the rental screens with the keyboard alone", async ({
   await page.keyboard.type(code);
   await tabTo(page, classForm.getByLabel("Name"));
   await page.keyboard.type(`FAKE keyboard van ${project}`);
-  await tabTo(page, classForm.getByRole("button", { name: "Save class" }));
+  const saveClass = classForm.getByRole("button", { name: "Save class" });
+  await tabTo(page, saveClass);
   await page.keyboard.press("Enter");
   await expect(page.getByText(`Class ${code} saved.`)).toBeVisible();
+  // Busy state uses aria-disabled, so saving never drops focus from the Save button.
+  await expect(saveClass).toBeFocused();
+  await ringed(page);
 
   // Activating the class code opens it for editing and moves focus to the form's heading.
   const classes = page.getByRole("table", { name: "Classes", exact: true });
@@ -169,6 +173,16 @@ test("an owner runs the rental screens with the keyboard alone", async ({
   await page.keyboard.press("Enter");
   await expect(
     page.getByRole("heading", { name: `Edit class ${code}`, exact: true }),
+  ).toBeFocused();
+  await ringed(page);
+  // Saving an edited class returns focus to the New class heading instead of losing it.
+  await tabTo(page, classForm.getByLabel("Name"));
+  await page.keyboard.press("End");
+  await page.keyboard.type(" v2");
+  await tabTo(page, saveClass);
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "New class", exact: true }),
   ).toBeFocused();
   await ringed(page);
 
@@ -298,6 +312,11 @@ test("an owner runs the rental screens with the keyboard alone", async ({
   await page.keyboard.press("Enter");
   await expect(page.getByText(`Booking ${number} cancelled.`)).toBeVisible();
   expect(cancellations).toHaveLength(1);
+  // The cancel form unmounts after success; focus moves to the booking heading instead of body.
+  await expect(
+    page.getByRole("heading", { name: `Booking ${number}`, exact: true }),
+  ).toBeFocused();
+  await ringed(page);
   await expect(row).toContainText("Cancelled");
   await accessible(page, testInfo, `${project}-keyboard-cancelled`);
 });

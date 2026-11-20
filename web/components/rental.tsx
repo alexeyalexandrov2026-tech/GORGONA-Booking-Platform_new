@@ -282,12 +282,14 @@ export function RentalScreen({
             key={editing?.class_id ?? "new"}
             businessId={businessId}
             editing={editing}
-            focusRequest={editing ? classFocus : 0}
+            focusRequest={classFocus}
             onSaved={(saved) => {
+              const wasEditing = editing !== null;
               setClasses((list) =>
                 replace(list, saved, (x) => x.class_id === saved.class_id),
               );
               setEditing(null);
+              if (wasEditing) setClassFocus((count) => count + 1);
               setNotice(`Class ${saved.code} saved.`);
             }}
           />
@@ -443,6 +445,7 @@ function ClassForm({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -507,7 +510,7 @@ function ClassForm({
           </select>
         </label>
         <div className="mgmt-form-actions">
-          <button type="submit" disabled={busy}>
+          <button type="submit" aria-disabled={busy}>
             Save class
           </button>
         </div>
@@ -549,6 +552,7 @@ function UnitsSection({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -609,7 +613,7 @@ function UnitsSection({
           </select>
         </label>
         <div className="mgmt-form-actions">
-          <button type="submit" disabled={busy}>
+          <button type="submit" aria-disabled={busy}>
             Save unit
           </button>
         </div>
@@ -769,6 +773,7 @@ function BookingsSection({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -842,7 +847,7 @@ function BookingsSection({
           />
         </label>
         <div className="mgmt-form-actions">
-          <button type="submit" disabled={busy}>
+          <button type="submit" aria-disabled={busy}>
             Save booking
           </button>
         </div>
@@ -957,13 +962,15 @@ function BookingPage({
     };
   }, [businessId, booking.booking_id]);
 
-  // Opening the booking from the table (focusRequest above 0) moves focus to its heading.
+  const [cancelledFocus, setCancelledFocus] = useState(0);
+  // Opening the booking from the table or cancelling it moves focus to its heading.
   useEffect(() => {
-    if (focusRequest > 0) heading.current?.focus();
-  }, [focusRequest]);
+    if (focusRequest > 0 || cancelledFocus > 0) heading.current?.focus();
+  }, [focusRequest, cancelledFocus]);
 
   async function assign(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -982,6 +989,7 @@ function BookingPage({
 
   async function cancel(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setError(null);
     setBusy(true);
     try {
@@ -997,6 +1005,7 @@ function BookingPage({
       notify(`Booking ${saved.number} cancelled.`);
       setReason("");
       setConfirmed(false);
+      setCancelledFocus((count) => count + 1);
     } catch (failure) {
       setError(`The booking was not cancelled: ${refusal(failure)}`);
     } finally {
@@ -1088,7 +1097,7 @@ function BookingPage({
               option={(u) => [u.unit_id, u.identifier]}
             />
             <div className="mgmt-form-actions">
-              <button type="submit" disabled={busy}>
+              <button type="submit" aria-disabled={busy}>
                 Assign unit
               </button>
             </div>
@@ -1113,7 +1122,7 @@ function BookingPage({
               I confirm this booking will be cancelled
             </label>
             <div className="mgmt-form-actions">
-              <button type="submit" disabled={busy}>
+              <button type="submit" aria-disabled={busy}>
                 Cancel booking
               </button>
             </div>
