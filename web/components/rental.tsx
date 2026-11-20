@@ -4,7 +4,7 @@
 // unit. Every figure is the server's (availability is never computed here); a command keeps its
 // record id and Idempotency-Key until it succeeds (ADR-0030). Times are shown and entered in the
 // time zone of the branch they belong to.
-import React, { useEffect, useId, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { businessDateTime, businessTimeToInstant } from "../lib/business-time";
 import { fetchCounterparties } from "../lib/counterparty-api";
 import { fetchWorkspace, type LocationItem } from "../lib/management-api";
@@ -196,6 +196,9 @@ export function RentalScreen({
   const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState<Booking | null>(null);
   const [editing, setEditing] = useState<RentalClass | null>(null);
+  // Counts the user's own activations of a class or a booking: each one moves focus to what opened.
+  const [classFocus, setClassFocus] = useState(0);
+  const [bookingFocus, setBookingFocus] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -242,6 +245,16 @@ export function RentalScreen({
     );
   }
 
+  function editClass(item: RentalClass) {
+    setEditing(item);
+    setClassFocus((count) => count + 1);
+  }
+
+  function openBooking(item: Booking) {
+    setSelected(item);
+    setBookingFocus((count) => count + 1);
+  }
+
   return (
     <div className="rental-screen">
       <h1>Rental</h1>
@@ -264,11 +277,12 @@ export function RentalScreen({
       )}
       {loaded && (
         <>
-          <ClassesSection classes={classes} onEdit={setEditing} />
+          <ClassesSection classes={classes} onEdit={editClass} />
           <ClassForm
             key={editing?.class_id ?? "new"}
             businessId={businessId}
             editing={editing}
+            focusRequest={editing ? classFocus : 0}
             onSaved={(saved) => {
               setClasses((list) =>
                 replace(list, saved, (x) => x.class_id === saved.class_id),
@@ -310,7 +324,7 @@ export function RentalScreen({
             branch={branch}
             klass={klass}
             customerName={customerName}
-            onOpen={setSelected}
+            onOpen={openBooking}
             onBooked={(saved) => {
               bookingChanged(saved);
               setNotice(`Booking ${saved.number} saved.`);
@@ -321,6 +335,7 @@ export function RentalScreen({
               key={selected.booking_id}
               businessId={businessId}
               booking={selected}
+              focusRequest={bookingFocus}
               units={units.filter(
                 (u) => u.class_id === selected.class_id && u.state === "active",
               )}
@@ -402,13 +417,20 @@ function ClassesSection({
 function ClassForm({
   businessId,
   editing,
+  focusRequest,
   onSaved,
 }: {
   businessId: string;
   editing: RentalClass | null;
+  focusRequest: number;
   onSaved: (item: RentalClass) => void;
 }) {
   const headingId = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
+  // Opening a class from the table (focusRequest above 0) moves focus to the form it opened.
+  useEffect(() => {
+    if (focusRequest > 0) heading.current?.focus();
+  }, [focusRequest]);
   // A new class keeps its id until the save succeeds, so a retry saves it once.
   const [classId, setClassId] = useState(
     () => editing?.class_id ?? crypto.randomUUID(),
@@ -448,7 +470,7 @@ function ClassForm({
 
   return (
     <section aria-labelledby={headingId}>
-      <h2 id={headingId}>
+      <h2 id={headingId} ref={heading} tabIndex={-1}>
         {editing ? `Edit class ${editing.code}` : "New class"}
       </h2>
       <form aria-label="Class" onSubmit={submit}>
@@ -883,6 +905,7 @@ function BookingsSection({
 function BookingPage({
   businessId,
   booking,
+  focusRequest,
   units,
   allUnits,
   zone,
@@ -896,6 +919,7 @@ function BookingPage({
 }: {
   businessId: string;
   booking: Booking;
+  focusRequest: number;
   units: Unit[];
   allUnits: Unit[];
   zone: string;
@@ -908,9 +932,11 @@ function BookingPage({
   notify: (text: string) => void;
 }) {
   const headingId = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
   const [assignments, setAssignments] = useState<Assignment[] | null>(null);
   const [unit, setUnit] = useState("");
   const [reason, setReason] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const identifier = (id: string) =>
@@ -930,6 +956,11 @@ function BookingPage({
       live = false;
     };
   }, [businessId, booking.booking_id]);
+
+  // Opening the booking from the table (focusRequest above 0) moves focus to its heading.
+  useEffect(() => {
+    if (focusRequest > 0) heading.current?.focus();
+  }, [focusRequest]);
 
   async function assign(event: React.FormEvent) {
     event.preventDefault();
@@ -965,6 +996,7 @@ function BookingPage({
       );
       notify(`Booking ${saved.number} cancelled.`);
       setReason("");
+      setConfirmed(false);
     } catch (failure) {
       setError(`The booking was not cancelled: ${refusal(failure)}`);
     } finally {
@@ -974,7 +1006,9 @@ function BookingPage({
 
   return (
     <section aria-labelledby={headingId}>
-      <h2 id={headingId}>{`Booking ${booking.number}`}</h2>
+      <h2 id={headingId} ref={heading} tabIndex={-1}>
+        {`Booking ${booking.number}`}
+      </h2>
       <p>
         {className} for {customerName}, {when(booking.starts_at, zone)} to{" "}
         {when(booking.ends_at, zone)}, from{" "}
@@ -1068,6 +1102,15 @@ function BookingPage({
                 onChange={(e) => setReason(e.target.value)}
                 required
               />
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(e) => setConfirmed(e.target.checked)}
+                required
+              />
+              I confirm this booking will be cancelled
             </label>
             <div className="mgmt-form-actions">
               <button type="submit" disabled={busy}>

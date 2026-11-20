@@ -45,6 +45,14 @@ test("manager offers an extension and the renter accepts through a live grant", 
   await access
     .getByRole("button", { name: "Manage agreement changes" })
     .click();
+  // The button names the wrapper that holds the panel it opened.
+  const changes = access.getByRole("button", {
+    name: "Close agreement changes",
+  });
+  await expect(changes).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    page.locator(`[id="${await changes.getAttribute("aria-controls")}"]`),
+  ).toContainText("Agreement change offer");
   const panel = access.getByRole("region", { name: "Agreement change offer" });
   const form = panel.getByRole("form", { name: "Prepare agreement change" });
   await form.getByRole("spinbutton", { name: "FAKE seat" }).fill("1");

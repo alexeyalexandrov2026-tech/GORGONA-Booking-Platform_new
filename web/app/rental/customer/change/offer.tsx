@@ -221,6 +221,7 @@ function OfferView({
             </>
           )}
           <form
+            aria-label="Accept the agreement change"
             className="customer-proposal-form"
             onSubmit={(event) => void accept(event)}
           >

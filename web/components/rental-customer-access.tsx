@@ -70,6 +70,7 @@ export function RentalCustomerAccess({
   zone: string;
 }) {
   const heading = useId();
+  const panel = useId();
   const [open, setOpen] = useState(false);
   return (
     <section aria-labelledby={heading}>
@@ -78,11 +79,16 @@ export function RentalCustomerAccess({
         type="button"
         className="secondary"
         aria-expanded={open}
+        aria-controls={panel}
         onClick={() => setOpen(!open)}
       >
         {open ? "Close customer access" : "Manage customer access"}
       </button>
-      {open && <AccessForm business={business} booking={booking} zone={zone} />}
+      <div id={panel} hidden={!open}>
+        {open && (
+          <AccessForm business={business} booking={booking} zone={zone} />
+        )}
+      </div>
     </section>
   );
 }

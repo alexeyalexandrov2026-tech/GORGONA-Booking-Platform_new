@@ -46,6 +46,7 @@ type Context = {
 };
 
 export function RentalChangeOffers(props: Props) {
+  const panel = useId();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -53,11 +54,14 @@ export function RentalChangeOffers(props: Props) {
         type="button"
         className="secondary"
         aria-expanded={open}
+        aria-controls={panel}
         onClick={() => setOpen(!open)}
       >
         {open ? "Close agreement changes" : "Manage agreement changes"}
       </button>
-      {open && <ChangeOffers {...props} />}
+      <div id={panel} hidden={!open}>
+        {open && <ChangeOffers {...props} />}
+      </div>
     </>
   );
 }

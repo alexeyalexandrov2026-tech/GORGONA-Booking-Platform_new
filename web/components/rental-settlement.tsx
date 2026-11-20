@@ -4,7 +4,7 @@
 // usage, the settlement, damage charges, refunds and the reconciliation. Every figure is the
 // server's; money is entered in major units and sent in minor units; a command keeps its
 // Idempotency-Key until it succeeds (ADR-0030). FIN-03 documents are issued on its own screens.
-import React, { useCallback, useEffect, useId, useState } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { businessTimeToInstant } from "../lib/business-time";
 import {
   currencyPlaces,
@@ -204,6 +204,27 @@ function InspectionsPanel({
   const needsMeter = handover ? handover.meter !== null : meterKind !== "none";
   const returned = inspections.some((i) => i.kind === "return");
   const kind = handedOver ? "return" : "handover";
+  const addMarkButton = useRef<HTMLButtonElement>(null);
+  const markList = useRef<HTMLUListElement>(null);
+  const removedAt = useRef<number | null>(null);
+
+  // After a mark is removed focus goes to the mark that took its place, else to the last one
+  // left, else to "Add mark"; it never stays on the button that went away.
+  useEffect(() => {
+    const removed = removedAt.current;
+    if (removed === null) return;
+    removedAt.current = null;
+    const buttons = Array.from(
+      markList.current?.querySelectorAll("button") ?? [],
+    );
+    const next = buttons.at(Math.min(removed, buttons.length - 1));
+    (next ?? addMarkButton.current)?.focus();
+  }, [marks]);
+
+  function removeMark(index: number) {
+    removedAt.current = index;
+    setMarks((all) => all.filter((_, i) => i !== index));
+  }
 
   function addMark() {
     setError(null);
@@ -408,21 +429,16 @@ function InspectionsPanel({
               </label>
             )}
             <div className="mgmt-form-actions">
-              <button type="button" onClick={addMark}>
+              <button type="button" ref={addMarkButton} onClick={addMark}>
                 Add mark
               </button>
             </div>
             {marks.length > 0 && (
-              <ul aria-label="Marks to record">
+              <ul ref={markList} aria-label="Marks to record">
                 {marks.map((m, index) => (
                   <li key={`${m.area}-${index}`}>
                     {`${index + 1}. ${m.area} (${m.severity})${m.new ? ", new" : ""}`}{" "}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setMarks((all) => all.filter((_, i) => i !== index))
-                      }
-                    >
+                    <button type="button" onClick={() => removeMark(index)}>
                       Remove mark {index + 1}
                     </button>
                   </li>

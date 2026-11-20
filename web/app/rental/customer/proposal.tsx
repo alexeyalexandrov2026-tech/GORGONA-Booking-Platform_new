@@ -182,6 +182,7 @@ function Proposal({
             </dd>
           </dl>
           <form
+            aria-label="Accept the rental proposal"
             className="customer-proposal-form"
             onSubmit={(event) => void accept(event)}
           >

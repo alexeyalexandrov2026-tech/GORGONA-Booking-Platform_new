@@ -145,7 +145,7 @@ test("an owner builds the catalogue, books a unit and cancels a booking", async 
   ).toContainText("Current");
   await accessible(page, testInfo, `${project}-booking`);
 
-  // A second booking, cancelled with a reason, by keyboard.
+  // A second booking: a reason, the confirmation, then Enter cancels it.
   await book.getByLabel("Note").fill("");
   const second = await booked(page, book, label, later, after);
   expect(second).not.toBe(first);
@@ -154,6 +154,7 @@ test("an owner builds the catalogue, books a unit and cancels a booking", async 
     .click();
   const cancel = page.getByRole("form", { name: "Cancel booking" });
   await cancel.getByLabel("Reason").fill(`FAKE plans changed ${project}`);
+  await cancel.getByLabel("I confirm this booking will be cancelled").check();
   await cancel.getByLabel("Reason").press("Enter");
   await expect(page.getByText(`Booking ${second} cancelled.`)).toBeVisible();
   await expect(
