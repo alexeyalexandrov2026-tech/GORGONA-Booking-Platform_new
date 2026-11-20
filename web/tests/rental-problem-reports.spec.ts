@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 test.use({ baseURL: process.env.GBA_MGMT_BROWSER_URL, actionTimeout: 15000 });
 
@@ -9,7 +9,57 @@ type Fixture = {
   number: number;
   grant: string;
   revoked: string;
+  companyName: string;
 };
+
+async function ringed(page: Page) {
+  const focused = page.locator(":focus");
+  await expect(focused).toHaveCount(1);
+  await expect(focused).toBeVisible();
+  const ring = await focused.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      what: element.outerHTML.slice(0, 90),
+      shown: element.matches(":focus-visible"),
+      style: style.outlineStyle,
+      width: Number.parseFloat(style.outlineWidth),
+    };
+  });
+  expect(ring.shown, `${ring.what} matches :focus-visible`).toBe(true);
+  expect(ring.style, `${ring.what} has an outline`).not.toBe("none");
+  expect(ring.width, `${ring.what} outline width`).toBeGreaterThan(0);
+}
+
+/** Press Tab until target is focused, checking the focus ring on every light-DOM stop. */
+async function tabTo(page: Page, target: Locator, limit = 30) {
+  for (let presses = 0; presses <= limit; presses += 1) {
+    if (
+      await target.evaluate((element) => element === document.activeElement)
+    ) {
+      await ringed(page);
+      return;
+    }
+    await page.keyboard.press("Tab");
+    const onShadowPicker = await page.evaluate(
+      () =>
+        document.activeElement instanceof HTMLInputElement &&
+        (document.activeElement.type === "date" ||
+          document.activeElement.type === "time") &&
+        document.querySelectorAll(":focus").length === 0,
+    );
+    if (!onShadowPicker) await ringed(page);
+  }
+  throw new Error(`Tab did not reach ${String(target)} in ${limit} presses`);
+}
+
+async function atTheTop(page: Page) {
+  await page.evaluate(() => {
+    document.body.tabIndex = -1;
+    document.body.focus();
+    document.body.removeAttribute("tabindex");
+    window.scrollTo(0, 0);
+  });
+}
 
 test("staff record a phoned-in problem and the renter reports one through a live grant", async ({
   page,
@@ -79,7 +129,10 @@ test("staff record a phoned-in problem and the renter reports one through a live
   const signIn = customer.getByRole("button", { name: "Sign in", exact: true });
   const main = customer.getByRole("main");
   await customer.goto(link(fixture.grant));
-  await signIn.click();
+  await expect(signIn).toBeVisible();
+  await atTheTop(customer);
+  await tabTo(customer, signIn);
+  await customer.keyboard.press("Enter");
   await expect(main.getByText("No problem reports yet.")).toBeVisible();
   await expect(main.getByText("FAKE flat tyre on the motorway")).toHaveCount(0);
   expect(
@@ -110,17 +163,31 @@ test("staff record a phoned-in problem and the renter reports one through a live
     },
   );
   const report = main.getByRole("form", { name: "Report a problem" });
-  await report.getByLabel("Kind").selectOption("damage");
+  const kind = report.getByLabel("Kind");
   const description = report.getByLabel("What happened");
-  await description.fill("FAKE cracked side mirror");
-  await report.getByLabel("Date").fill("2026-01-16");
-  await report.getByLabel("Time").fill("10:00");
-  await report.getByRole("button", { name: "Send problem report" }).click();
+  const date = report.getByLabel("Date");
+  const time = report.getByLabel("Time");
+  const send = report.getByRole("button", { name: "Send problem report" });
+  await atTheTop(customer);
+  await tabTo(customer, kind);
+  await customer.keyboard.type("Damage");
+  await expect(kind.locator("option:checked")).toHaveText("Damage");
+  await tabTo(customer, description);
+  await customer.keyboard.type("FAKE cracked side mirror");
+  await tabTo(customer, date);
+  await date.fill("2026-01-16");
+  await tabTo(customer, time);
+  await time.fill("10:00");
+  await tabTo(customer, send);
+  await customer.keyboard.press("Enter");
   await expect(main.getByRole("alert")).toContainText(
     "could not confirm your report",
   );
   await expect(description).toBeDisabled();
-  await report.getByRole("button", { name: "Retry problem report" }).click();
+  const retry = report.getByRole("button", { name: "Retry problem report" });
+  await atTheTop(customer);
+  await tabTo(customer, retry);
+  await customer.keyboard.press("Enter");
   const sent = main
     .getByRole("status")
     .filter({ hasText: "Problem report 2 sent." });
@@ -131,6 +198,11 @@ test("staff record a phoned-in problem and the renter reports one through a live
   const mine = main.getByRole("list", { name: "Your problem reports" });
   await expect(mine).toContainText("FAKE cracked side mirror");
   await expect(mine).toContainText("Report 2: Damage");
+
+  // Staff reloads problem reports and sees the customer company name for the platform report.
+  await reports.getByRole("button", { name: "Reload problem reports" }).click();
+  await expect(table).toContainText("FAKE cracked side mirror");
+  await expect(table).toContainText(`${fixture.companyName} on the platform`);
 
   await customer.reload();
   await signIn.click();

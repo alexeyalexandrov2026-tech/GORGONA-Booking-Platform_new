@@ -40,6 +40,7 @@ class Fixture(TypedDict):
     number: int
     grant: str
     revoked: str
+    companyName: str
 
 
 @pytest.mark.anyio
@@ -74,6 +75,15 @@ async def test_rental_problem_reports_browser(
     ended = await parties.act(owner_a, rental.tenant, revoked, "revoke", 2)
     assert ended.status_code == 200, ended.text
     grant = await parties.active_grant(owner_a, owner_b, [customer], **terms)
+    with owner_tenant_transaction(owner_conn, rental.tenant):
+        row = owner_conn.execute(
+            "select servicer_display_name from gba.delegation_grants "
+            "where owner_tenant_id = %s and id = %s",
+            (rental.tenant, grant),
+        ).fetchone()
+    assert row is not None, "grant row missing"
+    assert row[0], "grant must carry servicer_display_name"
+    company_name = str(row[0])
     fixtures: dict[str, Fixture] = {}
     for device in ("desktop", "mobile"):
         *_, booking = await agreed(rental, 2)
@@ -90,6 +100,7 @@ async def test_rental_problem_reports_browser(
             "number": int(existing.json()["number"]),
             "grant": str(grant),
             "revoked": str(revoked),
+            "companyName": company_name,
         }
 
     signed_in = _SignedIn({"owner": owner, "customer": customer})
