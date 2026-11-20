@@ -92,6 +92,12 @@ async def test_customer_accepts_only_the_latest_issued_terms(
         rental.base + path, json={**body, "review_hash": "0" * 64}, headers=headers
     )
     assert error(wrong) == (409, "RENTAL_PROPOSAL_STALE"), wrong.text
+    unsafe = await rental.client.post(
+        rental.base + path,
+        json={**body, "signatory": "FAKE\x00customer"},
+        headers=parties.headers(owner_b),
+    )
+    assert unsafe.status_code == 422, unsafe.text
     accepted_reply = await rental.client.post(rental.base + path, json=body, headers=headers)
     assert accepted_reply.status_code == 200, accepted_reply.text
     assert accepted_reply.json()["agreement_version"] == 2
@@ -103,6 +109,16 @@ async def test_customer_accepts_only_the_latest_issued_terms(
         )
     ).json() == accepted_reply.json()
     assert (await rental.get(path, headers)).json() == accepted_reply.json()
+    # R-09 review: a re-save of the same company binding blocks neither the retry nor the receipt.
+    resaved = await rental.put(
+        f"/bookings/{booking}/customer-company",
+        {"expected_revision": 1, "company_id": str(rental.world.b.tenant_id)},
+    )
+    assert resaved.status_code == 200, resaved.text
+    retried = await rental.client.post(rental.base + path, json=body, headers=headers)
+    assert (retried.status_code, retried.json()) == (200, accepted_reply.json()), retried.text
+    shown = await rental.get(path, headers)
+    assert (shown.status_code, shown.json()) == (200, accepted_reply.json()), shown.text
 
     async with tenant_transaction(app_pool, rental.tenant) as conn:
         row = await (

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import {
+  EARLIEST_PROBLEM_DATE,
   pastInstant,
   problemKindLabels,
 } from "../../../../components/rental-problem-reports";
@@ -315,6 +316,7 @@ function Problems({
               <input
                 type="date"
                 value={date}
+                min={EARLIEST_PROBLEM_DATE}
                 required
                 disabled={locked}
                 onChange={(event) => setDate(event.target.value)}

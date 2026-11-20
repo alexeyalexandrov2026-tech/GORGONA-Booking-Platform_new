@@ -1,11 +1,12 @@
 """R-09: a live customer grant can accept the booking's initial base quote."""
 
+import unicodedata
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
 from psycopg.errors import CheckViolation
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
 
 from gorgona_booking.booking import idempotency
 from gorgona_booking.booking.idempotency import IdempotencyScope
@@ -34,11 +35,28 @@ class RentalProposalStaleError(ConflictError):
 ReviewHash = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 
 
+def plain_line(value: str) -> str:
+    """R-09 one-line text has no NUL or other control character (422, not a database error)."""
+    if any(unicodedata.category(char) == "Cc" for char in value):
+        raise ValueError("text without control characters")
+    return value
+
+
+def plain_text(value: str) -> str:
+    """R-09 free text keeps line breaks and tabs but no NUL or other control character."""
+    if any(unicodedata.category(char) == "Cc" and char not in "\t\n\r" for char in value):
+        raise ValueError("text without control characters other than line breaks and tabs")
+    return value
+
+
+Signatory = Annotated[agreements.Name, AfterValidator(plain_line)]
+
+
 class CustomerAnswerInput(Strict):
     schema_version: Literal[1]
     binding_revision: int = Field(ge=1, le=2_147_483_647)
     review_hash: ReviewHash
-    signatory: agreements.Name
+    signatory: Signatory
 
 
 class ProposalLocation(BaseModel):
@@ -74,12 +92,23 @@ class Receipt(BaseModel):
 
 
 async def authorized_binding(
-    conn: RuntimeConnection, business: UUID, booking_id: UUID, delegation: DelegationScope
+    conn: RuntimeConnection,
+    business: UUID,
+    booking_id: UUID,
+    delegation: DelegationScope,
+    *,
+    lock: bool,
 ) -> CustomerCompanyView:
+    """The booking's customer binding, when it names the grant's company.
+
+    Authorization has already locked the grant and the delegate row. A write (`lock`) then
+    takes the booking class lock, so writes lock the grant first and the class second; a
+    read takes no class lock and does not queue behind writes on other bookings of the class.
+    """
     await require_rental(conn, business)
-    await conn.execute("select gba.lock_rental_booking_class(%s, %s)", (business, booking_id))
-    # The original grant lookup locks the grant and the employee row. The class lock can
-    # wait, so check the deadline after acquiring it and before reading or returning data.
+    if lock:
+        await conn.execute("select gba.lock_rental_booking_class(%s, %s)", (business, booking_id))
+    # The class lock can wait, so check the deadline after it and before reading or returning data.
     row = await (
         await conn.execute("select %s > pg_catalog.statement_timestamp()", (delegation.expires_at,))
     ).fetchone()
@@ -149,15 +178,17 @@ async def _pending_offer(
 async def load_proposal(
     conn: RuntimeConnection, business: UUID, booking_id: UUID, delegation: DelegationScope
 ) -> ProposalView | Receipt:
-    binding = await authorized_binding(conn, business, booking_id, delegation)
+    binding = await authorized_binding(conn, business, booking_id, delegation, lock=False)
+    # The receipt belongs to the agreement, the company and the grant that accepted it; a later
+    # re-save of the company binding does not hide it.
     accepted = await (
         await conn.execute(
             "select a.id, v.customer_review_hash, v.accepted_at from gba.rental_agreements a "
             "join gba.rental_agreement_versions v on (v.tenant_id, v.agreement_id) = "
             "(a.tenant_id, a.id) and v.version = 1 where a.booking_id = %s "
             "and v.source = 'platform' and v.customer_company_id = %s "
-            "and v.customer_grant_id = %s and v.customer_binding_revision = %s",
-            (booking_id, delegation.servicer_business_id, delegation.grant_id, binding.revision),
+            "and v.customer_grant_id = %s",
+            (booking_id, delegation.servicer_business_id, delegation.grant_id),
         )
     ).fetchone()
     if accepted is not None:
@@ -182,10 +213,9 @@ async def accept_proposal(
     key: str,
     body: CustomerAnswerInput,
 ) -> Receipt:
-    binding = await authorized_binding(conn, business, booking_id, delegation)
-    if body.binding_revision != binding.revision:
-        raise RentalRevisionConflictError("The customer company changed since the offer was read")
-
+    binding = await authorized_binding(conn, business, booking_id, delegation, lock=True)
+    # A retry returns the stored answer before the revision and offer checks, so a later
+    # re-save of the binding cannot block it.
     scope = IdempotencyScope(business, actor, "rental.customer_answer", key)
     request = fingerprint(f"{booking_id}:{delegation.grant_id}", body)
     stored = await idempotency.claim(conn, scope, request)
@@ -193,6 +223,8 @@ async def accept_proposal(
         if stored.request_hash != request:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return Receipt.model_validate(stored.body)
+    if body.binding_revision != binding.revision:
+        raise RentalRevisionConflictError("The customer company changed since the offer was read")
 
     offer, card = await _pending_offer(conn, booking_id, binding.revision)
     if offer.review_hash != body.review_hash:

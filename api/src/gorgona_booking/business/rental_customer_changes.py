@@ -18,6 +18,7 @@ from gorgona_booking.business.rental import Strict, fingerprint, require_rental
 from gorgona_booking.business.rental_customer_answer import (
     RentalProposalStaleError,
     ReviewHash,
+    Signatory,
     authorized_binding,
 )
 from gorgona_booking.business.rental_customer_company import (
@@ -82,7 +83,7 @@ class OfferForCustomer(Offer):
 class ChangeAnswerInput(Strict):
     schema_version: Literal[1]
     review_hash: ReviewHash
-    signatory: agreements.Name
+    signatory: Signatory
 
 
 class ChangeReceipt(BaseModel):
@@ -280,11 +281,16 @@ async def read_for_customer(
     revision: int,
     delegation: DelegationScope,
 ) -> OfferForCustomer | ChangeReceipt:
-    binding = await authorized_binding(conn, business, booking_id, delegation)
-    offer = await _allowed_offer(conn, booking_id, revision, binding)
-    receipt = await _accepted(conn, offer, delegation)
+    binding = await authorized_binding(conn, business, booking_id, delegation, lock=False)
+    # An accepted offer keeps showing its receipt to the company and grant that accepted it,
+    # also after a re-save of the binding; an open offer must name the current binding.
+    found = await _find_offer(conn, booking_id, revision)
+    if found is None:
+        raise NotFoundError("Rental change offer not found")
+    receipt = await _accepted(conn, found, delegation)
     if receipt is not None:
         return receipt
+    offer = await _allowed_offer(conn, booking_id, revision, binding)
     await _current_agreement(conn, offer)
     row = await (
         await conn.execute(
@@ -322,8 +328,8 @@ async def accept(
     key: str,
     body: ChangeAnswerInput,
 ) -> ChangeReceipt:
-    binding = await authorized_binding(conn, business, booking_id, delegation)
-    offer = await _allowed_offer(conn, booking_id, revision, binding)
+    binding = await authorized_binding(conn, business, booking_id, delegation, lock=True)
+    # A retry returns the stored answer before the binding and offer checks.
     scope = IdempotencyScope(business, actor, "rental.accept_customer_change", key)
     request = fingerprint(f"{booking_id}:{revision}:{delegation.grant_id}", body)
     stored = await idempotency.claim(conn, scope, request)
@@ -331,6 +337,7 @@ async def accept(
         if stored.request_hash != request:
             raise IdempotencyKeyReusedError("Key was used for another request")
         return ChangeReceipt.model_validate(stored.body)
+    offer = await _allowed_offer(conn, booking_id, revision, binding)
     if body.review_hash != offer.review_hash:
         raise RentalProposalStaleError("Review the current offer before accepting it")
     current = await _current_agreement(conn, offer)

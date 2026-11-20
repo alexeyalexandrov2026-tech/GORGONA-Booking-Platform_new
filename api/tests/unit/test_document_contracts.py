@@ -113,7 +113,8 @@ def test_guard_binds_one_parameter_per_placeholder() -> None:
     assert placeholders == 5 * len(schema_guard._DEFINITIONS) + 9 + 6 * 17 + 3
     # K3a (0052): company scope of the clearing account and the provider provenance;
     # K3b (0054): the link of a manual payment to its provider operation.
-    assert len(schema_guard._DEFINITIONS) == 99
+    # R-09 (0126): branch-scoped read policies on delegation grants and members.
+    assert len(schema_guard._DEFINITIONS) == 103
     assert LEDGER_BOUNDARY.count("%s") == len(LEDGER_PARAMETERS)
     assert FINANCIAL_BOUNDARY.count("%s") == len(FINANCIAL_PARAMETERS)
     assert len(schema_guard._OCCUPANCY_TRIGGERS) == 17

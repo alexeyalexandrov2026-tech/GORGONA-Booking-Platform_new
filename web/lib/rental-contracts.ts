@@ -4,7 +4,12 @@ import { z } from "zod";
 // (classes, units, bookings, availability and unit assignments). Times arrive in UTC.
 const id = z.uuid();
 const instant = z.iso.datetime({ offset: true });
-const text = (max: number) => z.string().min(1).max(max);
+// Lengths count Unicode code points, as the API does, not UTF-16 units (an emoji is one).
+const text = (max: number) =>
+  z
+    .string()
+    .min(1)
+    .refine((value) => [...value].length <= max, `At most ${max} characters.`);
 const revision = z.number().int().positive();
 const count = z.number().int().min(0);
 
@@ -274,13 +279,16 @@ const problemReportSchema = z
     source: z.enum(["platform", "phone", "email", "paper"]),
     reported_by: text(200).nullable(),
     company_id: id.nullable(),
+    company_name: text(200).nullable(),
     recorded_at: instant,
   })
   .refine(
     (report) =>
       report.source === "platform"
         ? report.reported_by === null && report.company_id !== null
-        : report.reported_by !== null && report.company_id === null,
+        : report.reported_by !== null &&
+          report.company_id === null &&
+          report.company_name === null,
     "A platform report names the company; any other report names the reporter.",
   );
 const problemListSchema = z.strictObject({

@@ -73,6 +73,11 @@ async def test_customer_accepts_exact_base_quote_through_a_live_grant(
         "signatory": "FAKE Renter",
     }
     url = rental.base + path
+    for signatory in ("FAKE\x00Renter", "FAKE\x07Renter", "FAKE\nRenter"):
+        unsafe = await rental.client.post(
+            url, json={**command, "signatory": signatory}, headers=parties.headers(owner_b)
+        )
+        assert unsafe.status_code == 422, (signatory, unsafe.text)
     stale = await rental.client.post(
         url, json={**command, "review_hash": "0" * 64}, headers=headers
     )
@@ -110,6 +115,16 @@ async def test_customer_accepts_exact_base_quote_through_a_live_grant(
     reopened = await rental.get(path, headers)
     assert reopened.status_code == 200, reopened.text
     assert reopened.json() == receipt
+    # R-09 review: a re-save of the same company binding blocks neither the retry nor the receipt.
+    resaved = await rental.put(
+        f"/bookings/{booking}/customer-company",
+        {"expected_revision": 2, "company_id": str(rental.world.b.tenant_id)},
+    )
+    assert resaved.status_code == 200, resaved.text
+    retried = await rental.client.post(url, json=command, headers=winner_headers)
+    assert (retried.status_code, retried.json()) == (200, receipt), retried.text
+    shown = await rental.get(path, headers)
+    assert (shown.status_code, shown.json()) == (200, receipt), shown.text
 
     async with tenant_transaction(app_pool, rental.tenant) as conn:
         proof = await (
@@ -135,6 +150,105 @@ async def test_customer_accepts_exact_base_quote_through_a_live_grant(
     revoked = await parties.act(owner_a, rental.tenant, grant, "revoke", 2)
     assert revoked.status_code == 200, revoked.text
     assert (await rental.client.post(url, json=command, headers=winner_headers)).status_code == 403
+
+
+SCOPE = "rental_agreement_customer_scope"
+
+
+async def _forge_acceptance(
+    app_pool: RuntimePool,
+    rental: Rental,
+    booking: str,
+    quote: dict[str, object],
+    grant: object,
+    owner: FakeUser,
+    user: FakeUser,
+    location: object,
+) -> str | None:
+    """A platform version 1 written by SQL as `user` in `location`'s branch scope."""
+    agreement = uuid7()
+    async with tenant_transaction(app_pool, rental.tenant) as conn:
+        await set_user_context(conn, owner.user_id)
+        async with conn.transaction(force_rollback=True):
+            await conn.execute(
+                "insert into gba.rental_agreements (tenant_id, id, booking_id, created_by) "
+                "values (%s, %s, %s, %s)",
+                (rental.tenant, agreement, booking, owner.user_id),
+            )
+            await set_user_context(conn, user.user_id)
+            await conn.execute(
+                "select pg_catalog.set_config('gba.location_id', %s, true)", (str(location),)
+            )
+            try:
+                async with conn.transaction():
+                    await conn.execute(
+                        "insert into gba.rental_agreement_versions "
+                        "(tenant_id, agreement_id, version, rate_card_id, starts_at, ends_at, "
+                        "month_count, week_count, day_count, hour_count, rental_amount, "
+                        "rental_days, total, source, accepted_by, accepted_at, recorded_by, "
+                        "customer_company_id, customer_grant_id, customer_binding_revision, "
+                        "customer_review_hash) "
+                        "values (%s, %s, 1, %s, %s, %s, 0, 0, 2, 0, 10000, 2, 10000, "
+                        "'platform', 'FAKE forged', now(), %s, %s, %s, 1, %s)",
+                        (
+                            rental.tenant,
+                            agreement,
+                            quote["rate_card_id"],
+                            quote["starts_at"],
+                            quote["ends_at"],
+                            user.user_id,
+                            rental.world.b.tenant_id,
+                            grant,
+                            "a" * 64,
+                        ),
+                    )
+            except CheckViolation as exc:
+                return exc.diag.constraint_name
+    return "accepted"
+
+
+async def test_branch_scoped_sql_rechecks_the_acceptance_grant(
+    rental: Rental,
+    parties: Parties,
+    owner_a: FakeUser,
+    owner_b: FakeUser,
+    manager_a: FakeUser,
+    app_pool: RuntimePool,
+) -> None:
+    """R-09 review: in a branch-scoped session the acceptance guard rechecks the grant (0126)."""
+    booking = await _linked_booking(rental)
+    here = rental.world.a.location_id
+    away, _ = seed_other_branch(rental.owner_conn, rental.world.a)
+    reading = await parties.active_grant(
+        owner_a, owner_b, [owner_b], permissions=["rental.customer_answer"]
+    )
+    proposal = await rental.get(
+        f"/bookings/{booking}/customer-proposal/{reading}", parties.headers(owner_b)
+    )
+    assert proposal.status_code == 200, proposal.text
+    quote = proposal.json()["quote"]
+    assert (await parties.act(owner_a, rental.tenant, reading, "revoke", 2)).status_code == 200
+
+    elsewhere = await parties.active_grant(
+        owner_a, owner_b, [owner_b], permissions=["rental.customer_answer"], location_id=str(away)
+    )
+    forged = await _forge_acceptance(
+        app_pool, rental, booking, quote, elsewhere, owner_a, owner_b, here
+    )
+    assert forged == SCOPE
+    assert (await parties.act(owner_a, rental.tenant, elsewhere, "revoke", 2)).status_code == 200
+
+    live = await parties.active_grant(
+        owner_a, owner_b, [owner_b], permissions=["rental.customer_answer"], location_id=str(here)
+    )
+    forged = await _forge_acceptance(
+        app_pool, rental, booking, quote, live, owner_a, manager_a, here
+    )
+    assert forged == SCOPE
+    assert (await parties.act(owner_a, rental.tenant, live, "revoke", 2)).status_code == 200
+    forged = await _forge_acceptance(app_pool, rental, booking, quote, live, owner_a, owner_b, here)
+    assert forged == SCOPE
+    assert (await rental.get(f"/bookings/{booking}/agreement")).status_code == 404
 
 
 async def test_customer_grant_does_not_cross_bindings_branches_or_expiry(

@@ -305,6 +305,7 @@ test("rental problem report routes validate lists and reports", () => {
     source: "phone",
     reported_by: "FAKE Renter",
     company_id: null,
+    company_name: null,
     recorded_at: at,
   };
   const platform = {
@@ -314,6 +315,7 @@ test("rental problem report routes validate lists and reports", () => {
     source: "platform",
     reported_by: null,
     company_id: uuid(13),
+    company_name: "FAKE Customer Company",
   };
   const list = {
     schema_version: 1,
@@ -337,6 +339,8 @@ test("rental problem report routes validate lists and reports", () => {
     { ...phone, company_id: uuid(13) },
     { ...platform, reported_by: "FAKE Renter" },
     { ...platform, company_id: null },
+    { ...phone, company_name: "FAKE Customer Company" },
+    { ...phone, company_name: "" },
     { ...phone, kind: "flood" },
     { ...phone, source: "fax" },
     { ...phone, description: "" },
@@ -347,6 +351,38 @@ test("rental problem report routes validate lists and reports", () => {
   const read = managementResponseSchema(customerPath, "GET");
   expect(read.safeParse(list).success).toBe(false);
   expect(read.safeParse({ ...mine, items: [phone] }).success).toBe(false);
+  // A platform report keeps working when the session cannot read the grant's company name.
+  const unnamed = { ...platform, company_name: null };
+  expect(write.parse(unnamed)).toEqual(unnamed);
+});
+
+test("rental text limits count characters as the API does, not UTF-16 units", () => {
+  // R-09 review: the API accepts 2000 characters; an emoji is one character but two UTF-16 units.
+  const path = `${base}/bookings/${booking.booking_id}/problems`;
+  const report = {
+    schema_version: 1,
+    booking_id: booking.booking_id,
+    number: 1,
+    kind: "other",
+    description: "\u{1F697}".repeat(2000),
+    occurred_at: at,
+    source: "phone",
+    reported_by: "\u{1F600}".repeat(200),
+    company_id: null,
+    company_name: null,
+    recorded_at: at,
+  };
+  expect("\u{1F697}".repeat(2000).length).toBe(4000);
+  const write = managementResponseSchema(path, "POST");
+  expect(write.parse(report)).toEqual(report);
+  expect(
+    write.safeParse({ ...report, description: "\u{1F697}".repeat(2001) })
+      .success,
+  ).toBe(false);
+  expect(
+    write.safeParse({ ...report, reported_by: "\u{1F600}".repeat(201) })
+      .success,
+  ).toBe(false);
 });
 
 const agreement = {

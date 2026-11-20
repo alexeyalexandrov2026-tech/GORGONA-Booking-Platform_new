@@ -382,7 +382,8 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
             for version, marker in (
                 (10, "-- Legal-entity branch scope:"),
                 (11, "-- Department branch scope:"),
-                (12, "-- Delegation branch scope:"),
+                # R-09 review: 0126 replaced the 0012 delegation branch scope.
+                (126, "-- Delegation branch scope (0126):"),
                 (13, "-- Group branch scope:"),
                 (14, "-- Company-wide scope:"),
                 (15, "-- Counterparty branch scope:"),

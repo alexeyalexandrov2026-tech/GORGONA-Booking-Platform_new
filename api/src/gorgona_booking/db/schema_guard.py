@@ -1002,8 +1002,6 @@ _DEFINITIONS = [
             "legal_entity_versions",
             "departments",
             "department_versions",
-            "delegation_grants",
-            "delegation_grant_members",
             "business_groups",
             "business_group_members",
             "business_configuration_versions",
@@ -1016,6 +1014,34 @@ _DEFINITIONS = [
     # Branch sessions read effective module states; only company-wide sessions write them.
     _company_only("business_module_states", "business_module_states_unrestricted_insert", "a"),
     _company_only("business_module_states", "business_module_states_unrestricted_update", "w"),
+    # Delegation (0126): a branch session reads only its user's own live delegate rows and the
+    # grants of its branch that user is a live delegate of; only company-wide sessions write.
+    *[
+        item
+        for table, scope in (
+            (
+                "delegation_grant_members",
+                f"({_NO_LOCATION} OR ((owner_tenant_id = gba.current_tenant_id()) "
+                "AND (user_id = gba.current_user_id()) AND (removed_at IS NULL)))",
+            ),
+            (
+                "delegation_grants",
+                "((gba.current_location_id() IS NULL) "
+                "OR ((owner_tenant_id = gba.current_tenant_id()) "
+                "AND (location_id = gba.current_location_id()) "
+                "AND (EXISTS ( SELECT 1 FROM gba.delegation_grant_members m "
+                "WHERE ((m.owner_tenant_id = delegation_grants.owner_tenant_id) "
+                "AND (m.grant_id = delegation_grants.id) "
+                "AND (m.servicer_tenant_id = delegation_grants.servicer_tenant_id) "
+                "AND (m.user_id = gba.current_user_id()) AND (m.removed_at IS NULL))))))",
+            ),
+        )
+        for item in (
+            (table, f"{table}_delegate_scope", "r", _compact(scope), ""),
+            _company_only(table, f"{table}_unrestricted_insert", "a"),
+            _company_only(table, f"{table}_unrestricted_update", "w"),
+        )
+    ],
 ]
 
 _ACCESS_BOUNDARY = """

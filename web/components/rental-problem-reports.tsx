@@ -37,6 +37,11 @@ const SOURCES = [
 ] as const;
 type Source = StaffProblemBody["source"];
 
+/** The API keeps problem moments from this instant on (R-09). */
+const EARLIEST_PROBLEM = "2000-01-01T00:00:00Z";
+/** The earliest date the problem date inputs offer. */
+export const EARLIEST_PROBLEM_DATE = "2000-01-01";
+
 /** A wall-clock minute in a zone as an instant that has already happened, or a reason. */
 export function pastInstant(date: string, time: string, zone: string): string {
   const instant = businessTimeToInstant(date, time, zone);
@@ -44,6 +49,8 @@ export function pastInstant(date: string, time: string, zone: string): string {
     throw new Error(
       "Enter when the problem happened; it cannot be in the future.",
     );
+  if (Date.parse(instant) < Date.parse(EARLIEST_PROBLEM))
+    throw new Error("Enter a moment on or after 1 January 2000.");
   return instant;
 }
 
@@ -57,7 +64,8 @@ function wallTime(instant: string, zone: string) {
 }
 
 function reporter(report: ProblemReport) {
-  if (report.source === "platform") return "Customer company on the platform";
+  if (report.source === "platform")
+    return `${report.company_name ?? "Customer company"} on the platform`;
   const way = report.source === "paper" ? "on paper" : `by ${report.source}`;
   return `${report.reported_by ?? ""} ${way}`;
 }
@@ -300,6 +308,7 @@ function ProblemForm({
         <input
           type="date"
           value={date}
+          min={EARLIEST_PROBLEM_DATE}
           required
           disabled={locked}
           onChange={(event) => setDate(event.target.value)}
