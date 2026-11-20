@@ -1,5 +1,34 @@
 # GORGONA — реестр реализации
 
+### PROPERTY-01 5a. Заявки на ремонт, согласование и отдельные обязательства FIN-03, 20 ноября
+
+Ветка `codex/package-property-01-maintenance` (исходный коммит `34a595c`, миграция
+`0127_property_maintenance.sql` без `SECURITY DEFINER`) от `c5d7077`. Реализованы
+таблицы `property_maintenance_requests`, `property_maintenance_events` и
+`property_maintenance_obligations`, 7 маршрутов `/v1/businesses/{business_id}/property/maintenance`
+и проверки `schema_guard.py` (`_DEFINITIONS = 111`, `_MODULE_TRIGGERS = 30`).
+Жизненный цикл `open → approved → assigned → completed` (или `cancelled` до привязки
+обязательств) сериализуется по `gba.lock_property_object`. Согласование фиксирует валюту
+и лимит расходов; привязка обязательства принимает только выпущенный счёт FIN-03 к оплате
+(`kind = 'invoice'`, `state = 'issued'`, `direction = 'payable'`) на назначенного
+подрядчика в утверждённой валюте, вычисляя `obligation_id`, `amount_minor` и `currency`
+напрямую в PostgreSQL и не позволяя превысить утверждённый лимит даже при конкурентных
+запросах. Черновики, счета к получению (аренда/клиент), чужой подрядчик, другая валюта и
+повторная привязка того же счёта отклоняются; смена собственника или управляющего в
+`property_parties` сохраняет прежние обязательства и получателя. Все 26 маршрутов Property
+(8 `property.read` для филиала и 18 `property.manage` для всей компании) проверены матрицей
+`test_property_access.py`; обновление наполненной базы `0126 → 0127` сохраняет все строки
+и контрольные суммы.
+
+Проверки на `gorgona-dev` (PostgreSQL 18.6, Chromium): `ruff check`, `ruff format --check`,
+`mypy` (586 файлов), `git diff --check` — PASS; unit-тесты API — **894 PASS** (17,86 с);
+полный параллельный прогон `34a595c` — **2991 PASS, 0 fail, 4 skip** из 2995 за **1147,5 с
+(19 мин 07 с)** (46 браузерных и 216 serial-тестов — 0 сбоев). Следующие шаги: 5b (доступ
+подрядчика к одному поручению через делегирование, миграция 0128) и 5c (экран обслуживания).
+В реестре `PROPERTY-01` остаётся `planned`, модуль `property` не включался.
+[Дизайн 5a](PACKAGE_PROPERTY01_MAINTENANCE_DESIGN_2026-11-20.md) ·
+[Запись приёмки](evidence/2026-11-20-property-maintenance/ACCEPTANCE.md)
+
 ### Ускорение полного тестового прогона на gorgona-dev (параллельный раннер), 20 ноября
 
 Добавлен параллельный раннер `api/tools/run_parallel_tests.py` (коммит `9c555f8`,
