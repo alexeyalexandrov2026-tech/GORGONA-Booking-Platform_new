@@ -4,6 +4,7 @@ No provider account, real key, network call, ledger, settlement or obligation is
 """
 
 import asyncio
+import os
 import secrets
 from collections.abc import AsyncIterator
 from typing import Any
@@ -52,21 +53,29 @@ NEW_TABLES = ("provider_operations", "provider_event_leases", "provider_event_de
 
 @pytest.fixture
 async def worker_pool(test_database: ProvisionedDatabase) -> AsyncIterator[RuntimePool]:
-    owner = conninfo_to_dict(test_database.owner_dsn)
-    app = conninfo_to_dict(test_database.app_dsn)
-    password = secrets.token_urlsafe(32)
-    bootstrap(
-        test_database.admin_dsn,
-        BootstrapSpec(
-            database=test_database.name,
-            owner_role=str(owner["user"]),
-            owner_password=str(owner["password"]),
-            app_role=str(app["user"]),
-            app_password=str(app["password"]),
-            receipt_worker_role=WORKER_ROLE,
-            receipt_worker_password=password,
-        ),
+    prebuilt_password = (
+        os.environ.get("GBA_TEST_WORKER_PASSWORD")
+        if os.environ.get("GBA_TEST_PREBUILT_DB")
+        else None
     )
+    if prebuilt_password is not None:
+        password = prebuilt_password
+    else:
+        owner = conninfo_to_dict(test_database.owner_dsn)
+        app = conninfo_to_dict(test_database.app_dsn)
+        password = secrets.token_urlsafe(32)
+        bootstrap(
+            test_database.admin_dsn,
+            BootstrapSpec(
+                database=test_database.name,
+                owner_role=str(owner["user"]),
+                owner_password=str(owner["password"]),
+                app_role=str(app["user"]),
+                app_password=str(app["password"]),
+                receipt_worker_role=WORKER_ROLE,
+                receipt_worker_password=password,
+            ),
+        )
     pool = create_runtime_pool(
         make_conninfo(test_database.app_dsn, user=WORKER_ROLE, password=password)
     )

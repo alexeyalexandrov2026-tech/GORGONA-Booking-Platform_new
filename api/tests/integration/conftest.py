@@ -55,6 +55,22 @@ def test_database() -> Iterator[ProvisionedDatabase]:
         if int(row[0]) < 180000:
             pytest.fail(f"PostgreSQL 18+ is required; server_version_num={row[0]}")
 
+    prebuilt = os.environ.get("GBA_TEST_PREBUILT_DB")
+    if prebuilt:
+        owner_password = os.environ["GBA_TEST_OWNER_PASSWORD"]
+        app_password = os.environ["GBA_TEST_APP_PASSWORD"]
+        yield ProvisionedDatabase(
+            name=prebuilt,
+            admin_dsn=admin_dsn,
+            owner_dsn=make_conninfo(
+                admin_dsn, dbname=prebuilt, user=TEST_OWNER_ROLE, password=owner_password
+            ),
+            app_dsn=make_conninfo(
+                admin_dsn, dbname=prebuilt, user=TEST_APP_ROLE, password=app_password
+            ),
+        )
+        return
+
     name = f"gba_test_{secrets.token_hex(6)}"
     owner_password, app_password = secrets.token_urlsafe(24), secrets.token_urlsafe(24)
     bootstrap(
