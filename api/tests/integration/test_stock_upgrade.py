@@ -195,6 +195,9 @@ K_TABLES = {
     "rental_customer_change_offers",
     # RENT-01 (0125): booking problem reports.
     "rental_problem_reports",
+    "property_maintenance_requests",
+    "property_maintenance_events",
+    "property_maintenance_obligations",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
