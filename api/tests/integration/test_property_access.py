@@ -52,6 +52,9 @@ TABLES = (
     "property_lease_term_events",
     "property_move_ins",
     "property_move_in_photos",
+    "property_maintenance_requests",
+    "property_maintenance_events",
+    "property_maintenance_obligations",
 )
 
 
@@ -75,6 +78,7 @@ class Estate:
     lease_id: UUID
     prospect: str
     move_in: dict[str, object]
+    maintenance_id: UUID
 
 
 async def estate(c: Catalog, a: Agreements) -> Estate:
@@ -98,7 +102,22 @@ async def estate(c: Catalog, a: Agreements) -> Estate:
     assert booked.is_success, booked.text
     recorded = await record_move_in(c, lease_id, move_in)
     assert recorded.is_success, recorded.text
-    return Estate(object_id, showing_id, lease_id, prospect, move_in)
+    maintenance_id = uuid7()
+    maint = await c.client.put(
+        f"/v1/businesses/{c.tenant}/property/maintenance/{maintenance_id}",
+        json={
+            "schema_version": 1,
+            "object_id": str(object_id),
+            "lease_id": str(lease_id),
+            "category": "plumbing",
+            "priority": "routine",
+            "title": "FAKE faucet drip",
+            "description": "FAKE washer replacement needed",
+        },
+        headers={**c.headers, "Idempotency-Key": str(uuid7())},
+    )
+    assert maint.is_success, maint.text
+    return Estate(object_id, showing_id, lease_id, prospect, move_in, maintenance_id)
 
 
 def showing(object_id: UUID, prospect: str, starts_at: str) -> dict[str, object]:
@@ -114,7 +133,12 @@ def showing(object_id: UUID, prospect: str, starts_at: str) -> dict[str, object]
 
 def routes(c: Catalog, e: Estate) -> list[Route]:
     """All nineteen authenticated Property routes, each with a valid body."""
-    known = {"object_id": e.object_id, "showing_id": e.showing_id, "lease_id": e.lease_id}
+    known = {
+        "object_id": e.object_id,
+        "showing_id": e.showing_id,
+        "lease_id": e.lease_id,
+        "request_id": e.maintenance_id,
+    }
 
     def route(
         method: str,
@@ -166,6 +190,45 @@ def routes(c: Catalog, e: Estate) -> list[Route]:
         route("POST", "/leases/{lease_id}/terms", release, MANAGE),
         route("GET", "/leases/{lease_id}/move-in", None, MANAGE),
         route("PUT", "/leases/{lease_id}/move-in", e.move_in, MANAGE),
+        route("GET", "/maintenance", None, READ),
+        route("GET", "/maintenance/{request_id}", None, READ),
+        route(
+            "PUT",
+            "/maintenance/{request_id}",
+            {
+                "schema_version": 1,
+                "object_id": str(e.object_id),
+                "lease_id": None,
+                "category": "general",
+                "priority": "routine",
+                "title": "FAKE refused request",
+                "description": "FAKE refused body",
+            },
+            MANAGE,
+            request_id=uuid7(),
+        ),
+        route("GET", "/maintenance/{request_id}/events", None, MANAGE),
+        route(
+            "POST",
+            "/maintenance/{request_id}/events",
+            {
+                "schema_version": 1,
+                "action": "cancel",
+                "expected_revision": 1,
+            },
+            MANAGE,
+        ),
+        route("GET", "/maintenance/{request_id}/obligations", None, MANAGE),
+        route(
+            "POST",
+            "/maintenance/{request_id}/obligations",
+            {
+                "schema_version": 1,
+                "book_id": str(uuid7()),
+                "invoice_document_id": str(uuid7()),
+            },
+            MANAGE,
+        ),
     ]
 
 
@@ -233,7 +296,7 @@ async def test_matrix_covers_every_property_route(
         for item in routes(enabled, e)
     ]
     assert sorted(covered) == declared
-    assert len(declared) == 19
+    assert len(declared) == 26
 
 
 async def test_other_company_lesser_roles_and_support_are_refused_and_write_nothing(
@@ -266,7 +329,7 @@ async def test_branch_managers_read_their_branch_and_manage_nothing(
     away, _ = member(enabled, "manager", other_branch)
     reads = [item for item in items if item.permission == READ]
     manages = [item for item in items if item.permission == MANAGE]
-    assert (len(reads), len(manages)) == (6, 13)
+    assert (len(reads), len(manages)) == (8, 18)
     for item in reads:
         response = await call(enabled, item, bearer(enabled, home))
         assert response.status_code == 200, (item.name, response.text)
@@ -278,7 +341,7 @@ async def test_branch_managers_read_their_branch_and_manage_nothing(
         seen[item.name] = response.status_code
         if response.status_code == 200:
             assert response.json()["items"] == [], item.name
-    assert sorted(seen.values()) == [200, 200, 200, 404, 404, 404], seen
+    assert sorted(seen.values()) == [200, 200, 200, 200, 404, 404, 404, 404], seen
 
 
 async def test_suspended_and_revoked_members_lose_every_route_and_their_replays(

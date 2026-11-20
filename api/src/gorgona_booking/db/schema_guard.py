@@ -864,10 +864,12 @@ _LEDGER_TABLES = (
 _PROPERTY_CATALOG_TABLES = ("property_objects", "property_revisions")
 _PROPERTY_LISTING_TABLES = ("property_listings", "property_listing_revisions")
 _PROPERTY_SHOWING_TABLES = ("property_showing_resources", "property_showings")
+_PROPERTY_MAINTENANCE_BRANCH_TABLES = ("property_maintenance_requests",)
 _PROPERTY_BRANCH_TABLES = (
     *_PROPERTY_CATALOG_TABLES,
     *_PROPERTY_LISTING_TABLES,
     *_PROPERTY_SHOWING_TABLES,
+    *_PROPERTY_MAINTENANCE_BRANCH_TABLES,
 )
 _PROPERTY_TABLES = (
     *_PROPERTY_BRANCH_TABLES,
@@ -877,6 +879,8 @@ _PROPERTY_TABLES = (
     "property_lease_term_events",
     "property_move_ins",
     "property_move_in_photos",
+    "property_maintenance_events",
+    "property_maintenance_obligations",
 )
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
@@ -889,6 +893,7 @@ _MODULE_TRIGGERS = (
             "property_showing_cancellations",
             "property_lease_term_events",
             "property_move_in_photos",
+            "property_maintenance_events",
         )
     ],
     *[(table, f"{table}_require_module", "counterparties") for table in _COUNTERPARTY_TABLES],
@@ -968,6 +973,21 @@ _DEFINITIONS = [
     _company_only("property_leases", "property_leases_unrestricted_scope", "*"),
     _company_only("property_move_ins", "property_move_ins_unrestricted_scope", "*"),
     _company_only("property_move_in_photos", "property_move_in_photos_unrestricted_scope", "*"),
+    _company_only(
+        "property_maintenance_requests",
+        "property_maintenance_requests_unrestricted_update",
+        "w",
+    ),
+    _company_only(
+        "property_maintenance_events",
+        "property_maintenance_events_unrestricted_scope",
+        "*",
+    ),
+    _company_only(
+        "property_maintenance_obligations",
+        "property_maintenance_obligations_unrestricted_scope",
+        "*",
+    ),
     _company_only(
         "property_lease_term_events", "property_lease_term_events_unrestricted_scope", "*"
     ),
