@@ -1,0 +1,57 @@
+{
+  "package": "SUPPLY-01",
+  "slice": "Slice 3 — Channel & contract price lists, retail/wholesale & 3PL orders, owner-isolated shipments (STOCK-01 COGS + FIN-03 invoice) & customer returns (STOCK-01 return + FIN-03 credit note)",
+  "date": "2026-11-21",
+  "branch": "codex/package-supply-01-trade-and-3pl-orders",
+  "base_commit": "e42d1cc9f19016d994e0ef6c9e4f8f0a62cb01d7",
+  "verified_code_commit": "9ef59ecd55197b67635de96314e62fd2e7112ffa",
+  "verified_code_tree": "02f4e3f26b2fc5469f76464323bbdb506f93076a",
+  "migration": "0140_supply_trade_and_3pl_orders.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_SUPPLY01_TRADE_ORDERS_DESIGN_2026-11-21.md": "e7c91e392afe0a0cd184a7187de1b6e3ed3e1bb658e5a7db428f9983195e6d3a",
+    "api/src/gorgona_booking/db/migrations/0140_supply_trade_and_3pl_orders.sql": "31f344f468b8babf4a0c045a16931e5b74f72056a642805a947bb16d7f49f564",
+    "api/src/gorgona_booking/business/supply_trade.py": "00ad77e03439206dc9e3c46670a679dd71380b328f9db72d685e793f33cde8df",
+    "api/src/gorgona_booking/api/supply_trade.py": "8d0fde241cba70b30e727aa701d6820f00bf1b8b75352b0238b4e3c2c11c9b39",
+    "api/src/gorgona_booking/db/schema_guard.py": "75f55ef01b6194ee81f96716e5ac044d65857d51569590f9ebaae75cbf54b59a",
+    "api/tests/unit/test_supply_trade_contracts.py": "5595d21d1500169b2a1ed63a18f4aa1f89efdc09abf13eace16ebde919ec229f",
+    "api/tests/integration/test_supply_trade.py": "1459687d77bdd29bd928f468a16404a93451a0c8629116195ca98ca061ad2858",
+    "api/tests/integration/test_supply_trade_upgrade.py": "76aa8414b3d5e66fa6fc1b610e2db9a289b0318a537f58d3dbb96da840e61a94"
+  },
+  "checks": {
+    "ruff_check": "PASS (648 files)",
+    "ruff_format_check": "PASS (648 files)",
+    "mypy": "PASS (648 files)",
+    "api_unit": {
+      "passed": 935,
+      "failed": 0,
+      "skipped": 0
+    },
+    "focused_integration": "PASS",
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3074,
+      "executed_tests": 3074,
+      "unique_tests": 3074,
+      "duplicates": 0,
+      "passed": 3070,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1472.66,
+      "browser_passed": 49,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "Slice 4 (no migration): /supply/ 4-tab UI and real-browser E2E",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}
