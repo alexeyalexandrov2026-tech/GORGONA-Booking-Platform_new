@@ -1,0 +1,62 @@
+{
+  "package": "PRO-01",
+  "slice": "Slice 4 — FIN-03 matter invoicing & ACL-enforced audited exports",
+  "date": "2026-11-21",
+  "branch": "codex/package-pro-01-billing-and-exports",
+  "base_commit": "11f02a6c4a1fc5458390d1048485b2e33d7ed312",
+  "verified_code_commit": "56a7ef9e8646bfb7949d7492aeea8dc42082953f",
+  "verified_code_tree": "5b46ec2944573ed976dfcf5fe95473ad4ffefb4b",
+  "migration": "0137_projects_billing_and_exports.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_PRO01_BILLING_EXPORTS_DESIGN_2026-11-21.md": "379f38282d1e7444fddf05b9faad711ffca2a2465ee07ec559492ee1d315d210",
+    "api/src/gorgona_booking/db/migrations/0137_projects_billing_and_exports.sql": "b4e9e219ceefb3f47acb8075f47b71e5b1a22d5de59c085eb54cba8c229dea27",
+    "api/src/gorgona_booking/business/projects_billing.py": "80c52d4560d6de7f0fe511732981441c7e5f89c6afc82622e33ecbadfaad4492",
+    "api/src/gorgona_booking/api/projects_billing.py": "f4b7afd626cc7a72d83108cdc1da53115559d1aa46934281c5a5037f59e2e3ae",
+    "api/src/gorgona_booking/db/schema_guard.py": "bfafabb0a0d9ee4f045dfef146bb916e5c5c18fa59050cecad53aad5e77784d1",
+    "api/tests/unit/test_projects_billing_contracts.py": "270903575700265d52d728e53a903dce82b33d5a20eefd1c2e68c23dbce0bf07",
+    "api/tests/integration/test_projects_billing.py": "7efaa66db35be69e0b354829525fc0d1de27130b37e2744930708d22402e882a",
+    "api/tests/integration/test_projects_billing_upgrade.py": "9a093b1848de5ae61f84f6de2047bc7122321171046422279ee5430b09e72c18"
+  },
+  "checks": {
+    "ruff_check": "PASS (634 files)",
+    "ruff_format_check": "PASS (634 files)",
+    "mypy": "PASS (634 files)",
+    "api_unit": {
+      "passed": 927,
+      "failed": 0,
+      "skipped": 0
+    },
+    "focused_integration": {
+      "passed": 36,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 37.82
+    },
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3060,
+      "executed_tests": 3060,
+      "unique_tests": 3060,
+      "duplicates": 0,
+      "passed": 3056,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1431.82,
+      "browser_passed": 48,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "Slice 5 (no migration): /projects/ 4-tab UI and real-browser E2E",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}
