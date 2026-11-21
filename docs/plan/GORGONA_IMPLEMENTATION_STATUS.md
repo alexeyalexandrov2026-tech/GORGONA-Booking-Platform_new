@@ -1,5 +1,11 @@
 # GORGONA — реестр реализации
 
+### REST-01 Slice 1. Залы, столы и независимые бронирования столов, 21 ноября
+
+Ветка `codex/package-rest-01-floor-and-tables` (коммит кода `5dc0b05`, миграция `0130_restaurant_floor_and_tables.sql` без повышения привилегий) от `PROPERTY-01 5c/6 UI` `617223a`. Принят ADR-0037 (`docs/adr/0037-restaurant-tables-menu-kitchen-checks.md`) и план из 5 срезов (`docs/plan/PACKAGE_REST01_PLAN_2026-11-20.md`). Зарегистрирован опциональный модуль `restaurant` (`Readiness.IMPLEMENTED`, `enableable=False`, `MODULE_REGISTRY_VERSION=8`) и права `restaurant.read/kitchen/service/manage` (`PERMISSIONS_VERSION=17`, без делегирования). Миграция `0130` расширяет `gba.resources.kind` (`restaurant_table`) и `gba.resource_allocations.source_kind` (`restaurant_reservation`), создаёт `restaurant_areas`, `restaurant_area_revisions`, `restaurant_tables`, `restaurant_table_reservations` и `restaurant_table_reservation_events` с проверкой вместимости, жизненным циклом `booked -> seated -> completed/cancelled/no_show`, автоматическим освобождением аллокации, branch RLS и обновлением `schema_guard.py` (`_DEFINITIONS=130`, `_OCCUPANCY_TRIGGERS=20`, `_MODULE_TRIGGERS=36`) и `workforce_guard.py`. Реализованы 11 маршрутов `/v1/businesses/{id}/restaurant` (`areas`, `tables`, `reservations`, `events`).
+
+Проверка на `gorgona-dev` (PostgreSQL 18.6, Chromium): `ruff`, `mypy` (598 файлов) — PASS; unit-тесты API — **910 PASS**; целевая интеграция и upgrade `0129 -> 0130` — **55 PASS**; serial и `test_location_access.py` — **85 PASS**; полный параллельный прогон на `5dc0b05` — **3018 PASS, 0 fail, 4 skip** из 3022 за **1177,1 с (19 м 37 с)** (браузер 47/47, serial 216/216). Готовность `REST-01` остаётся `planned`, модуль `restaurant` не включается без решения владельца. Доказательства: `docs/plan/evidence/2026-11-21-rest01-floor-and-tables/`.
+
 ### PROPERTY-01 5c/6 UI. Экран заявок на ремонт, портал подрядчика и выезд из объекта, 20 ноября
 
 Ветка `codex/package-property-01-maintenance-ui` (кодовый коммит `46f7f3d`, без новых миграций БД)

@@ -1,0 +1,76 @@
+{
+  "package": "REST-01",
+  "slice": "Slice 1 — Floor areas, tables & independent table reservations",
+  "date": "2026-11-21",
+  "branch": "codex/package-rest-01-floor-and-tables",
+  "base_commit": "617223abe570adeb40bfab922eb1b44894476baf",
+  "verified_code_commit": "5dc0b05d0b17a926073f9bb2e3798c471652d281",
+  "verified_code_tree": "873f5d11278cc413238b9aeb5e92db7230c63646",
+  "migration": "0130_restaurant_floor_and_tables.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/adr/0037-restaurant-tables-menu-kitchen-checks.md": "07c15b769a11d5c5f1277490b1bbda91f196ed1b55bac9eece4da1d749b3f04c",
+    "docs/plan/PACKAGE_REST01_PLAN_2026-11-20.md": "59d163a06bd1e62df4b2c0415f67843efbfd3b2274f61144f4d15b722034cc1f",
+    "docs/plan/PACKAGE_REST01_FLOOR_TABLES_DESIGN_2026-11-20.md": "ae31f25cf49ed45567368a738a831454c16a1fa774f6a016d350a256eb1bdd6e",
+    "api/src/gorgona_booking/db/migrations/0130_restaurant_floor_and_tables.sql": "42836a0cd030d099ede73054e406c712a1b7bd54ce906579734c11bba7feb454",
+    "api/src/gorgona_booking/business/modules.py": "b325298b7c8a92fe514f2ed702381b7f32d262bf00d19105997109d4bb6bf086",
+    "api/src/gorgona_booking/auth/permissions.py": "25299c8249252bc676711e528738ddf927e4a8eb8524e1744154e2e650a0f12d",
+    "api/src/gorgona_booking/business/restaurant_floor.py": "2482a11364e160a90fc0f182799cd51507965e3d4cfc63c6d981dc611a4123a4",
+    "api/src/gorgona_booking/api/restaurant_floor.py": "4bfe8bcd80d49bd43a106346f8c0721445071733ccca2cc9da53d221ac92466d",
+    "api/src/gorgona_booking/db/schema_guard.py": "c84ffe9c70820a79f520efdc33fd05636bb8e467bcb7f5034fe5c54634832051",
+    "api/src/gorgona_booking/db/workforce_guard.py": "e310b29dac7dcffc754ff57ee603750b78a1e990453052d0107c6f0950ca1c6f",
+    "api/tests/unit/test_restaurant_floor_contracts.py": "a33097596117d3c2a5f84ef272a9be3d6f2ef0772280bc550415c3e1c1f8247c",
+    "api/tests/integration/test_restaurant_floor_and_tables.py": "a92e7b76c4710b89c2357227a7b9f1b03b60e78a39d88972c3bfd92f6cfa14a9",
+    "api/tests/integration/test_restaurant_floor_upgrade.py": "c7f726f2c79a5ae013b62519f9858c365ffd786e68d97b418059a53b7b34e54f"
+  },
+  "checks": {
+    "git_diff_check": "PASS",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS (598 files)",
+    "mypy": "PASS (598 files)",
+    "api_unit": {
+      "passed": 910,
+      "failed": 0,
+      "skipped": 0
+    },
+    "focused_integration": {
+      "passed": 55,
+      "failed": 0,
+      "skipped": 0
+    },
+    "serial_and_location_access_integration": {
+      "passed": 85,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 39.95
+    },
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3022,
+      "executed_tests": 3022,
+      "unique_tests": 3022,
+      "duplicates": 0,
+      "passed": 3018,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1177.1,
+      "browser_passed": 47,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "Slice 2 (migration 0131): Versioned menu items, modifiers & STOCK-01 recipe ingredient BOMs",
+    "Slice 3 (migration 0132): Independent guest checks, station-routed kitchen tickets & STOCK-01 ingredient write-offs",
+    "Slice 4 (migration 0133): Split billing with total conservation, FIN-03 invoices & coordinated refunds",
+    "Slice 5 (no migration): Restaurant UI (Floor/Reservations, Menu/Recipes, Checks/Split Billing, Kitchen Board) with browser E2E",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}
