@@ -5,7 +5,7 @@ Roles come from server-side memberships and platform roles, never from token cla
 
 from enum import StrEnum
 
-PERMISSIONS_VERSION = 16
+PERMISSIONS_VERSION = 17
 
 
 class Permission(StrEnum):
@@ -52,6 +52,11 @@ class Permission(StrEnum):
     PROPERTY_READ = "property.read"
     PROPERTY_MANAGE = "property.manage"
     PROPERTY_CONTRACTOR_WORK = "property.contractor_work"
+    # ADR-0037 (REST-01): restaurant floor, service, kitchen and management; not delegated.
+    RESTAURANT_READ = "restaurant.read"
+    RESTAURANT_KITCHEN = "restaurant.kitchen"
+    RESTAURANT_SERVICE = "restaurant.service"
+    RESTAURANT_MANAGE = "restaurant.manage"
     MEMBERS_MANAGE = "members.manage"
     MEMBERS_MANAGE_ADMINS = "members.manage_admins"
     SETTINGS_MANAGE = "settings.manage"
@@ -67,9 +72,11 @@ _STAFF = frozenset(
         Permission.CATALOG_READ,
         Permission.STAFF_READ,
         Permission.WORKFORCE_SELF,
+        Permission.RESTAURANT_READ,
+        Permission.RESTAURANT_KITCHEN,
     }
 )
-_FRONT_DESK = _STAFF | {Permission.BOOKING_WRITE}
+_FRONT_DESK = _STAFF | {Permission.BOOKING_WRITE, Permission.RESTAURANT_SERVICE}
 _MANAGER = _FRONT_DESK | {
     Permission.COUNTERPARTIES_READ,
     Permission.COUNTERPARTIES_MANAGE,
@@ -104,6 +111,7 @@ _MANAGER = _FRONT_DESK | {
     Permission.PROPERTY_READ,
     Permission.PROPERTY_MANAGE,
     Permission.PROPERTY_CONTRACTOR_WORK,
+    Permission.RESTAURANT_MANAGE,
     Permission.MEMBERS_MANAGE,
     Permission.SETTINGS_MANAGE,
     Permission.READINESS_READ,

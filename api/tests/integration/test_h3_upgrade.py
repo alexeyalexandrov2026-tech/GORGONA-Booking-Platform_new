@@ -342,6 +342,15 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                     "where g.owner_tenant_id = t.owner_tenant_id and g.id = t.grant_id "
                     "and 'property.contractor_work' = any(g.permissions))"
                 ).format(names, query)
+            # REST-01 Slice 1 restaurant table resources and reservations cannot exist before 0130.
+            if target_version[0] < 130 and table == "resources":
+                query = sql.SQL("select {} from ({}) t where t.kind <> 'restaurant_table'").format(
+                    names, query
+                )
+            if target_version[0] < 130 and table == "resource_allocations":
+                query = sql.SQL(
+                    "select {} from ({}) t where t.source_kind <> 'restaurant_reservation'"
+                ).format(names, query)
             cursor = before.execute(query)
             assert cursor.description is not None
             json_columns = {

@@ -33,7 +33,7 @@ _FUNCTIONS.update(
     (name, body)
     for name, body in re.findall(
         _FUNCTION_PATTERN,
-        (_MIGRATIONS / "0114_property_showings.sql").read_text(encoding="utf-8"),
+        (_MIGRATIONS / "0130_restaurant_floor_and_tables.sql").read_text(encoding="utf-8"),
         re.DOTALL,
     )
     if name == "guard_resource_allocation"
@@ -355,7 +355,7 @@ _SHARED_CHECKS = {
         "resources_kind_valid",
     ): "((kind = ANY (ARRAY['artist'::text, 'chair'::text, 'room'::text, 'staff'::text, "
     "'equipment'::text, 'driver'::text, 'truck'::text, 'trailer'::text, "
-    "'rental_unit'::text, 'property_object'::text])))",
+    "'rental_unit'::text, 'property_object'::text, 'restaurant_table'::text])))",
     # L1 (0066): equipment is a resource kind; M2 (0075): drivers, trucks and trailers too;
     # R3a (0098): rental units.
     (
@@ -363,7 +363,7 @@ _SHARED_CHECKS = {
         "resource_allocations_source_kind",
     ): "((source_kind = ANY (ARRAY['booking'::text, 'reservation'::text, 'shift'::text, "
     "'trip_assignment'::text, 'rental_assignment'::text, 'rental_block'::text, "
-    "'property_showing'::text])))",
+    "'property_showing'::text, 'restaurant_reservation'::text])))",
     # M2 (0075), R3a (0098), R3b (0099)
 }
 

@@ -269,6 +269,39 @@ begin
                 message = 'the resource is booked in this interval';
         end if;
     end if;
+    if exists (
+        select 1 from gba.resources r where r.tenant_id = new.tenant_id
+          and r.id = new.resource_id and r.kind = 'restaurant_table'
+          and new.source_kind <> 'restaurant_reservation'
+    ) then
+        raise exception using errcode = '23514',
+            message = 'a restaurant table resource is reserved only for table reservations';
+    end if;
+    if new.source_kind = 'restaurant_reservation' then
+        if tg_op = 'INSERT' and not exists (
+            select 1 from gba.restaurant_table_reservations s
+              join gba.resources r on r.tenant_id = s.tenant_id
+             where s.tenant_id = new.tenant_id and s.id = new.source_id
+               and r.id = new.resource_id and r.location_id = s.location_id
+               and r.kind = 'restaurant_table' and r.is_active
+               and s.table_resource_id = r.id
+               and s.creation_xid = pg_current_xact_id()
+               and new.during = tstzrange(s.starts_at, s.ends_at, '[)')
+               and new.state = 'confirmed'
+        ) then
+            raise exception using errcode = '23514',
+                message = 'a table reservation allocation follows its reservation';
+        end if;
+        if tg_op = 'UPDATE' and new.state = 'released' and not exists (
+            select 1 from gba.restaurant_table_reservation_events e
+             where e.tenant_id = new.tenant_id and e.reservation_id = new.source_id
+               and e.action in ('complete', 'cancel', 'no_show')
+               and e.creation_xid = pg_current_xact_id()
+        ) then
+            raise exception using errcode = '23514',
+                message = 'a table reservation release requires a closing event';
+        end if;
+    end if;
     return new;
 end;
 """
@@ -312,6 +345,78 @@ begin
             raise exception using errcode = 'check_violation',
                 message = 'a reserved resource is outside the current branch';
         end if;
+    end if;
+    return null;
+end;
+"""
+
+GUARD_RESTAURANT_TABLE_SOURCE = """
+begin
+    if tg_op = 'DELETE' then
+        raise exception using errcode = '23514', message = 'restaurant tables are kept';
+    end if;
+    if tg_op = 'UPDATE' then
+        if (old.tenant_id, old.id, old.location_id, old.resource_id)
+           is distinct from (new.tenant_id, new.id, new.location_id, new.resource_id) then
+            raise exception using errcode = '23514',
+                message = 'a restaurant table keeps its branch and resource';
+        end if;
+        if new.revision <> old.revision + 1 then
+            raise exception using errcode = '23514',
+                message = 'restaurant table revision increments by one';
+        end if;
+    end if;
+    if not exists (
+        select 1 from gba.resources r
+        where r.tenant_id = new.tenant_id and r.id = new.resource_id
+          and r.location_id = new.location_id and r.kind = 'restaurant_table' and r.is_active
+    ) then
+        raise exception using errcode = '23514',
+            message = 'a restaurant table requires an active table resource in its branch';
+    end if;
+    return new;
+end;
+"""
+
+KEEP_RESTAURANT_TABLE_RESOURCE_IDENTITY_SOURCE = """
+begin
+    if (old.kind = 'restaurant_table' or new.kind = 'restaurant_table') and
+       (old.tenant_id, old.id, old.location_id, old.kind, old.is_active) is distinct from
+       (new.tenant_id, new.id, new.location_id, new.kind, new.is_active) then
+        raise exception using errcode = '23514',
+            message = 'a restaurant table resource keeps its identity';
+    end if;
+    return new;
+end;
+"""
+
+RELEASE_RESTAURANT_RESERVATION_SOURCE = """
+declare
+    released integer;
+begin
+    if new.action in ('complete', 'cancel', 'no_show') then
+        update gba.resource_allocations set state = 'released'
+        where tenant_id = new.tenant_id and source_kind = 'restaurant_reservation'
+          and source_id = new.reservation_id and state = 'confirmed';
+        get diagnostics released = row_count;
+        if released <> 1 then
+            raise exception using errcode = '23514',
+                message = 'closing event must release the table allocation';
+        end if;
+    end if;
+    return null;
+end;
+"""
+
+CHECK_RESTAURANT_RESERVATION_ALLOCATED_SOURCE = """
+begin
+    if (
+        select count(*) from gba.resource_allocations a
+        where a.tenant_id = new.tenant_id and a.source_kind = 'restaurant_reservation'
+          and a.source_id = new.id
+    ) <> 1 then
+        raise exception using errcode = '23514',
+            message = 'a table reservation requires its table allocation';
     end if;
     return null;
 end;
@@ -850,6 +955,30 @@ _OCCUPANCY_TRIGGERS = (
         "",
         RELEASE_PROPERTY_SHOWING_SOURCE,
     ),
+    (
+        "restaurant_tables",
+        "restaurant_tables_guard",
+        31,
+        "gba.guard_restaurant_table()",
+        "",
+        GUARD_RESTAURANT_TABLE_SOURCE,
+    ),
+    (
+        "resources",
+        "resources_keep_restaurant_table_identity",
+        19,
+        "gba.keep_restaurant_table_resource_identity()",
+        "",
+        KEEP_RESTAURANT_TABLE_RESOURCE_IDENTITY_SOURCE,
+    ),
+    (
+        "restaurant_table_reservation_events",
+        "restaurant_reservation_events_release",
+        5,
+        "gba.release_restaurant_reservation()",
+        "",
+        RELEASE_RESTAURANT_RESERVATION_SOURCE,
+    ),
 )
 _COUNTERPARTY_TABLES = (
     "counterparties",
@@ -900,9 +1029,22 @@ _PROPERTY_TABLES = (
     "property_move_outs",
     "property_move_out_photos",
 )
+_RESTAURANT_TABLES = (
+    "restaurant_areas",
+    "restaurant_area_revisions",
+    "restaurant_tables",
+    "restaurant_table_reservations",
+    "restaurant_table_reservation_events",
+)
+_RESTAURANT_MODULE_TABLES = (
+    "restaurant_areas",
+    "restaurant_tables",
+    "restaurant_table_reservations",
+)
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
 _MODULE_TRIGGERS = (
+    *[(table, f"{table}_require_module", "restaurant") for table in _RESTAURANT_MODULE_TABLES],
     *[
         (table, f"{table}_require_module", "property")
         for table in _PROPERTY_TABLES
@@ -1056,6 +1198,20 @@ _DEFINITIONS = [
             "(tenant_id=gba.current_tenant_id())",
         )
         for table in _PROPERTY_TABLES
+    ],
+    *[
+        _definition(table, f"({_NO_LOCATION} OR (location_id = gba.current_location_id()))")
+        for table in _RESTAURANT_TABLES
+    ],
+    *[
+        (
+            table,
+            f"{table}_tenant_isolation",
+            "*",
+            "(tenant_id=gba.current_tenant_id())",
+            "(tenant_id=gba.current_tenant_id())",
+        )
+        for table in _RESTAURANT_TABLES
     ],
     *[
         _company_only(table, f"{table}_unrestricted_scope", "*")
@@ -1272,6 +1428,19 @@ and exists (
       and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
       and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
 )
+and exists (
+    select 1 from pg_catalog.pg_trigger t
+    join pg_catalog.pg_proc f on f.oid = t.tgfoid
+    where t.tgrelid = pg_catalog.to_regclass('gba.restaurant_table_reservations')
+      and t.tgname = 'restaurant_table_reservations_allocated'
+      and t.tgtype = 5 and t.tgenabled = 'O' and not t.tgisinternal
+      and t.tgconstraint <> 0 and t.tgdeferrable and t.tginitdeferred
+      and t.tgqual is null and t.tgnargs = 0
+      and f.oid = pg_catalog.to_regprocedure('gba.check_restaurant_reservation_allocated()')
+      and not f.prosecdef and f.proconfig is null
+      and f.prolang = (select oid from pg_catalog.pg_language where lanname = 'plpgsql')
+      and regexp_replace(f.prosrc, '[[:space:]]', '', 'g') = %s
+)
 """
 
 
@@ -1292,6 +1461,7 @@ async def assert_location_scope_ready(conn: RuntimeConnection) -> None:
     parameters.append(_compact(_RESERVATION_ALLOCATED_SOURCE))
     parameters.append(_compact(CHECK_PROPERTY_SHOWING_ALLOCATED_SOURCE))
     parameters.append(_compact(_PROPERTY_MOVE_IN_PHOTOS_COMPLETE_SOURCE))
+    parameters.append(_compact(CHECK_RESTAURANT_RESERVATION_ALLOCATED_SOURCE))
     parameters.extend(LEDGER_PARAMETERS)
     parameters.extend(FINANCIAL_PARAMETERS)
     row = await (

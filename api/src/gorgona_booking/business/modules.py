@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[7] = 7
+MODULE_REGISTRY_VERSION: Literal[8] = 8
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -257,6 +257,16 @@ MODULES: tuple[PlatformModule, ...] = (
         "Internal parcel, building and unit catalog with ownership and management history. "
         "Enablement waits for PROPERTY-01 acceptance.",
         "New property objects and revisions. Reads and history continue.",
+    ),
+    _module(
+        "restaurant",
+        "Restaurants and food service",
+        _OPTIONAL,
+        ("booking_resources", "counterparties", "finance_documents", "inventory", "workforce"),
+        Readiness.IMPLEMENTED,
+        "REST-01 Slice 1 (ADR-0037): branch dining areas, tables and independent table "
+        "reservations using shared resource occupancy. Enablement waits for REST-01 acceptance.",
+        "New dining areas, tables and table reservations. Reads and history continue.",
     ),
     _module(
         "storefronts", "Storefronts and marketplaces", _OPTIONAL, ("products_services", "sales")

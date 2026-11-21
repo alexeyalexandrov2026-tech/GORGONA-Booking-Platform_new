@@ -203,6 +203,11 @@ K_TABLES = {
     "property_maintenance_contractor_updates",
     "property_move_outs",
     "property_move_out_photos",
+    "restaurant_areas",
+    "restaurant_area_revisions",
+    "restaurant_tables",
+    "restaurant_table_reservations",
+    "restaurant_table_reservation_events",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
