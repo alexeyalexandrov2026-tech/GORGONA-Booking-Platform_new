@@ -25,6 +25,7 @@ from gorgona_booking.api import (
     legal_entities,
     members,
     platform,
+    projects_billing,
     projects_matters,
     projects_time,
     projects_work,
@@ -174,6 +175,7 @@ def create_app(
     app.include_router(projects_matters.router)
     app.include_router(projects_work.router)
     app.include_router(projects_time.router)
+    app.include_router(projects_billing.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

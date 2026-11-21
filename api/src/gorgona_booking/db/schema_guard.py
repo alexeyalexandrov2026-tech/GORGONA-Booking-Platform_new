@@ -1084,6 +1084,9 @@ _PROJECTS_TABLES = (
     "project_time_entry_revisions",
     "project_recurring_schedules",
     "project_recurring_runs",
+    "project_matter_invoices",
+    "project_matter_invoice_items",
+    "project_exports",
 )
 _PROJECTS_MODULE_TABLES = (
     "project_matters",
@@ -1096,6 +1099,8 @@ _PROJECTS_MODULE_TABLES = (
     "project_time_entries",
     "project_recurring_schedules",
     "project_recurring_runs",
+    "project_matter_invoices",
+    "project_exports",
 )
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.

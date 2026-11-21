@@ -239,6 +239,9 @@ K_TABLES = {
     "project_time_entry_revisions",
     "project_recurring_schedules",
     "project_recurring_runs",
+    "project_matter_invoices",
+    "project_matter_invoice_items",
+    "project_exports",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
