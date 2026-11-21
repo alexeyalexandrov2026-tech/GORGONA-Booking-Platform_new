@@ -1,0 +1,58 @@
+{
+  "package": "SUPPLY-01",
+  "slice": "Slice 2 — Manufacturing BOMs, work orders, component lot issues, unused material returns, QC & finished-goods lot costing",
+  "date": "2026-11-21",
+  "branch": "codex/package-supply-01-manufacturing-and-costing",
+  "base_commit": "06c959425f6ea2e60bc8a4dfe82fae4a862b5472",
+  "verified_code_commit": "c838e4064cc8fb56688056de58a5d77c8adc435e",
+  "verified_code_tree": "e24f256377d0d1ff3ec3ee0cdcd404bacb7e1aef",
+  "migration": "0139_supply_manufacturing_and_costing.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_SUPPLY01_MANUFACTURING_DESIGN_2026-11-21.md": "d1bad92f87d3cee4d54ad749b97f41c38d324687fc6ca70b1a99c96c009d6200",
+    "api/src/gorgona_booking/db/migrations/0139_supply_manufacturing_and_costing.sql": "e62f8d2a93c436bc9b4ba55309e072924b6e26eb912320f6b75014f4c5e9fe84",
+    "api/src/gorgona_booking/business/supply_manufacturing.py": "caa124d18a1ae97d6dac8880bb82dd6a903f65b9c423bcf0aae46c2202f96a59",
+    "api/src/gorgona_booking/api/supply_manufacturing.py": "acf619cabf163411899f93a65f82b6ccaae68d4fbaa827a211427975f060903c",
+    "api/src/gorgona_booking/db/schema_guard.py": "49e7e6b91d031c7119abde9f8e31f32a423c6b36ad2b666717aa2e70dd21a0ea",
+    "api/tests/unit/test_supply_manufacturing_contracts.py": "53d41bf658ae77974bb79545e70d8a7e6910e4fd71f6f5aeae1591944e716649",
+    "api/tests/integration/test_supply_manufacturing.py": "3454d381c32074c616c26c77dea4e3184a9d47c1c807c616d27791f314ed0db4",
+    "api/tests/integration/test_supply_manufacturing_upgrade.py": "b9718621d963caedf1c4c027665daf8213d9b839a00eda82548f31915712084b"
+  },
+  "checks": {
+    "ruff_check": "PASS (644 files)",
+    "ruff_format_check": "PASS (644 files)",
+    "mypy": "PASS (644 files)",
+    "api_unit": {
+      "passed": 931,
+      "failed": 0,
+      "skipped": 0
+    },
+    "focused_integration": "PASS",
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3069,
+      "executed_tests": 3069,
+      "unique_tests": 3069,
+      "duplicates": 0,
+      "passed": 3065,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1520.04,
+      "browser_passed": 49,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "Slice 3 (0140): Trade price lists, retail/wholesale & 3PL orders, shipments & customer returns",
+    "Slice 4 (no migration): /supply/ 4-tab UI and real-browser E2E",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}
