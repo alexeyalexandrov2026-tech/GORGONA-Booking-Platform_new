@@ -28,6 +28,7 @@ from tests.integration.test_agreements import Agreements
 from tests.integration.test_property_catalog import Catalog
 from tests.integration.test_property_listings import listing
 from tests.integration.test_property_move_in import lease_with_evidence, record_move_in
+from tests.integration.test_property_move_out import move_out_evidence, record_move_out
 
 pytestmark = pytest.mark.anyio
 agreements = lease_tests.agreements
@@ -57,6 +58,8 @@ TABLES = (
     "property_maintenance_obligations",
     "property_maintenance_contractor_links",
     "property_maintenance_contractor_updates",
+    "property_move_outs",
+    "property_move_out_photos",
 )
 
 
@@ -80,6 +83,7 @@ class Estate:
     lease_id: UUID
     prospect: str
     move_in: dict[str, object]
+    move_out: dict[str, object]
     maintenance_id: UUID
 
 
@@ -104,6 +108,9 @@ async def estate(c: Catalog, a: Agreements) -> Estate:
     assert booked.is_success, booked.text
     recorded = await record_move_in(c, lease_id, move_in)
     assert recorded.is_success, recorded.text
+    move_out = await move_out_evidence(a, moved_out_on=str(move_in["moved_in_on"]))
+    recorded_out = await record_move_out(c, lease_id, move_out)
+    assert recorded_out.is_success, recorded_out.text
     maintenance_id = uuid7()
     maint = await c.client.put(
         f"/v1/businesses/{c.tenant}/property/maintenance/{maintenance_id}",
@@ -119,7 +126,7 @@ async def estate(c: Catalog, a: Agreements) -> Estate:
         headers={**c.headers, "Idempotency-Key": str(uuid7())},
     )
     assert maint.is_success, maint.text
-    return Estate(object_id, showing_id, lease_id, prospect, move_in, maintenance_id)
+    return Estate(object_id, showing_id, lease_id, prospect, move_in, move_out, maintenance_id)
 
 
 def showing(object_id: UUID, prospect: str, starts_at: str) -> dict[str, object]:
@@ -193,6 +200,8 @@ def routes(c: Catalog, e: Estate) -> list[Route]:
         route("POST", "/leases/{lease_id}/terms", release, MANAGE),
         route("GET", "/leases/{lease_id}/move-in", None, MANAGE),
         route("PUT", "/leases/{lease_id}/move-in", e.move_in, MANAGE),
+        route("GET", "/leases/{lease_id}/move-out", None, MANAGE),
+        route("PUT", "/leases/{lease_id}/move-out", e.move_out, MANAGE),
         route("GET", "/maintenance", None, READ),
         route("GET", "/maintenance/{request_id}", None, READ),
         route(
@@ -314,7 +323,7 @@ async def test_matrix_covers_every_property_route(
         for item in routes(enabled, e)
     ]
     assert sorted(covered) == declared
-    assert len(declared) == 31
+    assert len(declared) == 33
 
 
 async def test_other_company_lesser_roles_and_support_are_refused_and_write_nothing(
@@ -348,7 +357,7 @@ async def test_branch_managers_read_their_branch_and_manage_nothing(
     away, _ = member(enabled, "manager", other_branch)
     reads = [item for item in items if item.permission == READ]
     manages = [item for item in items if item.permission != READ]
-    assert (len(reads), len(manages)) == (8, 23)
+    assert (len(reads), len(manages)) == (8, 25)
     for item in reads:
         response = await call(enabled, item, bearer(enabled, home))
         assert response.status_code == 200, (item.name, response.text)

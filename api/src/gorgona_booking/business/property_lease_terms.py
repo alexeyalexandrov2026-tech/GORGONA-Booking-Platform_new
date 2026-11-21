@@ -75,6 +75,10 @@ class LeaseReleasedError(ConflictError):
     code = "PROPERTY_LEASE_RELEASED"
 
 
+class LeaseMoveOutConflictError(ConflictError):
+    code = "PROPERTY_LEASE_MOVE_OUT_CONFLICT"
+
+
 class LeaseMoveInConflictError(ConflictError):
     code = "PROPERTY_LEASE_MOVE_IN_CONFLICT"
 
@@ -153,6 +157,10 @@ async def record_term(
             case "property_lease_term_move_in":
                 raise LeaseMoveInConflictError(
                     "The term cannot end before a recorded move-in"
+                ) from exc
+            case "property_lease_term_move_out":
+                raise LeaseMoveOutConflictError(
+                    "A recorded move-out cannot be extended or preceded by release"
                 ) from exc
             case "property_lease_term_source":
                 raise InvalidReferenceError(

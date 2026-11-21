@@ -509,6 +509,20 @@ begin
             constraint = 'property_lease_term_move_in',
             message = 'the last day cannot precede a recorded move-in';
     end if;
+    if exists (
+        select 1 from gba.property_move_outs mo
+        where mo.tenant_id = new.tenant_id and mo.lease_id = new.id
+          and (mo.moved_out_on > new.occupied_through
+               or exists (
+                   select 1 from gba.property_lease_term_events ev
+                   where ev.tenant_id = new.tenant_id and ev.lease_id = new.id
+                     and ev.revision = new.term_revision and ev.action = 'extend'
+               ))
+    ) then
+        raise exception using errcode = 'check_violation',
+            constraint = 'property_lease_term_move_out',
+            message = 'a recorded move-out cannot be extended or preceded by release';
+    end if;
     return new;
 end;
 """
@@ -883,6 +897,8 @@ _PROPERTY_TABLES = (
     "property_maintenance_obligations",
     "property_maintenance_contractor_links",
     "property_maintenance_contractor_updates",
+    "property_move_outs",
+    "property_move_out_photos",
 )
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
@@ -896,6 +912,7 @@ _MODULE_TRIGGERS = (
             "property_lease_term_events",
             "property_move_in_photos",
             "property_maintenance_events",
+            "property_move_out_photos",
         )
     ],
     *[(table, f"{table}_require_module", "counterparties") for table in _COUNTERPARTY_TABLES],
@@ -975,6 +992,8 @@ _DEFINITIONS = [
     _company_only("property_leases", "property_leases_unrestricted_scope", "*"),
     _company_only("property_move_ins", "property_move_ins_unrestricted_scope", "*"),
     _company_only("property_move_in_photos", "property_move_in_photos_unrestricted_scope", "*"),
+    _company_only("property_move_outs", "property_move_outs_unrestricted_scope", "*"),
+    _company_only("property_move_out_photos", "property_move_out_photos_unrestricted_scope", "*"),
     _company_only(
         "property_maintenance_requests",
         "property_maintenance_requests_unrestricted_update",
