@@ -488,6 +488,7 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (137, "-- Projects billing branch scope:"),
                 (138, "-- Supply WMS branch scope:"),
                 (139, "-- Supply manufacturing branch scope:"),
+                (140, "-- Supply trade branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker

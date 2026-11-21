@@ -1116,6 +1116,12 @@ _SUPPLY_TABLES = (
     "supply_work_order_returns",
     "supply_work_order_qc",
     "supply_work_order_outputs",
+    "supply_price_lists",
+    "supply_price_list_items",
+    "supply_trade_orders",
+    "supply_trade_order_lines",
+    "supply_order_shipments",
+    "supply_order_returns",
 )
 _SUPPLY_MODULE_TABLES = _SUPPLY_TABLES
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)

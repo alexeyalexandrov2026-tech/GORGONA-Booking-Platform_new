@@ -255,6 +255,12 @@ K_TABLES = {
     "supply_work_order_returns",
     "supply_work_order_qc",
     "supply_work_order_outputs",
+    "supply_price_lists",
+    "supply_price_list_items",
+    "supply_trade_orders",
+    "supply_trade_order_lines",
+    "supply_order_shipments",
+    "supply_order_returns",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
