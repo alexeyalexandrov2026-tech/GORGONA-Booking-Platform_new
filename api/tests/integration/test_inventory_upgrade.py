@@ -231,6 +231,10 @@ K_TABLES = {
     "project_matter_members",
     "project_matter_revisions",
     "project_conflict_checks",
+    "project_stages",
+    "project_tasks",
+    "project_task_dependencies",
+    "project_matter_files",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

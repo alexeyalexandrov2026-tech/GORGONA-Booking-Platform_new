@@ -1076,11 +1076,19 @@ _PROJECTS_TABLES = (
     "project_matter_members",
     "project_matter_revisions",
     "project_conflict_checks",
+    "project_stages",
+    "project_tasks",
+    "project_task_dependencies",
+    "project_matter_files",
 )
 _PROJECTS_MODULE_TABLES = (
     "project_matters",
     "project_matter_members",
     "project_conflict_checks",
+    "project_stages",
+    "project_tasks",
+    "project_task_dependencies",
+    "project_matter_files",
 )
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
