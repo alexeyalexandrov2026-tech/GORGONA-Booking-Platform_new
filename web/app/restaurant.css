@@ -23,10 +23,20 @@
   font-weight: 500;
 }
 
+.restaurant-tab:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
 .restaurant-tab[aria-selected="true"] {
   background: #1e293b;
   color: #ffffff;
   border-color: #1e293b;
+}
+
+.restaurant-tab[aria-selected="true"]:hover {
+  background: #0f172a;
+  color: #ffffff;
 }
 
 .restaurant-panel {
