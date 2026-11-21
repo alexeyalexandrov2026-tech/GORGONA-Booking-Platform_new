@@ -514,9 +514,6 @@ alter table gba.restaurant_areas enable row level security;
 alter table gba.restaurant_areas force row level security;
 create policy restaurant_areas_tenant_isolation on gba.restaurant_areas
     using (tenant_id = gba.current_tenant_id()) with check (tenant_id = gba.current_tenant_id());
-create policy restaurant_areas_location_scope on gba.restaurant_areas as restrictive to gba_runtime
-    using (gba.current_location_id() is null or location_id = gba.current_location_id())
-    with check (gba.current_location_id() is null or location_id = gba.current_location_id());
 grant select, insert, update on gba.restaurant_areas to gba_runtime;
 create trigger restaurant_areas_require_module before insert on gba.restaurant_areas
     for each row execute function gba.require_enabled_module('restaurant');
@@ -525,18 +522,12 @@ alter table gba.restaurant_area_revisions enable row level security;
 alter table gba.restaurant_area_revisions force row level security;
 create policy restaurant_area_revisions_tenant_isolation on gba.restaurant_area_revisions
     using (tenant_id = gba.current_tenant_id()) with check (tenant_id = gba.current_tenant_id());
-create policy restaurant_area_revisions_location_scope on gba.restaurant_area_revisions as restrictive to gba_runtime
-    using (gba.current_location_id() is null or location_id = gba.current_location_id())
-    with check (gba.current_location_id() is null or location_id = gba.current_location_id());
 grant select, insert on gba.restaurant_area_revisions to gba_runtime;
 
 alter table gba.restaurant_tables enable row level security;
 alter table gba.restaurant_tables force row level security;
 create policy restaurant_tables_tenant_isolation on gba.restaurant_tables
     using (tenant_id = gba.current_tenant_id()) with check (tenant_id = gba.current_tenant_id());
-create policy restaurant_tables_location_scope on gba.restaurant_tables as restrictive to gba_runtime
-    using (gba.current_location_id() is null or location_id = gba.current_location_id())
-    with check (gba.current_location_id() is null or location_id = gba.current_location_id());
 grant select, insert, update on gba.restaurant_tables to gba_runtime;
 create trigger restaurant_tables_require_module before insert on gba.restaurant_tables
     for each row execute function gba.require_enabled_module('restaurant');
@@ -545,9 +536,6 @@ alter table gba.restaurant_table_reservations enable row level security;
 alter table gba.restaurant_table_reservations force row level security;
 create policy restaurant_table_reservations_tenant_isolation on gba.restaurant_table_reservations
     using (tenant_id = gba.current_tenant_id()) with check (tenant_id = gba.current_tenant_id());
-create policy restaurant_table_reservations_location_scope on gba.restaurant_table_reservations as restrictive to gba_runtime
-    using (gba.current_location_id() is null or location_id = gba.current_location_id())
-    with check (gba.current_location_id() is null or location_id = gba.current_location_id());
 grant select, insert, update on gba.restaurant_table_reservations to gba_runtime;
 create trigger restaurant_table_reservations_require_module before insert on gba.restaurant_table_reservations
     for each row execute function gba.require_enabled_module('restaurant');
@@ -556,7 +544,25 @@ alter table gba.restaurant_table_reservation_events enable row level security;
 alter table gba.restaurant_table_reservation_events force row level security;
 create policy restaurant_table_reservation_events_tenant_isolation on gba.restaurant_table_reservation_events
     using (tenant_id = gba.current_tenant_id()) with check (tenant_id = gba.current_tenant_id());
+grant select, insert on gba.restaurant_table_reservation_events to gba_runtime;
+
+-- Restaurant floor branch scope:
+create policy restaurant_areas_location_scope on gba.restaurant_areas as restrictive to gba_runtime
+    using (gba.current_location_id() is null or location_id = gba.current_location_id())
+    with check (gba.current_location_id() is null or location_id = gba.current_location_id());
+
+create policy restaurant_area_revisions_location_scope on gba.restaurant_area_revisions as restrictive to gba_runtime
+    using (gba.current_location_id() is null or location_id = gba.current_location_id())
+    with check (gba.current_location_id() is null or location_id = gba.current_location_id());
+
+create policy restaurant_tables_location_scope on gba.restaurant_tables as restrictive to gba_runtime
+    using (gba.current_location_id() is null or location_id = gba.current_location_id())
+    with check (gba.current_location_id() is null or location_id = gba.current_location_id());
+
+create policy restaurant_table_reservations_location_scope on gba.restaurant_table_reservations as restrictive to gba_runtime
+    using (gba.current_location_id() is null or location_id = gba.current_location_id())
+    with check (gba.current_location_id() is null or location_id = gba.current_location_id());
+
 create policy restaurant_table_reservation_events_location_scope on gba.restaurant_table_reservation_events as restrictive to gba_runtime
     using (gba.current_location_id() is null or location_id = gba.current_location_id())
     with check (gba.current_location_id() is null or location_id = gba.current_location_id());
-grant select, insert on gba.restaurant_table_reservation_events to gba_runtime;
