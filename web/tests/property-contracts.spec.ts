@@ -5,7 +5,10 @@ import {
   canReadProperty,
   KEEP_PARTY,
   NO_PARTY,
+  contractorWorkLinkSchema,
+  formatMinorUnits,
   parentOptions,
+  parseMinorUnits,
   propertyBody,
   propertyHistorySchema,
   propertyListSchema,
@@ -277,4 +280,200 @@ test("lease, term and move-in responses stay strict", () => {
   );
   expect(recorded.parse(moveIn)).toEqual(moveIn);
   expect(recorded.safeParse({ ...moveIn, photos: [] }).success).toBe(false);
+});
+
+test("move-out, maintenance and contractor work order contracts stay strict", () => {
+  const path = `/v1/businesses/${uuid(1)}/property`;
+  const moveOut = {
+    schema_version: 1,
+    lease_id: uuid(8),
+    term_revision: 2,
+    moved_out_on: "2026-12-31",
+    condition_summary: "damage_noted",
+    note: "Scuffed baseboard in hallway",
+    report: { document_id: uuid(14), revision: 1 },
+    photos: [{ document_id: uuid(15), revision: 1 }],
+    recorded_by: uuid(4),
+    recorded_at: "2031-06-05T10:00:00Z",
+  };
+  const moveOutRoute = managementResponseSchema(
+    `${path}/leases/${uuid(8)}/move-out`,
+    "PUT",
+  );
+  expect(moveOutRoute.parse(moveOut)).toEqual(moveOut);
+  expect(
+    moveOutRoute.safeParse({ ...moveOut, condition_summary: "destroyed" })
+      .success,
+  ).toBe(false);
+  expect(moveOutRoute.safeParse({ ...moveOut, photos: [] }).success).toBe(
+    false,
+  );
+
+  const req = {
+    schema_version: 1,
+    request_id: uuid(20),
+    object_id: uuid(2),
+    location_id: uuid(3),
+    object_kind: "unit",
+    lease_id: null,
+    category: "plumbing",
+    priority: "urgent",
+    title: "FAKE kitchen leak",
+    description: "Leak under sink",
+    revision: 3,
+    state: "assigned",
+    approved_limit_minor: 25050,
+    currency: "USD",
+    contractor_id: uuid(21),
+    recorded_by: uuid(4),
+    recorded_at: "2031-06-05T10:00:00Z",
+  };
+  expect(
+    managementResponseSchema(
+      `${path}/maintenance?object_id=${uuid(2)}`,
+      "GET",
+    ).parse({
+      schema_version: 1,
+      items: [req],
+      next_after: null,
+    }),
+  ).toMatchObject({ items: [req] });
+  expect(
+    managementResponseSchema(`${path}/maintenance/${uuid(20)}`, "PUT").parse(
+      req,
+    ),
+  ).toEqual(req);
+  expect(
+    managementResponseSchema(
+      `${path}/maintenance/${uuid(20)}/events`,
+      "POST",
+    ).parse(req),
+  ).toEqual(req);
+
+  const event = {
+    schema_version: 1,
+    request_id: uuid(20),
+    revision: 2,
+    action: "approve",
+    approved_limit_minor: 25050,
+    currency: "USD",
+    contractor_id: null,
+    note: "Approved up to limit",
+    recorded_by: uuid(4),
+    recorded_at: "2031-06-05T10:05:00Z",
+  };
+  expect(
+    managementResponseSchema(
+      `${path}/maintenance/${uuid(20)}/events`,
+      "GET",
+    ).parse({
+      schema_version: 1,
+      items: [event],
+      next_before: null,
+    }),
+  ).toMatchObject({ items: [event] });
+
+  const obligation = {
+    schema_version: 1,
+    request_id: uuid(20),
+    number: 1,
+    book_id: uuid(22),
+    invoice_document_id: uuid(23),
+    obligation_id: uuid(24),
+    amount_minor: 15000,
+    currency: "USD",
+    note: "Parts invoice",
+    recorded_by: uuid(4),
+    recorded_at: "2031-06-05T11:00:00Z",
+  };
+  expect(
+    managementResponseSchema(
+      `${path}/maintenance/${uuid(20)}/obligations`,
+      "GET",
+    ).parse({
+      schema_version: 1,
+      items: [obligation],
+    }),
+  ).toMatchObject({ items: [obligation] });
+
+  const company = {
+    schema_version: 1,
+    request_id: uuid(20),
+    revision: 1,
+    contractor_id: uuid(21),
+    company_id: uuid(25),
+    created_by: uuid(4),
+    created_at: "2031-06-05T10:10:00Z",
+  };
+  expect(
+    managementResponseSchema(
+      `${path}/maintenance/${uuid(20)}/contractor-company`,
+      "PUT",
+    ).parse(company),
+  ).toEqual(company);
+
+  const update = {
+    schema_version: 1,
+    request_id: uuid(20),
+    number: 1,
+    kind: "in_progress",
+    note: "Shut off valve and replacing trap",
+    company_id: uuid(25),
+    company_name: "FAKE Plumbing Co",
+    grant_id: uuid(26),
+    binding_revision: 1,
+    recorded_by: uuid(27),
+    created_at: "2031-06-05T10:15:00Z",
+  };
+  expect(
+    managementResponseSchema(
+      `${path}/maintenance/${uuid(20)}/contractor-work/${uuid(26)}/updates`,
+      "POST",
+    ).parse(update),
+  ).toEqual(update);
+
+  const workOrder = {
+    schema_version: 1,
+    request_id: uuid(20),
+    object_id: uuid(2),
+    object_name: "FAKE unit",
+    object_kind: "unit",
+    location_id: uuid(3),
+    category: "plumbing",
+    priority: "urgent",
+    title: "FAKE kitchen leak",
+    description: "Leak under sink",
+    state: "assigned",
+    revision: 3,
+    binding_revision: 1,
+    contractor_company_id: uuid(25),
+    updates: [update],
+  };
+  const workOrderRoute = managementResponseSchema(
+    `${path}/maintenance/${uuid(20)}/contractor-work/${uuid(26)}`,
+    "GET",
+  );
+  expect(workOrderRoute.parse(workOrder)).toEqual(workOrder);
+  // Private budget and lease fields must never appear on the contractor work order view.
+  expect(
+    workOrderRoute.safeParse({ ...workOrder, approved_limit_minor: 25050 })
+      .success,
+  ).toBe(false);
+  expect(
+    workOrderRoute.safeParse({ ...workOrder, lease_id: uuid(8) }).success,
+  ).toBe(false);
+
+  expect(
+    contractorWorkLinkSchema.parse({
+      business: uuid(1),
+      request: uuid(20),
+      grant: uuid(26),
+    }),
+  ).toEqual({ business: uuid(1), request: uuid(20), grant: uuid(26) });
+  expect(parseMinorUnits("250.50")).toBe(25050);
+  expect(parseMinorUnits("100")).toBe(10000);
+  expect(parseMinorUnits("0")).toBeNull();
+  expect(parseMinorUnits("-5")).toBeNull();
+  expect(parseMinorUnits("1.999")).toBeNull();
+  expect(formatMinorUnits(25050, "USD")).toBe("250.50 USD");
 });

@@ -17,17 +17,22 @@ import type { Document } from "../lib/document-contracts";
 import {
   fetchLeases,
   fetchMoveIn,
+  fetchMoveOut,
   fetchTermHistory,
   recordMoveIn,
+  recordMoveOut,
   recordTerm,
   registerLease,
   refusal,
   termConflict,
 } from "../lib/property-api";
-import type {
-  LeaseTerm,
-  LeaseView,
-  MoveInView,
+import {
+  MOVE_OUT_CONDITIONS,
+  type LeaseTerm,
+  type LeaseView,
+  type MoveInView,
+  type MoveOutCondition,
+  type MoveOutView,
 } from "../lib/property-contracts";
 
 type Named = { id: string; name: string };
@@ -40,6 +45,7 @@ type LoadedLease = {
   lease: LeaseView;
   history: LeaseTerm[];
   moveIn: MoveInView | null;
+  moveOut: MoveOutView | null;
   latest: Agreement;
   source: Agreement;
 };
@@ -339,6 +345,9 @@ export function PropertyLease({
               fetchMoveIn(businessId, lease.lease_id),
               fetchAgreement(businessId, lease.agreement_id),
             ]);
+            const moveOut = moveIn
+              ? await fetchMoveOut(businessId, lease.lease_id)
+              : null;
             const source =
               latest.revision === lease.agreement_revision
                 ? latest
@@ -353,6 +362,7 @@ export function PropertyLease({
                 (left, right) => right.revision - left.revision,
               ),
               moveIn,
+              moveOut,
               latest,
               source,
             };
@@ -614,6 +624,27 @@ function LeaseCard({
       ) : (
         <p className="muted">This lease has no occupied days to record.</p>
       )}
+      {row.moveIn ? (
+        <>
+          <h4>Move-out</h4>
+          {row.moveOut ? (
+            <MoveOutRecord businessId={businessId} moveOut={row.moveOut} />
+          ) : (
+            <MoveOutForm
+              key={current.revision + ":" + row.moveIn.moved_in_on}
+              businessId={businessId}
+              leaseId={row.lease.lease_id}
+              termRevision={current.revision}
+              moveIn={row.moveIn}
+              reports={reports}
+              images={images}
+              timezone={timezone}
+              onSaved={() => onChanged("Move-out recorded.")}
+              onReload={reload}
+            />
+          )}
+        </>
+      ) : null}
     </>
   );
 }
@@ -1091,6 +1122,271 @@ function RegisterForm({
         <button type="submit" disabled={saving || !usable}>
           {saving ? "Saving…" : "Register lease"}
         </button>
+      </div>
+    </form>
+  );
+}
+
+const CONDITION_LABELS: Record<MoveOutCondition, string> = {
+  normal_wear: "Normal wear",
+  damage_noted: "Damage noted",
+};
+
+function MoveOutRecord({
+  businessId,
+  moveOut,
+}: {
+  businessId: string;
+  moveOut: MoveOutView;
+}) {
+  return (
+    <>
+      <dl className="property-facts">
+        <div>
+          <dt>Moved out</dt>
+          <dd>{moveOut.moved_out_on}</dd>
+        </div>
+        <div>
+          <dt>Condition</dt>
+          <dd>{CONDITION_LABELS[moveOut.condition_summary]}</dd>
+        </div>
+        <div>
+          <dt>Move-out term revision</dt>
+          <dd>{moveOut.term_revision}</dd>
+        </div>
+        {moveOut.note ? (
+          <div>
+            <dt>Move-out note</dt>
+            <dd>{moveOut.note}</dd>
+          </div>
+        ) : null}
+      </dl>
+      <DownloadButton
+        businessId={businessId}
+        documentId={moveOut.report.document_id}
+        revision={moveOut.report.revision}
+        label="Download move-out report"
+      />
+      {moveOut.photos.map((photo, index) => (
+        <DownloadButton
+          key={photo.document_id + ":" + photo.revision}
+          businessId={businessId}
+          documentId={photo.document_id}
+          revision={photo.revision}
+          label={"Download move-out photo " + (index + 1)}
+        />
+      ))}
+    </>
+  );
+}
+
+function MoveOutForm({
+  businessId,
+  leaseId,
+  termRevision,
+  moveIn,
+  reports,
+  images,
+  timezone,
+  onSaved,
+  onReload,
+}: {
+  businessId: string;
+  leaseId: string;
+  termRevision: number;
+  moveIn: MoveInView;
+  reports: Summary[];
+  images: Summary[];
+  timezone: string | undefined;
+  onSaved: () => void;
+  onReload: () => void;
+}) {
+  const running = useRef(false);
+  const [day, setDay] = useState("");
+  const [condition, setCondition] = useState<MoveOutCondition>("normal_wear");
+  const [note, setNote] = useState("");
+  const [report, setReport] = useState<VersionChoice | null>(null);
+  const [photos, setPhotos] = useState<
+    { id: string; choice: VersionChoice | null }[]
+  >(() => [{ id: crypto.randomUUID(), choice: null }]);
+  const [saving, setSaving] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  const [error, setError] = useState("");
+  const chosen = photos.map((row) => row.choice);
+  const keys = chosen.map((item) =>
+    item ? item.documentId + ":" + item.revision : "",
+  );
+  const duplicate = keys.some(
+    (key, index) => key !== "" && keys.indexOf(key) !== index,
+  );
+  const sameReport = Boolean(
+    report &&
+    report.documentId === moveIn.report.document_id &&
+    report.revision === moveIn.report.revision,
+  );
+  const complete = Boolean(
+    day && report && !sameReport && chosen.every((item) => item) && !duplicate,
+  );
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (running.current || blocked || !report || !complete) return;
+    const selected = chosen.filter(
+      (item): item is VersionChoice => item !== null,
+    );
+    running.current = true;
+    setSaving(true);
+    setError("");
+    try {
+      const cleanedNote = note.trim();
+      await recordMoveOut(businessId, leaseId, {
+        schema_version: 1,
+        term_revision: termRevision,
+        moved_out_on: day,
+        condition_summary: condition,
+        note: cleanedNote || null,
+        report: { document_id: report.documentId, revision: report.revision },
+        photos: selected.map((item) => ({
+          document_id: item.documentId,
+          revision: item.revision,
+        })),
+      });
+      onSaved();
+    } catch (failure) {
+      if (termConflict(failure)) {
+        setBlocked(true);
+        setError("The lease term changed. Reload it before saving.");
+      } else setError(refusal(failure));
+    } finally {
+      running.current = false;
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      aria-label="Record move-out"
+      className="mgmt-form"
+      onSubmit={(event) => void submit(event)}
+    >
+      <div className="property-operation-fields">
+        <label>
+          Move-out date
+          <input
+            type="date"
+            required
+            min={moveIn.moved_in_on}
+            value={day}
+            onChange={(event) => setDay(event.target.value)}
+          />
+        </label>
+        <label>
+          Condition summary
+          <select
+            value={condition}
+            onChange={(event) => {
+              const next = MOVE_OUT_CONDITIONS.find(
+                (item) => item === event.target.value,
+              );
+              if (next) setCondition(next);
+            }}
+          >
+            {MOVE_OUT_CONDITIONS.map((item) => (
+              <option key={item} value={item}>
+                {CONDITION_LABELS[item]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Move-out note (optional)
+          <textarea
+            value={note}
+            maxLength={2000}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </label>
+        <DocumentChoice
+          businessId={businessId}
+          label="Move-out report"
+          documents={reports}
+          accept={(item) => item.category === "report" && item.file !== null}
+          onChange={setReport}
+        />
+        {photos.map((row, index) => (
+          <DocumentChoice
+            key={row.id}
+            businessId={businessId}
+            label={"Move-out photo " + (index + 1)}
+            documents={images}
+            accept={(item) =>
+              item.file?.media_type === "image/png" ||
+              item.file?.media_type === "image/jpeg"
+            }
+            onChange={(choice) =>
+              setPhotos((current) =>
+                current.map((item) =>
+                  item.id === row.id ? { ...item, choice } : item,
+                ),
+              )
+            }
+          />
+        ))}
+      </div>
+      <p className="muted">
+        {"Uses term revision " +
+          termRevision +
+          ". Must be on or after " +
+          moveIn.moved_in_on +
+          (timezone ? " (" + timezone + ")" : "") +
+          "."}
+      </p>
+      {sameReport ? (
+        <p className="error" role="alert">
+          Choose a different condition report version than move-in.
+        </p>
+      ) : null}
+      {duplicate ? (
+        <p className="error" role="alert">
+          Select each move-out photo version once.
+        </p>
+      ) : null}
+      {error ? (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="mgmt-form-actions">
+        <button
+          type="button"
+          className="secondary"
+          disabled={photos.length >= 50}
+          onClick={() =>
+            setPhotos((current) => [
+              ...current,
+              { id: crypto.randomUUID(), choice: null },
+            ])
+          }
+        >
+          Add move-out photo
+        </button>
+        {photos.length > 1 ? (
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setPhotos((current) => current.slice(0, -1))}
+          >
+            Remove move-out photo
+          </button>
+        ) : null}
+        <button type="submit" aria-disabled={saving || blocked || !complete}>
+          {saving ? "Saving…" : "Record move-out"}
+        </button>
+        {blocked ? (
+          <button type="button" className="secondary" onClick={onReload}>
+            Reload lease
+          </button>
+        ) : null}
       </div>
     </form>
   );

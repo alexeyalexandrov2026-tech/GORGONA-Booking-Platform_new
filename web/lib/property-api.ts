@@ -12,8 +12,26 @@ import type {
   ListingBody,
   ListingRevision,
   ListingView,
+  ContractorCompanyBody,
+  ContractorCompanyView,
+  ContractorUpdateBody,
+  ContractorUpdateList,
+  ContractorUpdateView,
+  ContractorWorkLink,
+  ContractorWorkOrderView,
+  MaintenanceEventBody,
+  MaintenanceEventHistory,
+  MaintenanceEventView,
+  MaintenanceObligationBody,
+  MaintenanceObligationList,
+  MaintenanceObligationView,
+  MaintenanceRequestBody,
+  MaintenanceRequestList,
+  MaintenanceRequestView,
   MoveInCommand,
   MoveInView,
+  MoveOutCommand,
+  MoveOutView,
   ShowingBody,
   ShowingList,
   ShowingView,
@@ -244,5 +262,167 @@ export function termConflict(error: unknown): boolean {
     error instanceof ManagementApiError &&
     (error.code === "PROPERTY_LEASE_REVISION_CONFLICT" ||
       error.code === "PROPERTY_LEASE_MOVE_IN_CONFLICT")
+  );
+}
+
+export async function fetchMoveOut(
+  business: string,
+  leaseId: string,
+): Promise<MoveOutView | null> {
+  try {
+    return await managementFetch<MoveOutView>(
+      `${leaseBase(business)}/${leaseId}/move-out`,
+    );
+  } catch (error) {
+    if (error instanceof ManagementApiError && error.status === 404)
+      return null;
+    throw error;
+  }
+}
+
+export const recordMoveOut = (
+  business: string,
+  leaseId: string,
+  body: MoveOutCommand,
+) =>
+  mutate<MoveOutView>(
+    `${leaseBase(business)}/${leaseId}/move-out`,
+    "PUT",
+    body,
+  );
+
+const maintenanceBase = (business: string) =>
+  `/v1/businesses/${business}/property/maintenance`;
+
+export async function fetchMaintenanceRequests(
+  business: string,
+  objectId: string,
+): Promise<MaintenanceRequestView[]> {
+  const all: MaintenanceRequestView[] = [];
+  let after = "";
+  for (;;) {
+    const query = new URLSearchParams({ object_id: objectId });
+    if (after) query.set("after", after);
+    const page = await managementFetch<MaintenanceRequestList>(
+      `${maintenanceBase(business)}?${query}`,
+    );
+    all.push(...page.items);
+    if (!page.next_after) return all;
+    after = page.next_after;
+  }
+}
+
+export const createMaintenanceRequest = (
+  business: string,
+  requestId: string,
+  body: MaintenanceRequestBody,
+) =>
+  mutate<MaintenanceRequestView>(
+    `${maintenanceBase(business)}/${requestId}`,
+    "PUT",
+    body,
+  );
+
+export async function fetchMaintenanceEvents(
+  business: string,
+  requestId: string,
+): Promise<MaintenanceEventView[]> {
+  const all: MaintenanceEventView[] = [];
+  let before = 0;
+  for (;;) {
+    const page = await managementFetch<MaintenanceEventHistory>(
+      `${maintenanceBase(business)}/${requestId}/events${before ? `?before=${before}` : ""}`,
+    );
+    all.push(...page.items);
+    if (page.next_before === null) return all;
+    before = page.next_before;
+  }
+}
+
+export const recordMaintenanceEvent = (
+  business: string,
+  requestId: string,
+  body: MaintenanceEventBody,
+) =>
+  mutate<MaintenanceRequestView>(
+    `${maintenanceBase(business)}/${requestId}/events`,
+    "POST",
+    body,
+  );
+
+export async function fetchMaintenanceObligations(
+  business: string,
+  requestId: string,
+): Promise<MaintenanceObligationView[]> {
+  const page = await managementFetch<MaintenanceObligationList>(
+    `${maintenanceBase(business)}/${requestId}/obligations`,
+  );
+  return page.items;
+}
+
+export const recordMaintenanceObligation = (
+  business: string,
+  requestId: string,
+  body: MaintenanceObligationBody,
+) =>
+  mutate<MaintenanceObligationView>(
+    `${maintenanceBase(business)}/${requestId}/obligations`,
+    "POST",
+    body,
+  );
+
+export const fetchContractorCompany = (business: string, requestId: string) =>
+  managementFetch<ContractorCompanyView>(
+    `${maintenanceBase(business)}/${requestId}/contractor-company`,
+  );
+
+export const saveContractorCompany = (
+  business: string,
+  requestId: string,
+  body: ContractorCompanyBody,
+) =>
+  mutate<ContractorCompanyView>(
+    `${maintenanceBase(business)}/${requestId}/contractor-company`,
+    "PUT",
+    body,
+  );
+
+export async function fetchContractorUpdates(
+  business: string,
+  requestId: string,
+): Promise<ContractorUpdateView[]> {
+  const page = await managementFetch<ContractorUpdateList>(
+    `${maintenanceBase(business)}/${requestId}/contractor-updates`,
+  );
+  return page.items;
+}
+
+export const fetchContractorWork = (
+  link: ContractorWorkLink,
+  signal?: AbortSignal,
+) =>
+  managementFetch<ContractorWorkOrderView>(
+    `${maintenanceBase(link.business)}/${link.request}/contractor-work/${link.grant}`,
+    signal ? { signal } : undefined,
+  );
+
+export const postContractorUpdate = (
+  link: ContractorWorkLink,
+  body: ContractorUpdateBody,
+) =>
+  mutate<ContractorUpdateView>(
+    `${maintenanceBase(link.business)}/${link.request}/contractor-work/${link.grant}/updates`,
+    "POST",
+    body,
+  );
+
+export function contractorWorkHref(link: ContractorWorkLink): string {
+  return `/property/contractor/?${new URLSearchParams(link).toString()}`;
+}
+
+export function maintenanceConflict(error: unknown): boolean {
+  return (
+    error instanceof ManagementApiError &&
+    error.code === "PROPERTY_MAINTENANCE_REVISION_CONFLICT"
   );
 }

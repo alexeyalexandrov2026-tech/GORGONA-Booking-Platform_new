@@ -171,7 +171,323 @@ export type MoveInCommand = {
   photos: { document_id: string; revision: number }[];
 };
 
+export const MOVE_OUT_CONDITIONS = ["normal_wear", "damage_noted"] as const;
+export type MoveOutCondition = (typeof MOVE_OUT_CONDITIONS)[number];
+
+export const moveOutSchema = z.strictObject({
+  schema_version: z.literal(1),
+  lease_id: id,
+  term_revision: revision,
+  moved_out_on: day,
+  condition_summary: z.enum(MOVE_OUT_CONDITIONS),
+  note: z.string().min(1).max(2000).nullable(),
+  report: documentReferenceSchema,
+  photos: z.array(documentReferenceSchema).min(1).max(50),
+  recorded_by: id,
+  recorded_at: instant,
+});
+export type MoveOutView = z.infer<typeof moveOutSchema>;
+export type MoveOutCommand = {
+  schema_version: 1;
+  term_revision: number;
+  moved_out_on: string;
+  condition_summary: MoveOutCondition;
+  note: string | null;
+  report: { document_id: string; revision: number };
+  photos: { document_id: string; revision: number }[];
+};
+
+export const MAINTENANCE_CATEGORIES = [
+  "plumbing",
+  "electrical",
+  "hvac",
+  "structural",
+  "appliance",
+  "general",
+] as const;
+export type MaintenanceCategory = (typeof MAINTENANCE_CATEGORIES)[number];
+
+export const MAINTENANCE_PRIORITIES = [
+  "emergency",
+  "urgent",
+  "routine",
+] as const;
+export type MaintenancePriority = (typeof MAINTENANCE_PRIORITIES)[number];
+
+export const MAINTENANCE_STATES = [
+  "open",
+  "approved",
+  "assigned",
+  "completed",
+  "cancelled",
+] as const;
+export type MaintenanceState = (typeof MAINTENANCE_STATES)[number];
+
+export const MAINTENANCE_ACTIONS = [
+  "approve",
+  "assign",
+  "complete",
+  "cancel",
+] as const;
+export type MaintenanceAction = (typeof MAINTENANCE_ACTIONS)[number];
+
+export const CONTRACTOR_UPDATE_KINDS = [
+  "acknowledged",
+  "in_progress",
+  "parts_needed",
+  "work_done",
+] as const;
+export type ContractorUpdateKind = (typeof CONTRACTOR_UPDATE_KINDS)[number];
+
+const currencyCode = z.string().regex(/^[A-Z]{3}$/);
+const minorAmount = z.number().int().min(1).max(999_999_999_999);
+
+export const maintenanceRequestSchema = z.strictObject({
+  schema_version: z.literal(1),
+  request_id: id,
+  object_id: id,
+  location_id: id,
+  object_kind: z.enum(PROPERTY_KINDS),
+  lease_id: id.nullable(),
+  category: z.enum(MAINTENANCE_CATEGORIES),
+  priority: z.enum(MAINTENANCE_PRIORITIES),
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(4000),
+  revision,
+  state: z.enum(MAINTENANCE_STATES),
+  approved_limit_minor: minorAmount.nullable(),
+  currency: currencyCode.nullable(),
+  contractor_id: id.nullable(),
+  recorded_by: id,
+  recorded_at: instant,
+});
+export const maintenanceRequestListSchema = z.strictObject({
+  schema_version: z.literal(1),
+  items: z.array(maintenanceRequestSchema),
+  next_after: id.nullable(),
+});
+export const maintenanceEventSchema = z.strictObject({
+  schema_version: z.literal(1),
+  request_id: id,
+  revision,
+  action: z.enum(MAINTENANCE_ACTIONS),
+  approved_limit_minor: minorAmount.nullable(),
+  currency: currencyCode.nullable(),
+  contractor_id: id.nullable(),
+  note: z.string().min(1).max(2000).nullable(),
+  recorded_by: id,
+  recorded_at: instant,
+});
+export const maintenanceEventHistorySchema = z.strictObject({
+  schema_version: z.literal(1),
+  items: z.array(maintenanceEventSchema),
+  next_before: revision.nullable(),
+});
+export const maintenanceObligationSchema = z.strictObject({
+  schema_version: z.literal(1),
+  request_id: id,
+  number: revision,
+  book_id: id,
+  invoice_document_id: id,
+  obligation_id: id,
+  amount_minor: minorAmount,
+  currency: currencyCode,
+  note: z.string().min(1).max(2000).nullable(),
+  recorded_by: id,
+  recorded_at: instant,
+});
+export const maintenanceObligationListSchema = z.strictObject({
+  schema_version: z.literal(1),
+  items: z.array(maintenanceObligationSchema),
+});
+export const contractorCompanySchema = z.strictObject({
+  schema_version: z.literal(1),
+  request_id: id,
+  revision: z.number().int().min(0),
+  contractor_id: id.nullable(),
+  company_id: id.nullable(),
+  created_by: id.nullable(),
+  created_at: instant.nullable(),
+});
+export const contractorUpdateSchema = z.strictObject({
+  schema_version: z.literal(1),
+  request_id: id,
+  number: revision,
+  kind: z.enum(CONTRACTOR_UPDATE_KINDS),
+  note: z.string().min(1).max(2000),
+  company_id: id,
+  company_name: z.string().min(1),
+  grant_id: id,
+  binding_revision: revision,
+  recorded_by: id,
+  created_at: instant,
+});
+export const contractorUpdateListSchema = z.strictObject({
+  schema_version: z.literal(1),
+  items: z.array(contractorUpdateSchema),
+});
+export const contractorWorkOrderSchema = z.strictObject({
+  schema_version: z.literal(1),
+  request_id: id,
+  object_id: id,
+  object_name: z.string().min(1).max(200),
+  object_kind: z.enum(PROPERTY_KINDS),
+  location_id: id,
+  category: z.enum(MAINTENANCE_CATEGORIES),
+  priority: z.enum(MAINTENANCE_PRIORITIES),
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(4000),
+  state: z.enum(MAINTENANCE_STATES),
+  revision,
+  binding_revision: revision,
+  contractor_company_id: id,
+  updates: z.array(contractorUpdateSchema),
+});
+export const contractorWorkLinkSchema = z.strictObject({
+  business: id,
+  request: id,
+  grant: id,
+});
+
+export type MaintenanceRequestView = z.infer<typeof maintenanceRequestSchema>;
+export type MaintenanceRequestList = z.infer<
+  typeof maintenanceRequestListSchema
+>;
+export type MaintenanceEventView = z.infer<typeof maintenanceEventSchema>;
+export type MaintenanceEventHistory = z.infer<
+  typeof maintenanceEventHistorySchema
+>;
+export type MaintenanceObligationView = z.infer<
+  typeof maintenanceObligationSchema
+>;
+export type MaintenanceObligationList = z.infer<
+  typeof maintenanceObligationListSchema
+>;
+export type ContractorCompanyView = z.infer<typeof contractorCompanySchema>;
+export type ContractorUpdateView = z.infer<typeof contractorUpdateSchema>;
+export type ContractorUpdateList = z.infer<typeof contractorUpdateListSchema>;
+export type ContractorWorkOrderView = z.infer<typeof contractorWorkOrderSchema>;
+export type ContractorWorkLink = z.infer<typeof contractorWorkLinkSchema>;
+
+export type MaintenanceRequestBody = {
+  schema_version: 1;
+  object_id: string;
+  lease_id: string | null;
+  category: MaintenanceCategory;
+  priority: MaintenancePriority;
+  title: string;
+  description: string;
+};
+export type MaintenanceEventBody =
+  | {
+      schema_version: 1;
+      action: "approve";
+      expected_revision: number;
+      approved_limit_minor: number;
+      currency: string;
+      note: string | null;
+    }
+  | {
+      schema_version: 1;
+      action: "assign";
+      expected_revision: number;
+      contractor_id: string;
+      note: string | null;
+    }
+  | {
+      schema_version: 1;
+      action: "complete" | "cancel";
+      expected_revision: number;
+      note: string | null;
+    };
+export type MaintenanceObligationBody = {
+  schema_version: 1;
+  invoice_document_id: string;
+  note: string | null;
+};
+export type ContractorCompanyBody = {
+  schema_version: 1;
+  expected_revision: number;
+  company_id: string | null;
+};
+export type ContractorUpdateBody = {
+  schema_version: 1;
+  kind: ContractorUpdateKind;
+  note: string;
+};
+
+/** Parse a positive major-unit decimal string (up to 2 decimals) into integer minor units. */
+export function parseMinorUnits(raw: string): number | null {
+  const cleaned = raw.trim();
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(cleaned);
+  if (!match) return null;
+  const major = Number(match[1]);
+  const minor = Number((match[2] ?? "").padEnd(2, "0"));
+  if (!Number.isSafeInteger(major) || !Number.isSafeInteger(minor)) return null;
+  const total = major * 100 + minor;
+  if (total < 1 || total > 999_999_999_999) return null;
+  return total;
+}
+
+/** Format positive integer minor units as "123.45 USD". */
+export function formatMinorUnits(minor: number, currency: string): string {
+  const major = Math.floor(minor / 100);
+  const cents = String(minor % 100).padStart(2, "0");
+  return `${major}.${cents} ${currency}`;
+}
+
 const routes: [RegExp, string[], z.ZodType][] = [
+  [
+    /^\/property\/leases\/[0-9a-f-]{36}\/move-out$/i,
+    ["GET", "PUT"],
+    moveOutSchema,
+  ],
+  [/^\/property\/maintenance$/i, ["GET"], maintenanceRequestListSchema],
+  [
+    /^\/property\/maintenance\/[0-9a-f-]{36}$/i,
+    ["GET", "PUT"],
+    maintenanceRequestSchema,
+  ],
+  [
+    /^\/property\/maintenance\/[0-9a-f-]{36}\/events$/i,
+    ["GET"],
+    maintenanceEventHistorySchema,
+  ],
+  [
+    /^\/property\/maintenance\/[0-9a-f-]{36}\/events$/i,
+    ["POST"],
+    maintenanceRequestSchema,
+  ],
+  [
+    /^\/property\/maintenance\/[0-9a-f-]{36}\/obligations$/i,
+    ["GET"],
+    maintenanceObligationListSchema,
+  ],
+  [
+    /^\/property\/maintenance\/[0-9a-f-]{36}\/obligations$/i,
+    ["POST"],
+    maintenanceObligationSchema,
+  ],
+  [
+    /^\/property\/maintenance\/[0-9a-f-]{36}\/contractor-company$/i,
+    ["GET", "PUT"],
+    contractorCompanySchema,
+  ],
+  [
+    /^\/property\/maintenance\/[0-9a-f-]{36}\/contractor-updates$/i,
+    ["GET"],
+    contractorUpdateListSchema,
+  ],
+  [
+    /^\/property\/maintenance\/[0-9a-f-]{36}\/contractor-work\/[0-9a-f-]{36}$/i,
+    ["GET"],
+    contractorWorkOrderSchema,
+  ],
+  [
+    /^\/property\/maintenance\/[0-9a-f-]{36}\/contractor-work\/[0-9a-f-]{36}\/updates$/i,
+    ["POST"],
+    contractorUpdateSchema,
+  ],
   [/^\/property\/leases$/i, ["GET"], leaseListSchema],
   [
     /^\/property\/leases\/[0-9a-f-]{36}\/terms$/i,

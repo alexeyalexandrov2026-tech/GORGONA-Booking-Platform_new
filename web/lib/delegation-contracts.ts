@@ -115,7 +115,8 @@ export function describeAccess(permissions: DelegablePermission[]): string {
       (p) =>
         !p.startsWith("transport.") &&
         !p.startsWith("construction.") &&
-        !p.startsWith("rental."),
+        !p.startsWith("rental.") &&
+        !p.startsWith("property."),
     )
     .sort();
   const same = (level: DelegablePermission[]) =>

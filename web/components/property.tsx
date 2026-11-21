@@ -7,6 +7,7 @@
 // silently, the member reloads the property and applies the change again.
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { PropertyLease } from "./property-lease";
+import { PropertyMaintenance } from "./property-maintenance";
 import { PropertyOperations } from "./property-operations";
 import { businessDateTime } from "../lib/business-time";
 import { fetchCounterparties } from "../lib/counterparty-api";
@@ -474,13 +475,22 @@ function PropertyDetail({
         </>
       )}
       {view && (
-        <PropertyOperations
-          businessId={businessId}
-          property={view}
-          canManage={canManage}
-          parties={parties}
-          timezone={zone(view.location_id)}
-        />
+        <>
+          <PropertyOperations
+            businessId={businessId}
+            property={view}
+            canManage={canManage}
+            parties={parties}
+            timezone={zone(view.location_id)}
+          />
+          <PropertyMaintenance
+            businessId={businessId}
+            property={view}
+            canManage={canManage}
+            parties={parties}
+            timezone={zone(view.location_id)}
+          />
+        </>
       )}
       <div className="mgmt-form-actions">
         <button type="button" className="secondary" onClick={onClose}>

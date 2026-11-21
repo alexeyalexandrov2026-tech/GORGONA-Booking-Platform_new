@@ -44,3 +44,19 @@
   width: 100%;
   min-height: 5rem;
 }
+
+.property-maintenance-detail {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle, #d4d4d8);
+}
+
+.property-contractor-link {
+  margin-top: 12px;
+}
+
+.property-contractor-link code {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
