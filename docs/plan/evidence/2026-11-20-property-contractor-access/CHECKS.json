@@ -1,0 +1,47 @@
+{
+  "slice": "PROPERTY-01-5b-contractor-access",
+  "date": "2026-11-20",
+  "branch": "codex/package-property-01-contractor-access",
+  "base_commit": "a85f0bcc4e9d8fc387232a7be34ecba9c52de554",
+  "base_ci_run": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44766786482",
+  "source_commit": "c1f3e8eaf02661d7316b8fac0e8193cd780a1204",
+  "source_tree": "09d494e0a8eac2525ccf37d0fc63ce73cc7fec7d",
+  "migration": "0128_property_contractor_access.sql",
+  "checksums_sha256": {
+    "api/src/gorgona_booking/db/migrations/0128_property_contractor_access.sql": "603518d1b3a5873ab92382904cd7b011c4975e36cc73285167fe20fcc7a68e5e",
+    "api/src/gorgona_booking/business/property_maintenance.py": "c8a9671c6cab75b749d5485ceb557f1fd47e06b7c3b82b13c522eff71d689ec0",
+    "api/src/gorgona_booking/api/property_maintenance.py": "940f5c7a9ad3596b2ee931a6a558236cbd8eab3212ee5e80b96dba75d39de5de",
+    "api/tests/integration/test_property_contractor_access.py": "c101c9f87c9666c087cbb45e53ad97c8334a1d589bd35695f0e54c7f5df55a38"
+  },
+  "checks": {
+    "red_baseline": "FAIL (expected 404 Not Found before implementation)",
+    "git_diff_check": "PASS",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS (588 files)",
+    "mypy": "PASS (588 files)",
+    "web_typecheck_lint_format_build": "PASS (36 static pages)",
+    "web_unit": {"passed": 194, "failed": 0},
+    "api_unit": {"passed": 895, "failed": 0, "skipped": 0, "seconds": 17.57},
+    "focused_5b_integration": {"passed": 55, "failed": 0, "skipped": 0, "seconds": 44.70},
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 2999,
+      "executed_tests": 2999,
+      "unique_tests": 2999,
+      "duplicates": 0,
+      "passed": 2995,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1142.55,
+      "browser_passed": 46,
+      "serial_passed": 216
+    }
+  },
+  "open_scope": [
+    "Step 5c: Property maintenance operations and contractor screens with browser checks",
+    "Step 6a: Move-out condition report and photos",
+    "Step 2d/4: public screening and jurisdiction-specific deposit custody",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}

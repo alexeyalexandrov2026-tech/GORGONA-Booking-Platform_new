@@ -1,5 +1,32 @@
 # GORGONA — реестр реализации
 
+### PROPERTY-01 5b. Доступ подрядчика к одному поручению через делегирование, 20 ноября
+
+Ветка `codex/package-property-01-contractor-access` (исходный коммит `c1f3e8e`, миграция
+`0128_property_contractor_access.sql` с правами вызывающего) от зелёной базы 5a `a85f0bc`
+([CI 44766786482 — success](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44766786482)).
+Добавлено делегируемое право `property.contractor_work` (`PERMISSIONS_VERSION = 16`, обновлены
+`delegation_contracts.py`, `web/lib/delegation-contracts.ts` и `delegation_grants_permissions_check`),
+таблицы `property_maintenance_contractor_links` и `property_maintenance_contractor_updates`, 5 новых
+маршрутов (`GET/PUT .../contractor-company`, `GET .../contractor-updates`,
+`GET .../contractor-work/{grant_id}`, `POST .../contractor-work/{grant_id}/updates`) и проверки
+`schema_guard.py` (`_DEFINITIONS = 116`, `_MODULE_TRIGGERS = 32`). Подрядчик через действующий
+грант видит и обновляет **только** привязанную к его компании заявку (без `lease_id`, бюджета
+`approved_limit_minor`, обязательств FIN-03, собственников и других заявок); снятие привязки или
+отзыв гранта немедленно блокирует чтение, запись и повтор прежнего ключа (`403`), а триггер БД
+повторно проверяет грант, делегата, филиал и ревизию привязки в любой сессии (по паттерну `0126`).
+Все 31 маршрут Property покрыты матрицей `test_property_access.py`; обновление `0127 → 0128`
+сохраняет все строки и контрольные суммы.
+
+Проверки на `gorgona-dev` (PostgreSQL 18.6, Chromium): статика API (`ruff`, `mypy`, 588 файлов) и
+web (`typecheck`, `lint`, `format:check`, `build` 36 страниц) — PASS; web unit — **194 PASS**;
+API unit — **895 PASS** (17,57 с); целевые интеграционные (9 файлов) — **55 PASS** (44,70 с);
+полный параллельный прогон `c1f3e8e` — **2995 PASS, 0 fail, 4 skip** из 2999 за **1142,55 с
+(19 мин 02 с)** (браузер 46/46, serial 216/216). Следующий шаг: 5c (экраны обслуживания и
+подрядчика с проверкой в браузере) и 6a (акт выезда и фото). `PROPERTY-01` остаётся `planned`.
+[Дизайн 5b](PACKAGE_PROPERTY01_CONTRACTOR_ACCESS_DESIGN_2026-11-20.md) ·
+[Запись приёмки](evidence/2026-11-20-property-contractor-access/ACCEPTANCE.md)
+
 ### PROPERTY-01 5a. Заявки на ремонт, согласование и отдельные обязательства FIN-03, 20 ноября
 
 Ветка `codex/package-property-01-maintenance` (исходный коммит `34a595c`, миграция
