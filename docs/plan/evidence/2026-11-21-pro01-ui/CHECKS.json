@@ -1,0 +1,66 @@
+{
+  "package": "PRO-01",
+  "slice": "Slice 5 — /projects/ 4-tab UI, contracts & real-browser desktop + mobile E2E",
+  "date": "2026-11-21",
+  "branch": "codex/package-pro-01-ui",
+  "base_commit": "03ae68a3fb3cc300deed56a31bbb801b2a90791e",
+  "verified_code_commit": "07df6c98be737b75b435727a329485957eafdaad",
+  "verified_code_tree": "de5a7e1cf7f76b9e64aaa63491019993796731ec",
+  "migration": null,
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_PRO01_UI_DESIGN_2026-11-21.md": "659e829a785892806a0fa34825eb96b2995bdec9893840af2bf262862d996567",
+    "web/lib/projects-contracts.ts": "01570e97ee26409c0c62bf2c2f62569e3d5e1187668559c195a4523c96c56c06",
+    "web/lib/projects-api.ts": "01c916e82a26b4d58670098609fd54137ed3069c1ab7e58fc827e242bf6a8db4",
+    "web/app/projects.css": "9106b46fba93a14d8fcb31e48844c11e70e536fc110747b05d72d33b3159d51b",
+    "web/app/projects/page.tsx": "c9f00806272e9077167d1d3b34dcc421f9abe9f0fc1200b0f7b669afc1ecb49d",
+    "web/components/projects.tsx": "9f1765abd2b78a1eff6351d4ea84236464be48f29eb69dd49fdbaf337b261796",
+    "web/tests/projects-contracts.spec.ts": "6415aeb0508355e7d45686a757e25a8e5ab12f38697964ed1dd1d29becd224fc",
+    "web/tests/projects.spec.ts": "173f44910cd2bb05dfbd4229fe27e3db81c5073b585a12e19204b16fe383a7f6",
+    "api/tests/integration/test_projects_browser.py": "ebfaa84348193c70394ea0fefe4c25f73fc9da70989f028b8b3967a80dbdcbb4"
+  },
+  "checks": {
+    "web_typecheck": "PASS",
+    "web_lint": "PASS",
+    "web_format_check": "PASS",
+    "web_unit": "PASS",
+    "web_build": "PASS (/projects static route exported)",
+    "ruff_check": "PASS (635 files)",
+    "ruff_format_check": "PASS (635 files)",
+    "mypy": "PASS (635 files)",
+    "focused_browser_e2e": {
+      "test": "tests/integration/test_projects_browser.py",
+      "projects": [
+        "desktop",
+        "mobile (390px)"
+      ],
+      "axe_core": "0 critical/serious violations",
+      "ethical_wall_two_user_proof": "PASS",
+      "postgresql_18_readback": "PASS"
+    },
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3061,
+      "executed_tests": 3061,
+      "unique_tests": 3061,
+      "duplicates": 0,
+      "passed": 3057,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1452.44,
+      "browser_passed": 49,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "Stage 5 (REST-01 + PRO-01) code complete; GitHub Actions exact-SHA CI pending push"
+  ]
+}
