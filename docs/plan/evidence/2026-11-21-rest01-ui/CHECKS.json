@@ -1,0 +1,75 @@
+{
+  "package": "REST-01",
+  "slice": "Slice 5 — /restaurant/ four-tab operations UI and real-browser E2E",
+  "date": "2026-11-21",
+  "branch": "codex/package-rest-01-ui",
+  "base_commit": "e75aba5342becf50ab6289cf18990105b1287912",
+  "verified_code_commit": "84660dff2953c45f73099dd27b32cb16184e5f0d",
+  "verified_code_tree": "5aa72894c3e9324381af4db52edb0fadc1f53f02",
+  "migration": null,
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_REST01_UI_DESIGN_2026-11-21.md": "c07057dfe2aeb72db2f5be1d63da52c42305b01086e799886fc84bc662a266f7",
+    "web/lib/restaurant-contracts.ts": "9b558b652937753dd88c261f9c7c652f03d177f2b5e19a76e8a9a3cd8a315f65",
+    "web/lib/management-contracts.ts": "8342e82f75da4d6d1d10b7349674b1bceb70d11a316280db9208b0f2438ceb1f",
+    "web/lib/restaurant-api.ts": "68b428593b5efebd3be4270ea050b4b6dd188ac4be00be5f31bb45dea0ad84b4",
+    "web/tests/restaurant-contracts.spec.ts": "c6949c1426b998aa154f23fa9afa37c168b93a330de9429da58453fcfeab4de8",
+    "web/components/management-layout.tsx": "2a1f07107b722e6659448aab66a40dee43a49013d85a33a4898f285689d3dc71",
+    "web/app/restaurant.css": "e07f185da3910fd47f3e9200154773f85b9cd1a0d1bc6f3f7aae08dcc196e478",
+    "web/app/restaurant/page.tsx": "e5e79b2fbdd3bf7e1d6ad25c1453446ee089480a2009f85ea46455b0a8b932ed",
+    "web/components/restaurant.tsx": "ef7523693ce9225d2298d9c784c78c66a7b5b86569e4ca4ccfe8d8c17863a99f",
+    "web/tests/restaurant.spec.ts": "99ecc4aee1a8f61c0ceaa8a409ce58c6c6e0de49b2749b9270c88ca346ffe98c",
+    "api/tests/integration/test_restaurant_browser.py": "492ceb4909ea812d9b6166a49ade7ffd0141fc9026d92bd88695d5d7462aa367"
+  },
+  "checks": {
+    "git_diff_check": "PASS",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS (614 files)",
+    "mypy": "PASS (614 files)",
+    "web_typecheck": "PASS",
+    "web_lint": "PASS (0 warnings, 0 errors)",
+    "web_format_check": "PASS",
+    "web_unit": {
+      "passed": 197,
+      "failed": 0,
+      "skipped": 0
+    },
+    "web_build": "PASS (38 static pages including /restaurant)",
+    "focused_browser_e2e": {
+      "test": "tests/integration/test_restaurant_browser.py",
+      "projects": [
+        "desktop",
+        "mobile (390px)"
+      ],
+      "passed": 1,
+      "failed": 0,
+      "seconds": 29.91
+    },
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3040,
+      "executed_tests": 3040,
+      "unique_tests": 3040,
+      "duplicates": 0,
+      "passed": 3036,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1311.85,
+      "browser_passed": 48,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "All 5 technical slices of REST-01 implemented and verified on gorgona-dev; module restaurant remains enableable=False and readiness unchanged until owner acceptance",
+    "Proceed to PRO-01 (Stage 5 second half, ADR-0038, next migration 0134)",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}
