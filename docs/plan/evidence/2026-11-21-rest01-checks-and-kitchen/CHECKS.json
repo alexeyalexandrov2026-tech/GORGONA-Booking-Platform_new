@@ -1,0 +1,70 @@
+{
+  "package": "REST-01",
+  "slice": "Slice 3 — Independent checks, station-routed kitchen tickets & STOCK-01 write-offs",
+  "date": "2026-11-21",
+  "branch": "codex/package-rest-01-checks-and-kitchen",
+  "base_commit": "cefa04a0b1d75ae799c4d562f8b38fd7d1860947",
+  "verified_code_commit": "8443b0b1a696412ca8924d082549becc5578cb4d",
+  "verified_code_tree": "42e2be02a6fa086bf1a8a05c2f9fe16b58122018",
+  "migration": "0132_restaurant_checks_and_kitchen.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_REST01_CHECKS_KITCHEN_DESIGN_2026-11-21.md": "31b5ca904b82c90bb4b7c238e8f8f43258c93f11a65209456d59dbc1aa8c83ef",
+    "api/src/gorgona_booking/db/migrations/0132_restaurant_checks_and_kitchen.sql": "abd1f9328c644b6fd0160c206b96ac504ddd4b241dbcb41f237e69128a727ed7",
+    "api/src/gorgona_booking/business/restaurant_checks.py": "9998f0070fdc3f7295baf4402c1dcc77ecd5af2ec05cedd2dfe246238f2ed30e",
+    "api/src/gorgona_booking/api/restaurant_checks.py": "3a34999f7e79ade6dd94988938a73fbe85857d859ddff4878ab656d386205415",
+    "api/src/gorgona_booking/db/schema_guard.py": "b9a206aedf856f899e52bcfca10905fd87f4d354817d6d96e775949bddd05960",
+    "api/tests/unit/test_restaurant_checks_contracts.py": "c0ebca4fa8b8e636455e2a7ea76412d7d6ef5404e0a25f39d92ea2247462297d",
+    "api/tests/integration/test_restaurant_checks_and_kitchen.py": "d3fbba5eb42e901e589303567b9251cd1887d14ca6fc8c880599103bd9d3a0e7",
+    "api/tests/integration/test_restaurant_checks_upgrade.py": "3ae99a4c2e81a571f203738348bc574acd62e7854cc146092f37b7a9906e2bea"
+  },
+  "checks": {
+    "git_diff_check": "PASS",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS (608 files)",
+    "mypy": "PASS (608 files)",
+    "api_unit": {
+      "passed": 915,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 21.89
+    },
+    "focused_integration": {
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 34.84
+    },
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3034,
+      "executed_tests": 3034,
+      "unique_tests": 3034,
+      "duplicates": 0,
+      "passed": 3029,
+      "failed": 1,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1301.1,
+      "browser_passed": 47,
+      "serial_passed": 216,
+      "unrelated_flake_rerun": {
+        "test": "tests/integration/test_credit_notes.py::test_credit_and_reserve_wait_on_one_lock_and_keep_the_cap[False]",
+        "note": "Unrelated FIN-03 credit-note race test flaked once under 6-worker load; entire test_credit_notes.py passed cleanly on immediate rerun against the same code commit",
+        "rerun_status": "PASS"
+      },
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "Slice 4 (migration 0133): Split billing with total conservation, FIN-03 invoices & coordinated refunds",
+    "Slice 5 (no migration): Restaurant UI (Floor/Reservations, Menu/Recipes, Checks/Split Billing, Kitchen Board) with browser E2E",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}
