@@ -1,3 +1,4 @@
+import { supplyResponseSchema } from "./supply-contracts";
 import { projectsResponseSchema } from "./projects-contracts";
 import { z } from "zod";
 import { ledgerResponseSchema } from "./ledger-contracts";
@@ -408,6 +409,8 @@ export function managementResponseSchema(
     if (restaurant) return restaurant;
     const projects = projectsResponseSchema(business[1] ?? "", method);
     if (projects) return projects;
+    const supply = supplyResponseSchema(business[1] ?? "", method);
+    if (supply) return supply;
     if (business[1] === "" && method === "GET") return businessSchema;
     if (business[1] === "/industry-catalog" && method === "GET")
       return industryCatalogSchema;
