@@ -198,6 +198,8 @@ K_TABLES = {
     "property_maintenance_requests",
     "property_maintenance_events",
     "property_maintenance_obligations",
+    "property_maintenance_contractor_links",
+    "property_maintenance_contractor_updates",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

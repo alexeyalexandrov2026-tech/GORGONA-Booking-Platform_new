@@ -115,11 +115,12 @@ def test_guard_binds_one_parameter_per_placeholder() -> None:
     # K3b (0054): the link of a manual payment to its provider operation.
     # R-09 (0126): branch-scoped read policies on delegation grants and members.
     # PROPERTY-01 5a (0127): maintenance request branch scope and event/obligation company scope.
-    assert len(schema_guard._DEFINITIONS) == 111
+    # PROPERTY-01 5b (0128): contractor links and updates branch/tenant scope.
+    assert len(schema_guard._DEFINITIONS) == 116
     assert LEDGER_BOUNDARY.count("%s") == len(LEDGER_PARAMETERS)
     assert FINANCIAL_BOUNDARY.count("%s") == len(FINANCIAL_PARAMETERS)
     assert len(schema_guard._OCCUPANCY_TRIGGERS) == 17
-    assert len(schema_guard._MODULE_TRIGGERS) == 30
+    assert len(schema_guard._MODULE_TRIGGERS) == 32
     assert {module for _, _, module in schema_guard._MODULE_TRIGGERS} == {
         "counterparties",
         "documents",

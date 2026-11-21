@@ -330,6 +330,18 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                     "where g.owner_tenant_id = t.owner_tenant_id and g.id = t.grant_id "
                     "and 'rental.customer_answer' = any(g.permissions))"
                 ).format(names, query)
+            # PROPERTY-01 5b contractor grants cannot exist before migration 0128.
+            if target_version[0] < 128 and table == "delegation_grants":
+                query = sql.SQL(
+                    "select {} from ({}) t "
+                    "where not 'property.contractor_work' = any(t.permissions)"
+                ).format(names, query)
+            if target_version[0] < 128 and table == "delegation_grant_members":
+                query = sql.SQL(
+                    "select {} from ({}) t where not exists (select 1 from gba.delegation_grants g "
+                    "where g.owner_tenant_id = t.owner_tenant_id and g.id = t.grant_id "
+                    "and 'property.contractor_work' = any(g.permissions))"
+                ).format(names, query)
             cursor = before.execute(query)
             assert cursor.description is not None
             json_columns = {

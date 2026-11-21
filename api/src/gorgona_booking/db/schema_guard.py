@@ -881,6 +881,8 @@ _PROPERTY_TABLES = (
     "property_move_in_photos",
     "property_maintenance_events",
     "property_maintenance_obligations",
+    "property_maintenance_contractor_links",
+    "property_maintenance_contractor_updates",
 )
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
@@ -987,6 +989,33 @@ _DEFINITIONS = [
         "property_maintenance_obligations",
         "property_maintenance_obligations_unrestricted_scope",
         "*",
+    ),
+    _definition(
+        "property_maintenance_contractor_links",
+        f"({_NO_LOCATION} OR "
+        + _parent(
+            "property_maintenance_contractor_links",
+            "property_maintenance_requests",
+            "r",
+            "request_id",
+        )
+        + ")",
+    ),
+    _company_only(
+        "property_maintenance_contractor_links",
+        "property_maintenance_contractor_links_unrestricted_insert",
+        "a",
+    ),
+    _definition(
+        "property_maintenance_contractor_updates",
+        f"({_NO_LOCATION} OR "
+        + _parent(
+            "property_maintenance_contractor_updates",
+            "property_maintenance_requests",
+            "r",
+            "request_id",
+        )
+        + ")",
     ),
     _company_only(
         "property_lease_term_events", "property_lease_term_events_unrestricted_scope", "*"

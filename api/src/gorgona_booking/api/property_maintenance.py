@@ -1,16 +1,49 @@
 """Property maintenance requests, lifecycle events and separate FIN-03 obligations."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
 
 from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
+from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.property_catalog import _access
+from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import property_maintenance as maintenance
+from gorgona_booking.db.schema_guard import assert_location_scope_ready
+from gorgona_booking.tenancy.authorization import (
+    DelegationScope,
+    PermissionDeniedError,
+    TenantAccess,
+    authorized_tenant,
+)
 
 router = APIRouter(prefix="/v1/businesses/{business_id}/property/maintenance", tags=["property"])
+
+
+@asynccontextmanager
+async def _contractor_grant(
+    request: Request, principal: CurrentPrincipal, business_id: UUID, grant_id: UUID
+) -> AsyncIterator[tuple[TenantAccess, DelegationScope]]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.PROPERTY_CONTRACTOR_WORK,
+        allow_location_scope=True,
+        allow_delegation=True,
+        delegation_id=grant_id,
+        request_id=get_request_id(request),
+    ) as access:
+        if access.delegation is None:
+            raise PermissionDeniedError(
+                "Only the contractor's delegate can access this maintenance request"
+            )
+        await assert_location_scope_ready(access.conn)
+        yield access, access.delegation
 
 
 @router.get("")
@@ -115,6 +148,81 @@ async def post_maintenance_obligation(
             access.conn,
             business_id,
             request_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/{request_id}/contractor-company")
+async def get_contractor_company(
+    business_id: UUID, request_id: UUID, request: Request, principal: CurrentPrincipal
+) -> maintenance.ContractorCompanyView:
+    async with _access(business_id, request, principal, Permission.PROPERTY_MANAGE) as access:
+        return await maintenance.get_contractor_company(access.conn, business_id, request_id)
+
+
+@router.put("/{request_id}/contractor-company")
+async def put_contractor_company(
+    business_id: UUID,
+    request_id: UUID,
+    body: maintenance.ContractorCompanyInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> maintenance.ContractorCompanyView:
+    async with _access(business_id, request, principal, Permission.PROPERTY_MANAGE) as access:
+        return await maintenance.set_contractor_company(
+            access.conn,
+            business_id,
+            request_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            key=idempotency_key,
+            body=body,
+        )
+
+
+@router.get("/{request_id}/contractor-updates")
+async def get_contractor_updates(
+    business_id: UUID, request_id: UUID, request: Request, principal: CurrentPrincipal
+) -> maintenance.ContractorUpdateList:
+    async with _access(business_id, request, principal, Permission.PROPERTY_MANAGE) as access:
+        return await maintenance.list_contractor_updates(access.conn, business_id, request_id)
+
+
+@router.get("/{request_id}/contractor-work/{grant_id}")
+async def get_contractor_work(
+    business_id: UUID,
+    request_id: UUID,
+    grant_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> maintenance.ContractorWorkOrderView:
+    async with _contractor_grant(request, principal, business_id, grant_id) as (access, grant):
+        return await maintenance.get_contractor_work(
+            access.conn, business_id, request_id, grant, location_id=access.location_id
+        )
+
+
+@router.post("/{request_id}/contractor-work/{grant_id}/updates")
+async def post_contractor_update(
+    business_id: UUID,
+    request_id: UUID,
+    grant_id: UUID,
+    body: maintenance.ContractorUpdateInput,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> maintenance.ContractorUpdateView:
+    async with _contractor_grant(request, principal, business_id, grant_id) as (access, grant):
+        return await maintenance.record_contractor_update(
+            access.conn,
+            business_id,
+            request_id,
+            grant,
+            location_id=access.location_id,
             user_id=principal.user_id,
             actor=principal.actor,
             key=idempotency_key,

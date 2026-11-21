@@ -14,6 +14,7 @@ export const delegablePermissionSchema = z.enum([
   "transport.tender",
   "construction.customer_answer",
   "rental.customer_answer",
+  "property.contractor_work",
 ]);
 export const delegationSchema = z
   .strictObject({
@@ -139,5 +140,7 @@ export function describeAccess(permissions: DelegablePermission[]): string {
     parts.push("Answer construction documents");
   if (permissions.includes("rental.customer_answer"))
     parts.push("Accept rental proposals");
+  if (permissions.includes("property.contractor_work"))
+    parts.push("Update assigned property repairs");
   return parts.join("; ");
 }

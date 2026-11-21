@@ -10,6 +10,8 @@ from gorgona_booking.business.property_maintenance import (
     AssignMaintenanceInput,
     CancelMaintenanceInput,
     CompleteMaintenanceInput,
+    ContractorCompanyInput,
+    ContractorUpdateInput,
     MaintenanceEventInput,
     MaintenanceObligationInput,
     MaintenanceRequestInput,
@@ -147,3 +149,31 @@ def test_maintenance_obligation_input_validates_fields() -> None:
                 "note": "   ",
             }
         )
+
+
+def test_contractor_company_and_update_inputs_validate_strictly() -> None:
+    parsed = ContractorCompanyInput.model_validate(
+        {"schema_version": 1, "expected_revision": 0, "company_id": str(uuid7())}
+    )
+    assert parsed.company_id is not None
+    assert (
+        ContractorCompanyInput.model_validate(
+            {"schema_version": 1, "expected_revision": 1, "company_id": None}
+        ).company_id
+        is None
+    )
+    with pytest.raises(ValidationError):
+        ContractorCompanyInput.model_validate(
+            {"schema_version": 1, "expected_revision": -1, "company_id": None}
+        )
+    upd = ContractorUpdateInput.model_validate(
+        {"schema_version": 1, "kind": "in_progress", "note": "  FAKE Working on valve  "}
+    )
+    assert upd.note == "FAKE Working on valve"
+    for bad in (
+        {"schema_version": 1, "kind": "completed", "note": "FAKE bad kind"},
+        {"schema_version": 1, "kind": "work_done", "note": "   "},
+        {"schema_version": 1, "kind": "work_done", "note": "FAKE\x00nul"},
+    ):
+        with pytest.raises(ValidationError):
+            ContractorUpdateInput.model_validate(bad)

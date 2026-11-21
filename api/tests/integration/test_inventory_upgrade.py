@@ -199,6 +199,8 @@ K_TABLES = {
     "property_maintenance_requests",
     "property_maintenance_events",
     "property_maintenance_obligations",
+    "property_maintenance_contractor_links",
+    "property_maintenance_contractor_updates",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

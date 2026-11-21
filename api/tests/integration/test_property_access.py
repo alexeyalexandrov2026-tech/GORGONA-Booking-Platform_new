@@ -39,7 +39,7 @@ manager_a = lease_tests.manager_a
 manager_b = lease_tests.manager_b
 __all__ = ["agreements", "catalog", "client", "enabled", "idp", "manager_a", "manager_b"]
 
-READ, MANAGE = "property.read", "property.manage"
+READ, MANAGE, DELEGATE = "property.read", "property.manage", "property.contractor_work"
 TABLES = (
     "property_objects",
     "property_revisions",
@@ -55,6 +55,8 @@ TABLES = (
     "property_maintenance_requests",
     "property_maintenance_events",
     "property_maintenance_obligations",
+    "property_maintenance_contractor_links",
+    "property_maintenance_contractor_updates",
 )
 
 
@@ -138,6 +140,7 @@ def routes(c: Catalog, e: Estate) -> list[Route]:
         "showing_id": e.showing_id,
         "lease_id": e.lease_id,
         "request_id": e.maintenance_id,
+        "grant_id": uuid7(),
     }
 
     def route(
@@ -229,6 +232,21 @@ def routes(c: Catalog, e: Estate) -> list[Route]:
             },
             MANAGE,
         ),
+        route("GET", "/maintenance/{request_id}/contractor-company", None, MANAGE),
+        route(
+            "PUT",
+            "/maintenance/{request_id}/contractor-company",
+            {"schema_version": 1, "expected_revision": 0, "company_id": None},
+            MANAGE,
+        ),
+        route("GET", "/maintenance/{request_id}/contractor-updates", None, MANAGE),
+        route("GET", "/maintenance/{request_id}/contractor-work/{grant_id}", None, DELEGATE),
+        route(
+            "POST",
+            "/maintenance/{request_id}/contractor-work/{grant_id}/updates",
+            {"schema_version": 1, "kind": "acknowledged", "note": "FAKE refused"},
+            DELEGATE,
+        ),
     ]
 
 
@@ -296,7 +314,7 @@ async def test_matrix_covers_every_property_route(
         for item in routes(enabled, e)
     ]
     assert sorted(covered) == declared
-    assert len(declared) == 26
+    assert len(declared) == 31
 
 
 async def test_other_company_lesser_roles_and_support_are_refused_and_write_nothing(
@@ -316,7 +334,8 @@ async def test_other_company_lesser_roles_and_support_are_refused_and_write_noth
     for item in items:
         if item.method == "GET":
             response = await call(enabled, item, enabled.headers)
-            assert response.status_code == 200, (item.name, response.text)
+            expected = 403 if item.permission == DELEGATE else 200
+            assert response.status_code == expected, (item.name, response.text)
 
 
 async def test_branch_managers_read_their_branch_and_manage_nothing(
@@ -328,8 +347,8 @@ async def test_branch_managers_read_their_branch_and_manage_nothing(
     other_branch, _ = seed_other_branch(enabled.owner_conn, enabled.world.a)
     away, _ = member(enabled, "manager", other_branch)
     reads = [item for item in items if item.permission == READ]
-    manages = [item for item in items if item.permission == MANAGE]
-    assert (len(reads), len(manages)) == (8, 18)
+    manages = [item for item in items if item.permission != READ]
+    assert (len(reads), len(manages)) == (8, 23)
     for item in reads:
         response = await call(enabled, item, bearer(enabled, home))
         assert response.status_code == 200, (item.name, response.text)
@@ -375,7 +394,8 @@ async def test_suspended_and_revoked_members_lose_every_route_and_their_replays(
     for item in items:
         if item.method == "GET":
             response = await call(enabled, item, headers)
-            assert response.status_code == 200, (item.name, response.text)
+            expected = 403 if item.permission == DELEGATE else 200
+            assert response.status_code == expected, (item.name, response.text)
 
     assert (await status("revoke")).status_code == 200
     await refused_everywhere(enabled, items, headers)

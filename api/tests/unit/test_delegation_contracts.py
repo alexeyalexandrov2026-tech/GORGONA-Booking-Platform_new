@@ -116,6 +116,7 @@ def test_delegable_permissions_are_limited_to_named_actions() -> None:
         Permission.TRANSPORT_TENDER,
         Permission.CONSTRUCTION_CUSTOMER_ANSWER,
         Permission.RENTAL_CUSTOMER_ANSWER,
+        Permission.PROPERTY_CONTRACTOR_WORK,
     } == DELEGABLE_PERMISSIONS
     for never in (
         Permission.BUSINESS_READ,
@@ -207,4 +208,15 @@ def test_delegated_routes_are_limited_to_the_booking_and_customer_workspaces() -
         'post("/bookings/{booking_id}/customer-changes/{revision}/{grant_id}"',
         'get("/bookings/{booking_id}/customer-problems/{grant_id}"',
         'post("/bookings/{booking_id}/customer-problems/{grant_id}"',
+    }
+
+    assert {
+        block.split(")", 1)[0]
+        for block in (Path(salons.__file__).parent / "property_maintenance.py")
+        .read_text(encoding="utf-8")
+        .split("@router.")[1:]
+        if "async with _contractor_grant(" in block
+    } == {
+        'get("/{request_id}/contractor-work/{grant_id}"',
+        'post("/{request_id}/contractor-work/{grant_id}/updates"',
     }
