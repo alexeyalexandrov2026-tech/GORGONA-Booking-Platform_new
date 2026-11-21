@@ -118,11 +118,12 @@ def test_guard_binds_one_parameter_per_placeholder() -> None:
     # PROPERTY-01 5b (0128): contractor links and updates branch/tenant scope.
     # PROPERTY-01 6a (0129): move-out report and photos company scope.
     # REST-01 Slice 2 (0131): menu items, modifiers and recipe BOM branch/tenant scope.
-    assert len(schema_guard._DEFINITIONS) == 144
+    # REST-01 Slice 3 (0132): checks, kitchen tickets and consumption branch/tenant scope.
+    assert len(schema_guard._DEFINITIONS) == 158
     assert LEDGER_BOUNDARY.count("%s") == len(LEDGER_PARAMETERS)
     assert FINANCIAL_BOUNDARY.count("%s") == len(FINANCIAL_PARAMETERS)
     assert len(schema_guard._OCCUPANCY_TRIGGERS) == 20
-    assert len(schema_guard._MODULE_TRIGGERS) == 41
+    assert len(schema_guard._MODULE_TRIGGERS) == 44
     assert {module for _, _, module in schema_guard._MODULE_TRIGGERS} == {
         "counterparties",
         "documents",

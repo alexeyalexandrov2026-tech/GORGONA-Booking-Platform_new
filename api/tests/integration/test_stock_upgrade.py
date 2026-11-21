@@ -214,6 +214,13 @@ K_TABLES = {
     "restaurant_menu_item_modifier_groups",
     "restaurant_recipes",
     "restaurant_recipe_lines",
+    "restaurant_checks",
+    "restaurant_kitchen_tickets",
+    "restaurant_kitchen_ticket_events",
+    "restaurant_check_lines",
+    "restaurant_check_line_modifiers",
+    "restaurant_check_consumptions",
+    "restaurant_check_consumption_lines",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
