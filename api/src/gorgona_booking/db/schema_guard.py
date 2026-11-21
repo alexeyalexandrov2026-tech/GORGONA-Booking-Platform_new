@@ -1071,9 +1071,21 @@ _RESTAURANT_MODULE_TABLES = (
     "restaurant_check_bills",
     "restaurant_check_refunds",
 )
+_PROJECTS_TABLES = (
+    "project_matters",
+    "project_matter_members",
+    "project_matter_revisions",
+    "project_conflict_checks",
+)
+_PROJECTS_MODULE_TABLES = (
+    "project_matters",
+    "project_matter_members",
+    "project_conflict_checks",
+)
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
 _MODULE_TRIGGERS = (
+    *[(table, f"{table}_require_module", "projects") for table in _PROJECTS_MODULE_TABLES],
     *[(table, f"{table}_require_module", "restaurant") for table in _RESTAURANT_MODULE_TABLES],
     *[
         (table, f"{table}_require_module", "property")
@@ -1242,6 +1254,20 @@ _DEFINITIONS = [
             "(tenant_id=gba.current_tenant_id())",
         )
         for table in _RESTAURANT_TABLES
+    ],
+    *[
+        _definition(table, f"({_NO_LOCATION} OR (location_id = gba.current_location_id()))")
+        for table in _PROJECTS_TABLES
+    ],
+    *[
+        (
+            table,
+            f"{table}_tenant_isolation",
+            "*",
+            "(tenant_id=gba.current_tenant_id())",
+            "(tenant_id=gba.current_tenant_id())",
+        )
+        for table in _PROJECTS_TABLES
     ],
     *[
         _company_only(table, f"{table}_unrestricted_scope", "*")

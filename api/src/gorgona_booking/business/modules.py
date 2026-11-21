@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[8] = 8
+MODULE_REGISTRY_VERSION: Literal[9] = 9
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -143,7 +143,19 @@ MODULES: tuple[PlatformModule, ...] = (
         "and reads continue, an open time entry can still be closed, and an uncertain command "
         "can still be resolved or discarded.",
     ),
-    _module("projects", "Projects and work", _OPTIONAL, ("counterparties",)),
+    # ADR-0038 (PRO-01): implemented, not enableable until acceptance and the owner's word.
+    _module(
+        "projects",
+        "Projects and work",
+        _OPTIONAL,
+        ("counterparties", "documents", "finance_documents"),
+        Readiness.IMPLEMENTED,
+        "PRO-01 Slice 1 (ADR-0038): legal matters, projects and recurring engagements with "
+        "append-only revision history, conflict-of-interest checks before legal-case activation, "
+        "and PostgreSQL 18 FORCE RLS ethical-wall access restrictions. Enablement waits for "
+        "PRO-01 acceptance.",
+        "New matters, conflict checks and ethical-wall memberships. Reads and history continue.",
+    ),
     _module(
         "documents",
         "Documents",

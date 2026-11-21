@@ -227,6 +227,10 @@ K_TABLES = {
     "restaurant_check_split_share_lines",
     "restaurant_check_bills",
     "restaurant_check_refunds",
+    "project_matters",
+    "project_matter_members",
+    "project_matter_revisions",
+    "project_conflict_checks",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

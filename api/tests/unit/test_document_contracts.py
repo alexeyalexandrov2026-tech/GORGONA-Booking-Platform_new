@@ -120,15 +120,16 @@ def test_guard_binds_one_parameter_per_placeholder() -> None:
     # REST-01 Slice 2 (0131): menu items, modifiers and recipe BOM branch/tenant scope.
     # REST-01 Slice 3 (0132): checks, kitchen tickets and consumption branch/tenant scope.
     # REST-01 Slice 4 (0133): split billing and refunds branch/tenant scope.
-    assert len(schema_guard._DEFINITIONS) == 168
+    assert len(schema_guard._DEFINITIONS) == 176
     assert LEDGER_BOUNDARY.count("%s") == len(LEDGER_PARAMETERS)
     assert FINANCIAL_BOUNDARY.count("%s") == len(FINANCIAL_PARAMETERS)
     assert len(schema_guard._OCCUPANCY_TRIGGERS) == 20
-    assert len(schema_guard._MODULE_TRIGGERS) == 47
+    assert len(schema_guard._MODULE_TRIGGERS) == 50
     assert {module for _, _, module in schema_guard._MODULE_TRIGGERS} == {
         "counterparties",
         "documents",
         "finance",
+        "projects",
         "property",
         "restaurant",
     }
