@@ -1,5 +1,29 @@
 # GORGONA — реестр реализации
 
+### PROPERTY-01 6a. Акт выезда и фотографии состояния помещения, 20 ноября
+
+Ветка `codex/package-property-01-move-out` (исходный коммит `7bcd645`, миграция
+`0129_property_move_out.sql` с правами вызывающего) от базы 5b `4292474`. Добавлены
+неизменяемые таблицы `property_move_outs` и `property_move_out_photos`, маршруты
+`GET/PUT /v1/businesses/{business_id}/property/leases/{lease_id}/move-out` (`property.manage`,
+уровень компании) и проверки `schema_guard.py` (`_DEFINITIONS = 120`, `_MODULE_TRIGGERS = 33`).
+Акт выезда требует записанного акта заселения, совпадения `term_revision`, даты выезда в
+диапазоне от дня заселения до конца текущего срока и локального дня филиала, отдельного от
+заселения хранимого документа-отчёта (`category = 'report'`), 1–50 уникальных PNG/JPEG фото
+(отложенный constraint-триггер) и фиксирует `condition_summary` (`normal_wear` / `damage_noted`).
+Обновлён `gba.guard_property_lease_term()`: после выезда запрещено продление договора и
+освобождение раньше даты выезда (`409 PROPERTY_LEASE_MOVE_OUT_CONFLICT`), а освобождение на
+дату выезда или позже разрешено. Матрица `test_property_access.py` покрывает все 33 маршрута
+Property; обновление наполненной базы `0128 → 0129` сохраняет все строки и контрольные суммы.
+
+Проверки на `gorgona-dev` (PostgreSQL 18.6, Chromium): `git diff --check`, `ruff check`,
+`ruff format --check` и `mypy` (592 файла) — PASS; unit-тесты API — **906 PASS** (17,51 с);
+полный параллельный прогон `7bcd645` — **3009 PASS, 0 fail, 4 skip** из 3013 за **1151,36 с
+(19 мин 11 с)** (браузер 46/46, serial 216/216). `PROPERTY-01` остаётся `planned`, модуль
+`property` не включался.
+[Дизайн 6a](PACKAGE_PROPERTY01_MOVE_OUT_DESIGN_2026-11-20.md) ·
+[Запись приёмки](evidence/2026-11-20-property-move-out/ACCEPTANCE.md)
+
 ### PROPERTY-01 5b. Доступ подрядчика к одному поручению через делегирование, 20 ноября
 
 Ветка `codex/package-property-01-contractor-access` (исходный коммит `c1f3e8e`, миграция
