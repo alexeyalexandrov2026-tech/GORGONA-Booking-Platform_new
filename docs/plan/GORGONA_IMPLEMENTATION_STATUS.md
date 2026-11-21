@@ -1,5 +1,29 @@
 # GORGONA — реестр реализации
 
+### PROPERTY-01 5c/6 UI. Экран заявок на ремонт, портал подрядчика и выезд из объекта, 20 ноября
+
+Ветка `codex/package-property-01-maintenance-ui` (кодовый коммит `46f7f3d`, без новых миграций БД)
+поверх шага 6a `f2a4306`. Добавлены строгие Zod-контракты и retry-safe клиент
+(`web/lib/property-contracts.ts`, `web/lib/property-api.ts`, `web/tests/property-contracts.spec.ts`),
+блок выезда `Move-out` в `web/components/property-lease.tsx` (запрет повторного акта въезда,
+оценка состояния, фото, скачивание файлов), секция `Maintenance` в `web/components/property-maintenance.tsx`
+(менеджер филиала читает только список без форм и `property.manage`-запросов; владелец/менеджер компании
+создаёт, согласует, назначает подрядчика, привязывает компанию-подрядчика по активному делегированию
+`property.contractor_work`, читает обновления и обязательства FIN-03, закрывает или отменяет заявку)
+и отдельный портал подрядчика `/property/contractor/` (`web/app/property/contractor/`) без утечки
+лимитов бюджета, аренды и контрагентов.
+
+Проверка на `gorgona-dev` (PostgreSQL 18.6, Chromium): `npm run typecheck`, `lint`, `format:check`,
+`test:unit` (**195 PASS**), `next build` (37 статических страниц, включая `/property/contractor`),
+`ruff`, `mypy` (593 файла) — PASS; unit-тесты API — **906 PASS**; реальные браузерные тесты
+`test_property_browser.py` и `test_property_maintenance_browser.py` (desktop + mobile 390px, axe,
+клавиатура, повтор после обрыва сети с тем же `Idempotency-Key`, 403 на чужую заявку, read-only филиал,
+сверка PostgreSQL) — PASS; полный параллельный прогон `46f7f3d` — **3010 PASS, 0 fail, 4 skip** из 3014
+за **1173,6 с (19 м 33 с)** (браузер 47/47, serial 216/216). `PROPERTY-01` остаётся `planned`, модуль
+`property` не включён.
+[Дизайн 5c/6 UI](PACKAGE_PROPERTY01_MAINTENANCE_UI_DESIGN_2026-11-20.md) и
+[доказательства приёмки](evidence/2026-11-20-property-maintenance-ui/ACCEPTANCE.md)
+
 ### PROPERTY-01 6a. Акт выезда и фотографии состояния помещения, 20 ноября
 
 Ветка `codex/package-property-01-move-out` (исходный коммит `7bcd645`, миграция
