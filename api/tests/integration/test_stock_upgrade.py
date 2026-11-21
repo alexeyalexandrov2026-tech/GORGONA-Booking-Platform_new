@@ -260,6 +260,10 @@ K_TABLES = {
     "supply_trade_order_lines",
     "supply_order_shipments",
     "supply_order_returns",
+    "market_storefronts",
+    "market_listings",
+    "marketplaces",
+    "marketplace_seller_connections",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

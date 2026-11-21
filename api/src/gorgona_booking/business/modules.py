@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[10] = 10
+MODULE_REGISTRY_VERSION: Literal[11] = 11
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -293,8 +293,17 @@ MODULES: tuple[PlatformModule, ...] = (
         "Enablement waits for SUPPLY-01 acceptance.",
         "New goods owners, warehouse bins, lots, serial units and WMS movements. Reads continue.",
     ),
+    # ADR-0040 (MARKET-01): implemented, not enableable until acceptance and the owner's word.
     _module(
-        "storefronts", "Storefronts and marketplaces", _OPTIONAL, ("products_services", "sales")
+        "storefronts",
+        "Storefronts and marketplaces",
+        _OPTIONAL,
+        ("counterparties", "finance_documents"),
+        Readiness.IMPLEMENTED,
+        "MARKET-01 (ADR-0040): business storefronts with strict explicit published_fields "
+        "projection, client-operated marketplaces with zero GORGONA transaction commission, "
+        "and single-seller order/payment isolation. It cannot be enabled until acceptance.",
+        "New storefronts, listings, marketplaces and orders. Reads continue.",
     ),
 )
 MODULES_BY_ID = {module.id: module for module in MODULES}
