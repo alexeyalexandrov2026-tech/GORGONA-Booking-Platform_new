@@ -1,0 +1,63 @@
+{
+  "package": "PRO-01",
+  "slice": "Slice 3 — Versioned billable time tracking & recurring service schedules/runs",
+  "date": "2026-11-21",
+  "branch": "codex/package-pro-01-time-and-recurring",
+  "base_commit": "9627bd54c34e7eb92e1cdb4fba739c0f1cb1edce",
+  "verified_code_commit": "ba783574c240d93ebf591ee0cda12689b05ce1ef",
+  "verified_code_tree": "3d48c6f8d96018d277b79bcaae2fe9655e26f268",
+  "migration": "0136_projects_time_and_recurring.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_PRO01_TIME_RECURRING_DESIGN_2026-11-21.md": "16da4093e879bc1919bbae0d880ae68f7c06a863a204c31e7a5cf78596a36318",
+    "api/src/gorgona_booking/db/migrations/0136_projects_time_and_recurring.sql": "a7077884e36d2b1649fedce12071805a551e56230e0cfa59ddf57a5e68fd6d8e",
+    "api/src/gorgona_booking/business/projects_time.py": "4d98f7bab361f58073dd124e6f82f0d210d4bb11fa17a514dc56ca420f57158a",
+    "api/src/gorgona_booking/api/projects_time.py": "5b147834e851efe4e08a72b8a49cfb3819ccd5894ea300bed2b5d4eb72174fb5",
+    "api/src/gorgona_booking/db/schema_guard.py": "ed3610970f8560340fa6fe5882c288814a9823a8a7cba9448a0588bd29a3f766",
+    "api/tests/unit/test_projects_time_contracts.py": "7707ee5f8c9bceb66bfd29939a8a2c729ddde3a697aa740412351cbc5c951476",
+    "api/tests/integration/test_projects_time.py": "1106deb1f0ecb7c2e88f50e1480aa8bf4a6333b42438d92d689616018ff6659d",
+    "api/tests/integration/test_projects_time_upgrade.py": "5882d32243d31ca6bbad403f16072bef78750658876e05e02cf5173cb30a438f"
+  },
+  "checks": {
+    "ruff_check": "PASS (629 files)",
+    "ruff_format_check": "PASS (629 files)",
+    "mypy": "PASS (629 files)",
+    "api_unit": {
+      "passed": 926,
+      "failed": 0,
+      "skipped": 0
+    },
+    "focused_integration": {
+      "passed": 35,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 35.89
+    },
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3057,
+      "executed_tests": 3057,
+      "unique_tests": 3057,
+      "duplicates": 0,
+      "passed": 3053,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1429.02,
+      "browser_passed": 48,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "Slice 4 (0137): FIN-03 matter invoicing & ACL-enforced audited exports",
+    "Slice 5 (no migration): /projects/ 4-tab UI and real-browser E2E",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}
