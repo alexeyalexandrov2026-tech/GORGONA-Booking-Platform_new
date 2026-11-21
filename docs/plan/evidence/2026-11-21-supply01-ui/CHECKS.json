@@ -1,0 +1,58 @@
+{
+  "package": "SUPPLY-01",
+  "slice": "Slice 4 — /supply/ 4-Tab Operations UI & Real-Browser E2E",
+  "date": "2026-11-21",
+  "branch": "codex/package-supply-01-ui",
+  "base_commit": "b8650ae19bc2b62e2488c567ea6257efb25e8251",
+  "verified_code_commit": "f35a1d43c7d5fa906895cee19c4af5b8949d9a3c",
+  "verified_code_tree": "cf960de9475c7846e1900e1d17b688c9a6a01c2e",
+  "migration": null,
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_SUPPLY01_UI_DESIGN_2026-11-21.md": "2ec088886ea67b07895598ccf3d5f9689bf8f52fbf31c98cef114da56b53b18a",
+    "web/lib/supply-contracts.ts": "a4bedc53756db8105b4449c842d8b27f1c7d742d87b32ca4a89e85b054a86716",
+    "web/lib/supply-api.ts": "9143bc145ced33a5f6ef9e9e52a73d4620419954f9b84df7d3d19d88ffa75c89",
+    "web/components/supply.tsx": "764d0d5aa1ffe32bfc941d89ba010a5b8cdcf04a443735a966a61d6c41f0d792",
+    "web/app/supply.css": "f2298a382ec30c0efcb8b3d7cbcd27ef86d230cde9ac0fead5e2087b4ad0ae37",
+    "web/app/supply/page.tsx": "7dfe06976a9e2d95efb6f6666105f7e47c1a4802443163bef072b037ac6abcee",
+    "web/tests/supply-contracts.spec.ts": "207281c68956f8d71c11e0915b32f08921fc6912224df05f966b4fffce884742",
+    "web/tests/supply.spec.ts": "a0161202a2e27065b481aa102502effda168ffbf84af6f288451881a188c49d6",
+    "api/tests/integration/test_supply_browser.py": "6dcd37928d66153206cd1fe914ef4cf925d545e039b1ddda340bf94243cfcf56"
+  },
+  "checks": {
+    "ruff_check": "PASS (649 files)",
+    "ruff_format_check": "PASS (649 files)",
+    "mypy": "PASS (649 files)",
+    "web_typecheck": "PASS",
+    "web_lint": "PASS",
+    "web_format_check": "PASS",
+    "web_unit": "PASS (202 passed)",
+    "web_build": "PASS (40 static routes)",
+    "focused_browser_e2e": "PASS (desktop + mobile 390px, axe-core 0 violations, goods-owner isolation negative proofs, PG18 read-back)",
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3075,
+      "executed_tests": 3075,
+      "unique_tests": 3075,
+      "duplicates": 0,
+      "passed": 3071,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1430.97,
+      "browser_passed": 50,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "readiness_registry.py remains planned and enableable=False pending owner approval",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}
