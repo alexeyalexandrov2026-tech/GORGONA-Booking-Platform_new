@@ -45,6 +45,7 @@ from gorgona_booking.api import (
     setup,
     shift_changes,
     stock,
+    supply_manufacturing,
     supply_wms,
     timesheets,
     transport,
@@ -178,6 +179,7 @@ def create_app(
     app.include_router(projects_time.router)
     app.include_router(projects_billing.router)
     app.include_router(supply_wms.router)
+    app.include_router(supply_manufacturing.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

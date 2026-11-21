@@ -247,6 +247,13 @@ K_TABLES = {
     "supply_lot_balances",
     "supply_serial_units",
     "supply_wms_movements",
+    "supply_boms",
+    "supply_bom_components",
+    "supply_work_orders",
+    "supply_work_order_issues",
+    "supply_work_order_returns",
+    "supply_work_order_qc",
+    "supply_work_order_outputs",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
