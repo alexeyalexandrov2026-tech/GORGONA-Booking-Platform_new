@@ -1035,11 +1035,23 @@ _RESTAURANT_TABLES = (
     "restaurant_tables",
     "restaurant_table_reservations",
     "restaurant_table_reservation_events",
+    "restaurant_menu_items",
+    "restaurant_menu_item_revisions",
+    "restaurant_modifier_groups",
+    "restaurant_modifier_options",
+    "restaurant_menu_item_modifier_groups",
+    "restaurant_recipes",
+    "restaurant_recipe_lines",
 )
 _RESTAURANT_MODULE_TABLES = (
     "restaurant_areas",
     "restaurant_tables",
     "restaurant_table_reservations",
+    "restaurant_menu_items",
+    "restaurant_modifier_groups",
+    "restaurant_modifier_options",
+    "restaurant_menu_item_modifier_groups",
+    "restaurant_recipes",
 )
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
