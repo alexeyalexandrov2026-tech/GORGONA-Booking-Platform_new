@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[9] = 9
+MODULE_REGISTRY_VERSION: Literal[10] = 10
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -279,6 +279,19 @@ MODULES: tuple[PlatformModule, ...] = (
         "REST-01 Slice 1 (ADR-0037): branch dining areas, tables and independent table "
         "reservations using shared resource occupancy. Enablement waits for REST-01 acceptance.",
         "New dining areas, tables and table reservations. Reads and history continue.",
+    ),
+    # ADR-0039 (SUPPLY-01): implemented, not enableable until acceptance and the owner's word.
+    _module(
+        "supply",
+        "Supply chain, 3PL WMS and manufacturing",
+        _OPTIONAL,
+        ("counterparties", "finance_documents", "inventory"),
+        Readiness.IMPLEMENTED,
+        "SUPPLY-01 Slice 1 (ADR-0039): multi-warehouse WMS bins, goods-owner isolation "
+        "(company legal entity vs 3PL bailor), lot/batch and serial tracking, and WMS movements "
+        "extending STOCK-01 without a second valuation ledger. "
+        "Enablement waits for SUPPLY-01 acceptance.",
+        "New goods owners, warehouse bins, lots, serial units and WMS movements. Reads continue.",
     ),
     _module(
         "storefronts", "Storefronts and marketplaces", _OPTIONAL, ("products_services", "sales")

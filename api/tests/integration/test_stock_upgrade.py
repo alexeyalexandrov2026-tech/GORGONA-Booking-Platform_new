@@ -241,6 +241,12 @@ K_TABLES = {
     "project_matter_invoices",
     "project_matter_invoice_items",
     "project_exports",
+    "supply_goods_owners",
+    "supply_warehouse_bins",
+    "supply_lots",
+    "supply_lot_balances",
+    "supply_serial_units",
+    "supply_wms_movements",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

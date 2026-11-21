@@ -1102,9 +1102,19 @@ _PROJECTS_MODULE_TABLES = (
     "project_matter_invoices",
     "project_exports",
 )
+_SUPPLY_TABLES = (
+    "supply_goods_owners",
+    "supply_warehouse_bins",
+    "supply_lots",
+    "supply_lot_balances",
+    "supply_serial_units",
+    "supply_wms_movements",
+)
+_SUPPLY_MODULE_TABLES = _SUPPLY_TABLES
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
 _MODULE_TRIGGERS = (
+    *[(table, f"{table}_require_module", "supply") for table in _SUPPLY_MODULE_TABLES],
     *[(table, f"{table}_require_module", "projects") for table in _PROJECTS_MODULE_TABLES],
     *[(table, f"{table}_require_module", "restaurant") for table in _RESTAURANT_MODULE_TABLES],
     *[
@@ -1288,6 +1298,20 @@ _DEFINITIONS = [
             "(tenant_id=gba.current_tenant_id())",
         )
         for table in _PROJECTS_TABLES
+    ],
+    *[
+        _definition(table, f"({_NO_LOCATION} OR (location_id = gba.current_location_id()))")
+        for table in _SUPPLY_TABLES
+    ],
+    *[
+        (
+            table,
+            f"{table}_tenant_isolation",
+            "*",
+            "(tenant_id=gba.current_tenant_id())",
+            "(tenant_id=gba.current_tenant_id())",
+        )
+        for table in _SUPPLY_TABLES
     ],
     *[
         _company_only(table, f"{table}_unrestricted_scope", "*")
