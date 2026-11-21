@@ -234,6 +234,10 @@ K_TABLES = {
     "project_tasks",
     "project_task_dependencies",
     "project_matter_files",
+    "project_time_entries",
+    "project_time_entry_revisions",
+    "project_recurring_schedules",
+    "project_recurring_runs",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
