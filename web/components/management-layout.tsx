@@ -43,6 +43,7 @@ const NAV_ITEMS = [
   { href: "/rental/", label: "Rental" },
   { href: "/property/", label: "Property" },
   { href: "/restaurant/", label: "Restaurant" },
+  { href: "/projects/", label: "Projects" },
   { href: "/provider-admission/", label: "Provider admission" },
   { href: "/settings/", label: "Settings" },
 ];
