@@ -222,6 +222,11 @@ K_TABLES = {
     "restaurant_check_line_modifiers",
     "restaurant_check_consumptions",
     "restaurant_check_consumption_lines",
+    "restaurant_check_splits",
+    "restaurant_check_split_shares",
+    "restaurant_check_split_share_lines",
+    "restaurant_check_bills",
+    "restaurant_check_refunds",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

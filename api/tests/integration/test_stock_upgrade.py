@@ -221,6 +221,11 @@ K_TABLES = {
     "restaurant_check_line_modifiers",
     "restaurant_check_consumptions",
     "restaurant_check_consumption_lines",
+    "restaurant_check_splits",
+    "restaurant_check_split_shares",
+    "restaurant_check_split_share_lines",
+    "restaurant_check_bills",
+    "restaurant_check_refunds",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

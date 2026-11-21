@@ -33,6 +33,7 @@ from gorgona_booking.api import (
     provider_admission,
     rental,
     reservations,
+    restaurant_billing,
     restaurant_checks,
     restaurant_floor,
     restaurant_menu,
@@ -166,6 +167,7 @@ def create_app(
     app.include_router(restaurant_floor.router)
     app.include_router(restaurant_menu.router)
     app.include_router(restaurant_checks.router)
+    app.include_router(restaurant_billing.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

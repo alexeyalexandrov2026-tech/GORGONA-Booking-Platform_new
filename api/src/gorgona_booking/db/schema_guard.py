@@ -1049,6 +1049,11 @@ _RESTAURANT_TABLES = (
     "restaurant_check_line_modifiers",
     "restaurant_check_consumptions",
     "restaurant_check_consumption_lines",
+    "restaurant_check_splits",
+    "restaurant_check_split_shares",
+    "restaurant_check_split_share_lines",
+    "restaurant_check_bills",
+    "restaurant_check_refunds",
 )
 _RESTAURANT_MODULE_TABLES = (
     "restaurant_areas",
@@ -1062,6 +1067,9 @@ _RESTAURANT_MODULE_TABLES = (
     "restaurant_checks",
     "restaurant_kitchen_tickets",
     "restaurant_check_consumptions",
+    "restaurant_check_splits",
+    "restaurant_check_bills",
+    "restaurant_check_refunds",
 )
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.

@@ -481,6 +481,7 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (130, "-- Restaurant floor branch scope:"),
                 (131, "-- Restaurant menu branch scope:"),
                 (132, "-- Restaurant checks branch scope:"),
+                (133, "-- Restaurant billing branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker
