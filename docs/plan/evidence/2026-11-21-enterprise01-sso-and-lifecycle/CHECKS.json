@@ -1,0 +1,43 @@
+{
+  "package": "ENTERPRISE-01",
+  "slice": "Slice 1 — Corporate SSO identity providers & atomic employee deprovisioning",
+  "date": "2026-11-21",
+  "branch": "codex/package-enterprise-01-holding-and-governance",
+  "base_commit": "a5c0ef3edea64896c1943046bffe20ced4eb8cf8",
+  "verified_code_commit": "f530ccc6311c084878ea6db6d9fc8e96aa4211d3",
+  "verified_code_tree": "609301fdb5611fc13b1c7b3a79b4abdd442f9aca",
+  "migration": "0143_enterprise_sso_and_lifecycle.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/adr/0041-enterprise-sso-lifecycle-and-group-reporting.md": "2ceac7d9d39c38e42d5e993eea58149b8d763dcb2ac5b290c85b5f3837949936",
+    "docs/plan/PACKAGE_ENTERPRISE01_PLAN_2026-11-21.md": "a3f711a1d50bd1c9e28600b790f4b5cd71a534f2d01778ce0a933e0881b9bcd5",
+    "api/src/gorgona_booking/db/migrations/0143_enterprise_sso_and_lifecycle.sql": "200cc2ca2988e095c3d7750a988fc7b3662eaade5e1bd9eb2851f4070e57f40f",
+    "api/src/gorgona_booking/business/enterprise_sso.py": "9c75c8c644220d96898e96dd913bdd9cbe8e8f5a388e038cce894761e6e811e9",
+    "api/src/gorgona_booking/api/enterprise_sso.py": "4678b67913c3b5c0aa1c8ddeec9f5c075c1080e156326870fa8590d5bde2f2ef",
+    "api/src/gorgona_booking/db/schema_guard.py": "411937681474fdad0d5ebc923ea0ebfc21ced5eae255f71a2bf629df6c548bf3",
+    "api/tests/unit/test_enterprise_sso_contracts.py": "7a45f68e90aa6af610c912792342a730d53ebd43c51605aa196473f692246725",
+    "api/tests/integration/test_enterprise_sso.py": "fe791995ce36dca141044888c19a0f18ab0b82e3b61f6fbc369edebb745b2cb4",
+    "api/tests/integration/test_enterprise_sso_upgrade.py": "96621647718e3af31b6829c4fb19cea4f9c959cc700c8d5ce1d65eaa800c8374"
+  },
+  "checks": {
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS",
+    "mypy": "PASS",
+    "focused_integration": "PASS",
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3089,
+      "executed_tests": 3089,
+      "unique_tests": 3089,
+      "duplicates": 0,
+      "passed": 3085,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1368.77,
+      "browser_passed": 51,
+      "serial_passed": 216
+    }
+  }
+}
