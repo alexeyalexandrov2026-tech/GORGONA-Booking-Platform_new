@@ -379,7 +379,7 @@ async def checkout_basket(
             )
         total_minor = sum(q * p for _, q, p, _ in items_list)
         order_id = uuid7()
-        order_num = f"MKT-{str(basket_id)[:6].upper()}-S{idx}-{str(order_id)[:4].upper()}"[:64]
+        order_num = f"MKT-{basket_id.hex[-8:].upper()}-S{idx}-{order_id.hex[-6:].upper()}"[:64]
         inv_doc_id = uuid7()
         inv_line_id = uuid7()
         await financial_documents.save_draft(
@@ -645,7 +645,7 @@ async def refund_market_order(
             credit_date=body.refund_date,
             due_date=body.refund_date,
             title=f"Marketplace order {order_num} refund",
-            number=f"{order_num}-CR-{str(cn_doc_id)[:6].upper()}"[:64],
+            number=f"{order_num}-CR-{cn_doc_id.hex[-8:].upper()}"[:64],
             lines=(
                 CreditLineInput(
                     line_id=uuid7(),
