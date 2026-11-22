@@ -1,0 +1,41 @@
+{
+  "package": "MARKET-01",
+  "slice": "Slice 2 — Single-seller basket split, FIN-03 invoices, refund credit notes & operator fees",
+  "date": "2026-11-21",
+  "branch": "codex/package-market-01-orders-and-settlement",
+  "base_commit": "69c2312f80b2dbb1ffd9adde9a3b1d3ff19c0d47",
+  "verified_code_commit": "67e9b46fe6f44c12fd9b500eb54e29764b47a84f",
+  "verified_code_tree": "246f68106125bc25fa8ad786fd90bdb1c002105b",
+  "migration": "0142_market_orders_and_settlement.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "api/src/gorgona_booking/db/migrations/0142_market_orders_and_settlement.sql": "83c59a1c4c2e3f80aa89c13f0e506165b552993f753ad35e312b7b201d19ab30",
+    "api/src/gorgona_booking/business/market_orders.py": "c0a15f43fe753c1a61e84dcbb3d1813d6c15f943202a071a0e885f20430fc255",
+    "api/src/gorgona_booking/api/market_orders.py": "b7bda0d09337bc9571a0e281840d81ac46f73311ba32af08783415449b71ea8a",
+    "api/src/gorgona_booking/db/schema_guard.py": "af91b68e689c76ca266dbab0c9c01141b31b48a8725d9775a3560056a4da778b",
+    "api/tests/unit/test_market_orders_contracts.py": "2a01d67f0021a4378ccc1ed57e0aa725afe1a02c33e6a2db8ef5b77c3140ffa6",
+    "api/tests/integration/test_market_orders.py": "d6c61d44c3950d6f8819a290cf0695ce074dc493edc6cc61d7fe81800d0d0248",
+    "api/tests/integration/test_market_orders_upgrade.py": "514bd987631d084f97076cf4c75581d13cd25a299a16b06d6a55e34858e47d11"
+  },
+  "checks": {
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS",
+    "mypy": "PASS",
+    "focused_integration": "PASS",
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3084,
+      "executed_tests": 3084,
+      "unique_tests": 3084,
+      "duplicates": 0,
+      "passed": 3080,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1413.44,
+      "browser_passed": 50,
+      "serial_passed": 216
+    }
+  }
+}

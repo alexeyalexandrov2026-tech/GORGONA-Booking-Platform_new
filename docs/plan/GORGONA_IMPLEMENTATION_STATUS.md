@@ -1,5 +1,9 @@
 # GORGONA — реестр реализации
 
+### MARKET-01 Slice 2. Разделение корзины по продавцам, независимые заказы и счета FIN-03 на одного продавца, возвраты и комиссия оператора, 21 ноября
+
+Ветка `codex/package-market-01-orders-and-settlement` (коммит кода `67e9b46`, миграция `0142_market_orders_and_settlement.sql` без повышения привилегий) от `MARKET-01 Slice 1` `69c2312`. Добавлены таблицы `market_baskets`, `market_orders`, `market_order_lines` и `market_operator_fees`: корзина с товарами нескольких продавцов автоматически делится на отдельные заказы с жёсткой привязкой строк к одному продавцу и одному юридическому лицу, отдельными счетами `FIN-03` и кредит-нотами возврата, без общих неразделённых платежей и с нулевой комиссией GORGONA. Полный параллельный прогон на `gorgona-dev`: `3080 PASS, 0 fail, 4 skip` из `3084` (`browser 50/50`, `serial 216/216`, `1413.44s`). Доказательства: `docs/plan/evidence/2026-11-21-market01-orders-and-settlement/ACCEPTANCE.md`, `CHECKS.json`.
+
 ### MARKET-01 Slice 1. Витрины бизнеса со строгой проекцией опубликованных полей и клиентские маркетплейсы без комиссии GORGONA, 21 ноября
 
 Ветка `codex/package-market-01-storefronts-and-publishing` (коммит кода `5f094df`, миграция `0141_market_storefronts_and_publishing.sql` без повышения привилегий) от `SUPPLY-01 Slice 4` `a2c5817`. Модуль `storefronts` переведён в `Readiness.IMPLEMENTED` (`enableable=False`, `MODULE_REGISTRY_VERSION=11`), добавлены права `MARKET_READ/MANAGE` (`PERMISSIONS_VERSION=20`), таблицы `market_storefronts`, `market_listings`, `marketplaces` (`gorgona_commission_bps = 0`) и `marketplace_seller_connections` с отзывом прав и строгой проекцией только выбранных публичных полей. Полный параллельный прогон на `gorgona-dev`: `3076 PASS, 0 fail, 4 skip` из `3080` (`browser 50/50`, `serial 216/216`, `1377.77s`). Доказательства: `docs/plan/evidence/2026-11-21-market01-storefronts-and-publishing/ACCEPTANCE.md`, `CHECKS.json`.
