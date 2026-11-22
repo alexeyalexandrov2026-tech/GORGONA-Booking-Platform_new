@@ -23,6 +23,7 @@ from gorgona_booking.api import (
     inventory,
     ledger,
     legal_entities,
+    market_orders,
     market_storefronts,
     members,
     platform,
@@ -184,6 +185,7 @@ def create_app(
     app.include_router(supply_manufacturing.router)
     app.include_router(supply_trade.router)
     app.include_router(market_storefronts.router)
+    app.include_router(market_orders.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

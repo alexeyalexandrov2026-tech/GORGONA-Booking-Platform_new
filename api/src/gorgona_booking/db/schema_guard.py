@@ -1129,6 +1129,10 @@ _MARKET_TABLES = (
     "market_listings",
     "marketplaces",
     "marketplace_seller_connections",
+    "market_baskets",
+    "market_orders",
+    "market_order_lines",
+    "market_operator_fees",
 )
 _MARKET_MODULE_TABLES = _MARKET_TABLES
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)

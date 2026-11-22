@@ -264,6 +264,10 @@ K_TABLES = {
     "market_listings",
     "marketplaces",
     "marketplace_seller_connections",
+    "market_baskets",
+    "market_orders",
+    "market_order_lines",
+    "market_operator_fees",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

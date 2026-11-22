@@ -265,6 +265,10 @@ K_TABLES = {
     "market_listings",
     "marketplaces",
     "marketplace_seller_connections",
+    "market_baskets",
+    "market_orders",
+    "market_order_lines",
+    "market_operator_fees",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]
