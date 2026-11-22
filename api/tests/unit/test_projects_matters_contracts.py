@@ -24,7 +24,7 @@ from gorgona_booking.business.readiness_registry import Readiness
 
 
 def test_projects_module_is_implemented_and_not_enableable() -> None:
-    assert modules.MODULE_REGISTRY_VERSION == 11
+    assert modules.MODULE_REGISTRY_VERSION == 12
     mod = modules.MODULES_BY_ID[PROJECTS_MODULE]
     assert mod.readiness is Readiness.IMPLEMENTED
     assert mod.enableable is False
@@ -32,7 +32,7 @@ def test_projects_module_is_implemented_and_not_enableable() -> None:
 
 
 def test_projects_permissions_are_role_scoped_and_never_delegated() -> None:
-    assert PERMISSIONS_VERSION == 20
+    assert PERMISSIONS_VERSION == 21
     pro_perms = {
         Permission.PROJECTS_READ,
         Permission.PROJECTS_WORK,

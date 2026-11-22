@@ -268,6 +268,9 @@ K_TABLES = {
     "market_orders",
     "market_order_lines",
     "market_operator_fees",
+    "enterprise_sso_providers",
+    "enterprise_directory_links",
+    "enterprise_lifecycle_events",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

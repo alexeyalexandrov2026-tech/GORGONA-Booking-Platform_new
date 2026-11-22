@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[11] = 11
+MODULE_REGISTRY_VERSION: Literal[12] = 12
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -219,7 +219,18 @@ MODULES: tuple[PlatformModule, ...] = (
     _module("assets", "Assets and maintenance", _OPTIONAL, ("organization",)),
     _module("communications", "Communications", _OPTIONAL, ("counterparties",)),
     _module("support", "Support", _OPTIONAL, ("counterparties",)),
-    _module("analytics", "Analytics", _OPTIONAL, ("organization",)),
+    # ADR-0041 (ENTERPRISE-01): implemented, not enableable until acceptance and the owner's word.
+    _module(
+        "analytics",
+        "Analytics",
+        _OPTIONAL,
+        ("organization",),
+        Readiness.IMPLEMENTED,
+        "ENTERPRISE-01 (ADR-0041): corporate SSO identity providers, SCIM-style employee "
+        "deprovisioning with immediate access revocation, and consent-based consolidated group "
+        "reporting without ownership transfer. It cannot be enabled until acceptance.",
+        "New SSO providers, directory links, lifecycle events and group reports. Reads continue.",
+    ),
     _module("automation_ai", "Automation and AI", _OPTIONAL, ("users_access",)),
     # ADR-0028 (package M, owner's word 2026-10-23): implemented, not enableable until acceptance.
     _module(
