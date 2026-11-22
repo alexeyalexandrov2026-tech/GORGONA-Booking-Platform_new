@@ -272,6 +272,8 @@ K_TABLES = {
     "enterprise_sso_providers",
     "enterprise_directory_links",
     "enterprise_lifecycle_events",
+    "enterprise_group_report_grants",
+    "enterprise_group_report_snapshots",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

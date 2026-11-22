@@ -1140,7 +1140,11 @@ _ENTERPRISE_TABLES = (
     "enterprise_directory_links",
     "enterprise_lifecycle_events",
 )
-_ENTERPRISE_MODULE_TABLES = _ENTERPRISE_TABLES
+_ENTERPRISE_GROUP_TABLES = (
+    "enterprise_group_report_grants",
+    "enterprise_group_report_snapshots",
+)
+_ENTERPRISE_MODULE_TABLES = (*_ENTERPRISE_TABLES, *_ENTERPRISE_GROUP_TABLES)
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
 _MODULE_TRIGGERS = (
@@ -1388,6 +1392,7 @@ _DEFINITIONS = [
             "department_versions",
             "business_groups",
             "business_group_members",
+            *_ENTERPRISE_GROUP_TABLES,
             "business_configuration_versions",
             "business_configuration_modules",
             *_MODULE_TABLES,

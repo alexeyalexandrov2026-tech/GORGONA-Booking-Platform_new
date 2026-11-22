@@ -16,6 +16,7 @@ from gorgona_booking.api import (
     delegations,
     departments,
     documents,
+    enterprise_reporting,
     enterprise_sso,
     financial_documents,
     groups,
@@ -188,6 +189,7 @@ def create_app(
     app.include_router(market_storefronts.router)
     app.include_router(market_orders.router)
     app.include_router(enterprise_sso.router)
+    app.include_router(enterprise_reporting.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

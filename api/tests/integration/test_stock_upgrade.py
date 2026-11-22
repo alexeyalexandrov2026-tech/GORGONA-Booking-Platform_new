@@ -271,6 +271,8 @@ K_TABLES = {
     "enterprise_sso_providers",
     "enterprise_directory_links",
     "enterprise_lifecycle_events",
+    "enterprise_group_report_grants",
+    "enterprise_group_report_snapshots",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
