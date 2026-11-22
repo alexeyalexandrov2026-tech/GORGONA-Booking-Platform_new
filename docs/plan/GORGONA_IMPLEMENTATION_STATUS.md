@@ -1,5 +1,9 @@
 # GORGONA — реестр реализации
 
+### ENTERPRISE-01 Slice 2. Сводная отчётность групп по явному согласию без переноса владения и смешения валют, 21 ноября
+
+Ветка `codex/package-enterprise-01-group-reporting` (коммит кода `3b34049`, миграция `0144_enterprise_group_reporting.sql` без повышения привилегий) от `ENTERPRISE-01 Slice 1` `b6a5ec3`. Добавлены таблицы `enterprise_group_report_grants` (отзываемые согласия участника на `allowed_report_sets`) и `enterprise_group_report_snapshots` с жёстким PostgreSQL 18 RLS: организатор группы получает только разрешённые наборы активных участников с разделением по валютам и юрлицам, без доступа к строкам чужой компании и с мгновенным скрытием при отзыве. Полный параллельный прогон на `gorgona-dev`: `3088 PASS, 0 fail, 4 skip` из `3092` (`browser 51/51`, `serial 216/216`, `1410.76s`). Доказательства: `docs/plan/evidence/2026-11-21-enterprise01-group-reporting/ACCEPTANCE.md`, `CHECKS.json`.
+
 ### ENTERPRISE-01 Slice 1. Корпоративный SSO и атомарное отключение сотрудников с мгновенной потерей доступа, 21 ноября
 
 Ветка `codex/package-enterprise-01-holding-and-governance` (коммит кода `f530ccc`, миграция `0143_enterprise_sso_and_lifecycle.sql` без повышения привилегий) от `MARKET-01 Slice 3` `a5c0ef3`. Модуль `analytics` переведён в `Readiness.IMPLEMENTED` (`enableable=False`, `MODULE_REGISTRY_VERSION=12`), добавлены права `ENTERPRISE_READ/MANAGE` (`PERMISSIONS_VERSION=21`), таблицы `enterprise_sso_providers`, `enterprise_directory_links` и неизменяемый журнал `enterprise_lifecycle_events` с атомарным отключением сотрудника (приостановка `gba.memberships`, удаление делегирований и мгновенный `403 TENANT_ACCESS_DENIED`). Полный параллельный прогон на `gorgona-dev`: `3085 PASS, 0 fail, 4 skip` из `3089` (`browser 51/51`, `serial 216/216`, `1368.77s`). Доказательства: `docs/plan/evidence/2026-11-21-enterprise01-sso-and-lifecycle/ACCEPTANCE.md`, `CHECKS.json`.
