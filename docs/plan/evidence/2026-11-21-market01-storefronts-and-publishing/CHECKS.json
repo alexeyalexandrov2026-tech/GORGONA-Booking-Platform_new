@@ -1,0 +1,43 @@
+{
+  "package": "MARKET-01",
+  "slice": "Slice 1 — Business storefronts, strict public field projection & client-operated marketplaces",
+  "date": "2026-11-21",
+  "branch": "codex/package-market-01-storefronts-and-publishing",
+  "base_commit": "a2c581711abf36c8ca293588dab1d572c5da3b3c",
+  "verified_code_commit": "5f094dfe9a23ac89881bbabd74c20a8648e9392f",
+  "verified_code_tree": "dd2049812bbef51e8d2aacbe68fc741eaadc906e",
+  "migration": "0141_market_storefronts_and_publishing.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/adr/0040-storefronts-and-multi-seller-marketplaces.md": "948634afca898c9087cfb839a6413024a90bd5bef34b05cab0273568490963c3",
+    "docs/plan/PACKAGE_MARKET01_PLAN_2026-11-21.md": "e689dd0120e9461edff209e18742607e9ce2003e383f57e8708851d6f013169b",
+    "api/src/gorgona_booking/db/migrations/0141_market_storefronts_and_publishing.sql": "c9bb7d0a9bbeef2000d25a3cc0070462fc225924022fc01c07d3b7df61aa1d46",
+    "api/src/gorgona_booking/business/market_storefronts.py": "6ae561bd3bc361fa210ea115a4453b3315288fd8125e54b3d56a6fabcdd84d88",
+    "api/src/gorgona_booking/api/market_storefronts.py": "f6dfcaa8e3cd1ca55ef3fa8e62eb259ce1846646cdebef0beb3c7a53df4bb985",
+    "api/src/gorgona_booking/db/schema_guard.py": "88e42cd2a8f126762098b79115267fc067b83a90d841b1f45e9b920d54954265",
+    "api/tests/unit/test_market_storefronts_contracts.py": "fa6adb31118be3579613ce49919f5397b2e8c6a0d3d99c3134043de25e80dcf8",
+    "api/tests/integration/test_market_storefronts.py": "72ceb4baf2dd802ee887924d2935eba15a01aa22f77cb876d77b5719d92448ef",
+    "api/tests/integration/test_market_storefronts_upgrade.py": "eb3ee4bc497143d90011bd677a3313fc42182576cad3f97c6391ffcf91a3c68b"
+  },
+  "checks": {
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS",
+    "mypy": "PASS",
+    "focused_integration": "PASS",
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3080,
+      "executed_tests": 3080,
+      "unique_tests": 3080,
+      "duplicates": 0,
+      "passed": 3076,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1377.77,
+      "browser_passed": 50,
+      "serial_passed": 216
+    }
+  }
+}
