@@ -308,9 +308,105 @@ def _approved_checks() -> tuple[_ApprovedCheck, ...]:
     return tuple(approved.values())
 
 
+def _is_wrapped(text: str) -> bool:
+    if len(text) < 2 or text[0] != "(" or text[-1] != ")":
+        return False
+    depth = 0
+    in_quote = False
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if in_quote:
+            if ch == "'":
+                if i + 1 < len(text) and text[i + 1] == "'":
+                    i += 1
+                else:
+                    in_quote = False
+        elif ch == "'":
+            in_quote = True
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0 and i < len(text) - 1:
+                return False
+        i += 1
+    return depth == 0
+
+
+def _split_bool_top(inner: str) -> tuple[list[str], list[str]]:
+    parts: list[str] = []
+    ops: list[str] = []
+    depth = 0
+    in_quote = False
+    start = 0
+    i = 0
+    n = len(inner)
+    while i < n:
+        ch = inner[i]
+        if in_quote:
+            if ch == "'":
+                if i + 1 < n and inner[i + 1] == "'":
+                    i += 1
+                else:
+                    in_quote = False
+            i += 1
+            continue
+        if ch == "'":
+            in_quote = True
+            i += 1
+            continue
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif depth == 0:
+            if inner.startswith(" AND ", i):
+                parts.append(inner[start:i])
+                ops.append("AND")
+                i += 5
+                start = i
+                continue
+            if inner.startswith(" OR ", i):
+                parts.append(inner[start:i])
+                ops.append("OR")
+                i += 4
+                start = i
+                continue
+        i += 1
+    parts.append(inner[start:])
+    return parts, ops
+
+
+def _pg_dump_check_expr(expr: str) -> str:
+    """Return the exact canonical form pg_dump emits when flattening nested AND chains."""
+    if not _is_wrapped(expr):
+        return expr
+    parts, ops = _split_bool_top(expr[1:-1])
+    if not ops:
+        return expr
+    rebuilt = [_pg_dump_check_expr(part) for part in parts]
+    if set(ops) == {"AND"}:
+        flat: list[str] = []
+        for part in rebuilt:
+            if _is_wrapped(part):
+                sub_parts, sub_ops = _split_bool_top(part[1:-1])
+                if sub_ops and set(sub_ops) == {"AND"}:
+                    flat.extend(sub_parts)
+                    continue
+            flat.append(part)
+        return "(" + " AND ".join(flat) + ")"
+    out = rebuilt[0]
+    for op, part in zip(ops, rebuilt[1:], strict=True):
+        out = f"{out} {op} {part}"
+    return f"({out})"
+
+
 _CHECKS = _approved_checks()
 FINANCIAL_PARAMETERS += tuple(
-    value for row in _CHECKS for value in (row.table, row.name, row.expression)
+    value
+    for row in _CHECKS
+    for value in (row.table, row.name, row.expression, _pg_dump_check_expr(row.expression))
 )
 FINANCIAL_BOUNDARY = (
     """
@@ -412,13 +508,16 @@ and not exists (
         'gba_runtime','gba.'||expected.table_name,'UPDATE,DELETE,TRUNCATE')
 )
 and not exists (
-    select 1 from (values __CHECKS__) expected(table_name,constraint_name,expression)
+    select 1 from (values __CHECKS__)
+        expected(table_name,constraint_name,expression,restored_expression)
     left join pg_catalog.pg_constraint c
       on c.conrelid=pg_catalog.to_regclass('gba.'||expected.table_name)
      and c.conname=expected.constraint_name
     where c.oid is null or c.contype<>'c' or not c.convalidated
        or c.connoinherit or not c.conislocal
-       or pg_catalog.pg_get_expr(c.conbin,c.conrelid) is distinct from expected.expression
+       or pg_catalog.pg_get_expr(c.conbin,c.conrelid) is null
+       or pg_catalog.pg_get_expr(c.conbin,c.conrelid)
+          not in (expected.expression,expected.restored_expression)
 )
 """.replace("__TRIGGERS__", ",".join("(%s,%s,%s::int,%s,%s::boolean,%s::text)" for _ in _TRIGGERS))
     .replace("__HELPERS__", ",".join("(%s,%s,%s::text)" for _ in _HELPERS))
@@ -427,5 +526,5 @@ and not exists (
     .replace("__COLUMNS__", ",".join("(%s,%s,%s,%s::boolean)" for _ in _COLUMNS))
     .replace("__PRIVATE__", ",".join("(%s,%s)" for _ in _PRIVATE))
     .replace("__DEFAULTS__", ",".join("(%s,%s,%s::text)" for _ in _DEFAULTS))
-    .replace("__CHECKS__", ",".join("(%s,%s,%s::text)" for _ in _CHECKS))
+    .replace("__CHECKS__", ",".join("(%s,%s,%s::text,%s::text)" for _ in _CHECKS))
 )
