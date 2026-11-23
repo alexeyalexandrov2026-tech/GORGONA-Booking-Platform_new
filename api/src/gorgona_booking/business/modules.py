@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[13] = 13
+MODULE_REGISTRY_VERSION: Literal[14] = 14
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -315,6 +315,17 @@ MODULES: tuple[PlatformModule, ...] = (
         "hospitality rooms and stays with housekeeping states, and events with ticket capacity "
         "conservation. It cannot be enabled until acceptance.",
         "New programs, enrollments, rooms, stays, events and tickets. Reads continue.",
+    ),
+    # ADR-0043 (SPECIAL-02): implemented, not enableable until jurisdictional acceptance.
+    _module(
+        "clinical_care",
+        "Healthcare, veterinary and social care",
+        _OPTIONAL,
+        ("counterparties",),
+        Readiness.IMPLEMENTED,
+        "SPECIAL-02 (ADR-0043): consent-gated patient, veterinary and social care records "
+        "with immediate write blocks and sensitive-note redaction upon consent revocation.",
+        "New care subjects, consents, plans and encounters. Reads continue with consent gating.",
     ),
     # ADR-0040 (MARKET-01): implemented, not enableable until acceptance and the owner's word.
     _module(

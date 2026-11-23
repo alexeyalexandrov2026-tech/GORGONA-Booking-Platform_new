@@ -280,6 +280,10 @@ K_TABLES = {
     "special_stays",
     "special_events",
     "special_tickets",
+    "care_subjects",
+    "care_consents",
+    "care_plans",
+    "care_encounters",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

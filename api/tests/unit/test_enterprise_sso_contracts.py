@@ -18,12 +18,12 @@ from gorgona_booking.business.readiness_registry import Readiness
 
 
 def test_analytics_module_and_enterprise_permissions_registered_conservatively() -> None:
-    assert modules.MODULE_REGISTRY_VERSION == 13
+    assert modules.MODULE_REGISTRY_VERSION == 14
     mod = modules.MODULES_BY_ID["analytics"]
     assert mod.readiness == Readiness.IMPLEMENTED
     assert mod.enableable is False
     assert set(mod.depends_on) == {"organization"}
-    assert PERMISSIONS_VERSION == 22
+    assert PERMISSIONS_VERSION == 23
     for perm in (Permission.ENTERPRISE_READ, Permission.ENTERPRISE_MANAGE):
         assert perm not in DELEGABLE_PERMISSIONS
 

@@ -279,6 +279,10 @@ K_TABLES = {
     "special_stays",
     "special_events",
     "special_tickets",
+    "care_subjects",
+    "care_consents",
+    "care_plans",
+    "care_encounters",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock
