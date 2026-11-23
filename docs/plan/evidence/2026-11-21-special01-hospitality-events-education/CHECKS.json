@@ -1,0 +1,15 @@
+{
+  "package": "SPECIAL-01",
+  "branch": "codex/package-special-01-hospitality-events-education",
+  "base_commit": "159dd90e46a14a49461894c4a18d3e712d4bcb4a",
+  "verified_code_commit": "74d9f9ef6ccbcc2d3e6e199ec2739a072a3e1c5d",
+  "verified_code_tree": "2bcdc98cfebbc764656ccc57e53dda187275cded",
+  "migration": "0145_special_hospitality_events_education_fitness.sql",
+  "expected_tests": 3097,
+  "passed": 3093,
+  "failed": 0,
+  "skipped": 4,
+  "wall_seconds": 1427.62,
+  "browser_passed": 52,
+  "serial_passed": 216
+}
