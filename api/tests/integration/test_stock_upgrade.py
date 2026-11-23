@@ -273,6 +273,12 @@ K_TABLES = {
     "enterprise_lifecycle_events",
     "enterprise_group_report_grants",
     "enterprise_group_report_snapshots",
+    "special_programs",
+    "special_enrollments",
+    "special_rooms",
+    "special_stays",
+    "special_events",
+    "special_tickets",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

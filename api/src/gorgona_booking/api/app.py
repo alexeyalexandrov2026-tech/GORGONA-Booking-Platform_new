@@ -48,6 +48,7 @@ from gorgona_booking.api import (
     salons,
     setup,
     shift_changes,
+    special_venues,
     stock,
     supply_manufacturing,
     supply_trade,
@@ -190,6 +191,7 @@ def create_app(
     app.include_router(market_orders.router)
     app.include_router(enterprise_sso.router)
     app.include_router(enterprise_reporting.router)
+    app.include_router(special_venues.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

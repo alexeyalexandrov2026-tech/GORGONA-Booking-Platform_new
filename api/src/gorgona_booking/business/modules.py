@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[12] = 12
+MODULE_REGISTRY_VERSION: Literal[13] = 13
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -303,6 +303,18 @@ MODULES: tuple[PlatformModule, ...] = (
         "extending STOCK-01 without a second valuation ledger. "
         "Enablement waits for SUPPLY-01 acceptance.",
         "New goods owners, warehouse bins, lots, serial units and WMS movements. Reads continue.",
+    ),
+    # ADR-0042 (SPECIAL-01): implemented, not enableable until acceptance and the owner's word.
+    _module(
+        "hospitality_events",
+        "Education, fitness, hospitality and events",
+        _OPTIONAL,
+        ("counterparties",),
+        Readiness.IMPLEMENTED,
+        "SPECIAL-01 (ADR-0042): education cohorts and fitness memberships with session tracking, "
+        "hospitality rooms and stays with housekeeping states, and events with ticket capacity "
+        "conservation. It cannot be enabled until acceptance.",
+        "New programs, enrollments, rooms, stays, events and tickets. Reads continue.",
     ),
     # ADR-0040 (MARKET-01): implemented, not enableable until acceptance and the owner's word.
     _module(

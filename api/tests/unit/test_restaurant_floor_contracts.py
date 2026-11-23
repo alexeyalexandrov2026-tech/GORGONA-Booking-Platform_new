@@ -23,7 +23,7 @@ from gorgona_booking.business.restaurant_floor import (
 
 
 def test_restaurant_module_is_implemented_and_not_enableable() -> None:
-    assert modules.MODULE_REGISTRY_VERSION == 12
+    assert modules.MODULE_REGISTRY_VERSION == 13
     mod = modules.MODULES_BY_ID["restaurant"]
     assert mod.readiness is Readiness.IMPLEMENTED
     assert mod.enableable is False
@@ -37,7 +37,7 @@ def test_restaurant_module_is_implemented_and_not_enableable() -> None:
 
 
 def test_restaurant_permissions_are_role_scoped_and_never_delegated() -> None:
-    assert PERMISSIONS_VERSION == 21
+    assert PERMISSIONS_VERSION == 22
     rest_perms = {
         Permission.RESTAURANT_READ,
         Permission.RESTAURANT_KITCHEN,
