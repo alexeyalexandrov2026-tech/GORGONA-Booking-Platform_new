@@ -1,5 +1,9 @@
 # GORGONA — реестр реализации
 
+### ENTERPRISE-01 Slice 3. Экран `/enterprise/` (3 вкладки: SSO и жизненный цикл сотрудников, согласия групп на отчётность, сводная аналитика по валютам) и real-browser E2E, 21 ноября
+
+Ветка `codex/package-enterprise-01-ui` (коммит кода `84e6d70`, без новой миграции) от `ENTERPRISE-01 Slice 2` `6a8af10`. Добавлены строгие Zod-контракты (`web/lib/enterprise-contracts.ts`), API-клиент (`web/lib/enterprise-api.ts`), экран `/enterprise/` (`web/components/enterprise.tsx`) и real-browser Chromium E2E (`web/tests/enterprise.spec.ts`, `api/tests/integration/test_enterprise_browser.py`, desktop + mobile `390px`, `axe-core` 0 нарушений, атомарное отключение с немедленным `403 TENANT_ACCESS_DENIED`, фильтрация сводного отчёта только по разрешённым наборам, мгновенное скрытие после отзыва и PG18 read-back). Полный параллельный прогон на `gorgona-dev`: `3089 PASS, 0 fail, 4 skip` из `3093` (`browser 52/52`, `serial 216/216`, `1439.06s`). Доказательства: `docs/plan/evidence/2026-11-21-enterprise01-ui/ACCEPTANCE.md`, `CHECKS.json`.
+
 ### ENTERPRISE-01 Slice 2. Сводная отчётность групп по явному согласию без переноса владения и смешения валют, 21 ноября
 
 Ветка `codex/package-enterprise-01-group-reporting` (коммит кода `3b34049`, миграция `0144_enterprise_group_reporting.sql` без повышения привилегий) от `ENTERPRISE-01 Slice 1` `b6a5ec3`. Добавлены таблицы `enterprise_group_report_grants` (отзываемые согласия участника на `allowed_report_sets`) и `enterprise_group_report_snapshots` с жёстким PostgreSQL 18 RLS: организатор группы получает только разрешённые наборы активных участников с разделением по валютам и юрлицам, без доступа к строкам чужой компании и с мгновенным скрытием при отзыве. Полный параллельный прогон на `gorgona-dev`: `3088 PASS, 0 fail, 4 skip` из `3092` (`browser 51/51`, `serial 216/216`, `1410.76s`). Доказательства: `docs/plan/evidence/2026-11-21-enterprise01-group-reporting/ACCEPTANCE.md`, `CHECKS.json`.

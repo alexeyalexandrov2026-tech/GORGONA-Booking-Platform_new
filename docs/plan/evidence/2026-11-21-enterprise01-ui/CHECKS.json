@@ -1,0 +1,42 @@
+{
+  "package": "ENTERPRISE-01",
+  "slice": "Slice 3 — /enterprise/ 3-Tab Governance UI & Real-Browser E2E",
+  "date": "2026-11-21",
+  "branch": "codex/package-enterprise-01-ui",
+  "base_commit": "6a8af1038b371ba352caaaff7103fe914dd92ec9",
+  "verified_code_commit": "84e6d705a5bc0f0d28140ed9778e0105eaa37a18",
+  "verified_code_tree": "6170f83b5a91b950bfed997b032551ccd3b0e580",
+  "migration": null,
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_ENTERPRISE01_UI_DESIGN_2026-11-21.md": "a4537e1fe8f4e55016f188c45b5b469ce5acfc08f816c7b2624b2be748aae446",
+    "web/lib/enterprise-contracts.ts": "9b8f8ff0f5b2436b4c9b471c5d6386955d2b53750d47f7a91b1831df267518aa",
+    "web/lib/enterprise-api.ts": "ee1da2f29d3149633fffe9e278759074cd5a353549cce2cbfc2a821e6162ab5d",
+    "web/components/enterprise.tsx": "c4fa51b13270d73d4303165e5dc4359a248399cbea634a8e53a69090f57f3f7c",
+    "web/app/enterprise.css": "9d5d66977639d80a6ba961f68e3d486b2a9986ac93f6a2cfdc51a8d350d52d0d",
+    "web/app/enterprise/page.tsx": "3ad70d6013f3a204d1a679763821021d5efefe283a1095daa28b5dfcf30ee1c8",
+    "web/tests/enterprise-contracts.spec.ts": "742e5510ec014f1e6450d5d2281ec402ef3f20d5b6d3fe3181e3d8ba3eb89c3e",
+    "web/tests/enterprise.spec.ts": "a1bea347b1c8588f43198d321061b165a141c7ba5176ae84d7df3ecb164ed853",
+    "api/tests/integration/test_enterprise_browser.py": "250b1cbd61fa1eaa4295b5f4314010a04284d344543b7701dfb2358d72563353"
+  },
+  "checks": {
+    "web_checks": "PASS (typecheck, lint, format:check, test:unit, build)",
+    "api_static": "PASS (ruff check, ruff format --check, mypy)",
+    "focused_browser_e2e": "PASS (desktop + mobile 390px, axe-core 0 violations, immediate 403 on deprovisioning, consent-filtered currency-separated group analytics, PG18 read-back)",
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3093,
+      "executed_tests": 3093,
+      "unique_tests": 3093,
+      "duplicates": 0,
+      "passed": 3089,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1439.06,
+      "browser_passed": 52,
+      "serial_passed": 216
+    }
+  }
+}
