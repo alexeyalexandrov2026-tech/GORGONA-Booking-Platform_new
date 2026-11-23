@@ -56,6 +56,7 @@ SERIAL_FILES: tuple[str, ...] = (
     "tests/integration/test_provider_receipt_attestations.py",
     "tests/integration/test_provider_receipt_guard_review.py",
     "tests/integration/test_workforce_guards.py",
+    "tests/integration/test_ops_recovery_and_replay.py",
 )
 
 # Heavier non-browser integration files get explicit weights so LPT balances worker runtimes.
