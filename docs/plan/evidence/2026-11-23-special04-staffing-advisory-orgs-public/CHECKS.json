@@ -1,0 +1,15 @@
+{
+  "package": "SPECIAL-04",
+  "branch": "codex/package-special-04-staffing-advisory-orgs-public",
+  "base_commit": "49314af9a676a0bb9fdb82f9f7a79466a7049ad2",
+  "verified_code_commit": "9ac8de092b996b3a39c6e263822be5171fa1468c",
+  "verified_code_tree": "35f00337d02ceebb3f047e24ba3e458c9c352da1",
+  "migration": "0148_special_staffing_advisory_orgs_public.sql",
+  "expected_tests": 3109,
+  "passed": 3105,
+  "failed": 0,
+  "skipped": 4,
+  "wall_seconds": 1462.7,
+  "browser_passed": 52,
+  "serial_passed": 216
+}
