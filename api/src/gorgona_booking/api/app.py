@@ -50,6 +50,7 @@ from gorgona_booking.api import (
     shift_changes,
     special_assets,
     special_care,
+    special_civic,
     special_venues,
     stock,
     supply_manufacturing,
@@ -196,6 +197,7 @@ def create_app(
     app.include_router(special_venues.router)
     app.include_router(special_care.router)
     app.include_router(special_assets.router)
+    app.include_router(special_civic.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

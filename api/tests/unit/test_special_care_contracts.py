@@ -13,12 +13,12 @@ from gorgona_booking.business.special_care import CareEncounterInput, CareSubjec
 
 
 def test_clinical_care_module_and_care_permissions_registered() -> None:
-    assert modules.MODULE_REGISTRY_VERSION == 15
+    assert modules.MODULE_REGISTRY_VERSION == 16
     mod = modules.MODULES_BY_ID["clinical_care"]
     assert mod.readiness == Readiness.IMPLEMENTED
     assert mod.enableable is False
     assert set(mod.depends_on) == {"counterparties"}
-    assert PERMISSIONS_VERSION == 24
+    assert PERMISSIONS_VERSION == 25
     for perm in (Permission.CARE_READ, Permission.CARE_WORK, Permission.CARE_MANAGE):
         assert perm not in DELEGABLE_PERMISSIONS
 

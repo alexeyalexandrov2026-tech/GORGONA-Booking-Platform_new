@@ -287,6 +287,10 @@ K_TABLES = {
     "asset_inspections",
     "asset_work_orders",
     "asset_safety_incidents",
+    "civic_programs",
+    "civic_cases",
+    "civic_allocations",
+    "civic_audit_events",
 }
 previous_stock_database = previous_admission_database
 stock = test_stock.stock

@@ -5,7 +5,7 @@ Roles come from server-side memberships and platform roles, never from token cla
 
 from enum import StrEnum
 
-PERMISSIONS_VERSION = 24
+PERMISSIONS_VERSION = 25
 
 
 class Permission(StrEnum):
@@ -83,6 +83,10 @@ class Permission(StrEnum):
     ASSETS_READ = "assets.read"
     ASSETS_WORK = "assets.work"
     ASSETS_MANAGE = "assets.manage"
+    # ADR-0045 (SPECIAL-04): staffing, advisory, orgs and public admin; not delegated.
+    CIVIC_READ = "civic.read"
+    CIVIC_WORK = "civic.work"
+    CIVIC_MANAGE = "civic.manage"
     MEMBERS_MANAGE = "members.manage"
     MEMBERS_MANAGE_ADMINS = "members.manage_admins"
     SETTINGS_MANAGE = "settings.manage"
@@ -112,6 +116,8 @@ _STAFF = frozenset(
         Permission.CARE_WORK,
         Permission.ASSETS_READ,
         Permission.ASSETS_WORK,
+        Permission.CIVIC_READ,
+        Permission.CIVIC_WORK,
     }
 )
 _FRONT_DESK = _STAFF | {Permission.BOOKING_WRITE, Permission.RESTAURANT_SERVICE}
@@ -157,6 +163,7 @@ _MANAGER = _FRONT_DESK | {
     Permission.SPECIAL_MANAGE,
     Permission.CARE_MANAGE,
     Permission.ASSETS_MANAGE,
+    Permission.CIVIC_MANAGE,
     Permission.MEMBERS_MANAGE,
     Permission.SETTINGS_MANAGE,
     Permission.READINESS_READ,
