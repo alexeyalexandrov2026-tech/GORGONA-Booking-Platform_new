@@ -1,0 +1,15 @@
+{
+  "package": "SPECIAL-02",
+  "branch": "codex/package-special-02-clinical-vet-social-care",
+  "base_commit": "1e82ca3998f81482accf41da6ed4adccfe96fb5a",
+  "verified_code_commit": "6b48bd3011f2cf84c8bf927c24657dfbdfe16d1c",
+  "verified_code_tree": "4ef918f31ec73cffcbcfdfa78075c4549057ce32",
+  "migration": "0146_special_clinical_vet_social_care.sql",
+  "expected_tests": 3101,
+  "passed": 3097,
+  "failed": 0,
+  "skipped": 4,
+  "wall_seconds": 1426.66,
+  "browser_passed": 52,
+  "serial_passed": 216
+}
