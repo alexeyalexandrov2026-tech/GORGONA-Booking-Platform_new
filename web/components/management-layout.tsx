@@ -47,6 +47,7 @@ const NAV_ITEMS = [
   { href: "/supply/", label: "Supply Chain" },
   { href: "/marketplace/", label: "Marketplace" },
   { href: "/enterprise/", label: "Enterprise" },
+  { href: "/specialized/", label: "Specialized" },
   { href: "/provider-admission/", label: "Provider admission" },
   { href: "/settings/", label: "Settings" },
 ];

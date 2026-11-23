@@ -36,6 +36,26 @@ async def _access(
         yield access
 
 
+@router.get("/subjects", response_model=sc.CareSubjectList)
+async def get_subjects(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> sc.CareSubjectList:
+    async with _access(request, principal, business_id) as access:
+        return await sc.list_subjects(access.conn, business_id)
+
+
+@router.get("/consents", response_model=sc.CareConsentList)
+async def get_consents(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> sc.CareConsentList:
+    async with _access(request, principal, business_id) as access:
+        return await sc.list_consents(access.conn, business_id)
+
+
 @router.put("/subjects/{subject_id}", response_model=sc.CareSubjectView)
 async def put_subject(
     business_id: UUID,

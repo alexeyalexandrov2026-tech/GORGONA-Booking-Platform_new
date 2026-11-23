@@ -36,6 +36,16 @@ async def _access(
         yield access
 
 
+@router.get("/programs", response_model=sv.ProgramList)
+async def get_programs(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> sv.ProgramList:
+    async with _access(request, principal, business_id) as access:
+        return await sv.list_programs(access.conn, business_id)
+
+
 @router.put("/programs/{program_id}", response_model=sv.ProgramView)
 async def put_program(
     business_id: UUID,

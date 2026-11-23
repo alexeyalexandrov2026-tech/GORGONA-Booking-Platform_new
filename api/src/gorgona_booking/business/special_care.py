@@ -190,6 +190,16 @@ class CareEncounterView(Strict):
     recorded_at: AwareDatetime
 
 
+class CareSubjectList(Strict):
+    schema_version: Literal[1] = 1
+    items: list[CareSubjectView]
+
+
+class CareConsentList(Strict):
+    schema_version: Literal[1] = 1
+    items: list[CareConsentView]
+
+
 class CareEncounterList(Strict):
     schema_version: Literal[1] = 1
     items: list[CareEncounterView]
@@ -255,6 +265,30 @@ def _encounter_view(r: tuple[Any, ...]) -> CareEncounterView:
         recorded_by=r[9],
         recorded_at=r[10],
     )
+
+
+async def list_subjects(conn: RuntimeConnection, business: UUID) -> CareSubjectList:
+    rows = await (
+        await conn.execute(
+            "select id, location_id, guardian_counterparty_id, subject_kind, code, "
+            "display_name, species_or_profile, allergies_summary, revision, recorded_by, "
+            "recorded_at from gba.care_subjects where tenant_id = %s order by code",
+            (business,),
+        )
+    ).fetchall()
+    return CareSubjectList(items=[_subject_view(r) for r in rows])
+
+
+async def list_consents(conn: RuntimeConnection, business: UUID) -> CareConsentList:
+    rows = await (
+        await conn.execute(
+            "select id, location_id, subject_id, scope, status, granted_by_name, revoked_at, "
+            "revision, recorded_by, recorded_at from gba.care_consents "
+            "where tenant_id = %s order by recorded_at desc, id desc",
+            (business,),
+        )
+    ).fetchall()
+    return CareConsentList(items=[_consent_view(r) for r in rows])
 
 
 async def save_subject(

@@ -110,6 +110,11 @@ class ProgramView(Strict):
     recorded_at: AwareDatetime
 
 
+class ProgramList(Strict):
+    schema_version: Literal[1] = 1
+    items: list[ProgramView]
+
+
 class EnrollmentInput(Versioned):
     location_id: UUID
     program_id: UUID
@@ -383,6 +388,18 @@ def _ticket_view(r: tuple[Any, ...]) -> TicketView:
 # ---------------------------------------------------------------------------
 # Education & Fitness
 # ---------------------------------------------------------------------------
+
+
+async def list_programs(conn: RuntimeConnection, business: UUID) -> ProgramList:
+    rows = await (
+        await conn.execute(
+            "select id, location_id, code, title, program_kind, capacity, enrolled_count, "
+            "included_sessions, price_minor, currency, is_active, revision, recorded_by, "
+            "recorded_at from gba.special_programs where tenant_id = %s order by code",
+            (business,),
+        )
+    ).fetchall()
+    return ProgramList(items=[_program_view(r) for r in rows])
 
 
 async def save_program(

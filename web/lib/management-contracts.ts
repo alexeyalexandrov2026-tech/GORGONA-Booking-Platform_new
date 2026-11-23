@@ -1,3 +1,4 @@
+import { specializedResponseSchema } from "./specialized-contracts";
 import { enterpriseResponseSchema } from "./enterprise-contracts";
 import { marketResponseSchema } from "./market-contracts";
 import { supplyResponseSchema } from "./supply-contracts";
@@ -417,6 +418,8 @@ export function managementResponseSchema(
     if (market) return market;
     const enterprise = enterpriseResponseSchema(business[1] ?? "", method);
     if (enterprise) return enterprise;
+    const specialized = specializedResponseSchema(business[1] ?? "", method);
+    if (specialized) return specialized;
     if (business[1] === "" && method === "GET") return businessSchema;
     if (business[1] === "/industry-catalog" && method === "GET")
       return industryCatalogSchema;
