@@ -284,6 +284,10 @@ K_TABLES = {
     "care_consents",
     "care_plans",
     "care_encounters",
+    "managed_assets",
+    "asset_inspections",
+    "asset_work_orders",
+    "asset_safety_incidents",
 }
 previous_inventory_database = previous_admission_database
 __all__ = ["changes", "client", "idp", "manager_a", "times", "workforce"]

@@ -1161,6 +1161,13 @@ _CARE_TABLES = (
     "care_encounters",
 )
 _CARE_MODULE_TABLES = _CARE_TABLES
+_ASSETS_TABLES = (
+    "managed_assets",
+    "asset_inspections",
+    "asset_work_orders",
+    "asset_safety_incidents",
+)
+_ASSETS_MODULE_TABLES = _ASSETS_TABLES
 _MODULE_TABLES = (*_COUNTERPARTY_TABLES, *_DOCUMENT_TABLES, *_LEDGER_TABLES)
 # (table, trigger, module argument) for every optional-module write gate.
 _MODULE_TRIGGERS = (
@@ -1168,6 +1175,7 @@ _MODULE_TRIGGERS = (
         (table, f"{table}_require_module", "hospitality_events")
         for table in _SPECIAL_VENUES_MODULE_TABLES
     ],
+    *[(table, f"{table}_require_module", "assets") for table in _ASSETS_MODULE_TABLES],
     *[(table, f"{table}_require_module", "clinical_care") for table in _CARE_MODULE_TABLES],
     *[(table, f"{table}_require_module", "analytics") for table in _ENTERPRISE_MODULE_TABLES],
     *[(table, f"{table}_require_module", "storefronts") for table in _MARKET_MODULE_TABLES],
@@ -1425,6 +1433,20 @@ _DEFINITIONS = [
             "(tenant_id=gba.current_tenant_id())",
         )
         for table in _CARE_TABLES
+    ],
+    *[
+        _definition(table, f"({_NO_LOCATION} OR (location_id = gba.current_location_id()))")
+        for table in _ASSETS_TABLES
+    ],
+    *[
+        (
+            table,
+            f"{table}_tenant_isolation",
+            "*",
+            "(tenant_id=gba.current_tenant_id())",
+            "(tenant_id=gba.current_tenant_id())",
+        )
+        for table in _ASSETS_TABLES
     ],
     *[
         _company_only(table, f"{table}_unrestricted_scope", "*")

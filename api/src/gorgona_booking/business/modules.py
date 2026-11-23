@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[14] = 14
+MODULE_REGISTRY_VERSION: Literal[15] = 15
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -216,7 +216,17 @@ MODULES: tuple[PlatformModule, ...] = (
         "New materials, storage places, posting rules and stock documents. Reads and history "
         "continue.",
     ),
-    _module("assets", "Assets and maintenance", _OPTIONAL, ("organization",)),
+    # ADR-0044 (SPECIAL-03): implemented, not enableable until jurisdictional acceptance.
+    _module(
+        "assets",
+        "Assets and maintenance",
+        _OPTIONAL,
+        ("organization",),
+        Readiness.IMPLEMENTED,
+        "SPECIAL-03 (ADR-0044): branch-scoped managed assets, insert-only inspections, "
+        "work orders and critical safety/environmental incidents across field industries.",
+        "New managed assets, inspections, work orders and incidents. Reads continue.",
+    ),
     _module("communications", "Communications", _OPTIONAL, ("counterparties",)),
     _module("support", "Support", _OPTIONAL, ("counterparties",)),
     # ADR-0041 (ENTERPRISE-01): implemented, not enableable until acceptance and the owner's word.
