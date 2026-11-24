@@ -3,6 +3,8 @@
 import httpx
 import pytest
 
+from fastapi.responses import JSONResponse
+
 from gorgona_booking.api.app import create_app
 from gorgona_booking.config import Settings
 
@@ -40,3 +42,18 @@ async def test_auth_config_returns_public_oidc_settings_when_configured() -> Non
         "client_id": "00000000-0000-0000-0000-000000000001",
         "scope": "openid profile email api://00000000-0000-0000-0000-000000000001/access_as_user",
     }
+
+
+async def test_auth_config_allows_test_override_when_unset() -> None:
+    app = create_app(Settings(environment="test"))
+
+    @app.get("/auth-config.json")
+    async def test_override() -> JSONResponse:
+        return JSONResponse({"authority": "http://127.0.0.1:1234", "client_id": "test"})
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        res = await client.get("/auth-config.json")
+    assert res.status_code == 200
+    assert res.json()["client_id"] == "test"

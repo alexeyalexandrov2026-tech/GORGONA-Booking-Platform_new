@@ -3,8 +3,8 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from gorgona_booking.api import (
@@ -204,26 +204,21 @@ def create_app(
     app.include_router(platform.router)
     app.include_router(customer.router)
 
-    @app.get("/auth-config.json", include_in_schema=False)
-    async def auth_config() -> Response:
-        if settings.auth_issuer and settings.auth_client_id and settings.auth_scope:
+    if settings.auth_issuer and settings.auth_client_id and settings.auth_scope:
+        authority = settings.auth_issuer
+        client_id = settings.auth_client_id
+        scope = settings.auth_scope
+
+        @app.get("/auth-config.json", include_in_schema=False)
+        async def auth_config() -> JSONResponse:
             return JSONResponse(
                 content={
-                    "authority": settings.auth_issuer,
-                    "client_id": settings.auth_client_id,
-                    "scope": settings.auth_scope,
+                    "authority": authority,
+                    "client_id": client_id,
+                    "scope": scope,
                 },
                 headers={"Cache-Control": "no-store"},
             )
-        if settings.customer_web_dir is not None:
-            static_cfg = settings.customer_web_dir / "auth-config.json"
-            if static_cfg.is_file():
-                return FileResponse(
-                    static_cfg,
-                    media_type="application/json",
-                    headers={"Cache-Control": "no-store"},
-                )
-        raise HTTPException(status_code=404, detail="Not Found")
 
     if settings.customer_web_dir is not None:
         # API routes are registered first. The export and APIs share the trusted Host.
