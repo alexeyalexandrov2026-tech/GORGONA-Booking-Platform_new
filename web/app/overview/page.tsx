@@ -279,7 +279,7 @@ function OverviewContent({
         </span>
       </div>
 
-      <div className="mgmt-table-container">
+      <div className="mgmt-table-container" tabIndex={0}>
         <table className="mgmt-table" aria-label="Today's Appointments">
           <thead>
             <tr>
@@ -359,7 +359,7 @@ function OverviewContent({
         </span>
       </div>
 
-      <div className="mgmt-table-container">
+      <div className="mgmt-table-container" tabIndex={0}>
         <table className="mgmt-table" aria-label="Recent Audit Activity">
           <thead>
             <tr>

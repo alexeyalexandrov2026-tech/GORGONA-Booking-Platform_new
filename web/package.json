@@ -47,7 +47,8 @@
     "test:management:property-maintenance": "playwright test tests/property-maintenance.spec.ts --max-failures=1",
     "test:management:rental-agreement": "playwright test tests/rental-agreement.spec.ts --max-failures=1",
     "test:management:rental-settlement": "playwright test tests/rental-settlement.spec.ts --max-failures=1",
-    "test:management:stock-documents": "playwright test tests/stock-documents.spec.ts --max-failures=1"
+    "test:management:stock-documents": "playwright test tests/stock-documents.spec.ts --max-failures=1",
+    "test:management:ops": "playwright test tests/ops-resilience.spec.ts --project=desktop --project=mobile"
   },
   "dependencies": {
     "next": "16.4.6",

@@ -179,7 +179,7 @@ function SettingsContent({
             <h3 style={{ margin: "0 0 12px", fontSize: "1.1rem" }}>
               Physical Locations ({settings.locations.length})
             </h3>
-            <div className="mgmt-table-container">
+            <div className="mgmt-table-container" tabIndex={0}>
               <table className="mgmt-table">
                 <thead>
                   <tr>
@@ -210,7 +210,7 @@ function SettingsContent({
             <h3 style={{ margin: "0 0 12px", fontSize: "1.1rem" }}>
               Salon Business Hours
             </h3>
-            <div className="mgmt-table-container">
+            <div className="mgmt-table-container" tabIndex={0}>
               <table className="mgmt-table">
                 <thead>
                   <tr>
@@ -281,7 +281,7 @@ function SettingsContent({
               Origins permitted by CORS and CSP to embed this salon&apos;s
               hosted booking widget and make public booking API calls.
             </p>
-            <div className="mgmt-table-container">
+            <div className="mgmt-table-container" tabIndex={0}>
               <table className="mgmt-table">
                 <thead>
                   <tr>
@@ -343,7 +343,7 @@ function SettingsContent({
               Audit confirmations of tenant business licenses, pricing parity,
               brand assets, and operating policies.
             </p>
-            <div className="mgmt-table-container">
+            <div className="mgmt-table-container" tabIndex={0}>
               <table className="mgmt-table">
                 <thead>
                   <tr>

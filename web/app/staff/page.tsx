@@ -371,7 +371,7 @@ function StaffContent({
       )}
 
       {!loading && !error && staffList.length > 0 && (
-        <div className="mgmt-table-container">
+        <div className="mgmt-table-container" tabIndex={0}>
           <table className="mgmt-table">
             <thead>
               <tr>
