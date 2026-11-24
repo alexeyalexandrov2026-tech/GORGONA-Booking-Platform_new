@@ -349,10 +349,11 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         style={{
           padding: "1rem 1.5rem",
           fontSize: "0.85rem",
-          opacity: 0.75,
+          color: "#3f3832",
           display: "flex",
+          flexWrap: "wrap",
           gap: "1rem",
-          borderTop: "1px solid rgba(0,0,0,0.08)",
+          borderTop: "1px solid rgba(0,0,0,0.12)",
         }}
       >
         <span>GORGONA Platform</span>

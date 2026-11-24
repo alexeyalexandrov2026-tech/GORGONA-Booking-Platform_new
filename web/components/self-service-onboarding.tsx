@@ -380,7 +380,7 @@ export function SelfServiceOnboarding() {
                     #{ind.id} {ind.name}
                   </strong>{" "}
                   <span>(NAICS {ind.naics_sectors.join(", ")})</span>
-                  <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
+                  <div style={{ fontSize: "0.85rem", color: "#3f3832" }}>
                     {ind.examples}
                   </div>
                 </label>
