@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 import psycopg
 from psycopg import sql
+from psycopg.conninfo import make_conninfo
 
 RUNTIME_GROUP = "gba_runtime"
 RECEIPT_WRITER_GROUP = "gba_receipt_writer"
@@ -143,9 +144,34 @@ def bootstrap(admin_conninfo: str, spec: BootstrapSpec) -> None:
             )
         elif owner[0] != spec.owner_role:
             raise BootstrapError(f"database {spec.database} is owned by {owner[0]}, not the owner")
+        admin_user_row = conn.execute("select current_user").fetchone()
+        admin_user = str(admin_user_row[0]) if admin_user_row is not None else ""
+        if admin_user and admin_user != spec.owner_role:
+            conn.execute(
+                sql.SQL("grant connect on database {} to {}").format(
+                    sql.Identifier(spec.database), sql.Identifier(admin_user)
+                )
+            )
+        target_dsn = make_conninfo(admin_conninfo, dbname=spec.database)
+        with psycopg.connect(target_dsn, autocommit=True) as db_conn:
+            # On Azure PostgreSQL 18 Flexible Server, template0's public schema is owned by
+            # azuresu/azure_pg_admin rather than pg_database_owner, so the non-superuser owner
+            # role needs explicit schema privileges to create public.gba_schema_migrations.
+            db_conn.execute(
+                sql.SQL("grant usage, create on schema public to {}").format(
+                    sql.Identifier(spec.owner_role)
+                )
+            )
+            db_conn.execute("create extension if not exists btree_gist")
         conn.execute(
             sql.SQL("revoke all on database {} from public").format(sql.Identifier(spec.database))
         )
+        if admin_user and admin_user != spec.owner_role:
+            conn.execute(
+                sql.SQL("revoke connect on database {} from {}").format(
+                    sql.Identifier(spec.database), sql.Identifier(admin_user)
+                )
+            )
         conn.execute(
             sql.SQL("grant connect on database {} to {}").format(
                 sql.Identifier(spec.database), sql.Identifier(RUNTIME_GROUP)
