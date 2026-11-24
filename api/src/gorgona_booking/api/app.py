@@ -28,6 +28,7 @@ from gorgona_booking.api import (
     market_orders,
     market_storefronts,
     members,
+    notifications,
     platform,
     projects_billing,
     projects_matters,
@@ -201,6 +202,7 @@ def create_app(
     app.include_router(special_civic.router)
     app.include_router(members.router)
     app.include_router(self_service.router)
+    app.include_router(notifications.router)
     app.include_router(setup.router)
     app.include_router(platform.router)
     app.include_router(customer.router)
