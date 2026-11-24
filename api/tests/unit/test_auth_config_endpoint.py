@@ -2,7 +2,6 @@
 
 import httpx
 import pytest
-
 from fastapi.responses import JSONResponse
 
 from gorgona_booking.api.app import create_app
