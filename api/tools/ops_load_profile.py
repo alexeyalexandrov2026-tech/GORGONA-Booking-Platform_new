@@ -339,6 +339,8 @@ def seed_synthetic_dataset(
                             occurred,
                         )
                     )
+            cur.execute("analyze gba.audit_events")
+            cur.execute("analyze gba.service_variants")
         conn.commit()
 
     seed_seconds = round(time.perf_counter() - t0, 3)

@@ -24,7 +24,7 @@ from tools.ops_recovery_drill import (
 
 from gorgona_booking.business import ledger
 from gorgona_booking.business.ledger_contracts import BookInput, EntryInput, LineInput
-from gorgona_booking.db.migrate import apply_migrations
+from gorgona_booking.db.migrate import apply_migrations, load_migrations
 from gorgona_booking.db.pool import RuntimePool, create_runtime_pool, tenant_transaction
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from tests.integration import test_management_api as shared
@@ -176,7 +176,7 @@ async def test_ops01_pg_dump_restore_reconciliation_replay_and_switchback(
         target_admin_dsn = make_conninfo(test_database.admin_dsn, dbname=target_db)
         src_snap = capture_reconciliation_snapshot(source_admin_dsn)
         dst_snap = capture_reconciliation_snapshot(target_admin_dsn)
-        assert src_snap.migration_count == 148
+        assert src_snap.migration_count == len(load_migrations())
         assert src_snap.table_counts["tenants"] >= 1
         assert src_snap.table_counts["journal_entries"] >= 2
         assert reconcile_snapshots(src_snap, dst_snap).matched is True
