@@ -245,6 +245,18 @@ module workers 'modules/ai-jobs.bicep' = if (deployWorkers) {
   dependsOn: [opsSecrets, workerSecrets, opsPull, workerPull]
 }
 
+module mlIdentity 'modules/user-identity.bicep' = {
+  name: 'ai-ml-identity'
+  scope: rg
+  params: { location: location, name: 'id-${namePrefix}-ml', tags: tags }
+}
+
+module mlPull 'modules/acr-pull.bicep' = {
+  name: 'ai-ml-acrpull'
+  scope: resourceGroup(registryRg)
+  params: { registryName: registryName, principalId: mlIdentity.outputs.principalId }
+}
+
 module ml 'modules/ai-ml.bicep' = {
   name: 'ai-ml'
   scope: rg
@@ -255,9 +267,12 @@ module ml 'modules/ai-ml.bicep' = {
     tags: tags
     appInsightsId: appInsightsId
     containerRegistryId: containerRegistryId
+    mlIdentityId: mlIdentity.outputs.id
+    mlIdentityPrincipalId: mlIdentity.outputs.principalId
     deployGpuCluster: deployGpuCluster
     cpuMaxNodes: cpuMaxNodes
   }
+  dependsOn: [mlPull]
 }
 
 module lock 'modules/rg-lock.bicep' = if (lockResourceGroup) {

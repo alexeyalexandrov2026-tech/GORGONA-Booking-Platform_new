@@ -32,7 +32,9 @@ param(
     [string] $BudgetStart = '2026-10-01',
     [string] $Image,
     [string] $AiImage,
-    [string] $Location = 'centralus'
+    [string] $Location = 'centralus',
+    [string] $AuthClientId = '',
+    [string] $AuthScope = ''
 )
 $ErrorActionPreference = 'Stop'
 
@@ -86,7 +88,9 @@ if ($Stage -eq 'staging') {
         'resource', 'show', '--ids', $set.GBA_APPINSIGHTS_ID, '--query', 'properties.ConnectionString', '-o', 'tsv')
     $set.GBA_AUTH_ISSUER = "https://login.microsoftonline.com/$($account.tenantId)/v2.0"
     $set.GBA_AUTH_JWKS_URL = "https://login.microsoftonline.com/$($account.tenantId)/discovery/v2.0/keys"
-    $set.GBA_AUTH_AUDIENCE = 'api://gorgona-staging'
+    $set.GBA_AUTH_AUDIENCE = if ($AuthClientId) { $AuthClientId } else { 'api://gorgona-staging' }
+    if ($AuthClientId) { $set.GBA_AUTH_CLIENT_ID = $AuthClientId }
+    if ($AuthScope) { $set.GBA_AUTH_SCOPE = $AuthScope }
 }
 
 foreach ($name in $set.Keys) {

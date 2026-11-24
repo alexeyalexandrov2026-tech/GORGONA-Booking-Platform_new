@@ -1,5 +1,7 @@
 // Azure Machine Learning workspace (registry, experiments, evaluations) with its own
 // system storage and Key Vault, and compute clusters that idle at 0 nodes.
+// Uses a user-assigned managed identity with explicit RBAC on the ML Key Vault and
+// storage account so workspace provisioning works cleanly with RBAC-enabled Key Vaults.
 // It holds ML metadata only; evidence stays in the private evidence store. Before
 // sensitive training data flows, move to a managed-VNet workspace (scale later).
 @description('Azure region.')
@@ -20,6 +22,12 @@ param appInsightsId string
 @description('Container registry ID (shared).')
 param containerRegistryId string
 
+@description('User-assigned managed identity resource ID for the Azure ML workspace.')
+param mlIdentityId string
+
+@description('User-assigned managed identity principal ID for RBAC role assignments.')
+param mlIdentityPrincipalId string
+
 @description('CPU cluster VM size (must be an Azure ML-supported size in the region; D4s_v5 is not, D4ds_v5 is).')
 param cpuVmSize string = 'Standard_D4ds_v5'
 
@@ -31,6 +39,23 @@ param deployGpuCluster bool = false
 
 @description('GPU cluster VM size.')
 param gpuVmSize string = 'Standard_NC4as_T4_v3'
+
+var contributorRole = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'b24988ac-6180-42a0-ab88-20f7382dd24c'
+)
+var storageBlobDataContributor = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+)
+var keyVaultAdministrator = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '00482a5a-887f-4fb3-b363-3b7fe8e74483'
+)
+var keyVaultContributor = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'f25e0fa2-a7c8-4377-a976-54943a77a395'
+)
 
 resource mlStorage 'Microsoft.Storage/storageAccounts@2026-04-01' = {
   name: 'stml${uniqueSuffix}gba'
@@ -59,14 +84,58 @@ resource mlVault 'Microsoft.KeyVault/vaults@2026-02-01' = {
   }
 }
 
+resource mlStorageContrib 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: mlStorage
+  name: guid(mlStorage.id, mlIdentityPrincipalId, contributorRole)
+  properties: {
+    principalId: mlIdentityPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: contributorRole
+  }
+}
+
+resource mlStorageBlobContrib 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: mlStorage
+  name: guid(mlStorage.id, mlIdentityPrincipalId, storageBlobDataContributor)
+  properties: {
+    principalId: mlIdentityPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: storageBlobDataContributor
+  }
+}
+
+resource mlVaultAdmin 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: mlVault
+  name: guid(mlVault.id, mlIdentityPrincipalId, keyVaultAdministrator)
+  properties: {
+    principalId: mlIdentityPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: keyVaultAdministrator
+  }
+}
+
+resource mlVaultContrib 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: mlVault
+  name: guid(mlVault.id, mlIdentityPrincipalId, keyVaultContributor)
+  properties: {
+    principalId: mlIdentityPrincipalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: keyVaultContributor
+  }
+}
+
 resource workspace 'Microsoft.MachineLearningServices/workspaces@2026-05-01' = {
   name: 'mlw-${namePrefix}-${uniqueSuffix}'
   location: location
   tags: tags
-  identity: { type: 'SystemAssigned' }
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: { '${mlIdentityId}': {} }
+  }
   sku: { name: 'Basic', tier: 'Basic' }
   properties: {
     friendlyName: 'GORGONA AI learning plane'
+    primaryUserAssignedIdentity: mlIdentityId
     storageAccount: mlStorage.id
     keyVault: mlVault.id
     applicationInsights: appInsightsId
@@ -74,6 +143,7 @@ resource workspace 'Microsoft.MachineLearningServices/workspaces@2026-05-01' = {
     publicNetworkAccess: 'Enabled'
     v1LegacyMode: false
   }
+  dependsOn: [mlStorageContrib, mlStorageBlobContrib, mlVaultAdmin, mlVaultContrib]
 }
 
 resource cpuCluster 'Microsoft.MachineLearningServices/workspaces/computes@2026-05-01' = {
