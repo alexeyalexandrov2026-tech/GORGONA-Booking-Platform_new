@@ -26,6 +26,8 @@ _ENV_FIELDS: Mapping[str, str] = {
     "GBA_AUTH_ISSUER": "auth_issuer",
     "GBA_AUTH_AUDIENCE": "auth_audience",
     "GBA_AUTH_JWKS_URL": "auth_jwks_url",
+    "GBA_AUTH_CLIENT_ID": "auth_client_id",
+    "GBA_AUTH_SCOPE": "auth_scope",
     "GBA_AUTH_ALGORITHMS": "auth_algorithms",
     "GBA_AUTH_LEEWAY_SECONDS": "auth_leeway_seconds",
     # Set only by the gated production promotion, after bridge acceptance passed and the
@@ -58,6 +60,8 @@ class Settings(BaseModel):
     auth_issuer: str | None = None
     auth_audience: str | None = None
     auth_jwks_url: str | None = None
+    auth_client_id: str | None = None
+    auth_scope: str = "openid profile email"
     auth_algorithms: tuple[str, ...] = ("RS256", "ES256")
     auth_leeway_seconds: int = Field(default=30, ge=0, le=300)
     applicationinsights_connection_string: SecretStr | None = None

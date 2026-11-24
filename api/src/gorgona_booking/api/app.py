@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from gorgona_booking.api import (
@@ -202,6 +203,23 @@ def create_app(
     app.include_router(setup.router)
     app.include_router(platform.router)
     app.include_router(customer.router)
+
+    if settings.auth_issuer and settings.auth_client_id and settings.auth_scope:
+        authority = settings.auth_issuer
+        client_id = settings.auth_client_id
+        scope = settings.auth_scope
+
+        @app.get("/auth-config.json", include_in_schema=False)
+        async def auth_config() -> JSONResponse:
+            return JSONResponse(
+                content={
+                    "authority": authority,
+                    "client_id": client_id,
+                    "scope": scope,
+                },
+                headers={"Cache-Control": "no-store"},
+            )
+
     if settings.customer_web_dir is not None:
         # API routes are registered first. The export and APIs share the trusted Host.
         app.mount(
