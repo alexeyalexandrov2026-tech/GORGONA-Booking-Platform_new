@@ -1,7 +1,7 @@
 -- 0151_notification_outbox.sql
 -- Tenant-scoped transactional Email & SMS notification outbox (invoker-only, FORCE RLS).
 
-CREATE TABLE IF NOT EXISTS gba.notification_outbox (
+CREATE TABLE gba.notification_outbox (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL REFERENCES gba.tenants(id) ON DELETE RESTRICT,
     channel text NOT NULL CHECK (channel IN ('email', 'sms')),
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS gba.notification_outbox (
     UNIQUE (tenant_id, idempotency_key)
 );
 
-CREATE INDEX IF NOT EXISTS notification_outbox_tenant_status_idx
+CREATE INDEX notification_outbox_tenant_status_idx
     ON gba.notification_outbox (tenant_id, status, next_attempt_at);
 
 ALTER TABLE gba.notification_outbox ENABLE ROW LEVEL SECURITY;
