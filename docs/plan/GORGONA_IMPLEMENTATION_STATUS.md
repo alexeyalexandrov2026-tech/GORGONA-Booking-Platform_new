@@ -1,5 +1,21 @@
 # GORGONA — реестр реализации
 
+## Current checkpoint — 2026-11-24: Stages 5–9 technical implementation & OPS-01..04 verification complete (migrations 0128–0149, all 39/39 profiles)
+
+Branch tip `codex/package-ops-04-audit-rls-perf-and-container-verify` (code `3aa0466`, [OPS-04 plan](PACKAGE_OPS04_PLAN_2026-11-24.md), [OPS-04 evidence](evidence/2026-11-24-ops04-audit-rls-perf/CHECKS.json), [operations runbook](../runbooks/OPS_RECOVERY_AND_LOAD_RUNBOOK.md)). Complete verified technical chain pushed to GitHub without touching `main`, `readiness_registry.py`, `enableable=False`, `transport`, or `gorgona-r09-rental-change-ui`:
+
+- **Stage 5**: `REST-01` (S1–S5, `/restaurant/`) and `PRO-01` (S1–S5, `/projects/`) — verified & pushed.
+- **Stage 6**: `SUPPLY-01` (S1–S4, migrations `0138..0140`, `/supply/`) — verified & pushed (`a2c5817`).
+- **Stage 7**: `MARKET-01` (S1–S3, `0141..0142`, `/marketplace/`, `a5c0ef3`) and `ENTERPRISE-01` (S1–S3, `0143..0144`, `/enterprise/`, `159dd90`) — verified & pushed.
+- **Stage 8**: `SPECIAL-01..05` (`0145..0148`, unified 4-tab `/specialized/`, covering all 39/39 industry profiles, `88806e6`) — verified & pushed.
+- **Stage 9 Technical Verification (`OPS-01..04`)**:
+  - `OPS-01` (`01ff54f`): real PG18 `pg_dump`/`pg_restore` drill, full 148-migration/table/multi-currency ledger reconciliation, idempotent replay & switchback; caught and fixed real `pg_dump` nested-`AND` AST recovery bug in `financial_guard.py`.
+  - `OPS-02` (`fd66351`): deterministic load profile generator (`v1.0.0`, strict `"FAKE "` & loopback guards) and `full-1000` benchmark (1,000 FAKE companies, 100 enterprise branches, 10,000 staff, 1,000,000 historical rows, 70/20/10 mix under `gba_runtime` RLS; `full_soak_40m_completed=false` on dev VM).
+  - `OPS-03` (`dd27976`): server offline conflict matrix (`409` stale revision, `200` idempotent retry, `422 IDEMPOTENCY_KEY_REUSED`, `403` revoked staff, `401` forged bearer, `PeriodClosedError`) + real Chromium desktop & 390px mobile E2E (keyboard `Tab`, `axe-core` WCAG 2.1 A/AA `0` violations, `0` horizontal overflow, `503`/`409` recovery); fixed latent WCAG 2.1 A `scrollable-region-focusable` across `.mgmt-table-container` wrappers.
+  - `OPS-04` (`3aa0466`): migration **0149** (`audit_events_rls_index.sql`, next migration **0150**) replaced non-indexable `IS NOT DISTINCT FROM` on `gba.audit_events`, reducing `full-1000` 1M-row report `p95` from `2468.73 ms` to **`24.573 ms`** (read `p95=9.756 ms`, write `p95=10.309 ms`, `2838.89 ops/s`, `0` unexpected errors, `0` cross-tenant leaks); verified real production Docker image (`GBA_REQUIRE_CONTAINER=1`: **3/3 passed**); validated `infra/azure/main-shared.bicep` and `main-platform.bicep` via `az bicep build`; full parallel suite **`3119 passed / 0 failed / 4 skipped`** out of `3123` (`browser 54/54`, `serial 218/218`, `count_ok=True`, `duplicates=0`).
+
+Remaining gates requiring explicit owner decision: PR/merge to `main`, `readiness_registry.py` raises, enabling optional modules (`enableable=True`), Azure staging deployment & 40-minute soak run, live payment/OIDC providers, DNS, and industry pilot acceptance (statuses 4–5).
+
 ### SPECIAL-05 (Этап 8). Единый UI специализированных отраслей /specialized/ (профили 12–39), 23 ноября
 
 Ветка `codex/package-special-05-specialized-ui` (коммит `139647b`, миграций нет — использует `0145`–`0148`). 4-вкладочный интерфейс + сквозной E2E-тест Chromium desktop/mobile с axe-core и чтением из PG18. Полный параллельный прогон на `gorgona-dev`: `3106 PASS, 0 fail, 4 skip` из `3110` (`1479.88s`, browser `53/53`, serial `216/216`).
