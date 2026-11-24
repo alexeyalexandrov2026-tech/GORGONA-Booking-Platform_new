@@ -65,21 +65,6 @@ resource waf 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@2025-11-
             {
               ruleGroupName: 'METHOD-ENFORCEMENT'
               rules: [
-        {
-          name: 'DisallowedHttpMethods'
-          priority: 50
-          enabledState: 'Enabled'
-          ruleType: 'MatchRule'
-          matchConditions: [
-            {
-              matchVariable: 'RequestMethod'
-              operator: 'Equal'
-              negateCondition: true
-              matchValue: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-            }
-          ]
-          action: 'Block'
-        }
                 {
                   // DRS 2.1 rule 911100 blocks PUT/PATCH/DELETE by default; GORGONA REST APIs
                   // use PUT/PATCH/DELETE, while non-standard methods are blocked by DisallowedHttpMethods below.
