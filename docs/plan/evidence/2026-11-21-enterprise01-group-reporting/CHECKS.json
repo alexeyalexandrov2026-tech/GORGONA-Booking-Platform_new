@@ -1,0 +1,41 @@
+{
+  "package": "ENTERPRISE-01",
+  "slice": "Slice 2 — Consent-based consolidated group reporting without ownership transfer",
+  "date": "2026-11-21",
+  "branch": "codex/package-enterprise-01-group-reporting",
+  "base_commit": "b6a5ec33003a60278e0ebf4c1687cbe6e0ed8b94",
+  "verified_code_commit": "3b34049f6edbac258476cddb09ac353b256aab04",
+  "verified_code_tree": "89ae65ab5b2b9609dce23660f9cfe19d8f7f28a8",
+  "migration": "0144_enterprise_group_reporting.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "api/src/gorgona_booking/db/migrations/0144_enterprise_group_reporting.sql": "86e75a296dc1e524fe88601cddc4b29629798aa5f801efc4c5d075131eb0a038",
+    "api/src/gorgona_booking/business/enterprise_reporting.py": "9e1147173be3392d36aa7ae353d210f066be5e4f18af48d696cc7b20487ed7ca",
+    "api/src/gorgona_booking/api/enterprise_reporting.py": "888edff2064df4bed982646cfa066bdc909cce88e89907db8d4f1ab039cb84d8",
+    "api/src/gorgona_booking/db/schema_guard.py": "bf91ef57b494327056255c8f353b50bc339ee6d7024847d918b4e01099cde165",
+    "api/tests/unit/test_enterprise_reporting_contracts.py": "bb1849208ec77dca2f2c5ad182058ba5f4438a6c5b3ba975885f71966710ff29",
+    "api/tests/integration/test_enterprise_reporting.py": "ae77a3ad6b1d1ffbadee64324cc2fee2363b36c0820691d9bb42f445d66f9bc6",
+    "api/tests/integration/test_enterprise_reporting_upgrade.py": "3d78bc471644bec6ecde865fbb014a904ae2063c1152738ff85186b54c7ded1f"
+  },
+  "checks": {
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS",
+    "mypy": "PASS",
+    "focused_integration": "PASS",
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3092,
+      "executed_tests": 3092,
+      "unique_tests": 3092,
+      "duplicates": 0,
+      "passed": 3088,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1410.76,
+      "browser_passed": 51,
+      "serial_passed": 216
+    }
+  }
+}

@@ -97,6 +97,9 @@ async def _linked_to_visit(conn: RuntimeConnection, book_id: UUID, document_id: 
 
     Those drafts are built from the visit or the sale; their routes keep trusting what they wrote.
     Package M review R-01: so are a transport order invoice and a trip pay accrual.
+    Package O (O5 decision 6): so are a pay application's invoice and its retainage accrual.
+    Package R (R7a decision 3, R7b decision 1): so are a rental settlement's and a damage
+    charge's invoice.
     """
     row = await (
         await conn.execute(
@@ -107,8 +110,21 @@ async def _linked_to_visit(conn: RuntimeConnection, book_id: UUID, document_id: 
             " or exists (select 1 from gba.transport_order_invoices where book_id=%s"
             " and document_id=%s)"
             " or exists (select 1 from gba.transport_pay_accruals where book_id=%s"
-            " and document_id=%s)",
-            (book_id, document_id) * 5,
+            " and document_id=%s)"
+            # N8 (RN-01): the carrier's pay of an accepted tender is frozen like the driver's.
+            " or exists (select 1 from gba.transport_tender_accruals where book_id=%s"
+            " and document_id=%s)"
+            " or exists (select 1 from gba.construction_pay_applications where book_id=%s"
+            " and invoice_document_id=%s)"
+            " or exists (select 1 from gba.construction_pay_applications where book_id=%s"
+            " and retainage_document_id=%s)"
+            # R7a (RENT-01): a rental settlement's invoice is built from the agreement and its use.
+            " or exists (select 1 from gba.rental_settlements where book_id=%s"
+            " and invoice_document_id=%s)"
+            # R7b: so is a rental damage charge's invoice.
+            " or exists (select 1 from gba.rental_damage_charges where book_id=%s"
+            " and invoice_document_id=%s)",
+            (book_id, document_id) * 10,
         )
     ).fetchone()
     return bool(row and row[0])
@@ -461,8 +477,8 @@ async def save_draft(
         raise FinancialDocumentStateError(f"An issued {spec.label.lower()} stays unchanged")
     if current is not None and await _linked_to_visit(conn, book_id, document_id):
         raise FinancialDocumentLinkedError(
-            f"This {spec.label.lower()} belongs to a visit, a prepaid sale or transport "
-            "and is not edited here"
+            f"This {spec.label.lower()} belongs to a visit, a prepaid sale, transport or "
+            "construction billing and is not edited here"
         )
     currency = await (
         await conn.execute("select minor_units from gba.currencies where code=%s", (body.currency,))

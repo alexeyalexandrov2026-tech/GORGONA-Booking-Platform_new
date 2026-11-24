@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-11-20T09:03:46+00:00",
+  "status": "PASS: RENT-01 R-10 keyboard accessibility of the rental screens",
+  "host": "gorgona-dev (Azure rg-gorgona-dev, Standard_D8as_v6, PostgreSQL 18.7)",
+  "base_commit": "13d4a8cd4412b158c05d88e785fb806af3cb3e28",
+  "commits": [
+    {
+      "commit": "728e66298b66027f588994d32a9c55336eb2a705",
+      "tree": "a34f35db6c01de6a6223d83947df9c3ce53d586c",
+      "migrations": []
+    },
+    {
+      "commit": "c7e304672e02f3bf8358c62bea6d3b6a91d48e50",
+      "tree": "003cf11aaf58c801d2752a22b11664cd9ea00727",
+      "migrations": []
+    },
+    {
+      "commit": "b2a6fac867763d9890c5cb15100a5cc24c7adcd1",
+      "tree": "52390595dbb3e348ecbf284f98aa56b4234e2a1c",
+      "migrations": []
+    }
+  ],
+  "vm_runs": [
+    {
+      "name": "R-10 base web checks (d3d5689)",
+      "tree": "f6678bb331e2b5213786339202e2670075cda6cc",
+      "result": "typecheck, lint, format:check, test:unit (193 passed), build PASS"
+    },
+    {
+      "name": "R-10 focus continuity red run",
+      "tree": null,
+      "result": "test_r10_rental_keyboard_browser.py failed as expected: Save class lost focus (inactive) under disabled={busy}"
+    },
+    {
+      "name": "R-10 focus fixes + 7 rental browsers (4345206)",
+      "tree": "86aacaa7520520c561c8cada58fb721737e5aa97",
+      "result": "web static/unit/build PASS; api ruff/mypy PASS; 7/7 rental browser suites passed in 98.31s"
+    },
+    {
+      "name": "combined tree Step 4 first browser run",
+      "tree": null,
+      "result": "6 passed, 1 failed (rental-problem-reports.spec.ts on time input shadow picker indicator)"
+    },
+    {
+      "name": "combined tree Step 4 targeted browsers (b2a6fac)",
+      "tree": "52390595dbb3e348ecbf284f98aa56b4234e2a1c",
+      "result": "web static/unit/build PASS; api ruff/mypy (583 files) PASS; 7/7 rental browser suites passed in 92.27s"
+    },
+    {
+      "name": "combined tree full suite (b2a6fac)",
+      "tree": "52390595dbb3e348ecbf284f98aa56b4234e2a1c",
+      "result": "static PASS (web unit 194 passed); 2968 passed, 4 skipped, 1 failed (test_l7a_catalog_browser) in 3182.82s; test_l7a_catalog_browser rerun alone passed 2/2"
+    }
+  ],
+  "vm_skips": [
+    "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent",
+    "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets",
+    "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking",
+    "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard"
+  ],
+  "github_actions": [
+    {
+      "run": 44681375203,
+      "commit": "13d4a8cd4412b158c05d88e785fb806af3cb3e28",
+      "conclusion": "success",
+      "result": "base R-09 review fixes CI passed 2026-11-20T06:24:20Z"
+    },
+    {
+      "run": 44692411664,
+      "commit": "b37ec0c88fd89d5362e150d3b537e096011d5632",
+      "conclusion": "success",
+      "result": "completed 2026-11-20T08:00:28Z on branch codex/package-r10-keyboard"
+    }
+  ]
+}

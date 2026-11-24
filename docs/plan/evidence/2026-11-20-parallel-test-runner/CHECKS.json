@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-11-20T09:03:46+00:00",
+  "status": "PASS: parallel full-suite test runner verified by 3 consecutive full runs matching serial baseline",
+  "host": "gorgona-dev (Azure rg-gorgona-dev, Standard_D8as_v6, 8 vCPU, PostgreSQL 18.7)",
+  "base_commit": "b37ec0c88fd89d5362e150d3b537e096011d5632",
+  "commits": [
+    {
+      "commit": "9c555f830804e9a963a4055f7675cf903d8e00f9",
+      "tree": "c94c5c2c5e9eeec303966228dd601a23481242b4",
+      "migrations": []
+    }
+  ],
+  "serial_baseline": {
+    "commit": "b2a6fac867763d9890c5cb15100a5cc24c7adcd1",
+    "wall_seconds": 3182.82,
+    "tests": 2973,
+    "passed": 2969,
+    "skipped": 4
+  },
+  "parallel_runs": [
+    {
+      "run": "diagnostic_v1",
+      "wall_seconds": 1175.6,
+      "expected_tests": 2974,
+      "executed_tests": 2974,
+      "passed": 2968,
+      "failed": 2,
+      "skipped": 4,
+      "duplicates": 0,
+      "note": "Exposed cluster-level role grant in test_provider_receipt_decisions.py; moved to SERIAL_FILES and added static guard test"
+    },
+    {
+      "run": "consecutive_1",
+      "wall_seconds": 1191.4,
+      "template_clone_seconds": 2.91,
+      "expected_tests": 2975,
+      "executed_tests": 2975,
+      "passed": 2971,
+      "failed": 0,
+      "skipped": 4,
+      "duplicates": 0,
+      "count_ok": true
+    },
+    {
+      "run": "consecutive_2",
+      "wall_seconds": 1176.5,
+      "template_clone_seconds": 2.8,
+      "expected_tests": 2975,
+      "executed_tests": 2975,
+      "passed": 2971,
+      "failed": 0,
+      "skipped": 4,
+      "duplicates": 0,
+      "count_ok": true
+    },
+    {
+      "run": "consecutive_3",
+      "wall_seconds": 1197.1,
+      "template_clone_seconds": 2.77,
+      "expected_tests": 2975,
+      "executed_tests": 2975,
+      "passed": 2971,
+      "failed": 0,
+      "skipped": 4,
+      "duplicates": 0,
+      "count_ok": true
+    }
+  ],
+  "vm_skips": [
+    "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent",
+    "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets",
+    "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking",
+    "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard"
+  ]
+}

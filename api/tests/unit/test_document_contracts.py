@@ -110,16 +110,33 @@ def test_downloads_are_attachments_with_an_ascii_fallback(name: str, fallback: s
 
 def test_guard_binds_one_parameter_per_placeholder() -> None:
     placeholders = schema_guard._ACCESS_BOUNDARY.count("%s")
-    assert placeholders == 5 * len(schema_guard._DEFINITIONS) + 8 + 6 * 5 + 1
+    assert placeholders == 5 * len(schema_guard._DEFINITIONS) + 9 + 6 * 20 + 4
     # K3a (0052): company scope of the clearing account and the provider provenance;
     # K3b (0054): the link of a manual payment to its provider operation.
-    assert len(schema_guard._DEFINITIONS) == 68
+    # R-09 (0126): branch-scoped read policies on delegation grants and members.
+    # PROPERTY-01 5a (0127): maintenance request branch scope and event/obligation company scope.
+    # PROPERTY-01 5b (0128): contractor links and updates branch/tenant scope.
+    # PROPERTY-01 6a (0129): move-out report and photos company scope.
+    # REST-01 Slice 2 (0131): menu items, modifiers and recipe BOM branch/tenant scope.
+    # REST-01 Slice 3 (0132): checks, kitchen tickets and consumption branch/tenant scope.
+    # REST-01 Slice 4 (0133): split billing and refunds branch/tenant scope.
+    assert len(schema_guard._DEFINITIONS) == 296
     assert LEDGER_BOUNDARY.count("%s") == len(LEDGER_PARAMETERS)
     assert FINANCIAL_BOUNDARY.count("%s") == len(FINANCIAL_PARAMETERS)
-    assert len(schema_guard._OCCUPANCY_TRIGGERS) == 5
-    assert len(schema_guard._MODULE_TRIGGERS) == 19
+    assert len(schema_guard._OCCUPANCY_TRIGGERS) == 20
+    assert len(schema_guard._MODULE_TRIGGERS) == 109
     assert {module for _, _, module in schema_guard._MODULE_TRIGGERS} == {
+        "analytics",
+        "assets",
+        "clinical_care",
         "counterparties",
         "documents",
         "finance",
+        "hospitality_events",
+        "projects",
+        "public_civic",
+        "property",
+        "restaurant",
+        "storefronts",
+        "supply",
     }

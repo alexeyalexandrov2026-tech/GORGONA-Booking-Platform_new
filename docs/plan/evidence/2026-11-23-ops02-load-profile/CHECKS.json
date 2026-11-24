@@ -1,0 +1,92 @@
+{
+  "wall_seconds": 1480.03,
+  "expected_tests": 3120,
+  "executed_tests": 3120,
+  "unique_tests": 3120,
+  "duplicates": 0,
+  "passed": 3116,
+  "failed": 0,
+  "skipped": 4,
+  "count_ok": true,
+  "lanes": [
+    {
+      "name": "browser",
+      "returncode": 0,
+      "seconds": 1387.38,
+      "tests": 53,
+      "passed": 53,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "serial",
+      "returncode": 0,
+      "seconds": 82.08,
+      "tests": 218,
+      "passed": 218,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "worker_1",
+      "returncode": 0,
+      "seconds": 512.83,
+      "tests": 352,
+      "passed": 352,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "worker_2",
+      "returncode": 0,
+      "seconds": 468.8,
+      "tests": 490,
+      "passed": 487,
+      "failed": 0,
+      "skipped": 3
+    },
+    {
+      "name": "worker_3",
+      "returncode": 0,
+      "seconds": 510.59,
+      "tests": 569,
+      "passed": 569,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "worker_4",
+      "returncode": 0,
+      "seconds": 489.81,
+      "tests": 443,
+      "passed": 443,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "worker_5",
+      "returncode": 0,
+      "seconds": 508.86,
+      "tests": 528,
+      "passed": 528,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "worker_6",
+      "returncode": 0,
+      "seconds": 485.04,
+      "tests": 467,
+      "passed": 466,
+      "failed": 0,
+      "skipped": 1
+    }
+  ],
+  "failures": [],
+  "skips": [
+    "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1",
+    "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1",
+    "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1",
+    "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard BLOCKED: tenant-site verification requires GBA_REQUIRE_TENANT_SITE=1"
+  ]
+}

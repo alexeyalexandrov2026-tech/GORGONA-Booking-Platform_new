@@ -11,6 +11,10 @@ export const delegablePermissionSchema = z.enum([
   "transport.plan",
   "transport.assign",
   "transport.events",
+  "transport.tender",
+  "construction.customer_answer",
+  "rental.customer_answer",
+  "property.contractor_work",
 ]);
 export const delegationSchema = z
   .strictObject({
@@ -20,7 +24,7 @@ export const delegationSchema = z
     owner_name: z.string().min(1),
     servicer_business_id: z.uuid(),
     servicer_name: z.string().min(1).nullable(),
-    permissions: z.array(delegablePermissionSchema).min(1).max(8),
+    permissions: z.array(delegablePermissionSchema).min(1).max(9),
     location_id: z.uuid().nullable(),
     expires_at: instant,
     status: z.enum(["pending", "active", "declined", "revoked"]),
@@ -66,7 +70,7 @@ export const delegatedBusinessSchema = z.strictObject({
   grant_id: z.uuid(),
   servicer_business_id: z.uuid(),
   servicer_name: z.string().nullable(),
-  permissions: z.array(delegablePermissionSchema).min(1).max(8),
+  permissions: z.array(delegablePermissionSchema).min(1).max(9),
   location_id: z.uuid().nullable(),
   expires_at: instant,
 });
@@ -101,11 +105,20 @@ const TRANSPORT_WORDS: Record<string, string> = {
   "transport.plan": "plan trips",
   "transport.assign": "assign crews",
   "transport.events": "record stop events",
+  "transport.tender": "answer tenders",
 };
 
 /** The granted rights in words, booking access first, then transport actions. */
 export function describeAccess(permissions: DelegablePermission[]): string {
-  const booking = permissions.filter((p) => !p.startsWith("transport.")).sort();
+  const booking = permissions
+    .filter(
+      (p) =>
+        !p.startsWith("transport.") &&
+        !p.startsWith("construction.") &&
+        !p.startsWith("rental.") &&
+        !p.startsWith("property."),
+    )
+    .sort();
   const same = (level: DelegablePermission[]) =>
     booking.join(",") === [...level].sort().join(",");
   const parts: string[] = [];
@@ -124,5 +137,11 @@ export function describeAccess(permissions: DelegablePermission[]): string {
     parts.push(
       `Transport: ${transport.map((p) => TRANSPORT_WORDS[p]).join(", ")}`,
     );
+  if (permissions.includes("construction.customer_answer"))
+    parts.push("Answer construction documents");
+  if (permissions.includes("rental.customer_answer"))
+    parts.push("Accept rental proposals");
+  if (permissions.includes("property.contractor_work"))
+    parts.push("Update assigned property repairs");
   return parts.join("; ");
 }

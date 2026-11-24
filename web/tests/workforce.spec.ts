@@ -32,7 +32,11 @@ const within = (page: Page, name: string | RegExp) =>
 
 async function signIn(page: Page, who: Person, choose = true) {
   if (choose) {
-    const switched = await page.request.post(`${issuer}/fixture/user/${who}`);
+    // Test identity switches can be minutes apart. Close each fixture connection
+    // so the next switch cannot reuse a socket expiring at the server.
+    const switched = await page.request.post(`${issuer}/fixture/user/${who}`, {
+      headers: { Connection: "close" },
+    });
     expect(switched.ok()).toBe(true);
   }
   await page.goto("/overview/");

@@ -1,0 +1,42 @@
+{
+  "package": "MARKET-01",
+  "slice": "Slice 3 — /marketplace/ 3-Tab Operations UI & Real-Browser E2E",
+  "date": "2026-11-21",
+  "branch": "codex/package-market-01-ui",
+  "base_commit": "8f90b69536e4c7ec364957fbe8451bc5867c68e8",
+  "verified_code_commit": "26d8a17c282269f377d5973591c57a2b9526ed36",
+  "verified_code_tree": "7f3042d80d5dd0c1493e57246fe0e8294e83c825",
+  "migration": null,
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_MARKET01_UI_DESIGN_2026-11-21.md": "f094b4c708f20e1999103bc6dd55f6cd76cfca6a3bcb81910270ba2dd5c5083d",
+    "web/lib/market-contracts.ts": "d90763fbeb14d2871ea40d8e993dbbbf6c88e337e4ad6fe9cfc1eb4e6ffe36e6",
+    "web/lib/market-api.ts": "faadedf4b58af12950b4256008637a5f31eacb5ab5ac03c2b96dc651a7685998",
+    "web/components/market.tsx": "67ddda27353bbc8b047879f34bb99bd8aac78634fb18194ffddbc9ec032c26e6",
+    "web/app/market.css": "374dd799d42e977a701158e8fa4bf2a7b799b2a297cdbaeceb2a25993b12e90f",
+    "web/app/marketplace/page.tsx": "f8fb7c77125ef399a7970de3db59215e217538ccdc3c5555e37ee8e133899d54",
+    "web/tests/market-contracts.spec.ts": "d4a1f95d36ecb3666840fe789f5e0f29d0d575ac605614b711012ee8392ab1f3",
+    "web/tests/market.spec.ts": "e0f9d95b581d201fa700d4de35c818794585f4f7145530121391c8c1cdb84ead",
+    "api/tests/integration/test_market_browser.py": "4098f37ccac959c9ae172a27af7baf88fd736e46d5e543fcfbf1ec64206cf201"
+  },
+  "checks": {
+    "web_checks": "PASS (typecheck, lint, format:check, test:unit, build)",
+    "api_static": "PASS (ruff check, ruff format --check, mypy)",
+    "focused_browser_e2e": "PASS (desktop + mobile 390px, axe-core 0 violations, strict projection, zero GORGONA commission, isolated multi-seller split, PG18 read-back)",
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3085,
+      "executed_tests": 3085,
+      "unique_tests": 3085,
+      "duplicates": 0,
+      "passed": 3081,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1382.82,
+      "browser_passed": 51,
+      "serial_passed": 216
+    }
+  }
+}

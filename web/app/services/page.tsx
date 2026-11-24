@@ -214,7 +214,7 @@ function ServicesContent({
           </button>
         </div>
       ) : (
-        <div className="mgmt-table-container">
+        <div className="mgmt-table-container" tabIndex={0}>
           <table className="mgmt-table" aria-label="Services Catalog">
             <thead>
               <tr>

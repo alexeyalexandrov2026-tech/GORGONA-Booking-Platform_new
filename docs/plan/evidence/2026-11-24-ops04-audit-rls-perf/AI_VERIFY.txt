@@ -1,0 +1,39 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.10, pytest-9.1.1, pluggy-1.6.0 -- /home/gorgona/gorgona-ops-04/ai/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/gorgona/gorgona-ops-04/ai
+configfile: pyproject.toml
+testpaths: tests
+collecting ... collected 29 items
+
+tests/test_container.py::test_image_is_non_root_without_baked_secrets PASSED [  3%]
+tests/test_container.py::test_jobs_bootstrap_migrate_tick_and_report_health PASSED [  6%]
+tests/test_learning_loop.py::test_full_learning_loop_and_explicit_promotion PASSED [ 10%]
+tests/test_learning_loop.py::test_non_production_and_unreviewed_data_never_enter_a_dataset PASSED [ 13%]
+tests/test_learning_loop.py::test_benchmark_leakage_is_rejected_by_the_gate PASSED [ 17%]
+tests/test_learning_loop.py::test_rag_refresh_embeds_updates_and_searches_within_the_tenant PASSED [ 20%]
+tests/test_learning_loop.py::test_ingest_rules_on_real_storage PASSED    [ 24%]
+tests/test_learning_loop.py::test_queue_intake_is_durable_idempotent_and_dead_letters_garbage PASSED [ 27%]
+tests/test_learning_loop.py::test_health_and_cli_entrypoints PASSED      [ 31%]
+tests/test_netcheck.py::test_parse_targets PASSED                        [ 34%]
+tests/test_netcheck.py::test_private_target_resolving_publicly_fails_closed PASSED [ 37%]
+tests/test_netcheck.py::test_all_dependencies_reachable_and_secret_presence_only PASSED [ 41%]
+tests/test_netcheck.py::test_dns_tcp_and_missing_secret_failures_are_reported PASSED [ 44%]
+tests/test_runtime.py::test_enqueue_is_idempotent PASSED                 [ 48%]
+tests/test_runtime.py::test_success_records_result PASSED                [ 51%]
+tests/test_runtime.py::test_transient_failures_retry_with_backoff_then_succeed PASSED [ 55%]
+tests/test_runtime.py::test_permanent_errors_dead_letter_immediately PASSED [ 58%]
+tests/test_runtime.py::test_exhausted_attempts_dead_letter PASSED        [ 62%]
+tests/test_runtime.py::test_expired_lease_is_reclaimed_after_a_worker_crash PASSED [ 65%]
+tests/test_runtime.py::test_a_run_is_claimed_by_exactly_one_worker PASSED [ 68%]
+tests/test_runtime.py::test_worker_role_cannot_bypass_tenant_isolation PASSED [ 72%]
+tests/test_units.py::test_embedder_is_deterministic_normalised_and_semantic_by_overlap PASSED [ 75%]
+tests/test_units.py::test_contact_data_is_redacted_from_free_text PASSED [ 79%]
+tests/test_units.py::test_non_production_evidence_never_trains PASSED    [ 82%]
+tests/test_units.py::test_invalid_or_contact_bearing_evidence_is_rejected[raw_payload0-correction-contact_data_field] PASSED [ 86%]
+tests/test_units.py::test_invalid_or_contact_bearing_evidence_is_rejected[raw_payload1-correction-invalid_payload] PASSED [ 89%]
+tests/test_units.py::test_invalid_or_contact_bearing_evidence_is_rejected[raw_payload2-correction-invalid_payload] PASSED [ 93%]
+tests/test_units.py::test_invalid_or_contact_bearing_evidence_is_rejected[raw_payload3-catalog-contact_data_field] PASSED [ 96%]
+tests/test_units.py::test_envelope_must_carry_scope_provenance_and_version PASSED [100%]
+
+============================= 29 passed in 33.45s ==============================

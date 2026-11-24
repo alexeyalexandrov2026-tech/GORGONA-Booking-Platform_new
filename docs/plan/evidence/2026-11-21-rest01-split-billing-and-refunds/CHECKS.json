@@ -1,0 +1,63 @@
+{
+  "package": "REST-01",
+  "slice": "Slice 4 — Split billing, FIN-03 per-share invoices & coordinated refunds",
+  "date": "2026-11-21",
+  "branch": "codex/package-rest-01-split-billing-and-refunds",
+  "base_commit": "578f80a9f6be2ecf060a93218be01ecba2538861",
+  "verified_code_commit": "d788d0810e5f7368c62fa686b69674a6c5b8bd2d",
+  "verified_code_tree": "ae09f138cbb2a0ad2010bbc0a6f1cfb140d17e5f",
+  "migration": "0133_restaurant_split_billing_and_refunds.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_REST01_SPLIT_BILLING_DESIGN_2026-11-21.md": "0900ed973e1135b5ef4be519d704ac6c44ce9a3648ca1eb562567f88375da5a2",
+    "api/src/gorgona_booking/db/migrations/0133_restaurant_split_billing_and_refunds.sql": "4da5f31145edfad3c3a77e46670941ba02560da1c7f71ac5e8f72732fcbfa2d4",
+    "api/src/gorgona_booking/business/restaurant_billing.py": "94dde25cbf8967b62fdea315260c6be0520c3717005986ae06953f7b6871ba5f",
+    "api/src/gorgona_booking/api/restaurant_billing.py": "1255aa2a5b1a5979a1f1bdbab4a3bf6b84def47b5ffa4e872894146629a527c5",
+    "api/src/gorgona_booking/db/schema_guard.py": "b11d7250fa2b09de358db3ca114bb526fc4cd1ce44ff5609dc001f0f6ab2e618",
+    "api/tests/unit/test_restaurant_billing_contracts.py": "c6b513762f64aa5cc0ad4ed2fd6b1ff0bfd75a7a8afd03aa5385ec25eb76abc6",
+    "api/tests/integration/test_restaurant_split_billing_and_refunds.py": "e4cd0abded2eea32922683fcfe812720cd01b50548c0354dc75d23351d1500e6",
+    "api/tests/integration/test_restaurant_billing_upgrade.py": "3ac54fb8205ada24abd2ac8746d8eb6366a36c13fe21534ed41927e8743d9885"
+  },
+  "checks": {
+    "git_diff_check": "PASS",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS (613 files)",
+    "mypy": "PASS (613 files)",
+    "api_unit": {
+      "passed": 917,
+      "failed": 0,
+      "skipped": 0
+    },
+    "focused_integration": {
+      "passed": 40,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 36.6
+    },
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3039,
+      "executed_tests": 3039,
+      "unique_tests": 3039,
+      "duplicates": 0,
+      "passed": 3035,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1284.1,
+      "browser_passed": 47,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "Slice 5 (no migration): Restaurant UI (Floor/Reservations, Menu/Recipes, Checks/Split Billing, Kitchen Board) with browser E2E",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}

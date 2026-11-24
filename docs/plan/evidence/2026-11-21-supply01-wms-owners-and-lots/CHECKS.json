@@ -1,0 +1,60 @@
+{
+  "package": "SUPPLY-01",
+  "slice": "Slice 1 — Multi-warehouse WMS bins, goods-owner isolation (company_entity vs counterparty_3pl), lots/batches & serial tracking",
+  "date": "2026-11-21",
+  "branch": "codex/package-supply-01-wms-owners-and-lots",
+  "base_commit": "48eeb0905bd3369ede58cbff49ab7afe99d9773a",
+  "verified_code_commit": "7ecf6c8e4f5c625713674011bd14c0e54f71ec0b",
+  "verified_code_tree": "3ec7966a127da4f84934b7e87b300eff924839aa",
+  "migration": "0138_supply_wms_owners_and_lots.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/adr/0039-supply-chain-wms-3pl-manufacturing.md": "1425107d0d94012ec66d2b9d07475ee7276f9d3af708ca853d65e5d47266641c",
+    "docs/plan/PACKAGE_SUPPLY01_PLAN_2026-11-21.md": "65e371743c4eb77186da4bd6c71ac4ec811083c13210d0ee6dce04eaa0d2f699",
+    "api/src/gorgona_booking/db/migrations/0138_supply_wms_owners_and_lots.sql": "5a79d80b70ccf9898f325153d472096a121c6d0774dfc7033fc19fd706563667",
+    "api/src/gorgona_booking/business/supply_wms.py": "2017864b27a31b8122bb57226c50fb9d00601399584983ab56be8a1a6910a7f4",
+    "api/src/gorgona_booking/api/supply_wms.py": "063233fa859426e1345fe41f9f1493a8a22267cb499fe4dca7ded11d295fb0d9",
+    "api/src/gorgona_booking/db/schema_guard.py": "dd3d311015244d785853e220e4c0a6eb4f12a05360531942b96994879785aabd",
+    "api/tests/unit/test_supply_wms_contracts.py": "bdc00f4f7e755958b7b5a02f8de62cf7d65ab1f6446833dccbee3eacbb2ce9ca",
+    "api/tests/integration/test_supply_wms.py": "7de59a9a6ab2c852dd4cb8a2efb27ccd042f434f1d007fddd092785fbb76b3f7",
+    "api/tests/integration/test_supply_wms_upgrade.py": "6e7c94aeadee75270fb1be08e8085a69dfc699f33a3c8962c57b48b7c0c39d3a"
+  },
+  "checks": {
+    "ruff_check": "PASS (639 files)",
+    "ruff_format_check": "PASS (639 files)",
+    "mypy": "PASS (639 files)",
+    "api_unit": {
+      "passed": 929,
+      "failed": 0,
+      "skipped": 0
+    },
+    "focused_integration": "PASS",
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3065,
+      "executed_tests": 3065,
+      "unique_tests": 3065,
+      "duplicates": 0,
+      "passed": 3061,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1442.32,
+      "browser_passed": 49,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "Slice 2 (0139): Manufacturing BOMs, work orders, QC & STOCK-01 lot/cost conservation",
+    "Slice 3 (0140): Trade price lists, retail/wholesale & 3PL orders, shipments & customer returns",
+    "Slice 4 (no migration): /supply/ 4-tab UI and real-browser E2E",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}

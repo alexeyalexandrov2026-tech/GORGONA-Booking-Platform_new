@@ -40,6 +40,7 @@ from gorgona_booking.business.financial_contracts import (
 )
 from gorgona_booking.business.financial_documents import (
     FEATURE,
+    FinancialDocumentLinkedError,
     FinancialDocumentStateError,
     require_workflow,
 )
@@ -522,6 +523,16 @@ async def save_draft(
     await require_workflow(conn, business_id)
     await ledger.require_book(conn, business_id, book_id)
     current = await load_credit(conn, business_id, book_id, document_id)
+    if current is not None:
+        # Package R (R7b decision 2): a rental refund's credit note is built from the refund.
+        linked = await (
+            await conn.execute(
+                "select 1 from gba.rental_refunds where book_id=%s and credit_document_id=%s",
+                (book_id, document_id),
+            )
+        ).fetchone()
+        if linked is not None:
+            raise FinancialDocumentLinkedError("A rental refund keeps this credit note")
     if current is None:
         other = await (
             await conn.execute(
@@ -849,7 +860,7 @@ async def void_credit(
     if current.refund_obligation_id is not None:
         await _require_untouched_refund(conn, business_id, book_id, current.refund_obligation_id)
     # A later credit that refunded money relied on this credit's unpaid part.
-    if to_minor(current.applied, current.minor_units):
+    if current.applied != from_minor(0, current.minor_units):
         dependent = await (
             await conn.execute(
                 "select document_id from gba.financial_document_versions "

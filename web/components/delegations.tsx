@@ -92,6 +92,8 @@ export function Delegations({
   const [level, setLevel] = useState<"manage" | "view" | "none">("manage");
   // M6b: transport actions a carrier's dispatcher may take; reading comes with any of them.
   const [transport, setTransport] = useState<DelegablePermission[]>([]);
+  const [construction, setConstruction] = useState(false);
+  const [rental, setRental] = useState(false);
   const [locationId, setLocationId] = useState("");
   const [endsOn, setEndsOn] = useState("");
   const [pending, setPending] = useState<Command | null>(null);
@@ -209,9 +211,15 @@ export function Delegations({
       ...(transport.length
         ? (["transport.read", ...transport] as DelegablePermission[])
         : []),
+      ...(construction ? ["construction.customer_answer" as const] : []),
+      ...(rental ? ["rental.customer_answer" as const] : []),
     ];
     if (!permissions.length) {
-      setError("Choose booking access or at least one transport action.");
+      setError("Choose at least one delegated action.");
+      return;
+    }
+    if (permissions.length > 9) {
+      setError("Choose up to nine actions for each grant.");
       return;
     }
     void run({
@@ -321,8 +329,8 @@ export function Delegations({
     <section aria-label="Delegated access" className="delegations">
       <h2>Delegated access</h2>
       <p className="muted">
-        Another independent business can work on your bookings only with access
-        you offer and it accepts. Each company keeps its own records.
+        You offer access to another business. It accepts and names its own
+        delegates. Each company keeps its own records.
       </p>
       {(error || loadError) && (
         <div className="mgmt-error-banner" role="alert">
@@ -488,6 +496,26 @@ export function Delegations({
                     you.
                   </p>
                 </fieldset>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={construction}
+                    onChange={(event) => setConstruction(event.target.checked)}
+                  />{" "}
+                  Answer construction documents
+                </label>
+                <p className="muted">
+                  Lets the customer&apos;s delegates answer proposals, change
+                  orders and work acceptance.
+                </p>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={rental}
+                    onChange={(event) => setRental(event.target.checked)}
+                  />{" "}
+                  Accept rental proposals
+                </label>
                 <label htmlFor="delegation-location">Location</label>
                 <select
                   id="delegation-location"

@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "status": "backend_verified",
+  "base": "ef00defc97e134a46264004e6c55263544bd16bf",
+  "source_commit": "8f993e30cf020abdb67b4deaa9f2c64bebb33d7f",
+  "branch": "codex/package-property-01-catalog",
+  "checks": {
+    "focused-4": {
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.71,
+          "log_sha256": "46591f6e8ed1c547746d154a556d984693602619030267f745749c78e5f52e45"
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.12,
+          "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+        },
+        {
+          "name": "focused",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 68.23,
+          "log_sha256": "fec6ad46123258e96ed4cc04fd21bb45c902455652cc6d47be65581a84add4df"
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.1,
+          "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+        }
+      ],
+      "source_unchanged_during_run": true
+    },
+    "static-3": {
+      "steps": [
+        {
+          "name": "ruff-check",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.04,
+          "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+        },
+        {
+          "name": "ruff-format",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.04,
+          "log_sha256": "087d4f8b8021c1def8dd956252e8c546aae8e2fa8f61b6701b9a9225e012bb1e"
+        },
+        {
+          "name": "mypy",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.8,
+          "log_sha256": "0f061caf1f17a63f32e24ce08227d1166295dd0de82c6011ad7d4c69b6862fe2"
+        },
+        {
+          "name": "web-typecheck",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 1.91,
+          "log_sha256": "37439f15bbc48c9844af67d4a088da9d892067ceab57dab44a1cd2730d3ebaf8"
+        },
+        {
+          "name": "web-lint",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 15.77,
+          "log_sha256": "444a17fd0efde2a58326fc9d3f117cccdd9dc6259f9c6a31638098bc043733a1"
+        },
+        {
+          "name": "web-format",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 4.81,
+          "log_sha256": "3f7187fb6a483373ab268b2e372f3c03415a99ea46b5defe7c1cfade43f01ddf"
+        },
+        {
+          "name": "web-unit",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 3.59,
+          "log_sha256": "d3ecc3612f92a5f452bf461d9b98d539b6f022a8ce1da60e09cd0922df628298"
+        },
+        {
+          "name": "web-build",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 4.47,
+          "log_sha256": "11f6ad89ad03857b0a3cd40dd02b6ef8c2e795d650a0a3e5a16db3a36b86a194"
+        },
+        {
+          "name": "web-audit",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.51,
+          "log_sha256": "5fdb2582868695a77d9969dca724515b44f67915626b1a979a7288dbcf249ab5"
+        },
+        {
+          "name": "web-audit-all",
+          "exit_code": 1,
+          "required": false,
+          "seconds": 1.75,
+          "log_sha256": "3a241e361269a5791d6dbcf4aba9d115d88333d86f3e175d00f43c8feda61f7b"
+        }
+      ],
+      "source_unchanged_during_run": true
+    },
+    "full-3": {
+      "steps": [
+        {
+          "name": "initdb",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.72,
+          "log_sha256": "8fc7d170d7f4b6efb736f3512a474d3873a21244437903a3ae9952e0d9161fc4"
+        },
+        {
+          "name": "pg-start",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.11,
+          "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+        },
+        {
+          "name": "pytest-full",
+          "exit_code": 1,
+          "required": true,
+          "seconds": 3947.29,
+          "log_sha256": "8385d77574bc5aa5834a16a99f6aa208b926bfc0d34b170ad9b84ab9ca5a1159"
+        },
+        {
+          "name": "pg-stop",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.1,
+          "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+        }
+      ],
+      "source_unchanged_during_run": true
+    }
+  },
+  "focused_summary": "180 passed in 66.94s (0:01:06)",
+  "vm_full_summary": "1 failed, 2874 passed, 4 skipped in 3945.02s (1:05:45)",
+  "vm_full_source": "117a1ef933b4757ed889f7121f2d95a780e2efee",
+  "vm_full_failed_tests": [
+    "FAILED tests/unit/test_configuration_contracts.py::test_module_registry_is_consistent"
+  ],
+  "final_vm_unit_summary": "877 passed in 26.01s",
+  "isolated_final_source_regression": {
+    "file": "api/tests/unit/test_configuration_contracts.py",
+    "summary": "21 passed in 0.13s",
+    "exit_code": 0
+  },
+  "vm_skips": [
+    "SKIPPED [1] tests/container/test_container_image.py:120: BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1",
+    "SKIPPED [1] tests/container/test_container_image.py:127: BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1",
+    "SKIPPED [1] tests/container/test_container_image.py:135: BLOCKED: container verification requires GBA_REQUIRE_CONTAINER=1",
+    "SKIPPED [1] tests/integration/test_tenant_site_embedding.py:56: BLOCKED: tenant-site verification requires GBA_REQUIRE_TENANT_SITE=1"
+  ],
+  "npm_audit": {
+    "web-audit": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "web-audit-all": {
+      "info": 0,
+      "low": 0,
+      "moderate": 7,
+      "high": 0,
+      "critical": 0,
+      "total": 7
+    }
+  },
+  "ci": {
+    "id": 43684904496,
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "8f993e30cf020abdb67b4deaa9f2c64bebb33d7f",
+    "html_url": "https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/43684904496"
+  },
+  "source_sha256": {
+    "api/src/gorgona_booking/api/app.py": "1327fa897a0d644b6da990891198212e72186f722bf255ef078f63c5213b1926",
+    "api/src/gorgona_booking/api/property_catalog.py": "0e53f41752b6edf00e977b31fc3137c6aba7ed0cd47f6637aa7297290f325bbe",
+    "api/src/gorgona_booking/auth/permissions.py": "4bcc6cafad4b17548144a2c680dc1cd05f8d63e9688e44445ff43d0ebc7df7c9",
+    "api/src/gorgona_booking/business/modules.py": "6ab45a27c2661033d968b24b41709f660785bf06483590157c68900bff5ae4f9",
+    "api/src/gorgona_booking/business/property_catalog.py": "843a0b4872e8bb7c4e0ca1d95139fad5ba48cfbf4571fa47e446104742fa612c",
+    "api/src/gorgona_booking/db/migrations/0112_property_catalog.sql": "2816ab8622006c6b2c13d8073189e0e77a339338f3c6a422f4de4fb2c853498c",
+    "api/src/gorgona_booking/db/schema_guard.py": "ddced53253cfff33541b434cf5b889c19f20f5473787a2c0ff5f0da965eb2086",
+    "api/tests/integration/test_configurations.py": "55aa7a301fb516d43e160709262d371c40afba363b5363461db6f80e66cd283d",
+    "api/tests/integration/test_inventory_upgrade.py": "f0969895e74e615bb04ce8977274706ac5b4d2228376f496fbcfb098eefe7e74",
+    "api/tests/integration/test_location_access.py": "8e3897e73ebcdc5d92e53c7cc26eb70bb768ec750bee7e80b095f88acbb1cbd8",
+    "api/tests/integration/test_property_catalog.py": "fcdf15dc3b2a68e0aaafe1f2e919944de1331b211bfe33351bde340ad9314193",
+    "api/tests/integration/test_property_catalog_upgrade.py": "95da8fa27814e50dd64c0727b9863c3389c7a8e4c5023543b2b86a9e9ebb164c",
+    "api/tests/integration/test_stock_upgrade.py": "c54152b861b3720ba70a1ac5ac5670978a304c74b97a8cbf305b36ec2bf4d427",
+    "api/tests/unit/test_configuration_contracts.py": "d0a13c8d176479524c07b58331a8a9305bddbaf621fc9b2536781bdd8b84c198",
+    "api/tests/unit/test_counterparty_contracts.py": "08536eca4475b0b8127e40cf403a1232a1d6a6d5a1d574b5b2a36d5a4986a802",
+    "api/tests/unit/test_document_contracts.py": "27cbcdbe94b38f3ac86401943ec60934092678489d218e860b8ad95d0ae4605d",
+    "api/tests/unit/test_financial_documents.py": "b3c165c5143b129c985838f7134150870053f5ccf4ec67c0f128a6c73a86b75e",
+    "api/tests/unit/test_inventory_contracts.py": "83cae99861f796e6685239d1097486894c791d42e2eb78d67b74df2856186b39",
+    "api/tests/unit/test_workforce_contracts.py": "d84084e86ebc678dcc24dc6ed1dfbf7fcf3523c5c47bcac2955b3452f80f8675",
+    "web/components/visit-desk.tsx": "6f3c5f5a86a1698ade0ea91ec3d4b2605df84bf74114aa5172d80c919534baa3",
+    "web/tests/visit-desk.spec.ts": "27621dc5c69c46db954179a16e5bba90c02c9b02801eb1dec35e0572fbb8511e"
+  },
+  "review": {
+    "baseline": "d4657ae9a66ec661c8b2707ec7749105840c398d",
+    "regressions": [
+      "Omitted party links are preserved; explicit null clears only the named role.",
+      "An authenticated mutation retry reloads its exact revision after disablement.",
+      "Catalog routes fail closed on permissive tenant-policy drift."
+    ],
+    "red": "red-review-2: three expected failures."
+  },
+  "not_tested": [
+    "Property catalog UI",
+    "External property roles and portals",
+    "Production"
+  ],
+  "vm_run_directory": "/home/gorgona/gba-runs/package-property-01-catalog-20261114"
+}

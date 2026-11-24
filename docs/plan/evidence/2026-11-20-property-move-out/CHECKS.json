@@ -1,0 +1,43 @@
+{
+  "slice": "PROPERTY-01-6a-move-out",
+  "date": "2026-11-20",
+  "branch": "codex/package-property-01-move-out",
+  "base_commit": "4292474756838cd1d76c31003e9b6437468755c1",
+  "source_commit": "7bcd64515b294e0ffa64900aace7b495baa4359f",
+  "source_tree": "612d0925f9ff95f5a4b98ae3c9620ac397d12f2a",
+  "migration": "0129_property_move_out.sql",
+  "checksums_sha256": {
+    "api/src/gorgona_booking/db/migrations/0129_property_move_out.sql": "4dd9f4c03b86db463988c3f7621eeb1ded303fbe1121e0bb99f44afa0ec39aa2",
+    "api/src/gorgona_booking/business/property_move_out.py": "ce0de6aa08979164abeeac7977d6d9da9853eb1d16d7f0cb5eb49d4a3d341caf",
+    "api/src/gorgona_booking/api/property_leases.py": "db899472fdb83492043c3aba624eedb123b2f221a83915c6f02f104893be0190",
+    "api/tests/integration/test_property_move_out.py": "60e7c5b8d821269b32ab1c26dc29df456a19fca87ba121b065a086564f094507"
+  },
+  "checks": {
+    "red_baseline": "FAIL (expected 404 Not Found before implementation)",
+    "git_diff_check": "PASS",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS (592 files)",
+    "mypy": "PASS (592 files)",
+    "api_unit": {"passed": 906, "failed": 0, "skipped": 0, "seconds": 17.51},
+    "focused_6a_integration": {"passed": 7, "failed": 0, "skipped": 0, "seconds": 19.11},
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3013,
+      "executed_tests": 3013,
+      "unique_tests": 3013,
+      "duplicates": 0,
+      "passed": 3009,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1151.36,
+      "browser_passed": 46,
+      "serial_passed": 216
+    }
+  },
+  "open_scope": [
+    "Step 5c/6 UI: Property maintenance, contractor, and move-out screens with browser checks",
+    "Step 2d/4/6b: public screening, deposit custody, and owner settlement rules",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}

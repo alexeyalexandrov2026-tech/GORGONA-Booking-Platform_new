@@ -1,0 +1,15 @@
+{
+  "package": "SPECIAL-03",
+  "branch": "codex/package-special-03-assets-agro-utilities-facilities",
+  "base_commit": "1f764fdb4e3edbbbe8b2d5e82004904832a89cdc",
+  "verified_code_commit": "a42cf7e74d5252554e6e9cab397f460d914375de",
+  "verified_code_tree": "38ae6a88b62deca91cc547fc8feef5805af8c838",
+  "migration": "0147_special_assets_field_ops.sql",
+  "expected_tests": 3105,
+  "passed": 3101,
+  "failed": 0,
+  "skipped": 4,
+  "wall_seconds": 1437.21,
+  "browser_passed": 52,
+  "serial_passed": 216
+}

@@ -1,0 +1,45 @@
+{
+  "slice": "PROPERTY-01-5a-maintenance",
+  "date": "2026-11-20",
+  "branch": "codex/package-property-01-maintenance",
+  "base_commit": "c5d70774fdc2f4c16d9bec421500f94f6b7b0d8f",
+  "source_commit": "34a595ceaa7c9af338924316ee9601ddbaec1a8f",
+  "source_tree": "8ad8c38caad7cb43dea663bb1c60e110167ec069",
+  "migration": "0127_property_maintenance.sql",
+  "checksums_sha256": {
+    "api/src/gorgona_booking/db/migrations/0127_property_maintenance.sql": "78e58f13eae1a2addd135abfc47ea40805b0332adcf3e0754b802d7e34747d1f",
+    "api/src/gorgona_booking/business/property_maintenance.py": "37b9bb3bd279733b55cd7c4ed91a9e7874da7dbd349e4373cd53850fca323888",
+    "api/src/gorgona_booking/api/property_maintenance.py": "8a658ead75e1375b6313455e6f508699d29b446edbdbea1ae855937a8a3b093e",
+    "api/tests/integration/test_property_maintenance.py": "9f503d1597a7a15b9e6af9f587c50e69a01ddb46802c2ec405b6f915d6f34a24"
+  },
+  "checks": {
+    "red_baseline": "FAIL (expected 404 Not Found before implementation)",
+    "git_diff_check": "PASS",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS (586 files)",
+    "mypy": "PASS (586 files)",
+    "api_unit": {"passed": 894, "failed": 0, "skipped": 0, "seconds": 17.86},
+    "focused_maintenance_upgrade_access": {"passed": 10, "failed": 0, "skipped": 0, "seconds": 21.76},
+    "legacy_upgrade_fix": {"passed": 5, "failed": 0, "skipped": 0, "seconds": 11.18},
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 2995,
+      "executed_tests": 2995,
+      "unique_tests": 2995,
+      "duplicates": 0,
+      "passed": 2991,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1147.5,
+      "browser_passed": 46,
+      "serial_passed": 216
+    }
+  },
+  "open_scope": [
+    "Step 5b: single-assignment contractor access via delegation grant (migration 0128)",
+    "Step 5c: Property maintenance UI screen and browser checks",
+    "Step 2d/4: public screening and jurisdiction-specific deposit custody",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}

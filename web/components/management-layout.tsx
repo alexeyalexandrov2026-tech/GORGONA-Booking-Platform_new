@@ -39,6 +39,15 @@ const NAV_ITEMS = [
   { href: "/finance/", label: "Financial documents" },
   { href: "/prepaid/", label: "Prepaid" },
   { href: "/transport/", label: "Transport" },
+  { href: "/construction/", label: "Construction" },
+  { href: "/rental/", label: "Rental" },
+  { href: "/property/", label: "Property" },
+  { href: "/restaurant/", label: "Restaurant" },
+  { href: "/projects/", label: "Projects" },
+  { href: "/supply/", label: "Supply Chain" },
+  { href: "/marketplace/", label: "Marketplace" },
+  { href: "/enterprise/", label: "Enterprise" },
+  { href: "/specialized/", label: "Specialized" },
   { href: "/provider-admission/", label: "Provider admission" },
   { href: "/settings/", label: "Settings" },
 ];
@@ -79,6 +88,9 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         "/materials/",
         "/stock-documents/",
         "/transport/",
+        "/construction/",
+        "/rental/",
+        "/property/",
       ].includes(item.href) ||
         (!delegation &&
           ["owner", "manager"].includes(membership?.role ?? "")) ||

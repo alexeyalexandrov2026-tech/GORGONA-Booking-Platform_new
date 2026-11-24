@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "generator_version": "1.0.0",
+  "mode": "full-1000",
+  "seed": 20261123,
+  "distribution": {
+    "companies": 1000,
+    "enterprise_branches": 100,
+    "enterprise_staff": 10000,
+    "historical_records": 1000000,
+    "service_variants": 1000
+  },
+  "seed_seconds": 24.771,
+  "benchmark_seconds": 30.565,
+  "total_operations": 4000,
+  "read_ops": 2800,
+  "write_ops": 800,
+  "report_ops": 400,
+  "expected_conflicts": 32,
+  "unexpected_errors": 0,
+  "unexpected_error_rate_pct": 0.0,
+  "cross_tenant_leaks": 0,
+  "invariant_violations": 0,
+  "throughput_ops_per_sec": 130.87,
+  "read_latency_ms": {
+    "count": 2800,
+    "p50_ms": 3.841,
+    "p95_ms": 17.109,
+    "p99_ms": 28.824,
+    "max_ms": 42.75
+  },
+  "write_latency_ms": {
+    "count": 800,
+    "p50_ms": 4.279,
+    "p95_ms": 17.808,
+    "p99_ms": 29.18,
+    "max_ms": 42.003
+  },
+  "report_latency_ms": {
+    "count": 400,
+    "p50_ms": 2082.06,
+    "p95_ms": 2468.729,
+    "p99_ms": 2540.002,
+    "max_ms": 2688.101
+  },
+  "targets_met": true,
+  "environment": {
+    "python_version": "3.14.10",
+    "platform": "Linux-7.0.0-1020-azure-x86_64-with-glibc2.39",
+    "cpu_count": 8,
+    "postgres_version": "18.7 (Ubuntu 18.7-1.pgdg24.04+2)",
+    "pool_min_size": 4,
+    "pool_max_size": 32,
+    "concurrency": 24,
+    "adapters": "real_pg18_rls+synthetic_fake_tenants_no_external_providers",
+    "git_sha": "01ff54f81b00b38856a7849e5e3d2d25d986eb9b",
+    "full_soak_40m_completed": false
+  }
+}

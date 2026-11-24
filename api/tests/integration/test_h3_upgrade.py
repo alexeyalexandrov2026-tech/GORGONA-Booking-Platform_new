@@ -142,7 +142,7 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                     ("gba." + table,),
                 )
             }
-            columns = [
+            source_columns = [
                 row[0]
                 for row in before.execute(
                     "select attname from pg_catalog.pg_attribute "
@@ -150,8 +150,8 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                     "and not attisdropped and attgenerated='' order by attnum",
                     ("gba." + table,),
                 ).fetchall()
-                if row[0] in kept
             ]
+            columns = [column for column in source_columns if column in kept]
             names = sql.SQL(",").join(sql.Identifier(column) for column in columns)
             # Historical upgrade fixtures exercise their own earlier schemas.
             # I1 rows cannot be represented there; omit staff and their dependent
@@ -181,6 +181,13 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                 predicate = sql.SQL(" where t.kind not in ('equipment'{})").format(
                     sql.SQL(", 'staff'") if target_version[0] < 32 else sql.SQL("")
                 )
+            # N4: a grant naming transport.tender and an answer given by the carrier's company
+            # cannot be represented before migration 0084.
+            if target_version[0] < 84:
+                if table == "delegation_grants":
+                    predicate = sql.SQL(" where not 'transport.tender' = any(t.permissions)")
+                elif table in ("transport_tender_answers", "transport_rate_confirmation_answers"):
+                    predicate = sql.SQL(" where t.source <> 'platform'")
             # L2a: before migration 0067 a booking holds one interval per resource; keep the
             # first, which is what such a schema would have held.
             if target_version[0] < 67 and table in ("booking_allocations", "resource_allocations"):
@@ -218,6 +225,34 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                         "where e.tenant_id=t.tenant_id and e.id=t.entry_id "
                         "and e.source_kind='stock' and e.tenant_id=any({}))"
                     ).format(incompatible)
+            # R3a: a rental unit has its own resource from migration 0098 on, and no unit can
+            # exist in a real database before it (rental was never enableable); an older schema
+            # takes neither the units, their values, their resources nor their holds.
+            rental: sql.Composable | None = None
+            if target_version[0] < 98 and table == "resources":
+                rental = sql.SQL("t.kind <> 'rental_unit'")
+            elif target_version[0] < 98 and table == "resource_allocations":
+                rental = sql.SQL("t.source_kind not in ('rental_assignment', 'rental_block')")
+            elif target_version[0] < 98 and table in ("rental_units", "rental_unit_values"):
+                rental = sql.SQL("false")
+            # R3b: a rental block hold cannot be represented before migration 0099.
+            elif target_version[0] < 99 and table == "resource_allocations":
+                rental = sql.SQL("t.source_kind <> 'rental_block'")
+            if rental is not None:
+                if predicate == sql.SQL(""):
+                    predicate = sql.SQL(" where {}").format(rental)
+                else:
+                    predicate = sql.SQL("{} and {}").format(predicate, rental)
+            # Migration 0115 excludes the original lease terms. A shortened term can now
+            # coexist with a newer lease that occupies days the original term included.
+            if (
+                target_version[0] == 115
+                and table == "property_leases"
+                and ("occupied_through" in source_columns)
+            ):
+                predicate = sql.SQL(
+                    " where t.occupied_through is null or t.occupied_through >= t.ends_on"
+                )
             query = sql.SQL("select {} from {} t{}").format(
                 names, sql.Identifier("gba", table), predicate
             )
@@ -227,6 +262,15 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                 query = sql.SQL("select {} from ({}) t where t.tenant_id <> all ({})").format(
                     names, query, sql.SQL("{}::uuid[]").format(sql.Literal(provider_companies))
                 )
+            # PROPERTY-01 showings and their resources first exist in migration 0114.
+            if target_version[0] < 114 and table == "resources":
+                query = sql.SQL("select {} from ({}) t where t.kind <> 'property_object'").format(
+                    names, query
+                )
+            if target_version[0] < 114 and table == "resource_allocations":
+                query = sql.SQL(
+                    "select {} from ({}) t where t.source_kind <> 'property_showing'"
+                ).format(names, query)
             # M2: transport lanes and their trip holds cannot be represented before migration
             # 0075; nothing else refers to them there.
             if target_version[0] < 75 and table == "resources":
@@ -262,6 +306,50 @@ def copy_fixture_data(source: ProvisionedDatabase, target: ProvisionedDatabase) 
                     "select {} from ({}) t where not exists (select 1 from gba.delegation_grants g "
                     "where g.owner_tenant_id = t.owner_tenant_id and g.id = t.grant_id "
                     "and g.permissions && " + transport_rights + ")"
+                ).format(names, query)
+            # Pre-0119 schemas cannot represent customer proposal grants or their delegates.
+            if target_version[0] < 119 and table == "delegation_grants":
+                query = sql.SQL(
+                    "select {} from ({}) t "
+                    "where not 'construction.customer_answer' = any(t.permissions)"
+                ).format(names, query)
+            if target_version[0] < 119 and table == "delegation_grant_members":
+                query = sql.SQL(
+                    "select {} from ({}) t where not exists (select 1 from gba.delegation_grants g "
+                    "where g.owner_tenant_id = t.owner_tenant_id and g.id = t.grant_id "
+                    "and 'construction.customer_answer' = any(g.permissions))"
+                ).format(names, query)
+            # R-09 rental grants and their members cannot exist before migration 0123.
+            if target_version[0] < 123 and table == "delegation_grants":
+                query = sql.SQL(
+                    "select {} from ({}) t where not 'rental.customer_answer' = any(t.permissions)"
+                ).format(names, query)
+            if target_version[0] < 123 and table == "delegation_grant_members":
+                query = sql.SQL(
+                    "select {} from ({}) t where not exists (select 1 from gba.delegation_grants g "
+                    "where g.owner_tenant_id = t.owner_tenant_id and g.id = t.grant_id "
+                    "and 'rental.customer_answer' = any(g.permissions))"
+                ).format(names, query)
+            # PROPERTY-01 5b contractor grants cannot exist before migration 0128.
+            if target_version[0] < 128 and table == "delegation_grants":
+                query = sql.SQL(
+                    "select {} from ({}) t "
+                    "where not 'property.contractor_work' = any(t.permissions)"
+                ).format(names, query)
+            if target_version[0] < 128 and table == "delegation_grant_members":
+                query = sql.SQL(
+                    "select {} from ({}) t where not exists (select 1 from gba.delegation_grants g "
+                    "where g.owner_tenant_id = t.owner_tenant_id and g.id = t.grant_id "
+                    "and 'property.contractor_work' = any(g.permissions))"
+                ).format(names, query)
+            # REST-01 Slice 1 restaurant table resources and reservations cannot exist before 0130.
+            if target_version[0] < 130 and table == "resources":
+                query = sql.SQL("select {} from ({}) t where t.kind <> 'restaurant_table'").format(
+                    names, query
+                )
+            if target_version[0] < 130 and table == "resource_allocations":
+                query = sql.SQL(
+                    "select {} from ({}) t where t.source_kind <> 'restaurant_reservation'"
                 ).format(names, query)
             cursor = before.execute(query)
             assert cursor.description is not None

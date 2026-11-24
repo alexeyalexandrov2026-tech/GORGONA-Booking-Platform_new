@@ -1,6 +1,7 @@
 """Cross-company delegation in real PostgreSQL: consent, limits, revocation and isolation."""
 
 import asyncio
+import re
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid7
@@ -10,6 +11,7 @@ import httpx
 import psycopg
 import pytest
 
+from gorgona_booking.db.migrate import load_migrations
 from gorgona_booking.db.pool import RuntimePool, tenant_transaction, unscoped_transaction
 from gorgona_booking.db.provisioning import add_membership, owner_tenant_transaction
 from tests.integration import test_management_api as shared
@@ -570,22 +572,40 @@ async def test_database_rules_hold_for_direct_sql(
         ) == []
 
 
-@pytest.mark.parametrize("table", ["delegation_grants", "delegation_grant_members"])
+@pytest.mark.parametrize(
+    ("table", "policy", "weakened"),
+    [
+        (table, f"{table}_{name}", weakened)
+        for table in ("delegation_grants", "delegation_grant_members")
+        for name, weakened in (
+            ("delegate_scope", "using (true)"),
+            ("unrestricted_insert", "with check (true)"),
+            ("unrestricted_update", "using (true) with check (true)"),
+        )
+    ],
+)
 async def test_delegation_scope_policy_damage_fails_readiness(
-    client: httpx.AsyncClient, owner_conn: psycopg.Connection, table: str
+    client: httpx.AsyncClient,
+    owner_conn: psycopg.Connection,
+    table: str,
+    policy: str,
+    weakened: str,
 ) -> None:
     # Fixed test parameters; privileged schema damage is confined to the disposable database.
+    # The approved policy text is restored from migration 0126, which replaced the 0012 scope.
+    approved = re.search(
+        rf"create policy {policy} on gba\.{table}\b.*?;",
+        next(m.sql for m in load_migrations() if m.version == 126),
+        re.DOTALL,
+    )
+    assert approved is not None
     try:
-        owner_conn.execute(
-            f"alter policy {table}_unrestricted_scope on gba.{table} using (true) with check (true)"
-        )
+        owner_conn.execute(f"alter policy {policy} on gba.{table} {weakened}")
         assert (await client.get("/health/ready")).status_code == 503
     finally:
-        owner_conn.execute(
-            f"alter policy {table}_unrestricted_scope on gba.{table} "
-            "using (gba.current_location_id() is null) "
-            "with check (gba.current_location_id() is null)"
-        )
+        owner_conn.execute(f"drop policy {policy} on gba.{table}")
+        owner_conn.execute(approved.group().encode("utf-8"))
+    assert (await client.get("/health/ready")).status_code == 200
 
 
 async def test_member_list_shows_only_the_requested_company(

@@ -6,6 +6,7 @@ sources of separate payable obligations, accrued once each on a closed trip; FIN
 payment within the open balance. Money is a company-wide finance task, never a carrier dispatcher's.
 """
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID, uuid7
@@ -174,14 +175,24 @@ async def money(
     return Money(payments, t, kit, parties_made[1])
 
 
-async def shipped(m: Money, *, close: bool = True) -> tuple[UUID, UUID]:
-    """10 pallets and 6 crates on one interstate trip; closed: all delivered or refused."""
+async def shipped(
+    m: Money,
+    *,
+    close: bool = True,
+    before: Callable[[UUID], Awaitable[None]] | None = None,
+) -> tuple[UUID, UUID]:
+    """10 pallets and 6 crates on one interstate trip; closed: all delivered or refused.
+
+    `before` runs on the planned trip ahead of any event (a brokered leg is tendered first).
+    """
     order, pallets, crates = uuid7(), uuid7(), uuid7()
     saved = await m.t.order(order, [load(pallets, 10), load(crates, 6, "FAKE crates")])
     assert saved.status_code == 200, saved.text
     trip = uuid7()
     made = await m.t.trip(trip, INTERSTATE, [leg(pallets, 10, 1, 2), leg(crates, 6, 1, 3)])
     assert made.status_code == 200, made.text
+    if before is not None:
+        await before(trip)
     loaded = await event(m.t, trip, "loaded", 1, quantities=((1, 10), (2, 6)), hour=9)
     assert loaded.status_code == 200, loaded.text
     first = await event(m.t, trip, "delivered", 2, quantities=((1, 10),), hour=15)

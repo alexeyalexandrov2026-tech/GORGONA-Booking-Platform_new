@@ -10,11 +10,14 @@ from gorgona_booking.api import (
     agreements,
     businesses,
     configurations,
+    construction,
     counterparties,
     customer,
     delegations,
     departments,
     documents,
+    enterprise_reporting,
+    enterprise_sso,
     financial_documents,
     groups,
     health,
@@ -22,14 +25,37 @@ from gorgona_booking.api import (
     inventory,
     ledger,
     legal_entities,
+    market_orders,
+    market_storefronts,
     members,
     platform,
+    projects_billing,
+    projects_matters,
+    projects_time,
+    projects_work,
+    property_catalog,
+    property_leases,
+    property_listings,
+    property_maintenance,
+    property_showings,
     provider_admission,
+    rental,
     reservations,
+    restaurant_billing,
+    restaurant_checks,
+    restaurant_floor,
+    restaurant_menu,
     salons,
     setup,
     shift_changes,
+    special_assets,
+    special_care,
+    special_civic,
+    special_venues,
     stock,
+    supply_manufacturing,
+    supply_trade,
+    supply_wms,
     timesheets,
     transport,
     visits,
@@ -146,6 +172,32 @@ def create_app(
     app.include_router(stock.router)
     app.include_router(visits.router)
     app.include_router(transport.router)
+    app.include_router(construction.router)
+    app.include_router(rental.router)
+    app.include_router(property_catalog.router)
+    app.include_router(property_leases.router)
+    app.include_router(property_listings.router)
+    app.include_router(property_showings.router)
+    app.include_router(property_maintenance.router)
+    app.include_router(restaurant_floor.router)
+    app.include_router(restaurant_menu.router)
+    app.include_router(restaurant_checks.router)
+    app.include_router(restaurant_billing.router)
+    app.include_router(projects_matters.router)
+    app.include_router(projects_work.router)
+    app.include_router(projects_time.router)
+    app.include_router(projects_billing.router)
+    app.include_router(supply_wms.router)
+    app.include_router(supply_manufacturing.router)
+    app.include_router(supply_trade.router)
+    app.include_router(market_storefronts.router)
+    app.include_router(market_orders.router)
+    app.include_router(enterprise_sso.router)
+    app.include_router(enterprise_reporting.router)
+    app.include_router(special_venues.router)
+    app.include_router(special_care.router)
+    app.include_router(special_assets.router)
+    app.include_router(special_civic.router)
     app.include_router(members.router)
     app.include_router(setup.router)
     app.include_router(platform.router)

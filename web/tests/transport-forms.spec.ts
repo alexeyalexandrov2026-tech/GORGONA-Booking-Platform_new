@@ -253,6 +253,11 @@ test("an owner plans with the forms and a carrier's dispatcher works through the
   await expect(page.getByRole("button", { name: /^Money for / })).toHaveCount(
     0,
   );
+  // N6-05: brokerage is a company-wide broker task; a delegate never sees its panels.
+  for (const name of ["Broker authority", "Carriers", "Loads to cover"])
+    await expect(page.getByRole("heading", { name, exact: true })).toHaveCount(
+      0,
+    );
   await board.getByRole("button", { name: `FAKE-TR-${p}` }).click();
   await expect(page.getByRole("button", { name: "Edit trip" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Trip pay" })).toHaveCount(0);

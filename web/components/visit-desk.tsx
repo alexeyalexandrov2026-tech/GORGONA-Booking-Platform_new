@@ -311,7 +311,12 @@ export function VisitDeskDialog({
             {completion.materials.length === 0 ? (
               <p className="muted">No materials were used.</p>
             ) : (
-              <div className="mgmt-table-container">
+              <div
+                className="mgmt-table-container"
+                role="region"
+                aria-label="Materials used table"
+                tabIndex={0}
+              >
                 <table className="mgmt-table" aria-label="Materials used">
                   <thead>
                     <tr>

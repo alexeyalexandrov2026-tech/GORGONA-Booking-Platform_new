@@ -382,7 +382,8 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
             for version, marker in (
                 (10, "-- Legal-entity branch scope:"),
                 (11, "-- Department branch scope:"),
-                (12, "-- Delegation branch scope:"),
+                # R-09 review: 0126 replaced the 0012 delegation branch scope.
+                (126, "-- Delegation branch scope (0126):"),
                 (13, "-- Group branch scope:"),
                 (14, "-- Company-wide scope:"),
                 (15, "-- Counterparty branch scope:"),
@@ -422,11 +423,103 @@ async def test_scoped_work_fails_closed_when_schema_boundary_is_missing(
                 (79, "-- Transport money branch scope:"),
                 # N1: broker authority and carrier profiles (company-wide).
                 (80, "-- Broker branch scope:"),
+                # N2: tenders and their answers (company-wide).
+                (82, "-- Tender branch scope:"),
+                # N3: rate confirmations and their answers (company-wide).
+                (83, "-- Rate confirmation branch scope:"),
+                # N4: carrier companies (company-wide).
+                (84, "-- Carrier company branch scope:"),
+                # N5: carrier pay (company-wide).
+                (85, "-- Carrier pay branch scope:"),
+                # O1: construction projects and estimates (by the project's branch).
+                (87, "-- Construction branch scope:"),
+                # O2: the contract and change orders (by the project's branch).
+                (88, "-- Construction branch scope:"),
+                # O3a: commitments (by the project's branch).
+                (89, "-- Construction branch scope:"),
+                (90, "-- Construction branch scope:"),
+                (91, "-- Construction branch scope:"),
+                (92, "-- Construction branch scope:"),
+                (93, "-- Construction branch scope:"),
+                (94, "-- Construction branch scope:"),
+                (95, "-- Construction branch scope:"),
+                # R1: rental units (by the unit's branch); classes are company-wide.
+                (96, "-- Rental branch scope:"),
+                # R2: rental bookings (by the pickup branch).
+                (97, "-- Rental branch scope:"),
+                # R3a: rental assignments (by the booking's pickup branch).
+                (98, "-- Rental branch scope:"),
+                # R3b: rental unit blocks (by the unit's branch).
+                (99, "-- Rental branch scope:"),
+                # R4a: rental rate cards (by the card's branch).
+                (100, "-- Rental branch scope:"),
+                # R4b: rental agreements (by the booking's pickup branch).
+                (101, "-- Rental branch scope:"),
+                # R4c: rental booking period changes (by the pickup branch).
+                (102, "-- Rental branch scope:"),
+                # R5a: rental securities and their events (by the pickup branch).
+                (103, "-- Rental branch scope:"),
+                # R5b: provider links of rental security events (by the pickup branch).
+                (104, "-- Rental branch scope:"),
+                # R6a: handover and return inspections and their marks (by the pickup branch).
+                (105, "-- Rental branch scope:"),
+                # R7a: rental settlements (by the pickup branch).
+                (106, "-- Rental branch scope:"),
+                # R7b: damage charges, their marks and refunds (by the pickup branch).
+                (107, "-- Rental branch scope:"),
+                # R-09: rental problem reports (by the booking's pickup branch).
+                (125, "-- Rental branch scope:"),
+                (112, "-- Property branch scope:"),
+                (113, "-- Property branch scope:"),
+                (114, "-- Property showing branch scope:"),
+                (115, "-- Property lease company scope:"),
+                (116, "-- Property lease term company scope:"),
+                (117, "-- Property move-in company scope:"),
+                (127, "-- Property maintenance branch scope:"),
+                (128, "-- Property maintenance contractor branch scope:"),
+                (129, "-- Property move-out company scope:"),
+                (130, "-- Restaurant floor branch scope:"),
+                (131, "-- Restaurant menu branch scope:"),
+                (132, "-- Restaurant checks branch scope:"),
+                (133, "-- Restaurant billing branch scope:"),
+                (134, "-- Projects matters branch scope:"),
+                (135, "-- Projects work branch scope:"),
+                (136, "-- Projects time & recurring branch scope:"),
+                (137, "-- Projects billing branch scope:"),
+                (138, "-- Supply WMS branch scope:"),
+                (139, "-- Supply manufacturing branch scope:"),
+                (140, "-- Supply trade branch scope:"),
+                (141, "-- Market storefronts branch scope:"),
+                (142, "-- Market orders branch scope:"),
+                (143, "-- Enterprise SSO branch scope:"),
+                (144, "-- Enterprise group reporting branch scope:"),
+                (145, "-- Special venues branch scope:"),
+                (146, "-- Clinical care branch scope:"),
+                (147, "-- Assets branch scope:"),
+                (148, "-- Public civic branch scope:"),
             ):
                 scope = next(m.sql for m in load_migrations() if m.version == version).partition(
                     marker
                 )[2]
                 owner_conn.execute(scope[scope.index("\n") :].encode("utf-8"))
+            # 0118 checks the branch scope on INSERT in its combined tenant policy.
+            customer_company = next(m.sql for m in load_migrations() if m.version == 118)
+            policy = re.search(
+                r"create policy construction_customer_company_tenant\b.*?;",
+                customer_company,
+                re.DOTALL,
+            )
+            assert policy is not None
+            owner_conn.execute(policy.group().encode("utf-8"))
+            # R-09: 0122 and 0124 check the branch scope on INSERT in their tenant policies.
+            for version, name in (
+                (122, "rental_customer_companies_tenant"),
+                (124, "rental_customer_change_offers_tenant"),
+            ):
+                rental_sql = next(m.sql for m in load_migrations() if m.version == version)
+                found = re.search(rf"create policy {name}\b.*?;", rental_sql, re.DOTALL)
+                assert found is not None, name
+                owner_conn.execute(found.group().encode("utf-8"))
             admission = next(m.sql for m in load_migrations() if m.version == 31)
             policies = re.findall(
                 r"create policy provider_admission_\w+_unrestricted_scope\b.*?;",

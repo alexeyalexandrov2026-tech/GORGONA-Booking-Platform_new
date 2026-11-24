@@ -7,6 +7,7 @@ same transaction as the operation, so authorization and work cannot diverge.
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -45,6 +46,7 @@ class DelegationScope:
     grant_id: UUID
     servicer_business_id: UUID
     revision: int
+    expires_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +76,7 @@ async def authorized_tenant(
     exclusive: str | None = None,
     allow_location_scope: bool = False,
     allow_delegation: bool = False,
+    delegation_id: UUID | None = None,
 ) -> AsyncIterator[TenantAccess]:
     """Yield a connection scoped to `salon_id` only if `principal` may use `permission`.
 
@@ -87,6 +90,8 @@ async def authorized_tenant(
     `allow_delegation` admits an employee of a servicing business under an active grant.
     A grant may be limited to one location, so only location-scoped handlers may opt in.
     """
+    if delegation_id is not None and not allow_delegation:
+        raise ValueError("The handler must allow delegation to select a grant")
     if allow_delegation and not allow_location_scope:
         raise ValueError("Delegated handlers must support location scope")
     async with pool.connection() as conn, conn.transaction():
@@ -104,6 +109,7 @@ async def authorized_tenant(
             permission,
             allow_location_scope=allow_location_scope,
             allow_delegation=allow_delegation,
+            delegation_id=delegation_id,
         )
         if access.location_id is not None:
             await assert_location_scope_ready(conn)
@@ -122,6 +128,7 @@ async def _authorize(
     *,
     allow_location_scope: bool,
     allow_delegation: bool = False,
+    delegation_id: UUID | None = None,
 ) -> TenantAccess:
     # FOR SHARE: a concurrent suspend/revoke waits until this request finishes.
     membership = await (
@@ -155,7 +162,11 @@ async def _authorize(
     elif (
         tenant is not None
         and allow_delegation
-        and (delegated := await _delegated_access(conn, principal, salon_id, permission, tenant[0]))
+        and (
+            delegated := await _delegated_access(
+                conn, principal, salon_id, permission, tenant[0], delegation_id
+            )
+        )
         is not None
     ):
         return delegated
@@ -181,6 +192,7 @@ async def _delegated_access(
     salon_id: UUID,
     permission: Permission,
     tenant_status: str,
+    delegation_id: UUID | None = None,
 ) -> TenantAccess | None:
     """Admit a named delegate of an active, unexpired grant; None if there is no grant.
 
@@ -192,13 +204,15 @@ async def _delegated_access(
         return None
     grants = await (
         await conn.execute(
-            "select g.id, g.servicer_tenant_id, g.permissions, g.location_id, g.revision "
+            "select g.id, g.servicer_tenant_id, g.permissions, g.location_id, "
+            "g.revision, g.expires_at "
             "from gba.delegation_grants g join gba.delegation_grant_members m "
             "on m.owner_tenant_id = g.owner_tenant_id and m.grant_id = g.id "
             "where g.owner_tenant_id = %s and m.user_id = %s and m.removed_at is null "
             "and g.status = 'active' and g.expires_at > pg_catalog.statement_timestamp() "
+            "and (%s::uuid is null or g.id = %s) "
             "order by g.id for share of g, m",
-            (salon_id, principal.user_id),
+            (salon_id, principal.user_id, delegation_id, delegation_id),
         )
     ).fetchall()
     if not grants:
@@ -215,7 +229,7 @@ async def _delegated_access(
     ).fetchone()
     if suspended is not None:
         raise PermissionDeniedError("Your access to this business is suspended")
-    for grant_id, servicer_id, permissions, location_id, revision in grants:
+    for grant_id, servicer_id, permissions, location_id, revision, expires_at in grants:
         if str(permission) not in permissions:
             continue
         # Membership rows are locked under their own company's context, then restored.
@@ -261,7 +275,7 @@ async def _delegated_access(
             None,
             "delegation",
             location_id,
-            DelegationScope(grant_id, servicer_id, revision),
+            DelegationScope(grant_id, servicer_id, revision, expires_at),
         )
     raise PermissionDeniedError("Your delegated access does not allow this action")
 

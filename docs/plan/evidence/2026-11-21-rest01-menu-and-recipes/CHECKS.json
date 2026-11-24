@@ -1,0 +1,66 @@
+{
+  "package": "REST-01",
+  "slice": "Slice 2 — Versioned menu items, modifiers & STOCK-01 recipe BOMs",
+  "date": "2026-11-21",
+  "branch": "codex/package-rest-01-menu-and-recipes",
+  "base_commit": "cb492fe9d0cf901755d3960c6f00784c2384d3d9",
+  "verified_code_commit": "69662f3a6bd0f76328c9298d3b08cde0b41b3261",
+  "verified_code_tree": "1e38c850c6fa8584d3b6d8fbdc52dfeb57e07958",
+  "migration": "0131_restaurant_menu_and_recipes.sql",
+  "readiness_unchanged": true,
+  "module_enableable": false,
+  "checksums_sha256": {
+    "docs/plan/PACKAGE_REST01_MENU_RECIPES_DESIGN_2026-11-21.md": "17d588e48e6649f70be2462abd3c4a8e6d4e34c03b28bcde40e2cac9dae774a0",
+    "api/src/gorgona_booking/db/migrations/0131_restaurant_menu_and_recipes.sql": "e88a311d4e7add82238d69fd17857be8cd15fc4e6ba3a4f77078ac5c497d33b1",
+    "api/src/gorgona_booking/business/restaurant_menu.py": "b8f17d38398525d0ea7ee45a85f6422cc8e0ea48011d5b8e490db76b27d770c0",
+    "api/src/gorgona_booking/api/restaurant_menu.py": "fba45546270aa40d097c5d2ff1f048ced337d34021defa6c53995b8fbfef31de",
+    "api/src/gorgona_booking/db/schema_guard.py": "83dd33279358aacb157bf72e996389b5c217ac8cbffbc5b02a0318a38141b94b",
+    "api/tests/unit/test_restaurant_menu_contracts.py": "e22e5700438666baf50d779a2303f931f17bd325fd806fc32a2631082260a512",
+    "api/tests/integration/test_restaurant_menu_and_recipes.py": "d1fd506766d90f2511b80aa972e5ee169db4f1037184bc2475269a59aa1c1788",
+    "api/tests/integration/test_restaurant_menu_upgrade.py": "efd1f5968c48f411fddea91d174e1bb963751c501da84e2d322bd0319c005e78"
+  },
+  "checks": {
+    "git_diff_check": "PASS",
+    "ruff_check": "PASS",
+    "ruff_format_check": "PASS (603 files)",
+    "mypy": "PASS (603 files)",
+    "api_unit": {
+      "passed": 913,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 20.48
+    },
+    "focused_integration": {
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 30.24
+    },
+    "full_parallel_suite_vm": {
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3029,
+      "executed_tests": 3029,
+      "unique_tests": 3029,
+      "duplicates": 0,
+      "passed": 3025,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1255.4,
+      "browser_passed": 47,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "Slice 3 (migration 0132): Independent guest checks, station-routed kitchen tickets & STOCK-01 ingredient write-offs",
+    "Slice 4 (migration 0133): Split billing with total conservation, FIN-03 invoices & coordinated refunds",
+    "Slice 5 (no migration): Restaurant UI (Floor/Reservations, Menu/Recipes, Checks/Split Billing, Kitchen Board) with browser E2E",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}

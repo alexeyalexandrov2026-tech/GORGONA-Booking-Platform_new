@@ -1,0 +1,15 @@
+{
+  "package": "SPECIAL-05",
+  "branch": "codex/package-special-05-specialized-ui",
+  "base_commit": "18b9ab6eb64bc8f1399038e62c991d45323cef09",
+  "verified_code_commit": "139647bb239c4cf6a70e76e6bfeee5a47c63b0d1",
+  "verified_code_tree": "2325d0a7f5bbd43be406814086bf7d24f9deda59",
+  "migration": "none (uses 0145..0148)",
+  "expected_tests": 3110,
+  "passed": 3106,
+  "failed": 0,
+  "skipped": 4,
+  "wall_seconds": 1479.88,
+  "browser_passed": 53,
+  "serial_passed": 216
+}

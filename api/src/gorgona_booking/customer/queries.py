@@ -238,7 +238,7 @@ async def _busy(
     window: tuple[datetime, datetime],
     exclude_booking_id: UUID | None,
 ) -> list[tuple[datetime, datetime]]:
-    """Intervals the resource is taken: bookings and unexpired holds, blocks, staff reservations."""
+    """Busy intervals from bookings, holds, blocks and shared occupancy."""
     rows = await (
         await conn.execute(
             "select lower(a.during), upper(a.during) from gba.booking_allocations a "
@@ -249,10 +249,10 @@ async def _busy(
             "and a.during && tstzrange(%s, %s, '[)') "
             "union all select starts_at, ends_at from gba.resource_blocks "
             "where resource_id = %s and starts_at < %s and ends_at > %s "
-            # Staff reservations take the resource in the shared occupancy (ADR-0022).
+            # Project staff reservations and showings from the shared occupancy (ADR-0022).
             "union all select lower(r.during), upper(r.during) "
             "from gba.resource_allocations r where r.resource_id = %s "
-            "and r.source_kind = 'reservation' and r.state = 'confirmed' "
+            "and r.source_kind in ('reservation', 'property_showing') and r.state = 'confirmed' "
             "and r.during && tstzrange(%s, %s, '[)')",
             (
                 resource_id,

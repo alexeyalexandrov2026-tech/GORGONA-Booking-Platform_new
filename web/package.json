@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "test:e2e": "playwright test tests/booking.spec.ts",
     "test:visit": "playwright test tests/visit-booking.spec.ts --max-failures=1",
-    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts tests/counterparty-contracts.spec.ts tests/document-contracts.spec.ts tests/agreement-contracts.spec.ts tests/reservation-contracts.spec.ts tests/ledger-contracts.spec.ts --project=desktop tests/financial-contracts.spec.ts tests/admission-contracts.spec.ts tests/workforce-contracts.spec.ts tests/inventory-contracts.spec.ts tests/stock-document-contracts.spec.ts tests/booking-contracts.spec.ts tests/catalog-contracts.spec.ts tests/visit-contracts.spec.ts tests/customer-visit.spec.ts tests/transport-contracts.spec.ts",
+    "test:unit": "playwright test tests/business-time.spec.ts tests/working-hours.spec.ts tests/management-contracts.spec.ts tests/counterparty-contracts.spec.ts tests/document-contracts.spec.ts tests/agreement-contracts.spec.ts tests/reservation-contracts.spec.ts tests/ledger-contracts.spec.ts --project=desktop tests/financial-contracts.spec.ts tests/admission-contracts.spec.ts tests/workforce-contracts.spec.ts tests/inventory-contracts.spec.ts tests/stock-document-contracts.spec.ts tests/booking-contracts.spec.ts tests/catalog-contracts.spec.ts tests/visit-contracts.spec.ts tests/customer-visit.spec.ts tests/transport-contracts.spec.ts tests/brokerage-contracts.spec.ts tests/construction-contracts.spec.ts tests/rental-contracts.spec.ts tests/property-contracts.spec.ts tests/restaurant-contracts.spec.ts tests/projects-contracts.spec.ts tests/supply-contracts.spec.ts tests/market-contracts.spec.ts tests/enterprise-contracts.spec.ts tests/specialized-contracts.spec.ts",
     "test:management": "playwright test tests/management.spec.ts",
     "test:management:location": "playwright test tests/location-access.spec.ts",
     "test:management:delegation": "playwright test tests/delegation.spec.ts",
@@ -38,10 +38,20 @@
     "test:management:transport": "playwright test tests/transport.spec.ts --max-failures=1",
     "test:management:transport-forms": "playwright test tests/transport-forms.spec.ts --max-failures=1",
     "test:management:transport-money": "playwright test tests/transport-money.spec.ts --max-failures=1",
-    "test:management:stock-documents": "playwright test tests/stock-documents.spec.ts --max-failures=1"
+    "test:management:transport-brokerage": "playwright test tests/transport-brokerage.spec.ts --max-failures=1",
+    "test:management:construction": "playwright test tests/construction.spec.ts --max-failures=1",
+    "test:management:construction-execution": "playwright test tests/construction-execution.spec.ts --max-failures=1",
+    "test:management:rental": "playwright test tests/rental.spec.ts --max-failures=1",
+    "test:management:rental-keyboard": "playwright test tests/rental-keyboard.spec.ts --max-failures=1",
+    "test:management:property": "playwright test tests/property.spec.ts --max-failures=1",
+    "test:management:property-maintenance": "playwright test tests/property-maintenance.spec.ts --max-failures=1",
+    "test:management:rental-agreement": "playwright test tests/rental-agreement.spec.ts --max-failures=1",
+    "test:management:rental-settlement": "playwright test tests/rental-settlement.spec.ts --max-failures=1",
+    "test:management:stock-documents": "playwright test tests/stock-documents.spec.ts --max-failures=1",
+    "test:management:ops": "playwright test tests/ops-resilience.spec.ts --project=desktop --project=mobile"
   },
   "dependencies": {
-    "next": "16.4.2",
+    "next": "16.4.6",
     "oidc-client-ts": "3.5.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -54,7 +64,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.4.2",
+    "eslint-config-next": "16.4.6",
     "prettier": "3.9.9",
     "typescript": "6.0.3"
   }

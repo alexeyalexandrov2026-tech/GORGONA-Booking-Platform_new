@@ -1,6 +1,1038 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-10-26: package M review fixes, locally verified
+## Current checkpoint — 2026-11-24: Stages 5–9 technical implementation & OPS-01..04 verification complete (migrations 0128–0149, all 39/39 profiles)
+
+Branch tip `codex/package-ops-04-audit-rls-perf-and-container-verify` (code `3aa0466`, [OPS-04 plan](PACKAGE_OPS04_PLAN_2026-11-24.md), [OPS-04 evidence](evidence/2026-11-24-ops04-audit-rls-perf/CHECKS.json), [operations runbook](../runbooks/OPS_RECOVERY_AND_LOAD_RUNBOOK.md)). Complete verified technical chain pushed to GitHub without touching `main`, `readiness_registry.py`, `enableable=False`, `transport`, or `gorgona-r09-rental-change-ui`:
+
+- **Stage 5**: `REST-01` (S1–S5, `/restaurant/`) and `PRO-01` (S1–S5, `/projects/`) — verified & pushed.
+- **Stage 6**: `SUPPLY-01` (S1–S4, migrations `0138..0140`, `/supply/`) — verified & pushed (`a2c5817`).
+- **Stage 7**: `MARKET-01` (S1–S3, `0141..0142`, `/marketplace/`, `a5c0ef3`) and `ENTERPRISE-01` (S1–S3, `0143..0144`, `/enterprise/`, `159dd90`) — verified & pushed.
+- **Stage 8**: `SPECIAL-01..05` (`0145..0148`, unified 4-tab `/specialized/`, covering all 39/39 industry profiles, `88806e6`) — verified & pushed.
+- **Stage 9 Technical Verification (`OPS-01..04`)**:
+  - `OPS-01` (`01ff54f`): real PG18 `pg_dump`/`pg_restore` drill, full 148-migration/table/multi-currency ledger reconciliation, idempotent replay & switchback; caught and fixed real `pg_dump` nested-`AND` AST recovery bug in `financial_guard.py`.
+  - `OPS-02` (`fd66351`): deterministic load profile generator (`v1.0.0`, strict `"FAKE "` & loopback guards) and `full-1000` benchmark (1,000 FAKE companies, 100 enterprise branches, 10,000 staff, 1,000,000 historical rows, 70/20/10 mix under `gba_runtime` RLS; `full_soak_40m_completed=false` on dev VM).
+  - `OPS-03` (`dd27976`): server offline conflict matrix (`409` stale revision, `200` idempotent retry, `422 IDEMPOTENCY_KEY_REUSED`, `403` revoked staff, `401` forged bearer, `PeriodClosedError`) + real Chromium desktop & 390px mobile E2E (keyboard `Tab`, `axe-core` WCAG 2.1 A/AA `0` violations, `0` horizontal overflow, `503`/`409` recovery); fixed latent WCAG 2.1 A `scrollable-region-focusable` across `.mgmt-table-container` wrappers.
+  - `OPS-04` (`3aa0466`): migration **0149** (`audit_events_rls_index.sql`, next migration **0150**) replaced non-indexable `IS NOT DISTINCT FROM` on `gba.audit_events`, reducing `full-1000` 1M-row report `p95` from `2468.73 ms` to **`24.573 ms`** (read `p95=9.756 ms`, write `p95=10.309 ms`, `2838.89 ops/s`, `0` unexpected errors, `0` cross-tenant leaks); verified real production Docker image (`GBA_REQUIRE_CONTAINER=1`: **3/3 passed**); validated `infra/azure/main-shared.bicep` and `main-platform.bicep` via `az bicep build`; full parallel suite **`3119 passed / 0 failed / 4 skipped`** out of `3123` (`browser 54/54`, `serial 218/218`, `count_ok=True`, `duplicates=0`).
+
+Remaining gates requiring explicit owner decision: PR/merge to `main`, `readiness_registry.py` raises, enabling optional modules (`enableable=True`), Azure staging deployment & 40-minute soak run, live payment/OIDC providers, DNS, and industry pilot acceptance (statuses 4–5).
+
+### SPECIAL-05 (Этап 8). Единый UI специализированных отраслей /specialized/ (профили 12–39), 23 ноября
+
+Ветка `codex/package-special-05-specialized-ui` (коммит `139647b`, миграций нет — использует `0145`–`0148`). 4-вкладочный интерфейс + сквозной E2E-тест Chromium desktop/mobile с axe-core и чтением из PG18. Полный параллельный прогон на `gorgona-dev`: `3106 PASS, 0 fail, 4 skip` из `3110` (`1479.88s`, browser `53/53`, serial `216/216`).
+
+### SPECIAL-04 (Этап 8). Персонал/рекрутинг, финансово-страховой консалтинг, организации и госуправление (профили 30, 31, 36, 39), 23 ноября
+
+Ветка `codex/package-special-04-staffing-advisory-orgs-public` (коммит `9ac8de0`, миграция `0148`). Завершает покрытие серверной логики и миграций для всех 39 отраслевых профилей каталога. Полный параллельный прогон на `gorgona-dev`: `3105 PASS, 0 fail, 4 skip` из `3109` (`1462.7s`).
+
+### SPECIAL-03 (Этап 8). Активы, инспекции, обслуживание и инциденты безопасности (профили 27, 28, 29, 32, 33, 34), 23 ноября
+
+Ветка `codex/package-special-03-assets-agro-utilities-facilities` (коммит `a42cf7e`, миграция `0147`). Полный параллельный прогон на `gorgona-dev`: `3101 PASS, 0 fail, 4 skip` из `3105` (`1437.21s`).
+
+### SPECIAL-02 (Этап 8). Медицина, ветеринария и социальный уход с жёстким контролем согласий (профили 14, 15, 16), 22 ноября
+
+Ветка `codex/package-special-02-clinical-vet-social-care` (коммит `6b48bd3`, миграция `0146`). Полный параллельный прогон на `gorgona-dev`: `3097 PASS, 0 fail, 4 skip` из `3101` (`1426.66s`).
+
+### SPECIAL-01 (Этап 8). Образование, фитнес, гостиницы/туризм, события и персональные услуги (профили 12, 13, 17, 18, 35), 22 ноября
+
+Ветка `codex/package-special-01-hospitality-events-education` (коммит `74d9f9e`, миграция `0145`). Полный параллельный прогон на `gorgona-dev`: `3093 PASS, 0 fail, 4 skip` из `3097` (`1427.62s`).
+
+### ENTERPRISE-01 Slice 3. Экран `/enterprise/` (3 вкладки: SSO и жизненный цикл сотрудников, согласия групп на отчётность, сводная аналитика по валютам) и real-browser E2E, 21 ноября
+
+Ветка `codex/package-enterprise-01-ui` (коммит кода `84e6d70`, без новой миграции) от `ENTERPRISE-01 Slice 2` `6a8af10`. Добавлены строгие Zod-контракты (`web/lib/enterprise-contracts.ts`), API-клиент (`web/lib/enterprise-api.ts`), экран `/enterprise/` (`web/components/enterprise.tsx`) и real-browser Chromium E2E (`web/tests/enterprise.spec.ts`, `api/tests/integration/test_enterprise_browser.py`, desktop + mobile `390px`, `axe-core` 0 нарушений, атомарное отключение с немедленным `403 TENANT_ACCESS_DENIED`, фильтрация сводного отчёта только по разрешённым наборам, мгновенное скрытие после отзыва и PG18 read-back). Полный параллельный прогон на `gorgona-dev`: `3089 PASS, 0 fail, 4 skip` из `3093` (`browser 52/52`, `serial 216/216`, `1439.06s`). Доказательства: `docs/plan/evidence/2026-11-21-enterprise01-ui/ACCEPTANCE.md`, `CHECKS.json`.
+
+### ENTERPRISE-01 Slice 2. Сводная отчётность групп по явному согласию без переноса владения и смешения валют, 21 ноября
+
+Ветка `codex/package-enterprise-01-group-reporting` (коммит кода `3b34049`, миграция `0144_enterprise_group_reporting.sql` без повышения привилегий) от `ENTERPRISE-01 Slice 1` `b6a5ec3`. Добавлены таблицы `enterprise_group_report_grants` (отзываемые согласия участника на `allowed_report_sets`) и `enterprise_group_report_snapshots` с жёстким PostgreSQL 18 RLS: организатор группы получает только разрешённые наборы активных участников с разделением по валютам и юрлицам, без доступа к строкам чужой компании и с мгновенным скрытием при отзыве. Полный параллельный прогон на `gorgona-dev`: `3088 PASS, 0 fail, 4 skip` из `3092` (`browser 51/51`, `serial 216/216`, `1410.76s`). Доказательства: `docs/plan/evidence/2026-11-21-enterprise01-group-reporting/ACCEPTANCE.md`, `CHECKS.json`.
+
+### ENTERPRISE-01 Slice 1. Корпоративный SSO и атомарное отключение сотрудников с мгновенной потерей доступа, 21 ноября
+
+Ветка `codex/package-enterprise-01-holding-and-governance` (коммит кода `f530ccc`, миграция `0143_enterprise_sso_and_lifecycle.sql` без повышения привилегий) от `MARKET-01 Slice 3` `a5c0ef3`. Модуль `analytics` переведён в `Readiness.IMPLEMENTED` (`enableable=False`, `MODULE_REGISTRY_VERSION=12`), добавлены права `ENTERPRISE_READ/MANAGE` (`PERMISSIONS_VERSION=21`), таблицы `enterprise_sso_providers`, `enterprise_directory_links` и неизменяемый журнал `enterprise_lifecycle_events` с атомарным отключением сотрудника (приостановка `gba.memberships`, удаление делегирований и мгновенный `403 TENANT_ACCESS_DENIED`). Полный параллельный прогон на `gorgona-dev`: `3085 PASS, 0 fail, 4 skip` из `3089` (`browser 51/51`, `serial 216/216`, `1368.77s`). Доказательства: `docs/plan/evidence/2026-11-21-enterprise01-sso-and-lifecycle/ACCEPTANCE.md`, `CHECKS.json`.
+
+### MARKET-01 Slice 3. Экран `/marketplace/` (3 вкладки: витрины и публикация, клиентские маркетплейсы, многопродавецкий checkout и возвраты) и real-browser E2E, 21 ноября
+
+Ветка `codex/package-market-01-ui` (коммит кода `26d8a17`, без новой миграции) от `MARKET-01 Slice 2` `8f90b69`. Добавлены строгие Zod-контракты (`web/lib/market-contracts.ts`), API-клиент (`web/lib/market-api.ts`), экран `/marketplace/` (`web/components/market.tsx`) и real-browser Chromium E2E (`web/tests/market.spec.ts`, `api/tests/integration/test_market_browser.py`, desktop + mobile `390px`, `axe-core` 0 нарушений, строгая проекция опубликованных полей, нулевая комиссия GORGONA, отзыв продавца `MARKET_STATE_INVALID`, запрет смешения книг продавцов, разделение корзины на отдельные заказы и счета `FIN-03`, частичный возврат и PG18 read-back). Полный параллельный прогон на `gorgona-dev`: `3081 PASS, 0 fail, 4 skip` из `3085` (`browser 51/51`, `serial 216/216`, `1382.82s`). Доказательства: `docs/plan/evidence/2026-11-21-market01-ui/ACCEPTANCE.md`, `CHECKS.json`.
+
+### MARKET-01 Slice 2. Разделение корзины по продавцам, независимые заказы и счета FIN-03 на одного продавца, возвраты и комиссия оператора, 21 ноября
+
+Ветка `codex/package-market-01-orders-and-settlement` (коммит кода `67e9b46`, миграция `0142_market_orders_and_settlement.sql` без повышения привилегий) от `MARKET-01 Slice 1` `69c2312`. Добавлены таблицы `market_baskets`, `market_orders`, `market_order_lines` и `market_operator_fees`: корзина с товарами нескольких продавцов автоматически делится на отдельные заказы с жёсткой привязкой строк к одному продавцу и одному юридическому лицу, отдельными счетами `FIN-03` и кредит-нотами возврата, без общих неразделённых платежей и с нулевой комиссией GORGONA. Полный параллельный прогон на `gorgona-dev`: `3080 PASS, 0 fail, 4 skip` из `3084` (`browser 50/50`, `serial 216/216`, `1413.44s`). Доказательства: `docs/plan/evidence/2026-11-21-market01-orders-and-settlement/ACCEPTANCE.md`, `CHECKS.json`.
+
+### MARKET-01 Slice 1. Витрины бизнеса со строгой проекцией опубликованных полей и клиентские маркетплейсы без комиссии GORGONA, 21 ноября
+
+Ветка `codex/package-market-01-storefronts-and-publishing` (коммит кода `5f094df`, миграция `0141_market_storefronts_and_publishing.sql` без повышения привилегий) от `SUPPLY-01 Slice 4` `a2c5817`. Модуль `storefronts` переведён в `Readiness.IMPLEMENTED` (`enableable=False`, `MODULE_REGISTRY_VERSION=11`), добавлены права `MARKET_READ/MANAGE` (`PERMISSIONS_VERSION=20`), таблицы `market_storefronts`, `market_listings`, `marketplaces` (`gorgona_commission_bps = 0`) и `marketplace_seller_connections` с отзывом прав и строгой проекцией только выбранных публичных полей. Полный параллельный прогон на `gorgona-dev`: `3076 PASS, 0 fail, 4 skip` из `3080` (`browser 50/50`, `serial 216/216`, `1377.77s`). Доказательства: `docs/plan/evidence/2026-11-21-market01-storefronts-and-publishing/ACCEPTANCE.md`, `CHECKS.json`.
+
+### SUPPLY-01 Slice 4. Экран `/supply/` (4 вкладки: WMS-собственники и ячейки, остатки и движения, производство и себестоимость, торговые и 3PL-заказы) и real-browser E2E, 21 ноября
+
+Ветка `codex/package-supply-01-ui` (коммит кода `f35a1d4`, без новой миграции) от `SUPPLY-01 Slice 3` `b8650ae`. Добавлены строгие Zod-контракты (`web/lib/supply-contracts.ts`), API-клиент (`web/lib/supply-api.ts`), экран `/supply/` (`web/components/supply.tsx`, `web/app/supply/page.tsx`, `web/app/supply.css`) и real-browser Chromium E2E (`web/tests/supply.spec.ts`, `api/tests/integration/test_supply_browser.py`, desktop + mobile `390px`, `axe-core` 0 нарушений, негативные проверки изоляции собственников `409 SUPPLY_OWNER_MISMATCH`, полный цикл производства и торгового заказа с возвратами и PostgreSQL 18 read-back). Полный параллельный прогон на `gorgona-dev`: `3071 PASS, 0 fail, 4 skip` из `3075` (`browser 50/50`, `serial 216/216`, `1430.97s`). Доказательства: `docs/plan/evidence/2026-11-21-supply01-ui/ACCEPTANCE.md`, `CHECKS.json`.
+
+### SUPPLY-01 Slice 3. Торговые прайс-листы, розничные/оптовые и 3PL-заказы, отгрузки и возвраты покупателей с сохранением партий, движений и себестоимости, 21 ноября
+
+Ветка `codex/package-supply-01-trade-and-3pl-orders` (коммит кода `9ef59ec`, миграция `0140_supply_trade_and_3pl_orders.sql` без повышения привилегий) от `SUPPLY-01 Slice 2` `e42d1cc`. Добавлены 6 branch-scoped таблиц (`supply_price_lists`, `supply_price_list_items`, `supply_trade_orders`, `supply_trade_order_lines`, `supply_order_shipments`, `supply_order_returns`): прайс-листы по каналам/контрагентам, торговые и 3PL-заказы, отгрузка партий/серий с проводкой COGS `STOCK-01` `write_off` и выпуском счёта `FIN-03`, а также возврат покупателя с восстановлением остатка партии/серии, возвратом себестоимости `STOCK-01` `return` и черновиком кредит-ноты `FIN-03`. Обновлён `schema_guard.py` (`_DEFINITIONS=236`, `_MODULE_TRIGGERS=78`). Полный параллельный прогон на `gorgona-dev`: `3070 PASS, 0 fail, 4 skip` из `3074` (`browser 49/49`, `serial 216/216`, `1472.66s`). Доказательства: `docs/plan/evidence/2026-11-21-supply01-trade-and-3pl-orders/ACCEPTANCE.md`, `CHECKS.json`.
+
+### SUPPLY-01 Slice 2. Производственные спецификации (BOM), заказы на производство, ОТК, выпуск/возврат партий и себестоимость через STOCK-01, 21 ноября
+
+Ветка `codex/package-supply-01-manufacturing-and-costing` (коммит кода `c838e40`, миграция `0139_supply_manufacturing_and_costing.sql` без повышения привилегий) от `SUPPLY-01 Slice 1` `06c9594`. Добавлены 7 branch-scoped таблиц (`supply_boms`, `supply_bom_components`, `supply_work_orders`, `supply_work_order_issues`, `supply_work_order_returns`, `supply_work_order_qc`, `supply_work_order_outputs`). Выдача сырья в производство создаёт реальное списание `STOCK-01` (`write_off`, `reason='used'`) со списанием партии и фиксацией себестоимости из `gba.stock_valuations`; возврат неиспользованного сырья создаёт реальный возврат `STOCK-01` (`return`, `reason='unused'`) с восстановлением остатка партии и уменьшением материальных затрат заказа; выпуск готовой продукции после ОТК создаёт партию готовой продукции и реальную приёмку `STOCK-01` (`receipt`) по полной себестоимости (`материалы - возвраты + труд + накладные`). Обновлён `schema_guard.py` (`_DEFINITIONS=224`, `_MODULE_TRIGGERS=72`). Полный параллельный прогон на `gorgona-dev`: `3065 PASS, 0 fail, 4 skip` из `3069` (`browser 49/49`, `serial 216/216`, `1520.04s`). Доказательства: `docs/plan/evidence/2026-11-21-supply01-manufacturing-and-costing/ACCEPTANCE.md`, `CHECKS.json`.
+
+### SUPPLY-01 Slice 1. Многоскладской WMS, изоляция собственников товаров (компания vs 3PL-поклажедатели), партии/серии и связь с STOCK-01, 21 ноября
+
+Ветка `codex/package-supply-01-wms-owners-and-lots` (коммит кода `7ecf6c8`, миграция `0138_supply_wms_owners_and_lots.sql` без повышения привилегий) от `PRO-01 Slice 5` `48eeb09`. Зарегистрирован модуль `supply` (`MODULE_REGISTRY_VERSION=10`, `Readiness.IMPLEMENTED`, `enableable=False`) и права `SUPPLY_READ/WORK/MANAGE` (`PERMISSIONS_VERSION=19`). Добавлены 6 branch-scoped таблиц (`supply_goods_owners`, `supply_warehouse_bins`, `supply_lots`, `supply_lot_balances`, `supply_serial_units`, `supply_wms_movements`), расширяющих базовые движения `STOCK-01` адресами хранения, партиями/сроками годности и серийными номерами со строгим запретом доступа к товару другого собственника (`409 SUPPLY_OWNER_MISMATCH`). Обновлён `schema_guard.py` (`_DEFINITIONS=210`, `_MODULE_TRIGGERS=65`). Полный параллельный прогон на `gorgona-dev`: `3061 PASS, 0 fail, 4 skip` из `3065` (`browser 49/49`, `serial 216/216`, `1442.32s`). Доказательства: `docs/plan/evidence/2026-11-21-supply01-wms-owners-and-lots/ACCEPTANCE.md`, `CHECKS.json`.
+
+### PRO-01 Slice 5. Интерфейс управления `/projects/` (дела, этические стены, этапы/DAG-задачи/файлы, время/регулярные циклы, биллинг FIN-03 и экспорт) + real-browser E2E, 21 ноября
+
+Ветка `codex/package-pro-01-ui` (коммит кода `07df6c9`, без новой миграции) от `PRO-01 Slice 4` `03ae68a`. Добавлены строгие TypeScript-декодеры (`web/lib/projects-contracts.ts`), API-клиент (`web/lib/projects-api.ts`), 4-вкладочный интерфейс `/projects/` (`web/components/projects.tsx`, `web/app/projects/page.tsx`, `web/app/projects.css`) и real-browser E2E (`web/tests/projects.spec.ts`, `api/tests/integration/test_projects_browser.py`) на desktop и mobile (`390px`) с проверкой `axe-core`, клавиатурной навигации, двухпользовательской проверкой этической стены (`FORCE RLS`) и прямым чтением из PostgreSQL 18. Пакет `PRO-01` (и весь Этап 5 `REST-01 + PRO-01`) полностью завершён. Проверка на `gorgona-dev`: `web` (`typecheck`, `lint`, `format:check`, `test:unit`, `build`), `ruff`/`mypy` (`635` файлов), полный параллельный прогон `3057 PASS, 0 fail, 4 skip` из `3061` (`browser 49/49`, `serial 216/216`, `1452.44s`). Доказательства: `docs/plan/evidence/2026-11-21-pro01-ui/ACCEPTANCE.md`, `CHECKS.json`.
+
+### PRO-01 Slice 4. Выставление реальных счетов FIN-03 по проектам/делам и аудируемый экспорт под FORCE RLS, 21 ноября
+
+Ветка `codex/package-pro-01-billing-and-exports` (коммит кода `56a7ef9`, миграция `0137_projects_billing_and_exports.sql` без повышения привилегий) от `PRO-01 Slice 3` `11f02a6`. Добавлены 3 branch-scoped таблицы (`project_matter_invoices`, `project_matter_invoice_items`, `project_exports`) под ограничительными политиками `FORCE RLS` (`*_matter_access`) с отложенным триггером сохранения суммы счёта и частичными уникальными индексами против двойного биллинга времени, этапов и регулярных циклов. Реализован выпуск реальных receivable-черновиков `FIN-03` (`financial_documents.save_draft`) без второго реестра, а также аудируемый экспорт карточки дела и портфеля филиала с полным исключением `restricted`-дел для неучастников. Обновлён `schema_guard.py` (`_DEFINITIONS=198`, `_MODULE_TRIGGERS=59`). Проверка на `gorgona-dev`: `ruff`/`mypy` (`634` файла), `927` unit-тестов, `36` сфокусированных integration + upgrade `0136 -> 0137` тестов, полный параллельный прогон `3056 PASS, 0 fail, 4 skip` из `3060` (`browser 48/48`, `serial 216/216`, `1431.82s`). Доказательства: `docs/plan/evidence/2026-11-21-pro01-billing-and-exports/ACCEPTANCE.md`, `CHECKS.json`.
+
+### PRO-01 Slice 3. Версионный учёт времени и регулярные графики/циклы работ, 21 ноября
+
+Ветка `codex/package-pro-01-time-and-recurring` (коммит кода `ba78357`, миграция `0136_projects_time_and_recurring.sql` без повышения привилегий) от `PRO-01 Slice 2` `9627bd5`. Добавлены 4 branch-scoped таблицы (`project_time_entries`, `project_time_entry_revisions`, `project_recurring_schedules`, `project_recurring_runs`) под ограничительными политиками `FORCE RLS` (`*_matter_access`). Реализован версионный учёт оплачиваемого и неоплачиваемого времени с сохранением всей цепочки ревизий, согласованием (`draft -> submitted -> approved -> billed / rejected`), регулярные графики (`weekly/biweekly/monthly/quarterly`) и идемпотентный выпуск циклов с созданием задач и продвижением `next_run_date`. Обновлён `schema_guard.py` (`_DEFINITIONS=192`, `_MODULE_TRIGGERS=57`). Проверка на `gorgona-dev`: `ruff`/`mypy` (`629` файлов), `926` unit-тестов, `35` сфокусированных integration + upgrade `0135 -> 0136` тестов, полный параллельный прогон `3053 PASS, 0 fail, 4 skip` из `3057` (`browser 48/48`, `serial 216/216`, `1429.02s`). Доказательства: `docs/plan/evidence/2026-11-21-pro01-time-and-recurring/ACCEPTANCE.md`, `CHECKS.json`.
+
+### PRO-01 Slice 2. Этапы, задачи, DAG-зависимости, файлы дела и ACL-поиск, 21 ноября
+
+Ветка `codex/package-pro-01-stages-tasks-and-files` (коммит кода `335ac61`, миграция `0135_projects_stages_tasks_and_files.sql` без повышения привилегий) от `PRO-01 Slice 1` `a0e5392`. Добавлены 4 branch-scoped таблицы (`project_stages`, `project_tasks`, `project_task_dependencies` с рекурсивным PostgreSQL-триггером запрета циклов и неизменяемые `project_matter_files` с валидацией `file_validation.validate_file` и `CSP: sandbox`), все защищены ограничительными политиками `FORCE RLS` (`*_matter_access`). Реализован единый ACL-фильтруемый поиск `GET /projects/search` по делам, этапам, задачам и файлам с доказанным нулевым раскрытием закрытых дел для посторонних (включая менеджеров того же филиала и владельца компании). Обновлён `schema_guard.py` (`_DEFINITIONS=184`, `_MODULE_TRIGGERS=54`). Проверка на `gorgona-dev`: `ruff`/`mypy` (`624` файла), `923` unit-теста, `34` сфокусированных integration + upgrade `0134 -> 0135` теста, полный параллельный прогон `3048 PASS, 0 fail, 4 skip` из `3052` (`browser 48/48`, `serial 216/216`, `1438.79s`). Доказательства: `docs/plan/evidence/2026-11-21-pro01-stages-tasks-and-files/ACCEPTANCE.md`, `CHECKS.json`.
+
+### PRO-01 Slice 1. Дела/проекты, проверка конфликтов и этический барьер PostgreSQL 18 `FORCE RLS`, 21 ноября
+
+Ветка `codex/package-pro-01-matters-and-acl` (коммит кода `f284b5f`, миграция `0134_projects_matters_and_acl.sql` без повышения привилегий) от `REST-01 Slice 5` `94fea94` (GitHub CI `44921492438` — `success`). Принят ADR-0038 (`docs/adr/0038-projects-legal-matters-recurring-services.md`) и план `PRO-01` из 5 срезов (`docs/plan/PACKAGE_PRO01_PLAN_2026-11-21.md`). Опциональный модуль `projects` переведён в `Readiness.IMPLEMENTED` (`enableable=False`, зависимости `counterparties/documents/finance_documents`, `MODULE_REGISTRY_VERSION=9`), добавлены неделегируемые права `projects.read/work/manage` (`PERMISSIONS_VERSION=18`). Добавлены 4 branch-scoped таблицы (`project_matters`, `project_matter_members`, `project_matter_revisions`, `project_conflict_checks`) с ограничительными политиками `FORCE RLS` (`*_matter_access` по `gba.current_user_id()`), отложенным триггером сохранения активного `lead` и блокировкой активации юридического дела до записи `clear`/`waived` проверки конфликта интересов. Обновлён `schema_guard.py` (`_DEFINITIONS=176`, `_MODULE_TRIGGERS=50`). Проверка на `gorgona-dev`: `ruff`/`mypy` (`619` файлов), `921` unit-тест, `48` сфокусированных integration + upgrade `0133 -> 0134` тестов, полный параллельный прогон `3044 PASS, 0 fail, 4 skip` из `3048` (`browser 48/48`, `serial 216/216`, `1395.88s`). Доказательства: `docs/plan/evidence/2026-11-21-pro01-matters-and-acl/ACCEPTANCE.md`, `CHECKS.json`.
+
+### REST-01 Slice 5. Операционный экран `/restaurant/` и реальный браузерный E2E, 21 ноября
+
+Ветка `codex/package-rest-01-ui` (коммит кода `84660df`, без новой миграции, следующая миграция остаётся `0134`) от `REST-01 Slice 4` `e75aba5`. Реализованы строгие Zod-контракты (`web/lib/restaurant-contracts.ts`), маршрутизация схем ответов (`web/lib/management-contracts.ts`), API-клиент с `Idempotency-Key` (`web/lib/restaurant-api.ts`) и 4-вкладочный экран `/restaurant/` (Floor & Reservations, Menu & Recipes, Checks & Split Billing, Kitchen Station Board) с разграничением ролей `owner`/`front_desk`/`artist`, клавиатурной навигацией, проверкой контрастности и доступности `axe-core` на desktop и mobile `390px`. Проверка на `gorgona-dev`: `web` typecheck/lint/format/unit (`197 passed`)/build (`38` страниц), `ruff`/`mypy` (`614` файлов), реальный браузерный E2E с чтением PostgreSQL 18 (`1 passed`), полный параллельный прогон `3036 PASS, 0 fail, 4 skip` из `3040` (`browser 48/48`, `serial 216/216`, `1311.85s`). Технический контур `REST-01` (срезы 1–5) завершён; модуль `restaurant` остаётся `enableable=False`, статус в `readiness_registry.py` не повышался. Доказательства: `docs/plan/evidence/2026-11-21-rest01-ui/ACCEPTANCE.md`, `CHECKS.json`.
+
+### REST-01 Slice 4. Разделение чека, счета `FIN-03` и согласованные возвраты, 21 ноября
+
+Ветка `codex/package-rest-01-split-billing-and-refunds` (коммит кода `d788d08`, миграция `0133_restaurant_split_billing_and_refunds.sql` без повышения привилегий) от `REST-01 Slice 3` `578f80a` (Slice 2 CI `44893189747` — success). Добавлены 5 branch-scoped таблиц: `restaurant_check_splits`, `restaurant_check_split_shares`, `restaurant_check_split_share_lines` (режимы `by_items` и `by_amounts` с отложенным триггером сохранения суммы без потерь), `restaurant_check_bills` (привязка 1:1 к счетам `FIN-03` с проверкой суммы и валюты) и `restaurant_check_refunds` (возвраты через credit notes `FIN-03` и внешние возвраты с контролем лимита по доле через `gba.credit_voided`). Обновлены `schema_guard.py` (`_DEFINITIONS=168`, `_MODULE_TRIGGERS=47`), `test_location_access.py`, upgrade-тесты и 5 маршрутов (`split`, `bill`, `refunds`, `reconciliation`).
+
+Проверка на `gorgona-dev` (PostgreSQL 18.6, Chromium): `ruff`, `mypy` (613 файлов) — PASS; unit-тесты API — **917 PASS**; целевая интеграция и upgrade `0132 -> 0133` — **40 PASS**; полный параллельный прогон на `d788d08` — **3035 PASS, 0 fail, 4 skip** из 3039 за **1284,1 с (21 м 24 с)** (браузер 47/47, serial 216/216). `REST-01` остаётся `planned`, модуль `restaurant` не включён. Доказательства: `docs/plan/evidence/2026-11-21-rest01-split-billing-and-refunds/`.
+
+### REST-01 Slice 3. Независимые чеки, кухонные тикеты по станциям и списание в `STOCK-01`, 21 ноября
+
+Ветка `codex/package-rest-01-checks-and-kitchen` (коммит кода `8443b0b`, миграция `0132_restaurant_checks_and_kitchen.sql` без повышения привилегий) от `REST-01 Slice 2` `cefa04a`. Добавлены 7 branch-scoped таблиц: `restaurant_checks` (`dine_in`/`takeout`/`bar`/`delivery`, опциональная связь со столом/бронью, без зависимости от смены), `restaurant_check_lines` и неизменяемые `restaurant_check_line_modifiers` (замороженные цены, ревизия рецепта, модификаторы с проверкой `min_select..max_select` и ссылками `STOCK-01`), `restaurant_kitchen_tickets` + `restaurant_kitchen_ticket_events` (маршрутизация по станциям `hot`/`cold`/`bar`/`pastry`, `queued -> preparing -> ready -> served / voided`), а также неизменяемое разовое списание ингредиентов `restaurant_check_consumptions` + `restaurant_check_consumption_lines` через `stock.post_document` (`write_off`/`used`). Обновлены `schema_guard.py` (`_DEFINITIONS=158`, `_MODULE_TRIGGERS=44`), `test_location_access.py`, upgrade-тесты и 12 маршрутов `/v1/businesses/{id}/restaurant`.
+
+Проверка на `gorgona-dev` (PostgreSQL 18.6, Chromium): `ruff`, `mypy` (608 файлов) — PASS; unit-тесты API — **915 PASS**; целевая интеграция и upgrade `0131 -> 0132` — **38 PASS**; полный параллельный прогон на `8443b0b` — **3029 PASS, 1 fail (не связанный флейк `test_credit_notes::test_credit_and_reserve_wait_on_one_lock_and_keep_the_cap[False]`), 4 skip** из 3034 за **1301,1 с (21 м 41 с)** (браузер 47/47, serial 216/216); повторный запуск `test_credit_notes.py` на том же коммите — **PASS**. `REST-01` остаётся `planned`, модуль `restaurant` не включён. Доказательства: `docs/plan/evidence/2026-11-21-rest01-checks-and-kitchen/`.
+
+### REST-01 Slice 2. Версионированное меню, модификаторы и рецептурные BOM (`STOCK-01`), 21 ноября
+
+Ветка `codex/package-rest-01-menu-and-recipes` (коммит кода `69662f3`, миграция `0131_restaurant_menu_and_recipes.sql` без повышения привилегий) от `REST-01 Slice 1` `cb492fe` (CI `44874370128` — success). Добавлены 7 branch-scoped таблиц: `restaurant_menu_items` + неизменяемые `restaurant_menu_item_revisions` (цены в минорных единицах, валюта, кухонная станция `hot`/`cold`/`bar`/`pastry`), `restaurant_modifier_groups`, `restaurant_modifier_options` (ограничения `min_select..max_select`, дельта цены, опциональная привязка к материалу `gba.stock_items`), `restaurant_menu_item_modifier_groups` (проверка валюты и активности) и неизменяемые рецептурные спецификации `restaurant_recipes` + `restaurant_recipe_lines` со связью на активные материалы `STOCK-01` и отложенным триггером полноты строк. Обновлены `schema_guard.py` (`_DEFINITIONS=144`, `_MODULE_TRIGGERS=41`), `test_location_access.py`, upgrade-тесты и 12 маршрутов `/v1/businesses/{id}/restaurant` (`menu-items`, `modifier-groups`, `recipes`).
+
+Проверка на `gorgona-dev` (PostgreSQL 18.6, Chromium): `ruff`, `mypy` (603 файла) — PASS; unit-тесты API — **913 PASS**; целевая интеграция и upgrade `0130 -> 0131` — **37 PASS**; полный параллельный прогон на `69662f3` — **3025 PASS, 0 fail, 4 skip** из 3029 за **1255,4 с (20 м 55 с)** (браузер 47/47, serial 216/216). `REST-01` остаётся `planned`, модуль `restaurant` не включён. Доказательства: `docs/plan/evidence/2026-11-21-rest01-menu-and-recipes/`.
+
+### REST-01 Slice 1. Залы, столы и независимые бронирования столов, 21 ноября
+
+Ветка `codex/package-rest-01-floor-and-tables` (коммит кода `5dc0b05`, миграция `0130_restaurant_floor_and_tables.sql` без повышения привилегий) от `PROPERTY-01 5c/6 UI` `617223a`. Принят ADR-0037 (`docs/adr/0037-restaurant-tables-menu-kitchen-checks.md`) и план из 5 срезов (`docs/plan/PACKAGE_REST01_PLAN_2026-11-20.md`). Зарегистрирован опциональный модуль `restaurant` (`Readiness.IMPLEMENTED`, `enableable=False`, `MODULE_REGISTRY_VERSION=8`) и права `restaurant.read/kitchen/service/manage` (`PERMISSIONS_VERSION=17`, без делегирования). Миграция `0130` расширяет `gba.resources.kind` (`restaurant_table`) и `gba.resource_allocations.source_kind` (`restaurant_reservation`), создаёт `restaurant_areas`, `restaurant_area_revisions`, `restaurant_tables`, `restaurant_table_reservations` и `restaurant_table_reservation_events` с проверкой вместимости, жизненным циклом `booked -> seated -> completed/cancelled/no_show`, автоматическим освобождением аллокации, branch RLS и обновлением `schema_guard.py` (`_DEFINITIONS=130`, `_OCCUPANCY_TRIGGERS=20`, `_MODULE_TRIGGERS=36`) и `workforce_guard.py`. Реализованы 11 маршрутов `/v1/businesses/{id}/restaurant` (`areas`, `tables`, `reservations`, `events`).
+
+Проверка на `gorgona-dev` (PostgreSQL 18.6, Chromium): `ruff`, `mypy` (598 файлов) — PASS; unit-тесты API — **910 PASS**; целевая интеграция и upgrade `0129 -> 0130` — **55 PASS**; serial и `test_location_access.py` — **85 PASS**; полный параллельный прогон на `5dc0b05` — **3018 PASS, 0 fail, 4 skip** из 3022 за **1177,1 с (19 м 37 с)** (браузер 47/47, serial 216/216). Готовность `REST-01` остаётся `planned`, модуль `restaurant` не включается без решения владельца. Доказательства: `docs/plan/evidence/2026-11-21-rest01-floor-and-tables/`.
+
+### PROPERTY-01 5c/6 UI. Экран заявок на ремонт, портал подрядчика и выезд из объекта, 20 ноября
+
+Ветка `codex/package-property-01-maintenance-ui` (кодовый коммит `46f7f3d`, без новых миграций БД)
+поверх шага 6a `f2a4306`. Добавлены строгие Zod-контракты и retry-safe клиент
+(`web/lib/property-contracts.ts`, `web/lib/property-api.ts`, `web/tests/property-contracts.spec.ts`),
+блок выезда `Move-out` в `web/components/property-lease.tsx` (запрет повторного акта въезда,
+оценка состояния, фото, скачивание файлов), секция `Maintenance` в `web/components/property-maintenance.tsx`
+(менеджер филиала читает только список без форм и `property.manage`-запросов; владелец/менеджер компании
+создаёт, согласует, назначает подрядчика, привязывает компанию-подрядчика по активному делегированию
+`property.contractor_work`, читает обновления и обязательства FIN-03, закрывает или отменяет заявку)
+и отдельный портал подрядчика `/property/contractor/` (`web/app/property/contractor/`) без утечки
+лимитов бюджета, аренды и контрагентов.
+
+Проверка на `gorgona-dev` (PostgreSQL 18.6, Chromium): `npm run typecheck`, `lint`, `format:check`,
+`test:unit` (**195 PASS**), `next build` (37 статических страниц, включая `/property/contractor`),
+`ruff`, `mypy` (593 файла) — PASS; unit-тесты API — **906 PASS**; реальные браузерные тесты
+`test_property_browser.py` и `test_property_maintenance_browser.py` (desktop + mobile 390px, axe,
+клавиатура, повтор после обрыва сети с тем же `Idempotency-Key`, 403 на чужую заявку, read-only филиал,
+сверка PostgreSQL) — PASS; полный параллельный прогон `46f7f3d` — **3010 PASS, 0 fail, 4 skip** из 3014
+за **1173,6 с (19 м 33 с)** (браузер 47/47, serial 216/216). `PROPERTY-01` остаётся `planned`, модуль
+`property` не включён.
+[Дизайн 5c/6 UI](PACKAGE_PROPERTY01_MAINTENANCE_UI_DESIGN_2026-11-20.md) и
+[доказательства приёмки](evidence/2026-11-20-property-maintenance-ui/ACCEPTANCE.md)
+
+### PROPERTY-01 6a. Акт выезда и фотографии состояния помещения, 20 ноября
+
+Ветка `codex/package-property-01-move-out` (исходный коммит `7bcd645`, миграция
+`0129_property_move_out.sql` с правами вызывающего) от базы 5b `4292474`. Добавлены
+неизменяемые таблицы `property_move_outs` и `property_move_out_photos`, маршруты
+`GET/PUT /v1/businesses/{business_id}/property/leases/{lease_id}/move-out` (`property.manage`,
+уровень компании) и проверки `schema_guard.py` (`_DEFINITIONS = 120`, `_MODULE_TRIGGERS = 33`).
+Акт выезда требует записанного акта заселения, совпадения `term_revision`, даты выезда в
+диапазоне от дня заселения до конца текущего срока и локального дня филиала, отдельного от
+заселения хранимого документа-отчёта (`category = 'report'`), 1–50 уникальных PNG/JPEG фото
+(отложенный constraint-триггер) и фиксирует `condition_summary` (`normal_wear` / `damage_noted`).
+Обновлён `gba.guard_property_lease_term()`: после выезда запрещено продление договора и
+освобождение раньше даты выезда (`409 PROPERTY_LEASE_MOVE_OUT_CONFLICT`), а освобождение на
+дату выезда или позже разрешено. Матрица `test_property_access.py` покрывает все 33 маршрута
+Property; обновление наполненной базы `0128 → 0129` сохраняет все строки и контрольные суммы.
+
+Проверки на `gorgona-dev` (PostgreSQL 18.6, Chromium): `git diff --check`, `ruff check`,
+`ruff format --check` и `mypy` (592 файла) — PASS; unit-тесты API — **906 PASS** (17,51 с);
+полный параллельный прогон `7bcd645` — **3009 PASS, 0 fail, 4 skip** из 3013 за **1151,36 с
+(19 мин 11 с)** (браузер 46/46, serial 216/216). `PROPERTY-01` остаётся `planned`, модуль
+`property` не включался.
+[Дизайн 6a](PACKAGE_PROPERTY01_MOVE_OUT_DESIGN_2026-11-20.md) ·
+[Запись приёмки](evidence/2026-11-20-property-move-out/ACCEPTANCE.md)
+
+### PROPERTY-01 5b. Доступ подрядчика к одному поручению через делегирование, 20 ноября
+
+Ветка `codex/package-property-01-contractor-access` (исходный коммит `c1f3e8e`, миграция
+`0128_property_contractor_access.sql` с правами вызывающего) от зелёной базы 5a `a85f0bc`
+([CI 44766786482 — success](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44766786482)).
+Добавлено делегируемое право `property.contractor_work` (`PERMISSIONS_VERSION = 16`, обновлены
+`delegation_contracts.py`, `web/lib/delegation-contracts.ts` и `delegation_grants_permissions_check`),
+таблицы `property_maintenance_contractor_links` и `property_maintenance_contractor_updates`, 5 новых
+маршрутов (`GET/PUT .../contractor-company`, `GET .../contractor-updates`,
+`GET .../contractor-work/{grant_id}`, `POST .../contractor-work/{grant_id}/updates`) и проверки
+`schema_guard.py` (`_DEFINITIONS = 116`, `_MODULE_TRIGGERS = 32`). Подрядчик через действующий
+грант видит и обновляет **только** привязанную к его компании заявку (без `lease_id`, бюджета
+`approved_limit_minor`, обязательств FIN-03, собственников и других заявок); снятие привязки или
+отзыв гранта немедленно блокирует чтение, запись и повтор прежнего ключа (`403`), а триггер БД
+повторно проверяет грант, делегата, филиал и ревизию привязки в любой сессии (по паттерну `0126`).
+Все 31 маршрут Property покрыты матрицей `test_property_access.py`; обновление `0127 → 0128`
+сохраняет все строки и контрольные суммы.
+
+Проверки на `gorgona-dev` (PostgreSQL 18.6, Chromium): статика API (`ruff`, `mypy`, 588 файлов) и
+web (`typecheck`, `lint`, `format:check`, `build` 36 страниц) — PASS; web unit — **194 PASS**;
+API unit — **895 PASS** (17,57 с); целевые интеграционные (9 файлов) — **55 PASS** (44,70 с);
+полный параллельный прогон `c1f3e8e` — **2995 PASS, 0 fail, 4 skip** из 2999 за **1142,55 с
+(19 мин 02 с)** (браузер 46/46, serial 216/216). Следующий шаг: 5c (экраны обслуживания и
+подрядчика с проверкой в браузере) и 6a (акт выезда и фото). `PROPERTY-01` остаётся `planned`.
+[Дизайн 5b](PACKAGE_PROPERTY01_CONTRACTOR_ACCESS_DESIGN_2026-11-20.md) ·
+[Запись приёмки](evidence/2026-11-20-property-contractor-access/ACCEPTANCE.md)
+
+### PROPERTY-01 5a. Заявки на ремонт, согласование и отдельные обязательства FIN-03, 20 ноября
+
+Ветка `codex/package-property-01-maintenance` (исходный коммит `34a595c`, миграция
+`0127_property_maintenance.sql` без `SECURITY DEFINER`) от `c5d7077`. Реализованы
+таблицы `property_maintenance_requests`, `property_maintenance_events` и
+`property_maintenance_obligations`, 7 маршрутов `/v1/businesses/{business_id}/property/maintenance`
+и проверки `schema_guard.py` (`_DEFINITIONS = 111`, `_MODULE_TRIGGERS = 30`).
+Жизненный цикл `open → approved → assigned → completed` (или `cancelled` до привязки
+обязательств) сериализуется по `gba.lock_property_object`. Согласование фиксирует валюту
+и лимит расходов; привязка обязательства принимает только выпущенный счёт FIN-03 к оплате
+(`kind = 'invoice'`, `state = 'issued'`, `direction = 'payable'`) на назначенного
+подрядчика в утверждённой валюте, вычисляя `obligation_id`, `amount_minor` и `currency`
+напрямую в PostgreSQL и не позволяя превысить утверждённый лимит даже при конкурентных
+запросах. Черновики, счета к получению (аренда/клиент), чужой подрядчик, другая валюта и
+повторная привязка того же счёта отклоняются; смена собственника или управляющего в
+`property_parties` сохраняет прежние обязательства и получателя. Все 26 маршрутов Property
+(8 `property.read` для филиала и 18 `property.manage` для всей компании) проверены матрицей
+`test_property_access.py`; обновление наполненной базы `0126 → 0127` сохраняет все строки
+и контрольные суммы.
+
+Проверки на `gorgona-dev` (PostgreSQL 18.6, Chromium): `ruff check`, `ruff format --check`,
+`mypy` (586 файлов), `git diff --check` — PASS; unit-тесты API — **894 PASS** (17,86 с);
+полный параллельный прогон `34a595c` — **2991 PASS, 0 fail, 4 skip** из 2995 за **1147,5 с
+(19 мин 07 с)** (46 браузерных и 216 serial-тестов — 0 сбоев). Следующие шаги: 5b (доступ
+подрядчика к одному поручению через делегирование, миграция 0128) и 5c (экран обслуживания).
+В реестре `PROPERTY-01` остаётся `planned`, модуль `property` не включался.
+[Дизайн 5a](PACKAGE_PROPERTY01_MAINTENANCE_DESIGN_2026-11-20.md) ·
+[Запись приёмки](evidence/2026-11-20-property-maintenance/ACCEPTANCE.md)
+
+### Ускорение полного тестового прогона на gorgona-dev (параллельный раннер), 20 ноября
+
+Добавлен параллельный раннер `api/tools/run_parallel_tests.py` (коммит `9c555f8`,
+без новых внешних зависимостей и без изменения стандартного `uv run pytest` и GitHub CI):
+внутри одного одноразового PostgreSQL один раз создаётся шаблонная база со всеми
+126 миграциями и тестовыми ролями (~2,8 с) и клонируется через `CREATE DATABASE ... TEMPLATE`
+отдельно для каждого из 6 параллельных API/unit-воркеров и выделенной браузерной дорожки
+(41 файл / 46 тестов без гонок `web/test-results/` и без конкуренции за CPU в Chromium),
+после чего на чистой базе выполняется упорядоченная serial-дорожка (14 файлов / 216 тестов:
+`test_location_access.py` → `test_delegations.py` → `test_r09_rental_problem_reports.py`
+и все тесты с DDL кластерных ролей и удалением функций, что статически проверяется
+unit-тестом `test_all_cluster_role_and_function_drop_tests_are_in_serial_lane`).
+Раннер сверяет число собранных (`pytest --collect-only`) и реально выполненных тестов,
+отклоняя любую потерю или дубликат.
+
+Все **3 последовательных полных параллельных прогона** на `gorgona-dev` (8 vCPU) прошли
+с первого раза без единого сбоя (включая `test_l7a_catalog_browser` — 3/3 PASS):
+- Прогон 1: **1191,4 с (19 мин 51 с)** — **2971 PASS, 0 fail, 4 skip** (из 2975, дубликатов 0);
+- Прогон 2: **1176,5 с (19 мин 36 с)** — **2971 PASS, 0 fail, 4 skip** (из 2975, дубликатов 0);
+- Прогон 3: **1197,1 с (19 мин 57 с)** — **2971 PASS, 0 fail, 4 skip** (из 2975, дубликатов 0).
+Ускорение полного прогона: **~53 мин → ~19,6 мин (~2,7×)** без потери покрытия.
+Также завершился зелёным [CI R-10 `b37ec0c` (`44692411664`)](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44692411664).
+[Запись приёмки параллельного раннера](evidence/2026-11-20-parallel-test-runner/ACCEPTANCE.md)
+
+### RENT-01 R-09 (доработки по ревью) и R-10 (клавиатура), 19–20 ноября
+
+По итогам независимого ревью R-09 закрыты все восемь замечаний (коммит `13d4a8c`,
+миграция `0126_rental_grant_branch_recheck.sql` без `SECURITY DEFINER`): в филиальной
+сессии делегат читает только свои активные строки и гранты этого филиала, а триггеры
+0123 и 0125 повторно проверяют действующий грант, право `rental.customer_answer`,
+текущего делегата и филиал во всех сессиях; ретраи ответа/изменения/проблемы работают
+после пересохранения привязки компании; чтение клиента не берёт блокировку класса;
+время проблемы до `2000-01-01` (`RENTAL_PROBLEM_TOO_EARLY`) и NUL/управляющие символы
+дают 422; лимиты текста на вебе считают кодовые точки; в таблице проблем у персонала
+показывается название компании-клиента. Полный прогон `13d4a8c` на `gorgona-dev` —
+**2968 PASS, 4 skip, 0 сбоев** (3182,52 с);
+[CI `13d4a8c` — success](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44681375203)
+(также [CI `146c35f` — success](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44478464976)).
+
+Поверх `13d4a8c` закрыт **R-10** (клавиатурная доступность экранов аренды, коммиты
+`728e662`, `c7e3046`, `b2a6fac`): перевод фокуса на заголовки при открытии класса/брони,
+после сохранения редактирования класса и после отмены брони; сохранение фокуса на
+кнопках отправки во время запроса (`aria-disabled={busy}`); обязательное подтверждение
+отмены брони; `aria-controls` у раскрывающихся панелей; `aria-label` на клиентских
+формах; перенос фокуса при удалении отметок повреждений; новый браузерный harness
+`test_r10_rental_keyboard_browser.py` и клавиатурный проход страницы клиентских проблем
+с проверкой колонки компании на стороне персонала. Целевой прогон всех 7 браузерных
+наборов аренды — **7 PASS** (92,27 с). Полный прогон объединённого дерева `b2a6fac` на
+`gorgona-dev` — **2968 PASS, 4 skip, 1 сбой** известного нестабильного
+`test_l7a_catalog_browser` (два отдельных повтора на том же дереве — **2 PASS**).
+R-09 и R-10 теперь PASS; открытыми остаются вложения и уведомления персоналу по
+сообщениям о проблемах. В реестре `RENT-01` остаётся `planned` до решения владельца.
+Следующая миграция 0127.
+[Запись приёмки R-09](evidence/2026-11-18-r09-customer-grant/ACCEPTANCE.md) ·
+[Запись приёмки R-10](evidence/2026-11-19-r10-keyboard/ACCEPTANCE.md)
+
+### RENT-01 R-09. Ответы клиента через доступ, 18–19 ноября
+
+Компания-клиент отвечает на платформе только через действующий доступ
+с правом `rental.customer_answer`. Если ответ или сообщение записывает
+сам бизнес, записываются источник и имя. Готовы привязка компании к
+брони (0122), принятие предложения (0123), изменения договора (0124)
+и сообщения о проблемах (0125), с экранами для бизнеса и клиента.
+Первые два CI (`19a285d`, `2488ef9`) упали: миграция 0123 использовала
+`SECURITY DEFINER`, а тест границ филиала не восстанавливал политики
+R-09. Исправление `1ea7008`: проверки в триггерах работают с правами
+вызывающего, тест восстанавливает политики 0122, 0124 и 0125. Полный
+набор на gorgona-dev — **2960 PASS, 4 skip, 1 сбой** нестабильного
+браузерного теста каталога салона (отдельный повтор — 2 PASS).
+[CI `1ea7008` — success](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44413721541).
+R-09 теперь PASS. В реестре RENT-01 остаётся `planned` до решения
+владельца. Следующая миграция 0126.
+[Запись приёмки R-09](evidence/2026-11-18-r09-customer-grant/ACCEPTANCE.md)
+
+### BUILD-01. Техническая приёмка, 18 ноября
+
+Код операторского доступа `dc9ee75` прошёл полный CI —
+2946 PASS, 1 skip за 2889,48 с. В первом полном CI ветки приёмки
+`a3c5884` прошли 2948 тестов, один был пропущен и один завершился
+сбоем. Мобильный тест Workforce потерял HTTP-соединение с тестовым
+OIDC при переключении пользователя. Запрос тестового переключения
+теперь закрывает соединение после ответа. Целевой набор Workforce и
+клиентских сценариев прошёл — 7 PASS за 194,39 с, exit 0.
+Повторный CI `3ea5d289d06f242b0754e85b4d60f78d35d61c7b` прошёл —
+**2949 PASS, 1 skip за 4194,42 с**, exit 0. Пропущена опциональная
+проверка внешнего сайта, требующая `GBA_REQUIRE_TENANT_SITE=1`.
+[Повторный CI](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44242186256)
+Повтор всех 33 файлов O1–O9 с дополнительными гонками на `c4a9c67`
+дал **100 PASS за 539,46 с**, без пропусков, exit 0. PostgreSQL 18.7 и
+Chromium были обязательными. `c4a9c67` добавляет к `3ea5d28`
+только ссылки на доказательства.
+O-01–O-10 технически приняты. В реестре BUILD-01 остаётся `planned`
+до решения владельца. Сценарии с зарегистрированной технической
+проверкой — 13 из 28 (46,4%). Все 39 отраслевых профилей — `planned`.
+[Технические проверки пакета O](PACKAGE_O_ACCEPTANCE_2026-11-17.md)
+
+### BUILD-01. Общая проверка пакета O, 17 ноября
+
+На коде `dc9ee75` все 33 файла O1–O9 прошли одним набором —
+**97 PASS за 605,29 с**, без пропусков, exit 0. Отдельно
+`b0807b8` добавляет прямые проверки ответа делегата одновременно
+со служебным отзывом и одновременных клиентских приёмок с одинаковыми
+и разными ключами. Все пять проверок в двух клиентских файлах прошли
+за 19,41 с, exit 0. Три новых гонки наблюдают ожидание блокировки в БД.
+
+Критерий O-01 в плане согласован с принятым ADR-0035. При отключении
+модуля записи отклоняются, авторизованная история остаётся доступной.
+Код этого поведения сохраняется. Полный CI `dc9ee75` прошёл.
+Статусы readiness не повышены.
+[Сопоставление критериев и результаты](PACKAGE_O_ACCEPTANCE_2026-11-17.md)
+
+### BUILD-01 O-09. Операторская привязка и клиентские ссылки, 17 ноября
+
+Ветка `codex/package-o9-customer-access` от `9f12e96`. На странице
+проекта сотрудники всей компании связывают заказчика с business ID,
+выбирают действующий grant и готовят ссылки на исходное предложение,
+изменение договора и приёмку. Перед подготовкой повторно читаются проект,
+привязка и все страницы grants. Проверяются компания, филиал, срок,
+право ответа и наличие делегатов. Неподтверждённые правки и неопределённое
+сохранение блокируют подготовку ссылок. Каждый клиентский маршрут
+повторно авторизует пользователя при чтении и ответе.
+
+В существующей форме делегирования появилось право отвечать на
+строительные документы. API и web-схемы допускают девять прав, как
+миграция 0119. Прежний предел восемь отвергал комбинацию четырёх прав
+booking, четырёх transport и клиентского construction. Тест воспроизвёл
+этот отказ до исправления. Десять прав по-прежнему отвергаются.
+Новой миграции нет.
+
+На PostgreSQL Debian 18.7 прошли **38 проверок за 43,32 с**, включая
+полный операторский и клиентский путь в Chromium desktop/mobile
+(**2 сценария за 22,6 с**), прежние проверки привязки и делегирования.
+Оператор сохраняет привязку после потери ответа без второй ревизии,
+выдаёт девять прав, заказчик принимает grant и исходное предложение,
+отклоняет изменение и открывает приёмку по полученным ссылкам. После
+отзыва grant подготовка ссылок отклоняется. Проверены клавиатура, axe,
+mobile и фактические записи компании, подписанта и grant в БД.
+
+API unit suite — **878 PASS за 25,82 с**, web unit — **190 PASS за 3,2 с**.
+Ruff, формат и mypy на 571 файле, web typecheck, ESLint, формат,
+сборка 33 страниц и проверка diff завершились с кодом 0. Независимый
+обзор исходников замечаний не выявил. Reviewer отдельно тесты не запускал.
+Полный CI этого SHA и итоговая проверка пакета остаются открытыми.
+BUILD-01 сохраняет planned до завершения приёмки пакета и решения о готовности.
+
+CI API изменения договора на `98e1064` завершился успешно —
+2941 PASS, 1 skip за 2962,34 с.
+[Результат](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44159227568)
+
+### BUILD-01 O-09. Экран клиентской приёмки, 17 ноября
+
+Ветка `codex/package-o9-customer-acceptance-screen` от `6a6cd8c`.
+`/construction/customer/acceptance/` показывает договорный и выполненный
+объём, готовность этапов, общий счётчик замечаний и прошлые приёмки. Клиент
+выбирает этап либо финальную приёмку, дату, подписанта, заметку и конец
+гарантии. После изменения данных требуется перечитывание. Неопределённый
+результат сохраняет исходные тело и ключ, подтверждённый отказ 422
+оставляет форму редактируемой. Квитанция сверяется с отправленными
+объёмом, hash, датами, подписантом и заметкой до показа успешного результата.
+
+Новая проверка Chromium desktop/mobile прошла **2 сценария за 10,0 с**,
+в pytest **1 PASS за 23,10 с**. Проверены OIDC, клавиатура, axe, mobile
+без горизонтального переполнения, изменение измерения через реальный API,
+устаревший hash, потеря ответа после записи, подменённый hash квитанции,
+три равных ключа и тела повтора, исправление гарантии после 422 и запись
+этапа и финальной приёмки. БД содержит два правильных scope с компанией,
+grant, автором и hash. Четыре другие проверки — API приёмки, клиентские
+исходное предложение и изменение договора, служебная приёмка с освобождением
+удержаний — прошли в первом общем наборе.
+
+В первом наборе новый browser-тест получил отказ при попытке записать
+измерение внутрь уже выставленного периода. Дата тестового измерения
+исправлена на день после закрытого периода. Независимый обзор выявил два
+замечания — обработку подтверждённого 422 как неопределённого результата
+и отсутствие проверки соответствия квитанции запросу. Оба исправлены,
+проверены браузером и повторным обзором. Reviewer тесты не запускал.
+**188 web unit-тестов**, web typecheck, ESLint, формат, сборка 33 страниц,
+Ruff и mypy на 570 файлах завершились с кодом 0.
+
+Операторский интерфейс привязки компании, выдачи grant и клиентских ссылок
+остаётся открытым. Полный CI текущего SHA и production ожидаются.
+
+### BUILD-01 O-09. Клиентская приёмка работ через grant, 17 ноября
+
+Ветка `codex/package-o9-customer-acceptance` от `917989c`. GET/POST
+`/projects/{project_id}/customer-acceptance/{grant_id}` открывают клиенту
+объём договора, выполненные количества, готовность этапов и историю приёмок.
+Клиент принимает этап или завершённый проект. POST сверяет действующий
+grant, компанию и поколение заказчика. Новый ответ требует hash прочитанных
+данных. Он отражает показанные объём, готовность работ и биллинга,
+привязку компании и историю приёмки. Успешный повтор возвращает исходную квитанцию
+после повторной авторизации.
+
+Миграция 0121 хранит компанию, grant, автора и hash просмотренного объёма.
+Существующая служба сохраняет правила выполненных работ, замечаний,
+финального биллинга, дат и гарантий. Клиентский ответ исключает внутренние
+затраты и служебные заметки об освобождении удержаний. Освобождение
+удержаний остаётся отдельной операцией.
+
+На PostgreSQL Debian 18.7 прошли **60 проверок за 112,02 с**, включая
+приёмку, гарантию, филиалы, разрешённые маршруты и обновления старой схемы.
+Проверены устаревший hash, незавершённые работы, замечание без фазы,
+неполный биллинг, однократная запись этапа и проекта, hash в БД, отказ
+при подмене автора и отзыв grant до повтора. API unit suite завершилась
+с **877 PASS за 31,59 с**. Ruff, формат и mypy прошли на 569 файлах.
+
+До реализации новый тест получил 404. Первый набор получил 48 PASS и
+неверное ожидание 409 вместо существующего 422 для повторного ключа
+с другим телом. Независимый обзор выявил отсутствие общего счётчика
+замечаний в hash, дефект исправлен и покрыт тестом. Повторный обзор
+исходников замечаний не выявил. Reviewer отдельно не запускал тесты.
+Клиентский экран приёмки, операторская выдача ссылок, полный CI этого
+изменения и production остаются открытыми.
+
+### BUILD-01 O-09. Клиентский экран изменения договора, 17 ноября
+
+Ветка `codex/package-o9-customer-change-screen` от `98e1064`. Страница
+`/construction/customer/change/` использует параметры `business`,
+`project`, `grant` и `number`. Показывает добавляемый и исключаемый объём,
+изменение цены и срока. Клиент одобряет или отклоняет изменение и оставляет
+заметку. После потерянного ответа поля блокируются до повтора или перечитывания
+документа. Повтор использует прежние тело и ключ запроса. Ответ API проверяется
+по проекту, номеру изменения и допустимому состоянию. Вход и сообщения об
+ошибках используют общий компонент с исходным предложением.
+
+На PostgreSQL Debian 18.7 прошли **8 проверок за 108,41 с**, включая Chromium
+desktop/mobile для обоих клиентских экранов и прежние проверки управления.
+На новом экране проверены клавиатура, axe, ширина на mobile, возврат после OIDC,
+потеря ответа после записи, равенство тела и ключа повтора, одобрение, отказ
+и отзыв grant через реальный API после открытия документа. БД содержит два
+решения с правильными авторами и grant. Третье решение после отзыва отсутствует.
+Дополнительно API отклоняет чтение и запись через grant другого филиала.
+**187 web unit-тестов**, ESLint, typecheck и формат прошли с кодом 0.
+API unit suite завершилась с 877 PASS за 35,15 с. Ruff и mypy прошли
+на 568 файлах.
+Независимый обзор исходников API и экрана дефектов не выявил. Reviewer
+отдельно не запускал тесты.
+
+Из-за остановки сборки на известной уязвимости Next.js обновлены `next`
+и `eslint-config-next` с 16.4.2 до 16.4.6, обновлён lockfile. Установка
+`npm ci --ignore-scripts`, сборка 32 страниц и аудит production-зависимостей
+прошли с кодом 0. Полный `npm audit` вернул код 1 с 15 находками в
+dev-зависимостях (6 moderate, 9 high).
+[Уведомление Next.js](https://github.com/vercel/next.js/security/advisories/GHSA-mfr8-8qww-v76h)
+
+Полный CI точного SHA, production, клиентская приёмка этапов и работ,
+операторская выдача ссылок остаются открытыми. Реестр содержит
+13 технически подтверждённых сценариев из 28 (**46,4%**), все 39 отраслевых
+профилей остаются planned.
+
+### BUILD-01 O-09. Исправление CI API изменения договора, 17 ноября
+
+CI экрана исходного предложения `6e7dcee` прошёл.
+[Результат](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44019373237)
+CI `c08f3a8` выявил пропущенные GET/POST изменения договора в списке
+разрешённых делегированных маршрутов и коллизию `tenant_hosts_pkey`
+в нагрузочной проверке. Перечень маршрутов обновлён. Нагрузочный тест
+использует существующий уникальный hostname своей компании через
+поддерживаемый параметр `--host`, сохраняя loopback-адрес сервера.
+На PostgreSQL 18.7 прошли 27 проверок за 10,40 с. Ruff и формат прошли
+с кодом 0. Полный CI исправления ожидается.
+[Предыдущий сбой](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44020180542)
+
+### BUILD-01 O-09. Ответ клиента на изменение договора
+
+Ветка `codex/package-o9-customer-change-answer` от `6e7dcee`. Клиентский
+маршрут GET/POST `/projects/{project_id}/change-orders/{number}/customer-answer/{grant_id}`
+показывает объём, стоимость для заказчика, изменение срока и результат.
+POST принимает одобрение или отказ. Сервер сверяет действующие полномочия,
+филиал, привязку к проекту и версию назначения заказчика перед первым
+запросом и перед повтором. Миграция 0120 сохраняет компанию, grant и автора
+платформенного ответа. Одобрение проходит через существующие ограничения
+объёма, выполненных и выставленных работ. Служебный ответ письмом или на
+бумаге и отзыв изменения продолжают работать через прежний API.
+
+До реализации тест получил ожидаемый 404. Первый интеграционный набор
+получил 42 PASS и одно неверное ожидание статуса. Служебная схема уже
+возвращает 422 при попытке передать `source=platform`. После исправления
+ожидания и добавления проверок чужого проекта и записи без идентичности
+прошли **43 теста за 92,77 с** на PostgreSQL Debian 18.7, включая проверки
+филиалов, исходного договора, приёмки и трёх обновлений исторической схемы.
+Ruff, формат и mypy прошли на 567 файлах. Экран изменения договора и ответ
+клиента на приёмку остаются открытыми. Полный CI и production не проверены.
+
+### BUILD-01 O-09. Клиентский экран исходного предложения
+
+Ветка `codex/package-o9-customer-proposal-screen` от `850e216`. Маршрут
+`/construction/customer/` открывает предложение по параметрам
+`business`, `project` и `grant`. После входа через OIDC клиент возвращается
+на ту же страницу. Доступ проверяет API по указанному grant. Экран показывает
+объём работ, цены и итог, принимает имя подписанта и заметку и повторяет
+запрос с прежним ключом, если ответ потерялся. Схема ответа в web привязана
+к проекту и отклоняет поля внутренних затрат.
+
+На PostgreSQL Debian 18.7 прошли **5 тестов за 21,51 с**, включая Chromium
+desktop и mobile (**2 проверки за 8,7 с**). Проверены клавиатура, доступные
+подписи, автоматическая проверка axe, возврат после OIDC, потеря ответа,
+одна подтверждённая запись в БД и отказ по отозванному grant. Пять отдельных
+регрессий управления и входа прошли при первой проверке. Web typecheck,
+ESLint, Prettier, **186 unit-тестов** и повторная статическая сборка на 31
+страницу завершились с кодом 0. Ruff и mypy прошли на 566 файлах.
+
+Первая сборка завершилась с кодом 1 из-за предупреждения Next.js 16.4.2.
+`npm audit --omit=dev` вернул 1 с одним предупреждением уровня moderate.
+Код использует статический экспорт. Поиск `unstable_cache` и `use cache`
+в коде web совпадений не нашёл.
+[Уведомление Next.js](https://github.com/vercel/next.js/security/advisories/GHSA-mfr8-8qww-v76h)
+
+Ссылка собирается из действующих идентификаторов. Выдача ссылки и привязки
+через операторский экран, ответы на изменения договора и приёмку,
+полный CI и production остаются открытыми. Порядок продолжения записан в
+[передаче O-09](NEXT_AGENT_BUILD01_O09_CUSTOMER_2026-11-16.md).
+
+### BUILD-01 O-09. Восстановление проверок CI
+
+[CI на `2e3d42d`](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/44004742205)
+завершился с `9 failed, 2930 passed, 1 skipped`. Тест области филиала
+удалял `gba.current_location_id()` с `CASCADE`, но при восстановлении
+пропускал политику `construction_customer_company_tenant` из миграции 0118.
+В результате четыре последующих теста не могли записать привязку компании.
+Ещё пять тестов обновления схемы требовали добавить новую таблицу в перечни
+ожидаемых таблиц после миграций.
+
+Порядок «область филиала → привязка и принятие предложения» локально
+воспроизвёл четыре отказа RLS. После восстановления политики из исходного
+SQL и обновления перечней прошли **26 тестов за 60,63 с** на PostgreSQL 18.7
+Debian `18.7-1.pgdg13+2`, включая весь файл `test_location_access.py`, оба
+файла O-09 и три файла обновления схемы. Ruff, формат и mypy прошли на
+565 файлах. Новых миграций нет. Полный CI исправленного коммита ожидается.
+
+### BUILD-01 O-09. Принятие исходного предложения клиентом
+
+Код `9bf449d69c67e967ff119ee25f0467a781ef1a89`, ветка
+`codex/package-o8-customer-answer`. GET и POST
+`/projects/{project_id}/customer-proposal/{grant_id}` используют отдельное
+право `construction.customer_answer`. API проверяет выбранный действующий
+grant, его филиал и связь компании с текущим заказчиком проекта. Ответ
+клиенту содержит цены и условия строк предложения. После принятия договор
+сохраняет компанию, grant и сотрудника, который его принял.
+
+Миграция 0119 хранит эту связь с выданным grant и проверяет привязку к
+проекту. Проверка активности grant работает в существующем слое авторизации
+до установки области филиала. Исторические записи сохраняются. Право
+`construction.approve` остаётся неделегируемым.
+
+На PostgreSQL 18.7 прошли 62 теста за 37,12 с, включая регрессии договоров,
+делегирования, транспорта и обновления старой схемы. Повтор с тем же ключом
+возвращает подтверждённое предложение. Отозванный grant и устаревшая привязка
+получают отказ. Ruff и mypy прошли на 565 файлах. Web ESLint, проверка типов,
+формат и 185 unit-тестов прошли. Итоговые команды завершились с кодом `0`.
+
+Остаются клиентский экран и подтверждение изменений договора и приёмки.
+Полный CI этой ветки и проверка в production ожидаются.
+
+### BUILD-01 O-09. Привязка компании клиента к проекту
+
+Код `fd54c351b2d40734c5a674bf0877ba8f20ff4346`, ветка
+`codex/package-o8-customer-company`. Миграция 0118 добавляет историю привязок,
+а GET и PUT `/projects/{project_id}/customer-company` работают в рамках
+компании для сотрудников с `construction.approve`. PUT сверяет ревизию
+привязки и версию назначения заказчика. Смена заказчика прекращает действие
+привязки, включая возврат к прежнему заказчику. Переименование проекта
+сохраняет привязку. Право клиента на ответ через делегирование ещё в работе.
+
+На PostgreSQL 18.7 прошли 36 тестов за 45,11 с. Проверены миграции, API,
+неизменяемость истории, изоляция компаний и прежние сценарии смет, договоров
+и приёмки. Ruff и mypy прошли на 564 файлах. Все команды завершились с кодом
+`0`. До реализации два теста выявили отсутствие маршрута (RED, `347a73a`).
+Полный [CI предыдущего этапа O8](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/43846605152)
+прошёл на `3a22e0f`. Миграция 0118 проверена в локальной тестовой базе.
+
+Следующий шаг O-09 — принять исходный договор через действующее делегирование.
+Клиентский маршрут должен проверять привязку к текущему заказчику до запроса
+предложения и повторно перед записью под блокировкой проекта. Для клиента
+нужен ответ без внутренних затрат. Право `construction.approve` остаётся
+у сотрудника компании, ведущей проект.
+
+### BUILD-01 O8. Техническая проверка (2026-11-16)
+
+Следующая таблица сохраняет состояние на 16 ноября. Результаты O-09 от
+17 ноября приведены в дополнениях выше.
+
+База `32a474e45daad2aa886e0f1e7a1a83a72a045028`, клавиатура и проверка
+области Finance в `ba96385dc39aef23557629e86666f7bca317df28`.
+Набор из 26 файлов O1–O7 прошёл на PostgreSQL 18.7 и Chromium за 389,14 с
+(`88 passed`, код `0`, без пропусков). Семь сценариев прошли в двух
+браузерных конфигурациях. Свежий набор клавиатуры и области Finance
+прошёл за 72,34 с (`3 passed`, код `0`, шесть браузерных конфигураций).
+Сборка Web, ESLint и Prettier на коммите с тестами прошли.
+
+| Требование | Подтверждено |
+| --- | --- |
+| O-01 | Тесты подтверждают запрет включения модуля, ограничения компании и филиала, отказ записи при выключенном модуле. План формулирует общий отказ маршрутов, ADR-0035 сохраняет разрешённое чтение при выключенном модуле. Буквальный критерий плана не принят. |
+| O-02 и O-03 | PASS. Сметы и исходный договор неизменяемы, сумма выводится из исходного договора и принятых изменений. |
+| O-04 | PASS. Проверены конкурирующие утверждения и отзыв изменения против утверждения. |
+| O-05 и O-06 | PASS. Источники фактических затрат уникальны до сторнирования, смета и факт сверяются, объём работ ограничен договором. |
+| O-07 и O-08 | PASS. Биллинг ограничен стоимостью договора, удержание отдельно, приёмка и высвобождение фиксируются однократно. Сверка подтверждена реальными проводками в тестовой базе. |
+| O-09 | Подтверждены полномочия сотрудника и запись ответа с внешним источником. Ответ клиента через делегирование ещё отсутствует. |
+| O-10 | Desktop, mobile, axe и выборочная работа с клавиатуры прошли. Полный CI на итоговом коммите ожидается. |
+
+BUILD-01 остаётся в плане до закрытия оставшихся критериев и решения владельца.
+Модуль не включался, production не проверялся. Первый шаг O-09 — версионированная
+привязка компании клиента к проекту, за ней отдельное право ответа через grant.
+
+### BUILD-01 O7c4. Гарантийные обращения и расходы на ремонт (2026-11-16)
+
+Код `d6f277f5c16b8725812cb89202383698e9429dcd`, ветка
+`codex/package-o7c4-warranty` от `5826e3a`. Экран регистрирует обращения
+в пределах гарантийного периода, ведёт историю переходов с ревизиями и
+назначает существующую привязку фактических затрат. Сторнированная привязка
+остаётся в истории, а её сумма уходит из итогов ремонта и сверки.
+Серверные маршруты, права и схема БД остались прежними.
+
+**PASS.** O6b, гарантийный сценарий и регрессия сверки — 9 тестов за 91,66 с
+с PostgreSQL 18.7. Chromium desktop/mobile гарантийного сценария — 2 прогона
+за 25,0 с. В каждом SQL подтвердил одно обращение, одну привязку после
+повтора с тем же ключом и четыре перехода до закрытия. После сторнирования
+затрат активная сумма ремонта упала с 25,00 USD до 0,00 USD.
+Регрессия сверки — 2 браузерных прогона за 10,7 с. Web — 185 unit-тестов,
+сборка, ESLint, Prettier и проверка типов. API — Ruff и mypy (562 файла).
+Итоговые команды завершились с кодом 0.
+
+Контрактный тест RED `ebc95a2` выявил отсутствие маршрутов. Ревью уточнило
+сброс устаревшей формы перехода, точное название фазы и границы Unicode.
+В тестовом скрипте исправлены длинная строка SQL и тип локальной переменной.
+Следом — технические проверки O8 по всему BUILD-01. Полный CI и production
+локально не проверялись. Статус готовности сценария не менялся.
+
+### BUILD-01 O7c3. Сверка проекта (2026-11-16)
+
+Код `1c949f5856cceb1865944b69f7253f4f79f76229`, ветка
+`codex/package-o7c3-reconciliation` от `f5bc814`. Сверка связывает данные
+договора, выполненных работ, бюджета, выставленных сумм, удержания и
+погашения документов. Суммы возвращает O6b. Сверка доступна при доступе
+к Finance всей компании и обновляется после изменений в проекте.
+Клиент принимает знаковые разницы. API и схема БД остались прежними.
+
+**PASS.** O6b с браузерным тестом — 8 тестов за 46,06 с на PostgreSQL 18.7.
+Chromium desktop и mobile — 2 прогона за 11,3 с. Проведены тестовые
+платежи 100,00 USD по счёту и 15,00 USD по удержанию. Экран показал
+195,07 USD после вычета погашенного из выставленного и 25,00 USD гарантийных
+расходов внутри фактических 65,00 USD. После высвобождения 31,00 USD
+сверка автоматически обновилась, выплаченные 15,00 USD сохранились,
+а погашенная сумма сверх высвобожденной стала нулевой.
+Web — 184 unit-теста, сборка, проверка типов, ESLint и Prettier.
+API — Ruff и mypy (561 файл). Итоговые команды завершились с кодом 0.
+
+RED в `665c356` подтвердил отсутствие маршрута в клиентском реестре.
+Ревью уточнило подпись показателя удержания, обе конфигурации прошли повторно.
+Полный CI и production локально не проверялись. Следующий срез O7c —
+регистрация, переходы и назначение расходов гарантийных обращений.
+
+### BUILD-01 O7c2. Приёмка и высвобождение удержания (2026-11-16)
+
+Код `b61cc93f277e7412cec7525b141a43c9e38961ac`, ветка
+`codex/package-o7c2-acceptance` от `5e40eaa`. Экран показывает состояние фаз и
+причины незавершённой приёмки, фиксирует приёмку фазы или всего проекта и
+высвобождение удержания. Итоговая приёмка сохраняет срок гарантии и закрывает
+открытую форму новой заявки на оплату. Сумму высвобождения определяет O6a.
+Серверные маршруты и схема базы остались прежними.
+
+**PASS.** PostgreSQL 18.7 — 9 тестов за 69,46 с, включая O6a и регрессию заявок
+на оплату. Desktop и mobile сценарий приёмки — 2 прогона за 15,2 с.
+В каждом SQL подтвердил две приёмки и два высвобождения по 25,00 и 6,00 USD
+без дублей после потери ответа. Экран после повторного входа показал нулевой
+остаток удержания. Браузерная регрессия заявок — 2 прогона за 20,5 с.
+Web — 183 unit-теста, сборка, проверка типов, ESLint и Prettier.
+API — Ruff и mypy (560 файлов). Итоговые команды завершились с кодом 0.
+
+Контрактный тест сначала выявил отсутствующие ответы (RED, `496beab`). В первом
+браузерном прогоне тест пропустил повторный вход после перезагрузки страницы.
+После исправления обе конфигурации прошли. Ревью подтвердило допустимость
+источника `platform` в прочитанной истории и устранило повторное открытие биллинга
+при гонке с устаревшим чтением. Полный CI и production локально не проверялись.
+В O7c остаются сверка проекта и гарантийные обращения. Итоговая приёмка BUILD-01 в O8.
+
+### BUILD-01 O7c1. Заявки на оплату и ставка удержания (2026-11-16)
+
+Код `e4402d746a98333bd9f21a0e66864fc7578a71ae`, ветка
+`codex/package-o7c1-billing` от O7b2 `9d27f8b`. Экран показывает расчёт периода,
+строки заявки и статусы связанных документов, меняет ставку с контролем ревизии
+и создаёт заявку через O5. FIN-03 хранит отдельные черновики счёта и начисления
+удержания. Менеджеру филиала доступна ставка его проекта, финансовые документы
+остаются в области доступа всей компании. Список книг поддерживает валюту проекта,
+отличную от базовой валюты книги. История использует зафиксированные суммы при
+изменении текущего договора. Серверные маршруты и схема БД не менялись.
+
+**PASS.** PostgreSQL 18.7, O5 и новый браузерный набор — 8 тестов за 46,10 с.
+Chromium desktop (USD) и mobile (JPY) — 2 теста за 20,3 с. SQL подтвердил по одной
+заявке после повтора с тем же ключом, раздельные документы и расчёт 10000 / 1000 /
+9000 в минимальных единицах валюты. После изменения ставки на 12,50% заявка по-прежнему
+показывает 10,00%. Регрессия O7b/O7b2 — 2 теста за 65,17 с, в них 4 прогона Chromium.
+Web — 182 unit-теста, сборка, проверка типов, ESLint и Prettier. API — Ruff и mypy
+(559 файлов). Команды итоговой проверки завершились с кодом 0.
+
+Контрактный тест сначала выявил отсутствующие маршруты (RED, коммит `5faa74b`).
+На первом браузерном прогоне ошибся селектор строки, после правки обе конфигурации
+прошли. Независимое ревью уточнило правила истории, валют и доступа филиала.
+Полный CI, production-контейнер и production-среда локально не проверялись.
+Следующий срез — приёмка этапа и проекта и выпуск удержания через O6a. Итоговая
+техническая приёмка BUILD-01 остаётся в O8.
+
+### BUILD-01 O7b2. Фактические затраты проекта (2026-11-16)
+
+Исходный коммит `6c6e5746feae125d6f4bdc4e89c1c91697ca3a6a`, ветка
+`codex/package-o7b2-costs` от проверенной базы Property `21dc638`.
+На странице проекта доступны привязка к строке бюджета складского списания, строки
+выпущенного обязательства и утверждённого времени, журнал операций и сторнирование
+с причиной. Суммы рассчитывает существующий API. После записи экран перечитывает
+журнал и бюджет. При потере ответа повтор записи использует тот же ключ.
+Если чтение журнала не удалось после успешной записи, повторяется только чтение.
+Серверные маршруты и схема БД не менялись.
+
+**PASS.** PostgreSQL 18.7 локально, набор O3b и новый браузерный сценарий — 10 тестов
+за 68,40 с, включая Chromium desktop/mobile (2 теста за 23,8 с). SQL подтвердил ровно
+три привязки, а на экране сумма 110,00 USD изменилась на 100,00 USD после сторнирования.
+Существующий браузерный сценарий O7b — 1 тест за 37,95 с, Chromium desktop/mobile
+2 теста за 29,0 с. Web — 180 unit-тестов, проверка типов, ESLint, Prettier и сборка.
+API — Ruff и mypy (558 файлов). Все перечисленные команды завершились с кодом 0.
+
+**NOT TESTED локально.** Полный набор CI, production-контейнер и production-среда.
+Следующий этап O7c — экраны заявок на оплату, приёмки, удержаний, гарантии и сверки.
+Приёмка полного BUILD-01 остаётся в O8. Статусы сценариев и отраслей не повышались.
+
+### PROPERTY-01 access to every Property route (2026-11-15)
+
+Source `2b124b52a0908268ccb4878a55ed1cada80fa091` on `codex/package-property-01-access`. Test-only, no schema, API or screen change.
+`test_property_access.py` ties a 19-route matrix to the OpenAPI paths. Another company, members
+without property rights and platform support are refused everywhere and write nothing. Branch
+managers read six routes of their own branch. Suspended and revoked members are refused,
+including replays of their earlier keys, and keep authorship of what they recorded.
+Box PostgreSQL 18.7: 4 passed in 13.20s, Property and identity 83 passed in 99.40s, unit 877 passed.
+A box full run had 3 failures outside Property, recorded in the evidence. GitHub CI decides.
+[Evidence](evidence/2026-11-15-property-access/CHECKS.json). [Handoff](NEXT_AGENT_PROPERTY01_ACCESS_2026-11-15.md).
+
+### PROPERTY-01 lease release in the browser (2026-11-15)
+
+Source `2f8aaf6b68bc2cc82bfa4548f9d17162c9de70e8` on `codex/package-property-01-lease-release`, stacked on the lease screen.
+Test-only: no schema, API or screen change and no migration. The Property browser scenario now
+terminates the signed agreement on the move-in day and releases the term on the screen. An
+aborted request retries with the same key, a second tab meets the revision conflict, and the
+history keeps the extension under the release. PostgreSQL stores revision 3 with the move-in day
+as the inclusive last day of possession, and the move-in report remains.
+
+Box run (not `gorgona-dev`, which stays stopped) on PostgreSQL 18.7: the base `e79f11a` passed the
+lease, term and move-in suites (25 passed in 40.86s) and the browser (1 passed in 49.56s, 10 Playwright
+passed). With release, the browser passed (1 passed in 53.87s, 10 Playwright passed in 47.0s).
+Static checks, 179 web unit tests and the web build passed.
+[Evidence](evidence/2026-11-15-property-lease-release/CHECKS.json).
+[Successor handoff](NEXT_AGENT_PROPERTY01_LEASE_RELEASE_2026-11-15.md).
+
+### PROPERTY-01 unit lease on the Property screen (2026-11-15)
+
+Source `e79f11a8b35ea3052da5cee4f9cd1180652b91f9` on `codex/package-property-01-lease-screen`. Recorded after the fact from its
+[handoff](NEXT_AGENT_PROPERTY01_LEASE_SCREEN_2026-11-15.md); the slice has no evidence folder of its own.
+`GET /property/leases` accepts an optional `object_id`. Without it, the company list is
+unchanged. The selected unit shows the original contract, current term, history and move-in
+report to company-wide owners and managers, and records registration, term changes and move-in.
+Branch members neither see nor request it. No migration.
+
+VM PostgreSQL 18: 25 passed in 55.67s; browser desktop and mobile 1 passed in 58.21s; seven screen
+contract checks, Ruff, ESLint, Prettier, `tsc --noEmit` and `git diff --check` passed.
+[CI 43784742809](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/43784742809) passed.
+The release path was then covered by the next slice.
+
+### PROPERTY-01 move-in report (2026-11-15)
+
+Source `41be1caabe50fe92e77f67f2350b46d3bd3e2276` on `codex/package-property-01-move-in`. Migration 0117 records one private move-in report per lease.
+The actual local date and reviewed lease revision determine eligibility. The report and each
+photo name a specific ADR-0020 version. PostgreSQL requires the complete photo set before
+commit. A lease release cannot remove a previously recorded day of possession.
+
+VM PostgreSQL 18.6 focused 172 passed in 241.48s (0:04:01). API unit 877 passed in 27.76s. Ruff, mypy and Git checks passed.
+Verified refusal after a concurrent release with an observed waiter, the opposite order,
+retry after a bad photo and populated 0116 upgrade. The existing Property screen passed
+eight Chromium scenarios on desktop and mobile (34.7s). [Evidence](evidence/2026-11-15-property-move-in/CHECKS.json).
+Next is the company operations UI for registration, terms and move-in.
+[Successor handoff](NEXT_AGENT_PROPERTY01_MOVE_IN_2026-11-15.md).
+
+### PROPERTY-01 signed lease term changes (2026-11-15)
+
+Source `6e9f55f46d7c69685e047a61387977fdaa5385f6` on `codex/package-property-01-lease-terms`. Migration 0116 records signed extensions and explicit release,
+keeps the original registration, and applies exclusion to the current term. A conflicting
+extension rolls back its event and receipt. Early release keeps the last occupied day inclusive
+or frees the entire period before it starts. The original command and history replay remain stable.
+
+VM PostgreSQL 18.6 focused 163 passed in 277.39s (0:04:37). API unit 877 passed in 50.71s. Ruff check, Ruff format,
+mypy and diff checks passed. The initial broader run found one failure in the old-schema
+fixture copy (162 passed). The replay of the fixture with a shortened lease now preserves only
+legacy-compatible ranges. The 0115 upgrade preserves prior facts and checksums.
+[Evidence](evidence/2026-11-15-property-lease-terms/CHECKS.json). Next is 3c move-in with condition evidence.
+[Successor handoff](NEXT_AGENT_PROPERTY01_LEASE_TERMS_2026-11-15.md).
+
+### PROPERTY-01 signed unit lease registration (2026-11-15)
+
+Source `01077e96c36d58b0d652edd95b6bdeca5f581149` on `codex/package-property-01-leases`. Migration 0115 registers a property unit with the exact
+current agreed revision and its stored signed document from ADR-0020. It keeps inclusive
+civil dates and excludes overlapping possession of the same unit. Routes, SQL policies and
+the module gate restrict registrations to the company-wide workflow. The receipt replays the
+same record. The module continues to await package acceptance.
+
+VM PostgreSQL 18.6 focused 148 passed in 224.90s (0:03:44). API unit 877 passed in 48.43s.
+Ruff check, Ruff format and mypy passed. The first signed lease test failed with 404 before
+implementation. Independent review found a stale transaction snapshot risk. The final
+migration requires READ COMMITTED and the disposable database check verifies the refusal
+at repeatable read. Migration 0115 was applied to a populated 0114 with existing agreements,
+document files and property rows preserved. [Evidence](evidence/2026-11-15-property-leases/CHECKS.json).
+The next slice handles signed extensions and early release. [Successor handoff](NEXT_AGENT_PROPERTY01_LEASES_2026-11-15.md).
+
+### PROPERTY-01 internal listings and showings screen (2026-11-15)
+
+Source `1d325c0ecdcd7f40aa65adbdd37fe367b02d1d97` on `codex/package-property-01-operations-screen`. The existing Property
+detail now shows the listing and schedule. Company-wide owners/managers may edit the listing,
+schedule a showing, assign an eligible host and cancel. Branch-scoped users read the existing
+server projection. The UI uses exact minor units, branch wall time, strict API contracts and
+idempotent command retries. No database migration in this slice.
+
+VM focused 18 passed in 92.47s (0:01:32). Chromium 8 passed over desktop and mobile, with axe and database
+read-back. Static checks and web build passed. The Workforce schema-damage fixture captures
+the exact original constraint before testing fail-closed behavior. Its prior restore failed on
+existing showing allocations. The follow-up showing and Workforce suite reports 42 passed in 56.38s.
+[Evidence](evidence/2026-11-15-property-operations-screen/CHECKS.json).
+Public storefront, inquiry and application decisions remain tracked in the PROPERTY-01 plan.
+
+### PROPERTY-01 authenticated showings (2026-11-15)
+
+Source `f267857c311a18f48ccf27149d13dde3969b85be` on `codex/package-property-01-showings`.
+Migration 0114 adds internal showing creation, scoped schedule reads and cancellation.
+The object and optional bookable host use shared PostgreSQL occupancy. Booking and showing
+conflict in both command orders, the resource lock has an observed waiter, and cancellation
+releases all allocations. Legacy upgrade tests and Workforce schema checks cover the new
+source. The module remains implemented pending package acceptance.
+
+VM focused 75 passed in 99.42 s. Ruff check, Ruff format and mypy passed across 546 Python files.
+Independent review follow-up `40e4a4761556ebaafe0c7ae60717f47e692dd66a` includes showings in staff and customer availability. The slot disappears after creation and returns after cancellation. VM follow-up 32 passed in 51.16s. Compatibility 56 passed including the existing Property catalog browser checks.
+[Evidence](evidence/2026-11-15-property-showings/CHECKS.json).
+The next slice is the internal listings and showings screen. Production remains unverified.
+
+## Current checkpoint — 2026-11-15: PROPERTY-01 internal catalog backend
+
+Source `8f993e30cf020abdb67b4deaa9f2c64bebb33d7f` on `codex/package-property-01-catalog`. Migration 0112 adds the parcel, building and unit catalog with append-only revisions, private owner and manager history, and tenant and branch isolation. The same mutation key replays its original revision even after module disablement. Missing party fields retain their existing values and explicit null clears the named role. The schema guard fails closed on catalog tenant-policy drift. PostgreSQL verifies concurrent revision conflict and upgrade from a populated 0111. Legacy upgrade tests account for the three new empty catalog tables. The Visit Desk now offers a keyboard-focusable Materials used table, verified on desktop and mobile. The module is implemented and awaits enablement. The next work is the internal catalog screen with browser accessibility and mobile evidence.
+
+VM focused 180 passed in 66.94s (0:01:06). VM full on `117a1ef` 1 failed, 2874 passed, 4 skipped in 3945.02s (1:05:45). The only failure was the obsolete module count in one unit test. The corrected test file passed all 21 tests on the final source. The final API unit suite passed 877 tests. Ruff, mypy, web typecheck, lint, format, unit and build passed. [Code CI 43684904496](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new/actions/runs/43684904496) passed on the exact source commit. [Evidence](evidence/2026-11-15-property-catalog/CHECKS.json).
+
+## Previous checkpoint — 2026-11-14: whole-period availability for rental class bookings
+
+RR-08 (code `495a38c`, [design](PACKAGE_RR4_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr4-feasibility/CHECKS.json)). A booking needs one feasible unit for its full interval. The class stays unassigned until an actual assignment. Assigned units and maintenance blocks constrain the solver. Booking, assignment, period, block and fleet changes preserve feasibility under the class lock. Migration 0111. Static PASS, focused 1122 passed in 1990.52s (0:33:10), full 2866 passed, 4 skipped in 4158.08s (1:09:18). Next: PROPERTY-01 planning. Release readiness remains an owner decision. Next migration 0112.
+
+## Earlier checkpoint — 2026-11-14: rental history and sandbox intent review fixes
+
+RR-07 and RR-09 (code `33e931b`, [design](PACKAGE_RR3_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr3-history/CHECKS.json)). Return and usage follow the handover's measurement context. Settled terms are frozen. One sandbox intent has one initial link per tenant. Migration 0110. Static PASS, focused 1118 passed in 1924.19s (0:32:04), full 2862 passed, 4 skipped in 4063.29s (1:07:43). RR-08 remains open. Next migration 0111.
+
+## Earlier checkpoint — 2026-11-14: rental refund and financial draft review fixes
+
+RR-05, RR-06 and RR-10 (code `a62b32f`, [design](PACKAGE_RR2_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr2-finance/CHECKS.json)). Voided credits remain in history and release both refund limits. An issued credit takes one share of invoice capacity. Migration 0109 protects linked FIN-03 drafts. Damage records keep the complete reason. Static PASS, focused 1115 passed in 1977.21s (0:32:57), full 2859 passed, 4 skipped in 4033.05s (1:07:13). RR-07 through RR-09 remain open. Next migration 0110.
+
+## Earlier checkpoint — 2026-11-14: first rental review fixes on gorgona-dev
+
+RR-01 through RR-04 on `codex/package-r-review-occupancy-fixes` (code `de7a196`, [design](PACKAGE_RR1_DESIGN_2026-11-14.md), [checks](evidence/2026-11-14-rr1-occupancy/CHECKS.json)). The class lock serializes current assignments and fleet capacity. An open handover blocks a second handover of the unit. Assignment replacement, period changes and cancellation close at handover. The return still uses the original assignment. Migration 0108 protects these transitions and retains all rows on a nonempty 0107 upgrade. Static PASS, focused 1112 passed in 2035.62s (0:33:55), full 2856 passed, 4 skipped in 4287.33s (1:11:27). Next are RR-05 through RR-10, followed by PROPERTY-01 planning. In-use changes remain open. Rental readiness and enablement require a separate owner decision. Next migration 0109.
+
+## Earlier checkpoint — 2026-11-13: R9 technical acceptance of RENT-01 on gorgona-dev
+
+R9 on `codex/package-r9-rental-acceptance` (design `a323b58`, code `2388cda`, [acceptance](evidence/2026-11-13-r9-acceptance/ACCEPTANCE.md), [checks](evidence/2026-11-13-r9-acceptance/CHECKS.json)): staff agreement acceptance, change and period change accept Paper and Email. The browser exercises both desktop and mobile. The API/PostgreSQL scenario covers class capacity, unit exclusion, frozen rates, security, handover and return, settlement, damage, refund and reconciliation. VM gates-1: static PASS, focused 1102 passed in 2655.30s (0:44:15), full 2846 passed, 4 skipped in 5764.45s (1:36:04). The two expected pre-fix failures are recorded. R-09 remains PARTIAL (customer grant flow open). The independent package R review awaits owner consent. Rental stays registered as `implemented` and readiness and enablement require an owner decision. Next migration **0108**. [Review handoff](NEXT_AGENT_PACKAGE_R_REVIEW_2026-11-13.md).
+
+## Earlier checkpoint — 2026-11-11: R8c rental screens: inspections, usage, settlement, charges, refunds and reconciliation, verified on the VM
+
+R8c on `codex/package-r8c-rental-settlement-screens` (from R8b docs `977a96f`; design `bc54650`, code `c45d3da`, [R8c design](PACKAGE_R8C_DESIGN_2026-11-11.md), [R8c evidence](evidence/2026-11-11-r8c-rental-settlement-screens/CHECKS.json)): web only, no API change and no migration (next stays **0108**). `web/components/rental-settlement.tsx` on the booking page after the agreement and the security: handover and return inspections with damage marks (a return mark can be new), the usage from the server, the settlement into a FIN-03 receivable invoice draft (book and accounts chosen on the form), damage charges on new return marks, external refunds (credit refunds offered once the reconciliation shows an issued document) and the reconciliation with documents, refunds, security and totals. Strict contracts of the R6a-R7c responses and their calls. Real browser desktop and mobile with axe and no horizontal scroll: hand over at 1000, return at 1300 with a new dent, excess 100 at 25.00, settlement 125.00, damage 80.00, external refund 10.00, charged 205.00. One test-data slip recorded: the first mobile booking crossed the end of daylight saving time and was moved. VM gates-1: static PASS, focused 1101 passed, full 2845 passed and 4 skipped. R8b CI run 43128481780 on 977a96f: success. Next: R9 acceptance of RENT-01; readiness only on the owner's word.
+
+## Earlier checkpoint — 2026-11-11: R8b rental screens: rate cards, the agreement and the security, verified on the VM
+
+R8b on `codex/package-r8b-rental-agreement-screens` (from R8a docs `454c70f`; design `bf5dd55`, code `b3528b8`, [R8b design](PACKAGE_R8B_DESIGN_2026-11-11.md), [R8b evidence](evidence/2026-11-11-r8b-rental-agreement-screens/CHECKS.json)): web only, no API change and no migration (next stays **0108**). `web/components/rental-agreement.tsx`, wired into the Rental page: rate cards per class and branch (money entered in major units, sent in minor units; the server decides the version); on the booking page the server's quote, the agreement accepted with its source, who and when, and the security request with the server's figures and events (a hold names a reference, a capture a basis; capturing needs `rental.approve` on the server). Strict contracts of the R4a-R5a responses (`web/lib/rental-contracts.ts`) and their calls (`web/lib/rental-api.ts`). Real browser desktop and mobile with axe and no horizontal scroll. VM gates-1: static PASS, focused 1100 passed, full 2844 passed and 4 skipped. The R8b session stopped after the gates; a new session read the VM results, started the VM again on the owner's word and finished the record. R8a CI run 43058107935 failed in the web build step (browser install, cause not visible without credentials); the rerun 43061387414 on the empty commit `9b60600` succeeded. Next: R8c (handover and return, settlement, damage charges, refunds and the reconciliation on screen), then R9 acceptance of RENT-01; readiness only on the owner's word.
+
+## Earlier checkpoint — 2026-11-11: R8a rental screens: catalogue, availability and bookings, verified on the VM
+
+R8a on `codex/package-r8a-rental-screens` (from R7c docs `a2bfc54`; design `eef91e1`, code `06b3c25`, [R8a design](PACKAGE_R8A_DESIGN_2026-11-09.md), [R8a evidence](evidence/2026-11-09-r8a-rental-screens/CHECKS.json)): web only, no API change and no migration (next stays **0108**). The Rental page (`web/app/rental/page.tsx`, `web/components/rental.tsx`) with strict contracts (`web/lib/rental-contracts.ts`) and commands that keep their Idempotency-Key (`web/lib/rental-api.ts`): classes and units, availability from the server, bookings with unit assignment and cancellation, times in the branch zone; only active owners and managers who are not delegates. Real browser desktop and mobile with axe and no horizontal scroll. VM gates-1: static PASS, focused 1099 passed, full 2843 passed and 4 skipped. R7c CI run 42558093855: success. Next: R8b.
+
+## Earlier checkpoint — 2026-11-09: R7c reconciliation per rental agreement, derived, verified on the VM
+
+R7c on `codex/package-r7c-rental-reconciliation` (from R7b docs `6f20a26`; design `c16edcf`, code `6876fee`, [R7c design](PACKAGE_R7C_DESIGN_2026-11-08.md), [R7c evidence](evidence/2026-11-08-r7c-rental-reconciliation/CHECKS.json)): no migration (next stays **0108**). `GET bookings/{id}/reconciliation` derives on read the settlement and damage charge invoices with their FIN-03 state and `gba.obligation_balance` (principal, paid, credited, open), the refunds with their credit note and the refund obligation FIN-03 made, the R5a security figures and the totals. Also fixed: the R7b test took today in UTC while the FAKE business is in America/New_York (a slip, recorded). VM gates-1: static PASS, focused 1098 passed, full 2842 passed and 4 skipped. R7b CI run 42511820796: success. R7 is complete; next: R8 screens.
+
+## Earlier checkpoint — 2026-11-08: R7b damage charges and refunds of a rental agreement, verified on the VM
+
+R7b on `codex/package-r7b-rental-damage-refunds` (from R7a docs `2ef404e`; design `0453d6a` corrected in `00c7dc0`, code `b174d1b`, [R7b design](PACKAGE_R7B_DESIGN_2026-11-08.md), [R7b evidence](evidence/2026-11-08-r7b-rental-damage-refunds/CHECKS.json)): migration **0107** adds insert-only `rental_damage_charges` with `rental_damage_charge_marks` (after the settlement, new return marks each charged once, the customer's FIN-03 receivable invoice draft for the amount) and `rental_refunds` (a FIN-03 credit note against an issued obligation of the settlement or a charge, or a recorded external refund; all refunds within the settlement total plus the damage charged). Both need `rental.approve`; FIN-03 keeps the drafts linked. Routes `GET bookings/{id}/charges`, `POST bookings/{id}/damage-charges`, `POST bookings/{id}/refunds`. VM gates-1: static PASS, focused 1095 passed, full 2839 passed and 4 skipped. R7a CI run 42449693704: success. Next: R7c.
+
+## Earlier checkpoint — 2026-11-08: R7a final settlement invoice of a rental agreement, verified on the VM
+
+R7a on `codex/package-r7a-rental-settlement` (from R6b docs `0432c98`; design `5f968b9`, code `31cf73d`, [R7a design](PACKAGE_R7A_DESIGN_2026-11-07.md), [R7a evidence](evidence/2026-11-07-r7a-rental-settlement/CHECKS.json)): R7 is split (R7b damage charges and refunds, R7c reconciliation). Migration **0106** adds insert-only `rental_settlements`, one per booking after its return: the latest agreement version total, the meter excess and the late return (started hours at the card hour rate, else started days at the day rate; `RENTAL_SETTLEMENT_UNPRICED` otherwise), recomputed by the guard, with the FIN-03 receivable invoice draft of the customer for the total written in the same request and kept linked (`FINANCIAL_DOCUMENT_LINKED`). Routes `GET`/`POST bookings/{id}/settlement`. Fuel is not priced. VM gates-1: static PASS, focused 1090 passed, full 2834 passed and 4 skipped. R6b CI run 42438106172: success. Next: R7b.
+
+## Earlier checkpoint — 2026-11-07: R6b overdue time and meter excess, derived, verified on the VM
+
+R6b on `codex/package-r6b-rental-usage` (from R6a docs `18470ae`; design `af3f01f`, code `010692f`, [R6b design](PACKAGE_R6B_DESIGN_2026-11-07.md), [R6b evidence](evidence/2026-11-07-r6b-rental-usage/CHECKS.json)): no migration (next stays **0106**). `GET bookings/{id}/usage` derives on read, from the latest agreement version, its rate card and the R6a inspections, the state (not handed over, out, returned), the overdue seconds and started hours to the return (or the read while out) past the agreement period end, the meter distance, the allowance (per day times rental days), the excess and its amount at the card's excess rate. Nothing is stored or charged; R7 settles. VM gates-1: static PASS, focused 1084 passed, full 2828 passed and 4 skipped. R6a CI run 42426865948: success. Next: R7.
+
+## Earlier checkpoint — 2026-11-07: R6a handover and return inspections, verified on the VM
+
+R6a on `codex/package-r6a-rental-inspections` (from R5b docs `fc1c378`; design `7d5dec6`, code `78db1a8`, [R6a design](PACKAGE_R6A_DESIGN_2026-11-07.md), [R6a evidence](evidence/2026-11-07-r6a-rental-inspections/CHECKS.json)): R6 is split (R6b: overdue and meter excess). Migration **0105** adds insert-only `rental_inspections`, one handover and one return per booking, naming the current unit assignment of a booking with an agreement that is not cancelled; a return follows the handover of the same assignment; the class meter reading never goes back (none for a class without a meter); a level 0..100 and a note; `rental_inspection_marks` written with the inspection (1..50, minor or major, new only on a return, a photo a PNG or JPEG document version). Routes `GET`/`POST bookings/{id}/inspections` (`RENTAL_INSPECTION_STATE`, `RENTAL_INSPECTION_INVALID`). VM gates-1: static PASS, focused 1074 passed, full 2818 passed and 4 skipped. R5b CI run 42413235532: FAIL on the flaky browser check `service-catalog.spec.ts:137` (no web change). Next: R6b.
+
+## Earlier checkpoint — 2026-11-07: R5b provider evidence for a rental card hold, sandbox only, verified on the VM
+
+R5b on `codex/package-r5b-rental-provider-holds` (from R5a docs `7129d83`; design `58391fd`, code `e4efe63`, [R5b design](PACKAGE_R5B_DESIGN_2026-11-07.md), [R5b evidence](evidence/2026-11-07-r5b-rental-provider-holds/CHECKS.json)): migration **0104** links a recorded event of a `card_hold` security to the signature-checked test-mode receipt of a company connection that is not revoked (`rental_security_provider_links`, insert-only). The database checks the receipt: a hold by a paid charge of the intent with nothing captured; a capture by the intent success for the security amount with everything captured so far received; a release or expiry by the cancellation with nothing captured, or by the success with exactly what was captured; same currency, test mode, one intent per security. Route `POST bookings/{id}/security/events/{sequence}/provider` (`RENTAL_SECURITY_EVIDENCE`); capture evidence needs `rental.approve`. Nothing is sent to the provider; no live provider. VM gates-1: static PASS, focused 1038 passed, full 2811 passed and 4 skipped. R5a CI run 42404010560: FAIL on the known flaky visit-desk mobile axe check (no web change in R5a; rerun needs GitHub credentials). Next: R6.
+
+## Earlier checkpoint — 2026-11-07: R5a recorded security of payment for a rental booking, verified on the VM
+
+R5a on `codex/package-r5a-rental-security` (from R4c docs `63b2318`; design `5d25694`, code `ffe05b8`, [R5a design](PACKAGE_R5A_DESIGN_2026-11-07.md), [R5a evidence](evidence/2026-11-07-r5a-rental-security/CHECKS.json)): R5 is split (R5b: provider holds in sandbox). Migration **0103** adds one security per booking with an agreement that is not cancelled, in the currency of the latest agreement version's card (card hold, cash, bank transfer or other), and insert-only events numbered 1, 2, 3: held once first for the full amount with an external reference, captured within what is still held with a basis, released or expired for exactly the rest, nothing after closing; the state and every figure are derived; nothing refers to charges. Routes `GET/POST bookings/{id}/security`, `POST bookings/{id}/security/events` (capture needs `rental.approve`; `RENTAL_SECURITY_EXISTS`, `RENTAL_SECURITY_STATE`). Gates on the VM gorgona-dev (gates-1): static PASS, focused 1032 passed, full 2805 passed and 4 skipped. R4c CI run 42394185544 success. Readiness, enabling rental and main still need the owner's word. Next: R5b provider holds in sandbox.
+
+## Earlier checkpoint — 2026-11-07: R4c rental extensions and shortened periods on the shared occupancy, verified on the VM
+
+R4c on `codex/package-r4c-rental-extensions` (from R4b docs `86d2cad`; design `0cb38f2`, code `c38efe8`, [R4c design](PACKAGE_R4C_DESIGN_2026-11-06.md), [R4c evidence](evidence/2026-11-06-r4c-rental-extensions/CHECKS.json)): migration **0102** adds insert-only period changes numbered 2, 3 per booking (at most 366 days, only for a booking with an agreement that is not cancelled, under the class row lock); `gba.rental_current_bookings` gives each booking its current period, and the availability peak, the assignment guard and the agreement version guard use it; at commit the latest agreement version and any current assignment carry the current period. The shared occupancy guard is not replaced; a held unit is released and assigned again with a new hold. Route `POST bookings/{id}/agreement/period` (`RENTAL_UNIT_BUSY`, `RENTAL_UNAVAILABLE`). Gates on the VM gorgona-dev (gates-2): static PASS, focused 1026 passed, full 2799 passed and 4 skipped; gates-1 focused had 1 failure in the known flaky `test_l7b_visit_desk_browser` (passes alone). R4b CI run 42291512691 success. Readiness, enabling rental and main still need the owner's word. Next: R5 payment states of rental deposits and holds.
+
+## Earlier checkpoint — 2026-11-06: R4b the rental agreement as the frozen accepted quote, verified on the VM
+
+R4b on `codex/package-r4b-rental-agreements` (from R4a docs `4902f23`; design `7e793ea`, code `a098477`, [R4b design](PACKAGE_R4B_DESIGN_2026-11-06.md), [R4b evidence](evidence/2026-11-06-r4b-rental-agreements/CHECKS.json)): R4 is split again (R4c: extensions). Migration **0101** adds one agreement per booking: version 1 freezes the card in force when the booking was made, the booking period, the chosen extras copied from the card and the amounts, with the source (platform, paper, email), who accepted and when; a change is the next insert-only version with a reason over the same card and period. The database checks the card, the period, the version sequence, that the counted whole units cover the period and price to the rental amount, the extra lines against the card and the total at commit; a cancelled booking takes no version. Slips, all in the record: red-1 10 failed, 7 passed as intended; dev-1 the migration did not parse (a CASE inside an IF condition); dev-2 the guard locked a row the runtime role cannot update (now the class row); dev-3 32 passed. Final gates (gates-1, VM): static-1 PASS, focused-1 1020 passed, full-1 2793 passed and 4 skipped; lowest free disk 137G. R4a CI run 41900546592 succeeded on `4902f23`. Next migration **0102**; next slice R4c (extensions and shortened periods on the shared occupancy). Readiness and enabling rental, construction and `main` wait for the owner's word.
+
+## Earlier checkpoint — 2026-11-04: R4a rental rate cards and quotes, verified on the VM
+
+R4a on `codex/package-r4a-rental-rates` (from R3b docs `90fb28f`; design `281d3f6`, code `79d678f`, [R4a design](PACKAGE_R4A_DESIGN_2026-11-04.md), [R4a evidence](evidence/2026-11-04-r4a-rental-rates/CHECKS.json)): R4 is split in R4a and R4b. Migration **0100** adds rate cards: insert-only versions per class and branch with no gap (under the class row lock), one currency, rates per hour, day, week and month in minor units (at least one), a meter allowance and excess rate for later slices, extras recorded only with their card, and no back-dating. The quote is computed, never typed: the cheapest cover of the period by whole units of the card plus extras per rental day or per rental; a booking is quoted from the card in force when it was made, and a later version never changes it (`RENTAL_NO_RATE` without one). The VM was started on the owner's word (it had been stopped); its new address was set in the SSH alias. Slips, all in the record: red-1 collection error and red-2 10 failed, 7 passed as intended; ruff 9 and mypy 4 findings fixed by hand (tests changed after red only in lint and typing); the first dev-1 start did not run (a hash check stopped the chain); dev-1 76 passed. Final gates (gates-1, VM): static-1 PASS, focused-1 1014 passed, full-1 2787 passed and 4 skipped; lowest free disk 137G. R3b CI run 41708625225 succeeded on `90fb28f`. Next migration **0101**; next slice R4b (the frozen agreement, extensions and changes). Readiness and enabling rental, construction and `main` wait for the owner's word.
+
+## Previous checkpoint — 2026-11-03: R3b rental unit blocks, moves and availability, verified on the VM
+
+R3b on `codex/package-r3b-rental-blocks` (from R3a docs `cf9ff3f`; design `427b8f0`, code `b5cff95`, [R3b design](PACKAGE_R3B_DESIGN_2026-11-03.md), [R3b evidence](evidence/2026-11-03-r3b-rental-blocks/CHECKS.json)): migration **0099** adds unit blocks (maintenance, repair or other, with a reason and a period of at most 366 days; insert-only, released once with a reason). A block holds its active unit through one confirmed allocation of the new source kind `rental_block` on the shared occupancy, so it never overlaps an assignment either way; its release releases the hold (both checked at commit). Availability counts unreleased blocks, so a block that would leave a booking without a unit and a booking that meets a blocked unit are refused, under the class row lock. A unit with a current or future hold keeps its branch (service `RENTAL_UNIT_HELD` and database). The shared occupancy guard is the 0098 body kept whole plus the block lane; the runtime schema guards approve the new text and kind. Slips, all in the record: red-1 10 failed and 7 passed as intended; dev-1 8 upgrade tests failed because the R3a fixture rule came first in an elif chain and let block holds into schemas below 98 (test support fixed); dev-2 141 passed. Final gates (gates-1, VM): static-1 PASS, focused-1 1004 passed, full-1 2777 passed and 4 skipped; lowest free disk 137G. R3a CI run 41627679283 succeeded on `cf9ff3f`. Next migration **0100**; next slice R4 (rate cards, quotes and the frozen agreement). Readiness and enabling rental, construction and `main` wait for the owner's word.
+
+## Previous checkpoint — 2026-11-03: R3a assigning a rental unit to a booking on the shared occupancy, verified on the VM
+
+R3a on `codex/package-r3-rental-assignment` (from R2 docs `e96e8fc`; design `ce29972`, code `ab98936`, [R3a design](PACKAGE_R3A_DESIGN_2026-11-03.md), [R3a evidence](evidence/2026-11-03-r3a-rental-assignment/CHECKS.json)): R3 is split in R3a and R3b. Migration **0098** gives every rental unit its own occupancy resource and assigns a unit to a booking through one confirmed allocation on the shared occupancy, so a unit is never issued twice (database exclusion); a new assignment releases the current one, a cancellation releases it, history stays. The shared occupancy guard is replaced with the 0075 body kept whole plus the rental lane; the runtime schema guards approve the new text and kinds; booking screens keep rental units out. Slips, all in the record: red-1 as intended; dev-1 upgrade fixtures carried rental rows into older schemas (test support fixed); a backfill of existing units was tried and removed because migrations may not lift row security (design R3a-01 and R3a-06 refined: no unit can exist before 0098, the upgrade refuses loudly if one did); gates-1 stopped on that migration rule and on a workforce damage test that restored an old source kind list (fixed); dev-5 57 passed. Final gates (gates-2, VM): static-2 PASS, focused-2 998 passed, full-2 2771 passed and 4 skipped; lowest free disk 137G. R2 CI run 41606651336 succeeded on `e96e8fc`. Next migration **0099**; next slice R3b (maintenance, blocks, moves). Readiness and enabling rental, construction and `main` wait for the owner's word.
+
+## Previous checkpoint — 2026-11-03: R2 rental class bookings and availability, verified on the VM
+
+R2 on `codex/package-r2-rental-bookings` (from R1 docs `101e3ad`; design `d423d7e`, code `e34ac3f`, [R2 design](PACKAGE_R2_DESIGN_2026-11-03.md), [R2 evidence](evidence/2026-11-03-r2-rental-bookings/CHECKS.json)): migration **0097** adds class bookings (a class, never a unit; a customer, pickup and return branches and a period of at most 366 days; insert-only, numbered per pickup branch, cancelled once with a reason). A booking is accepted only while the active units of the class at the pickup branch cover the peak of bookings that overlap at one instant; the service and the database (guard under the class row lock) both check, so two racing bookings for the last unit leave one after an observed `pg_locks` wait. Availability is read per class, branch and period. Slips, all in the record: red-1 12 failed, 7 passed and 4 errors as intended; the test changed after red only in type annotations; the booking number runs per pickup branch instead of per business (a branch member cannot see other branches); dev-1 44 passed; gates-1 stopped at focused-1 on the known flaky `test_l7b_visit_desk_browser` (mobile axe, older tables; R2 changes no web code), which passed alone (dev-2). Final gates (gates-2, VM): static-2 PASS, focused-2 990 passed, full-2 2763 passed and 4 skipped; lowest free disk 137G. R1 CI run 41590287564 succeeded on `101e3ad`. Next migration **0098**; next slice R3 (unit assignment on the shared occupancy). Readiness and enabling rental, construction and `main` wait for the owner's word.
+
+## Previous checkpoint — 2026-11-03: R1 rental module, item classes and units, verified on the VM
+
+R1 on `codex/package-r1-rental-catalog` (from O7b docs `506f12c`; design and ADR-0036 `889c69a`, code `15a884d`, [R1 design](PACKAGE_R1_DESIGN_2026-11-03.md), [R1 evidence](evidence/2026-11-03-r1-rental-catalog/CHECKS.json), [package R plan](PACKAGE_RENT_PLAN_2026-11-03.md)): the module `rental` (Rental and hire) is registered implemented and **not enableable** (registry version 6); permissions `rental.read`, `rental.manage` and `rental.approve` for owners and managers (version 12), not delegable. Migration **0096** adds company-wide item classes with a typed attribute set per revision (code fixed) and units with an identifier unique in the business, a branch, a state (retired is final) and values the database checks against the class (key, type, required at commit). Slips, all in the record: red-1 15 failed, 143 passed and 10 errors as intended; after red one assertion changed (the 403 code is PERMISSION_DENIED, not FORBIDDEN); the attribute order got an explicit position before any run; dev-1 5 failed and 921 passed for a code defect (pydantic strict mode refused UUID strings), fixed; dev-2 7 passed. Final gates (gates-1, VM): static-1 PASS, focused-1 983 passed, full-1 2756 passed and 4 skipped; lowest free disk 137G. O7b CI run 41578843175 succeeded on `506f12c`. Next migration **0097**; next slice R2 (class bookings). Readiness and enabling rental, construction and `main` wait for the owner's word.
+
+## Previous checkpoint — 2026-11-03: O7b construction screens for budget, commitments, schedule, daily reports and completed quantities, verified on the VM
+
+O7b on `codex/package-o7b-construction-screens` (from O7a docs `dec2b58`; design `1e94aec`, code `ded715d`, [O7b design](PACKAGE_O7B_DESIGN_2026-11-02.md), [O7b evidence](evidence/2026-11-02-o7b-construction-screens/CHECKS.json)): once a project has a contract, the project page shows the budget per line and phase with committed, actual, remaining and the over-committed and over-budget flags as the server derives them; commitments created and revised with the revision read (a counterparty of the role of the kind); the schedule with dependencies and the server's conflicts, critical phases and planned finish; daily reports per site date sent with the revision read; completed quantities with the progress per line and phase (a retry after a lost answer records once). Cost links move to O7b2 (pickers over STOCK-01, FIN-03 and WORK-01 facts). No API change and no migration (next migration **0096**). Slips, all in the record: the first VM checkout stopped on the uncommitted O7a copies (checked byte-equal to the commit, then dropped); red-1 1 failed as intended (no budget table) and red-2 the new contract case failed as intended; no test changed after red; dev-1 1 failed and 1 passed for a code defect (a label around a select takes its options into its name, so a placeholder also matched the Kind label), fixed; dev-2 1 passed. Final gates (gates-1, VM): static-1 PASS (development audit 17 moderate, not required), focused-1 927 passed, full-1 2748 passed and 4 skipped; lowest free disk 137G. O7a CI run 41568069482 succeeded on `dec2b58`. Next: O7b2, O7c and O8 of package O; the plan of package R (RENT-01) is ready ([plan](PACKAGE_RENT_PLAN_2026-11-03.md)); readiness and enabling construction and `main` wait for the owner's word.
+
+## Previous checkpoint — 2026-11-02: O7a construction screens for projects, estimates, contract and change orders, verified on the VM
+
+O7a on `codex/package-o7a-construction-screens` (built in the O5 worktree from O6b docs `04db17c`; design `074d42c`, code `6c5ea3d`, [O7a design](PACKAGE_O7A_DESIGN_2026-11-02.md), [O7a evidence](evidence/2026-11-02-o7a-construction-screens/CHECKS.json)): O7 is split in O7a (O1-O2 screens), O7b (budget, costs, execution) and O7c (quality, billing, acceptance, warranty, reconciliation). O7a adds the Construction screen for active, non-delegated owners and managers: the project list (read to its end) and form, estimate versions with the server's totals, the editor of the next version (a retry after a lost answer saves once), the proposal, the customer's acceptance with the server's original, approved and current sums, and change orders that add or remove scope, answered with their source or withdrawn. Strict zod contracts for every O1-O2 response; money typed in major units and sent as exact minor units by ISO 4217 places. No API change and no migration (next migration **0096**). Heavy runs on the Google Cloud VM `gorgona-dev`. Slips, all in the record: red-1 1 failed as intended (no construction page in the build) and red-2 failed as intended (contracts module absent); after red the browser spec changed only by a prettier line wrap; eslint refused the first project-page loader (setState in an effect), split before any run; dev-1 1 passed (desktop and mobile). Final gates (gates-1, VM): static-1 PASS (development audit 17 moderate, not required), focused-1 926 passed, full-1 2747 passed and 4 skipped; lowest free disk 137G. O6b CI run 41529536177 succeeded on `04db17c`. Readiness and enabling construction and `main` wait for the owner's word. Next slice O7b ([handoff](NEXT_AGENT_PACKAGE_O7B_2026-11-02.md)).
+
+## Previous checkpoint — 2026-11-02: O6b construction warranty claims, repair cost and reconciliation, verified on the VM
+
+O6b on `codex/package-o6b-reconciliation` (built in the O5 worktree from O6a docs `04d0329`; design `381deeb`, code `44736e8`, [O6b design](PACKAGE_O6B_DESIGN_2026-11-02.md), [O6b evidence](evidence/2026-11-02-o6b-reconciliation/CHECKS.json)): migration **0095** adds numbered, insert-only warranty claims (site date not after today, inside the warranty period of the final acceptance, a phase of the budget), claim state as insert-only events (open to repaired or rejected, repaired to closed or open; rejecting and reopening carry a note) and repairs that assign an O3b cost link that still counts to an open or repaired claim, once per link, so each fact still counts once. A read-only reconciliation view derives contract, completed, budget, committed, actual (warranty repair apart), billed, retained, due, released, held, paid and credited from the FIN-03 obligations, and the differences (retainage settled before release never below 0). FIN-03 and the O3b guard are unchanged. Two racing claim moves leave one outcome after an observed `pg_locks` wait. Heavy runs ran on the Google Cloud VM `gorgona-dev` as the owner asked. Slips, all in the record: red-1 stopped at collection (the unit file imported the absent module), so red-2 (8 failed as intended) and red-3 (collection error as intended) ran apart; dev-1 1 failed and 40 passed for a code defect (`to_minor` refuses a zero balance, the view returned 500), fixed; dev-2 1 failed and 7 passed for a test defect (front_desk has no `construction.read`, now 403), fixed; dev-3 9 passed. Final gates (gates-1, VM): static-1 PASS, focused-1 925 passed, full-1 2746 passed and 4 skipped; lowest free disk 138G. No test settles a pay-application obligation (limit). O6a CI run 41490808670 succeeded on `04d0329`. Readiness and enabling construction and `main` wait for the owner's word. Next migration **0096**; next slice O7 screens ([handoff](NEXT_AGENT_PACKAGE_O7_2026-11-02.md)).
+
+## Previous checkpoint — 2026-11-02: O6a construction stage and final acceptance, retainage release, locally verified
+
+O6a on `codex/package-o6a-acceptance` (built in the O5 worktree; design `a756265`, code `c06ec73`, [O6a design](PACKAGE_O6A_DESIGN_2026-11-02.md), [O6a evidence](evidence/2026-11-02-o6a-acceptance/CHECKS.json)): O6 is split into O6a (acceptance and retainage release, migration 0094) and O6b (warranty claims and reconciliation, migration 0095). Migration **0094** adds numbered, insert-only acceptances of a phase or of the whole project (each once, nothing after the final one) with the site date (not after today), signatory, source (paper or email) and a note; only finished work measured by the acceptance date is accepted, open or fixed quality items of the phase block a phase acceptance and any open or fixed item blocks the final one (the O4b question), and the final acceptance needs the contract billed in full and records the warranty end (after the acceptance, within 10 years). Accepted work is closed by new triggers: measurements and change-order approvals touching an accepted phase, and after the final acceptance every measurement, approval and pay application, are refused (`CONSTRUCTION_ACCEPTED`). Retainage is released once per acceptance by an amount the server derives (a phase's retainage once it is billed in full, the rest at the final acceptance), never more than held; FIN-03 is unchanged. Two racing releases, and an acceptance racing a measurement, each leave one outcome after an observed `pg_locks` wait. red-1 failed as intended (8). Slips, all in the record: dev-1 1 failed and 110 passed for a test defect (a duplicate keyword argument), fixed, dev-2 8 passed; a carriage-return check miscounted (git shows LF everywhere); the first evidence file stated a wrong lowest free disk space (25.43 GB is right) and was rewritten. Final gates (gates-1): static-1 PASS, focused-1 916 passed, full-1 2737 passed and 4 skipped. O5 CI run 41395706736 succeeded on 47ba8bd. Readiness and enabling construction, transport and `main` wait for the owner's word. Next migration **0095** (O6b warranty claims and reconciliation; [handoff](NEXT_AGENT_PACKAGE_O6B_2026-11-02.md)).
+
+## Previous checkpoint — 2026-11-01: O5 construction pay applications with retainage, locally verified
+
+O5 on `codex/package-o5-pay-applications` (own worktree; design `67a6bed`, code `11a5508`, [O5 design](PACKAGE_O5_DESIGN_2026-11-01.md), [O5 evidence](evidence/2026-11-01-o5-billing/CHECKS.json)): migration **0093** adds a versioned retainage rate (0 to 5000 basis points) and pay applications. An application closes a billing period (a period end after the previous one and not after today on the site; one per period, two racing ones leave one after an observed `pg_locks` wait) and bills the completed value of every budget line as of its period end minus earlier billing; retainage is held from that amount rounded down. It drafts two FIN-03 documents that are never mixed: a receivable invoice for the amount due and a receivable manual accrual without a due date for the retained amount (another asset account); FIN-03 refuses to edit them and issues them as two obligations. A billed period is closed for measurements; billed never exceeds the contract sum (a finished project bills exactly it), the database rechecks the whole application with `construction_contract_minor`, and an approval that would take the contract sum below billed is refused (BUILD-01 part 2, O-07). red-1 failed as intended (8); dev-1 88 passed on the first run. Slips, all in the record: migration 0093 was written before red-1 and was moved aside for an honest red-1; the gates ran slower than usual and free disk space fell to 3.44 GB at its lowest. Final gates (gates-1): static-1 PASS, focused-1 908 passed, full-1 2729 passed and 4 skipped. O4b CI run 41333075606 succeeded on 88cf16e. Readiness and enabling construction, transport and `main` wait for the owner's word. Next migration **0094** (O6 acceptance, retainage release, warranty and reconciliation).
+
+## Previous checkpoint — 2026-11-01: O4b construction inspections, defects and the punch list, locally verified
+
+O4b on `codex/package-o4b-quality` (design `5864c85`, code `6b6124f`, [O4b design](PACKAGE_O4B_DESIGN_2026-11-01.md), [O4b evidence](evidence/2026-11-01-o4b-quality/CHECKS.json)): migration **0092** completes O4 with inspections and quality items. An inspection is an insert-only, numbered check of a budget phase (or of the whole project) on a site date not after today, with a kind, the inspector, a result (passed, passed with items, failed), notes and PNG/JPEG document versions as photos. A defect or punch item has a severity, raised and due site dates, an optional responsible counterparty and optionally the inspection that found it; the database refuses an item from a passed inspection. An item's state moves only by insert-only events (open to fixed or void, fixed to closed or reopened; closed and void are final; voiding and reopening need a note), which the database checks under the project lock; two racing moves of one item leave one after an observed `pg_locks` wait. State, overdue (in the site's time zone) and a summary per phase and kind are derived; whether open items block a stage acceptance is decided in O6. red-1 failed as intended (8); dev-1 75 passed on the first run. Slips, all in the record: full-1 had one browser failure under load (the visit desk materials table on mobile was scrollable without keyboard access at the moment of the accessibility scan), which passed alone; that latent accessibility gap of older table containers is a separate task. Final gates (gates-2): static-2 PASS, focused-2 900 passed, full-2 2721 passed and 4 skipped. O4a CI run 41313515832 succeeded on 852c117. Readiness and enabling construction, transport and `main` wait for the owner's word. Next migration **0093** (O5 pay applications with retainage).
+
+## Previous checkpoint — 2026-11-01: O4a construction schedule, daily reports and completed quantities, locally verified
+
+O4a on `codex/package-o4a-execution` (design `aa20810`, code `6afdbd7`, [O4a design](PACKAGE_O4A_DESIGN_2026-11-01.md), [O4a evidence](evidence/2026-11-01-o4a-execution/CHECKS.json)): O4 is split like O3; migration **0091** adds the schedule as insert-only versions of budget phases with planned site dates and finish-to-start dependencies (a dependency on itself or one closing a cycle is refused by the database), daily reports per site date with revisions (never after today in the site's time zone; crew lines, weather, notes and PNG/JPEG document versions as photos) and cumulative completed quantities per budget line, never above the contracted quantity and never dated before the line's latest measurement; a lower value is a correction with a note. The O2 approval guard is replaced: an approved removal never leaves a contract line below its completed quantity, and a measurement racing such an approval leaves one outcome after an observed `pg_locks` wait. Progress is derived per line, phase and total; a finished line is worth its contract value as O2 sums it, so a finished project's completed value equals the current contract sum (O-06). The schedule view shows conflicts (not blocked), the critical chain and phase progress. red-1 failed as intended (12); dev-1 65 passed on the first run. Slips, all in the record: the disk monitor stamps local time with a Z suffix, and an edit left one source file with CRLF line endings in the working copy (git stores LF; no effect on any result). Final gates (gates-1): static-1 PASS, focused-1 892 passed, full-1 2713 passed and 4 skipped. O3b CI run 41288503088 succeeded on 9557ae2. Readiness and enabling construction, transport and `main` wait for the owner's word. Next migration **0092** (O4b inspections, defects and the punch list).
+
+## Previous checkpoint — 2026-10-31: O3b construction actual costs, locally verified
+
+O3b on `codex/package-o3b-costs` (design `e02025e`, acceptance wording `9e78a2e`, code `c464df9`, [O3b design](PACKAGE_O3B_DESIGN_2026-10-31.md), [O3b evidence](evidence/2026-10-31-o3b-costs/CHECKS.json)): migration **0090** adds actual costs as links of existing facts to budget lines — a STOCK-01 write-off line at its valuation, a line of an issued FIN-03 payable invoice or manual accrual at its amount, or an approved WORK-01 time entry at worked time (breaks deducted) × a rate per hour entered with the link (WORK-01 has no labor rate), rounded half up. The database computes and rechecks the fact (`construction_cost_fact`), its branch (the project's), its currency (the project's), the amount, the budget line and that a fact counts on one link at a time across the company (`attempt` unique per fact); a reversal is one insert-only row per link, after which the fact may be linked again. The budget view adds actual, remaining and over-budget per line, phase and total beside committed; overruns are shown, not blocked. Two racing links of one fact and two racing reversals each leave one after an observed `pg_locks` wait. Slips, all in the record: red-1 failed for a test-fixture defect (lowercase material codes) and was repeated; full-1 had one browser timing failure under load (stock pagination), which passed alone; full-2 ran out of disk space (DiskFull, not code; npm cache cleaned on the owner's choice); focused-3 hit the open test_i4_browser defect. Final gates (gates-4): static-4 PASS, focused-4 880 passed, full-4 2701 passed and 4 skipped. O3a CI run 41217421527 succeeded on df6f84b. Readiness and enabling construction, transport and `main` wait for the owner's word. Next migration **0091** (O4 execution).
+
+## Previous checkpoint — 2026-10-31: O3a construction budget and commitments, locally verified
+
+O3a on `codex/package-o3a-budget` (design `a4ee9a5`, code `447ff4f`, [O3a design](PACKAGE_O3A_DESIGN_2026-10-31.md), [O3a evidence](evidence/2026-10-31-o3a-budget/CHECKS.json)): O3 is split in two (O3a budget and commitments, O3b actual costs). The budget is derived, never stored: the contract lines and the added lines of approved change orders, current quantity and cost after approved removals, grouped by phase in first-appearance order; its total equals the contract's current cost. Migration **0089** adds commitments: a `subcontract` (counterparty with the contractor role) or a `purchase_order` (supplier role), numbered per project, needs the contract; insert-only versions on the expected revision, each line naming one budget line once; a cancellation is final. Committed = the latest version of every open commitment; uncommitted and over-committed are shown per line and phase, an overrun is not blocked. Two racing revisions and two racing creations each resolve after an observed `pg_locks` wait. red-1 failed as intended (8); dev-1 46 passed; one record slip (generated record script did not compile because of an apostrophe; fixed and recorded). Gates-1: focused **870 passed**, full **2691 passed, 4 skipped**. O2 CI run 41134636738 success. Readiness and enabling construction, transport and `main` wait for the owner's word. Next migration **0090** (O3b actual costs).
+
+## Previous checkpoint — 2026-10-30: O2 construction contract and change orders, locally verified
+
+O2 on `codex/package-o2-contract` (design `489b842`, code `5ab928f`, [O2 design](PACKAGE_O2_DESIGN_2026-10-30.md), [O2 evidence](evidence/2026-10-30-o2-contract/CHECKS.json)): migration **0088** makes the accepted proposal the frozen original contract (only the latest proposed version; one per project; signatory, source `paper`/`email`, recorder); after it no estimate version is added and the customer stays; change orders are numbered, insert-only, with `add` lines and `remove` lines that name a contract line and never exceed what it holds after approved removals (a reprice is a remove and an add); one decision per change order (approved/rejected with the customer's source need `construction.approve`, withdrawn needs `construction.manage`); the current contract sum = original + approved changes, derived on read. Two racing approvals, an approval racing a withdrawal and two racing acceptances each leave one outcome after an observed `pg_locks` wait. red-1 failed as intended (10); dev-1 had one test slip (role `staff` is not a membership role; corrected, recorded). Gates-1: focused **862 passed**, full **2683 passed, 4 skipped**. O1 CI run 41122058137 success. Readiness and enabling construction, transport and `main` wait for the owner's word. Next migration **0089** (O3 budget and costs).
+
+## Previous checkpoint — 2026-10-30: O1 construction projects and estimate versions, locally verified
+
+Package O (BUILD-01, stage 4) started under the owner's full delegation: [plan](PACKAGE_O_PLAN_2026-10-30.md) `21f1a12`, [O1 design](PACKAGE_O1_DESIGN_2026-10-30.md) and ADR-0035 `54418e1`. O1 on `codex/package-o1-estimates` (code `b4bff00`, [O1 evidence](evidence/2026-10-30-o1-estimates/CHECKS.json)): module `construction` registered **implemented, not enableable** (depends on counterparties and finance documents; registry version 5); permissions `construction.read/manage/approve` for owners and managers (version 11, not delegated); migration **0087** keeps projects with one currency and a site time zone, insert-only estimate versions and lines with totals derived half up, and a one-time proposal stamp on the latest version; branch scope by the project's branch; a race of two saves on one base leaves one version after an observed `pg_locks` wait. red-1 failed as intended (no module); dev-1 had one test slip (expected 409 for a reused key, the platform answers 422; corrected, recorded). Gates-1: focused **852 passed**, full **2673 passed, 4 skipped**. Readiness and enabling construction, transport and `main` wait for the owner's word. Next migration **0088** (O2 contract and change orders).
+
+## Previous checkpoint — 2026-10-30: N8 fixes of the independent review of package N, locally verified
+
+N8 on `codex/package-n8-review-fixes` (code `b6cd7ef`, [N8 evidence](evidence/2026-10-30-n8-review-fixes/CHECKS.json), [package N acceptance record](evidence/2026-10-29-n7-acceptance/ACCEPTANCE.md)): with the owner's consent («Yes, run review») one read-only agent reviewed package N at `4861b85` and found RN-01..RN-09 (2 high, 5 medium, 2 low); each is fixed with a test that failed first — RN-01 the tender accrual draft is frozen; RN-02 a tendered trip is not re-planned; RN-03 a carrier never closes a shared stop; RN-04 no withdrawal or new rate version after the accrual; RN-05 a carrier answers at server time; RN-06 an unlinked carrier keeps its restriction; RN-07 a carrier reads only its own trips; RN-08 the margin never adds currencies; RN-09 a started trip is not tendered. N7 is now a true brokered flow (tenders before events, carrier A acts on the platform); N-09 is PARTIAL (keyboard-only not run). Migration **0086** (triggers only). Gates-5: focused **844 passed**, full **2665 passed, 4 skipped**; gates-1..4 failed and are recorded (mypy; vanished Playwright files, reinstalled on the owner's word; a crashed git call; the existing `test_i4_browser` "read ECONNRESET", passed alone and in gates-5, cause open). Readiness, enabling transport and `main` wait for the owner's word. Next migration **0087**.
+
+## Previous checkpoint — 2026-10-29: package N acceptance (N7), technically accepted locally; independent review open
+
+N7 on `codex/package-n7-acceptance` (code `08f519c`, [acceptance record](evidence/2026-10-29-n7-acceptance/ACCEPTANCE.md)): one end-to-end test of a brokered two-leg load through the API and PostgreSQL (no authority refused, a carrier without a profile refused, two carriers on two legs, a covered leg refuses a second acceptance, rate confirmation version 2 agreed with version 1 kept, stop events close the leg and a repeat changes nothing, each pay accrues once, margin 1500.00 − 900.00 − 450.00 = 150.00 with no margin column); the record maps TMS-01..03 and N-01..N-09 to proofs and limits. Gates-1 found an N6 defect (Save authority enabled before the authority was read, so a fast save sent revision 0); the button now waits for the read. Gates-2: focused **833 passed**, full **2654 passed, 4 skipped**. No migration. **The one independent review of package N waits for the owner's consent**; readiness, enabling transport and `main` wait for the owner's word. Next migration **0086**.
+
+## Previous checkpoint — 2026-10-28: N6 brokerage on the transport screens, locally verified
+
+N6 on `codex/package-n6-screens` (code `33fc82e`, [validation record](evidence/2026-10-28-n6-brokerage-screens/VALIDATION.md)): strict web contracts for the N1–N5 routes and brokerage panels on the transport screen for company-wide owners and managers — broker authority, carriers with eligibility in words, loads to cover, tenders with answers, rate confirmation versions, carrier pay and the order margin; a real-browser test on desktop and mobile. No migration. Dev and gates-1 failures kept in the record; gates-2: focused **832 passed**, full **2653 passed, 4 skipped**. A branch-limited member is covered by the page rule and the server refusal, not by a browser run. Readiness and enabling transport wait for the owner's word. Next migration **0086**.
+
+## Previous checkpoint — 2026-10-28: N5 carrier pay and margin, locally verified
+
+N5 on `codex/package-n5-carrier-pay` (code `5dd4700`, [validation record](evidence/2026-10-28-n5-carrier-pay/VALIDATION.md)): migration **0085** books one insert-only FIN-03 payable manual accrual per accepted tender with closed legs, for the rate confirmation in force (fixed or per mile); `GET orders/{order}/margin` derives the invoice total less the accrued pay of the order's own tenders, listing shared tenders without subtracting them. One dev failure kept in the record (the accrual kind); gates-1: focused **831 passed**, full **2652 passed, 4 skipped**. Readiness and enabling transport wait for the owner's word. Next migration **0086**.
+
+## Previous checkpoint — 2026-10-28: N4 carrier companies and tracking, locally verified
+
+N4 on `codex/package-n4-tracking` (code `cd301f1`, [validation record](evidence/2026-10-28-n4-carrier-companies/VALIDATION.md)): migration **0084** links a carrier to its own company on the platform in insert-only versions; that company's delegates answer the tenders and rate confirmations addressed to their carrier through a grant with `transport.tender` (source `platform`) and record stop events only on their accepted tendered legs. gates-1 failed once (a unit test listing the delegable rights; fixed; kept in the record); gates-2: focused **826 passed**, full **2647 passed, 4 skipped**. Readiness and enabling transport wait for the owner's word. Next migration **0085**.
+
+## Previous checkpoint — 2026-10-27: N3 rate confirmations, locally verified
+
+N3 on `codex/package-n3-rate-confirmations` (code `526189e`, [validation record](evidence/2026-10-27-n3-rate-confirmations/VALIDATION.md)): migration **0083** keeps rate confirmation versions of accepted tenders and the carrier's answers as insert-only facts; accepting a tender writes version 1, agreed; a change is in force only once the carrier agrees. gates-1 failed once (4 tests outside transport under load, passed alone; kept in the record); gates-2: focused **820 passed**, full **2641 passed, 4 skipped**. Not tested: a signed copy that is the business's own document; the backfill on accepted tenders. Readiness and enabling transport wait for the owner's word. Next migration **0084**.
+
+## Previous checkpoint — 2026-10-27: N2 tenders, locally verified
+
+`main` was fast-forwarded to `590a8f3` on the owner's word (2026-10-27): package M with its review fixes, the package N plan and N1. N2 on `codex/package-n2-tenders` (code `80183b5`, [validation record](evidence/2026-10-27-n2-tenders/VALIDATION.md)): migration **0082** keeps tenders of trip legs to other carriers and their answers as insert-only facts with a source; the state is derived; offering and accepting need an eligible broker and carrier on the local date; a leg has at most one accepted tender. gates-1 failed once (two upgrade tests lacked the new tables; kept in the record); gates-2: focused **814 passed**, full **2635 passed, 4 skipped**. Readiness and enabling transport wait for the owner's word. Next migration **0083**.
+
+## Previous checkpoint — 2026-10-26: package M review fixes, locally verified
 
 Review fixes on `codex/package-m-review-fixes` (code `44b8505`, [validation record](evidence/2026-10-26-m-review-fixes/VALIDATION.md)): all nine findings of the independent package M review are fixed. FIN-03 freezes transport drafts; a leg loaded short closes once its pickup is departed; migration **0081** keeps the loads of an invoiced order; money lines are bounded and exact (422); a concurrent pay component on the same id is compared; stop windows carry an end date; module text and grant label corrected. gates-1: focused **807 passed**, full **2628 passed, 4 skipped**. The `main` fast-forward (M6a..M8, the N plan, N1 and these fixes) is proposed to the owner and waits for their word, as do readiness and enabling transport. Next migration **0082**.
 

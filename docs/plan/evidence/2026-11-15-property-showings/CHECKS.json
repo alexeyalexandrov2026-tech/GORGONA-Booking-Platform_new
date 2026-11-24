@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "source_commit": "f267857c311a18f48ccf27149d13dde3969b85be",
+  "base": "63a721ec78cecca84ebe622f5bc49f15cebcb05c",
+  "migration": 114,
+  "status": "focused_verified",
+  "vm": {
+    "focused": "75 passed in 99.42s",
+    "commands": [
+      {
+        "name": "initdb",
+        "command": [
+          "/usr/lib/postgresql/18/bin/initdb",
+          "-D",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/focused-2/data",
+          "-U",
+          "gba_superuser",
+          "--pwfile=/home/gorgona/gba-runs/package-property-01-showings-20261115/focused-2/init-password.tmp",
+          "--auth=scram-sha-256",
+          "--locale=C",
+          "--encoding=UTF8",
+          "--data-checksums"
+        ],
+        "cwd": "/home/gorgona/gba-runs/package-property-01-showings-20261115/focused-2",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 1.03,
+        "log_sha256": "c3500b19fa21e0e10f236d72f09e2497fcd410c1cd96d9a770d785222f0834cb"
+      },
+      {
+        "name": "pg-start",
+        "command": [
+          "/usr/lib/postgresql/18/bin/pg_ctl",
+          "start",
+          "-D",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/focused-2/data",
+          "-l",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/focused-2/server.log",
+          "-w",
+          "-o",
+          "-p 42441 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-property-01-showings-20261115/focused-2"
+        ],
+        "cwd": "/home/gorgona/gba-runs/package-property-01-showings-20261115/focused-2",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 0.12,
+        "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+      },
+      {
+        "name": "focused",
+        "command": [
+          "/home/gorgona/gorgona/api/.venv/bin/python",
+          "-m",
+          "pytest",
+          "-p",
+          "no:cacheprovider",
+          "--basetemp",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/focused-2/focused-tmp",
+          "-q",
+          "-ra",
+          "--tb=short",
+          "--capture=tee-sys",
+          "--junitxml=/home/gorgona/gba-runs/package-property-01-showings-20261115/focused-2/focused.xml",
+          "tests/integration/test_property_showings.py",
+          "tests/integration/test_property_showings_upgrade.py",
+          "tests/integration/test_property_listings.py",
+          "tests/integration/test_resource_reservations.py",
+          "tests/integration/test_location_access.py",
+          "tests/integration/test_inventory_upgrade.py",
+          "tests/integration/test_stock_upgrade.py",
+          "tests/unit/test_migration_files.py",
+          "tests/unit/test_document_contracts.py"
+        ],
+        "cwd": "/home/gorgona/gorgona/api",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 101.14,
+        "log_sha256": "7a2a192b964623801b3b87b16261462370d8087c2ced01a032931edaf79b0cb4"
+      },
+      {
+        "name": "pg-stop",
+        "command": [
+          "/usr/lib/postgresql/18/bin/pg_ctl",
+          "stop",
+          "-D",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/focused-2/data",
+          "-m",
+          "fast",
+          "-w"
+        ],
+        "cwd": "/home/gorgona/gba-runs/package-property-01-showings-20261115/focused-2",
+        "exit_code": 0,
+        "required": false,
+        "seconds": 0.1,
+        "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+      }
+    ],
+    "static": {
+      "ruff_check": 0,
+      "ruff_format_check": 0,
+      "mypy": 0,
+      "python_files": 546
+    },
+    "evidence_directory": "/home/gorgona/gba-runs/package-property-01-showings-20261115"
+  },
+  "source_sha256": {
+    "api/src/gorgona_booking/api/app.py": "bfa5f63a8032b1d755628ae63b97e971443bb78cf21e32a255eeedcf2e427cd1",
+    "api/src/gorgona_booking/api/property_showings.py": "8be3fcdb1b4e109221a99e5a975bdba35cd1686da6d0c05f52baf9bf99114d19",
+    "api/src/gorgona_booking/api/salons.py": "413ece7e5f3e94bd25a57bb4dfe2e8570c6aa49ac6e2c45d55077a3481bb910a",
+    "api/src/gorgona_booking/business/property_showings.py": "d9e87cc32c8088d75243bbc3404c89c3e0bc2d27da045855f95335e9d8f72677",
+    "api/src/gorgona_booking/db/migrations/0114_property_showings.sql": "40bdfe8f88aaaee117389edb18e5a26aad7bf3b0c8c6e75d6542c9ee51d533ea",
+    "api/src/gorgona_booking/db/schema_guard.py": "a6db89edced093c782022c341cf633e389446acf59d47f98416c3ba67bbb3855",
+    "api/src/gorgona_booking/db/workforce_guard.py": "3157262104c36cc556a23c420608a35226dbe381e5016ca41cf177fa38cbd01d",
+    "api/src/gorgona_booking/occupancy/reservations.py": "aea2fcb340a8a050caf2841d0e32231e8fa9e315199c1d67fca989e50fa38310",
+    "api/tests/integration/test_h3_upgrade.py": "353b65707091ecab52755fadba97fb13b33b07a78bac1aaf2818d540e633b65e",
+    "api/tests/integration/test_inventory_upgrade.py": "dd1d4a4490637ca2a688467bd24d9a87bf79b1c2fd0bbea6a8732ae64ae32673",
+    "api/tests/integration/test_location_access.py": "4a6d2c1175587a93514db055d201f2c5535f51e96605fd9652b92de8c4171ac8",
+    "api/tests/integration/test_property_showings.py": "3bd73859b081d22736cd94b1f6acc6854d0bfa419ea028db8f1121b81bd49b80",
+    "api/tests/integration/test_property_showings_upgrade.py": "3fc65486b1aeb6fd18f8aee099f5ad9dc9885752639596473971f134e37e11b9",
+    "api/tests/integration/test_stock_upgrade.py": "bb23a786dd762a1d4639997931dd3365e1036d7bff2f93d6c238bedd7d1d26e5",
+    "api/tests/unit/test_document_contracts.py": "4529f5bdac9014cd9a1a31c0d6409a831576002a2f90f0ea579f5298f05fd699"
+  },
+  "baseline": "3 failures before the route existed",
+  "earlier_dev_failure": "SQL CASE parentheses, then shared workforce schema pins and legacy fixture copying",
+  "not_tested": [
+    "production",
+    "showings UI",
+    "public storefront"
+  ],
+  "compatibility": {
+    "source": "239ede0550d0a4f46f442e521601db0683ef659f",
+    "passed": "56 passed in 101.90s, including 6 Property catalog Chromium cases"
+  },
+  "review_fix": {
+    "source": "40e4a4761556ebaafe0c7ae60717f47e692dd66a",
+    "finding": "Customer and staff availability omitted confirmed showing allocations.",
+    "baseline": "availability-red-3: 1 expected failure with the occupied slot offered",
+    "focused": "32 passed in 51.16s",
+    "commands": [
+      {
+        "name": "initdb",
+        "command": [
+          "/usr/lib/postgresql/18/bin/initdb",
+          "-D",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/data",
+          "-U",
+          "gba_superuser",
+          "--pwfile=/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/init-password.tmp",
+          "--auth=scram-sha-256",
+          "--locale=C",
+          "--encoding=UTF8",
+          "--data-checksums"
+        ],
+        "cwd": "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 1.05,
+        "log_sha256": "5715e9f6f0e02d4403bd119a6d0b4f56f48a91a11921c9e40f812d076b67600b"
+      },
+      {
+        "name": "pg-start",
+        "command": [
+          "/usr/lib/postgresql/18/bin/pg_ctl",
+          "start",
+          "-D",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/data",
+          "-l",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/server.log",
+          "-w",
+          "-o",
+          "-p 47941 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green"
+        ],
+        "cwd": "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 0.12,
+        "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+      },
+      {
+        "name": "focused",
+        "command": [
+          "/home/gorgona/gorgona/api/.venv/bin/python",
+          "-m",
+          "pytest",
+          "-p",
+          "no:cacheprovider",
+          "--basetemp",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/focused-tmp",
+          "-q",
+          "-ra",
+          "--tb=short",
+          "--capture=tee-sys",
+          "--junitxml=/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/focused.xml",
+          "tests/integration/test_property_showings.py",
+          "tests/integration/test_customer_api.py",
+          "tests/integration/test_resource_reservations.py"
+        ],
+        "cwd": "/home/gorgona/gorgona/api",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 53.0,
+        "log_sha256": "148f30f91e1e25464d87bae3b545cdd5427ab8662b7f245129ea36e8789e68cb"
+      },
+      {
+        "name": "pg-stop",
+        "command": [
+          "/usr/lib/postgresql/18/bin/pg_ctl",
+          "stop",
+          "-D",
+          "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green/data",
+          "-m",
+          "fast",
+          "-w"
+        ],
+        "cwd": "/home/gorgona/gba-runs/package-property-01-showings-20261115/availability-green",
+        "exit_code": 0,
+        "required": false,
+        "seconds": 0.11,
+        "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+      }
+    ],
+    "source_sha256": {
+      "api/src/gorgona_booking/customer/queries.py": "536d3a6758cbc03f7a9bbdbefcf6bdaacd5310507936e4e398ed32b52b308e8d",
+      "api/tests/integration/test_property_showings.py": "61d7477a94c14290830a9fa2f0b89ab09b8af0b8073c234193caf6c76876db71"
+    },
+    "static": {
+      "ruff_check": 0,
+      "ruff_format_check": 0,
+      "mypy": 0,
+      "python_files": 546
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "source_commit": "2f8aaf6b68bc2cc82bfa4548f9d17162c9de70e8",
+  "base": "e79f11a8b35ea3052da5cee4f9cd1180652b91f9",
+  "run_host": "Grok Bot box (Debian 13, 8 CPU); not gorgona-dev",
+  "source_sha256": {
+    "api/tests/integration/test_property_browser.py": "0289e86f4d93bc8d44ac8dbea4260f289537d7e263120e0ec3a7b7fd83085619",
+    "web/tests/property.spec.ts": "d8d7f3538fc69d452fb46676026ec53beb5edd70ccc363d8abde65e99fe06263",
+    "web/components/property-lease.tsx": "a43c08656a0d5a1b21698fce4ebe034d90ce0f3983a3c7cd6b6877b96b446933",
+    "web/lib/property-api.ts": "38507209e880a73f7d153f005f202e3409c5006967ab4335146480994f9e524d",
+    "web/lib/property-contracts.ts": "cf65c0b7b7954a71b417fe4456d4a161426b44f651e22e2de4ff8d06df294985",
+    "api/src/gorgona_booking/api/property_leases.py": "68fbf11e5fecae7a43df0f3233f53cea017441cd105f3b5cb24beef3f77d67dd",
+    "api/src/gorgona_booking/business/property_lease_terms.py": "b680f4ab132de764869b0bf4ed9bb31eefcd64929ee91027ea2eebe3caae6902",
+    "api/src/gorgona_booking/business/property_move_in.py": "6b6a2042f4b67b37eb1aa697d9338e083e1a729bbfad279156f07f4ee8e9bb91"
+  },
+  "versions": {
+    "python": "3.14.10",
+    "pytest": "9.1.1",
+    "psycopg": "3.3.6",
+    "ruff": "0.16.9",
+    "mypy": "2.3.1",
+    "fastapi": "0.142.1",
+    "pydantic": "2.13.5",
+    "node": "24.22.1",
+    "next": "16.4.2",
+    "playwright": "1.63.0",
+    "postgres": "18.7 (pgdg13 binaries, max_connections=250)"
+  },
+  "checks": {
+    "baseline-static": {
+      "status": "PASS",
+      "commit": "e79f11a8b35ea3052da5cee4f9cd1180652b91f9",
+      "commands": [
+        "npm run typecheck",
+        "npm run lint",
+        "npm run format:check",
+        "npm run test:unit",
+        "uv run ruff format --check .",
+        "uv run ruff check .",
+        "uv run mypy",
+        "git diff --check 6a179d6 HEAD",
+        "npm run build"
+      ],
+      "outcome": "typecheck, lint, 179 web unit and contract tests (5.0s), Ruff format and check, mypy on 556 files, git diff --check and the web build passed. Prettier flagged only web/tests/property.spec.ts, which was being edited for this slice during the run; the committed file passes Prettier.",
+      "log_sha256": "b58eb163e7ddb9fbaeb48a3652f3374abf88138a54c4a2be0ed850dc0e350787"
+    },
+    "baseline-focused": {
+      "status": "PASS",
+      "commit": "e79f11a8b35ea3052da5cee4f9cd1180652b91f9",
+      "command": "uv run pytest tests/integration/test_property_leases.py tests/integration/test_property_lease_terms.py tests/integration/test_property_move_in.py -q",
+      "env": [
+        "GBA_REQUIRE_POSTGRES=1"
+      ],
+      "outcome": "25 passed in 40.86s",
+      "log_sha256": "6310dbd194d81b97026885e3b4fba0a2ce86465ec226966aea6f430312f9b5f6"
+    },
+    "baseline-browser": {
+      "status": "PASS",
+      "commit": "e79f11a8b35ea3052da5cee4f9cd1180652b91f9",
+      "command": "uv run pytest tests/integration/test_property_browser.py -q -s",
+      "env": [
+        "GBA_REQUIRE_POSTGRES=1",
+        "GBA_REQUIRE_BROWSER=1"
+      ],
+      "outcome": "1 passed in 49.56s; Playwright 10 passed (42.4s), desktop and mobile",
+      "log_sha256": "32f55f2ea03433d77c6b66cad7c210b2bbbd68087d1270e5c08fccb72f177766"
+    },
+    "release-browser": {
+      "status": "PASS",
+      "commit": "2f8aaf6b68bc2cc82bfa4548f9d17162c9de70e8",
+      "command": "uv run pytest tests/integration/test_property_browser.py -q -s",
+      "env": [
+        "GBA_REQUIRE_POSTGRES=1",
+        "GBA_REQUIRE_BROWSER=1"
+      ],
+      "outcome": "1 passed in 53.87s; Playwright 10 passed (47.0s). The lease scenario takes 9.2s on desktop and 10.5s on mobile.",
+      "log_sha256": "27796224ff64fb057e2fe0c9dc27c7b660c85a0e074dbfefe94022ebde730d43"
+    },
+    "release-static": {
+      "status": "PASS",
+      "commit": "2f8aaf6b68bc2cc82bfa4548f9d17162c9de70e8",
+      "commands": [
+        "uv run ruff format --check tests/integration/test_property_browser.py",
+        "uv run ruff check tests/integration/test_property_browser.py",
+        "npx prettier --check tests/property.spec.ts",
+        "npx eslint tests/property.spec.ts --max-warnings=0",
+        "npx tsc --noEmit",
+        "git diff --check"
+      ],
+      "outcome": "all exit 0"
+    }
+  }
+}

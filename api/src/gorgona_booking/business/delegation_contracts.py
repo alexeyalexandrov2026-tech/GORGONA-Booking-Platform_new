@@ -16,6 +16,10 @@ DelegablePermission = Literal[
     "transport.plan",
     "transport.assign",
     "transport.events",
+    "transport.tender",
+    "construction.customer_answer",
+    "rental.customer_answer",
+    "property.contractor_work",
 ]
 GrantStatus = Literal["pending", "active", "declined", "revoked"]
 
@@ -35,7 +39,7 @@ class DelegationIssue(_Versioned):
     """Owner terms. They never change after issue; new terms need a new grant."""
 
     servicer_business_id: UUID
-    permissions: tuple[DelegablePermission, ...] = Field(min_length=1, max_length=8)
+    permissions: tuple[DelegablePermission, ...] = Field(min_length=1, max_length=9)
     location_id: UUID | None
     expires_at: AwareDatetime
 

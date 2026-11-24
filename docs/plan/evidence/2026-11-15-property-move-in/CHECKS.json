@@ -1,0 +1,418 @@
+{
+  "schema_version": 1,
+  "source_commit": "41be1caabe50fe92e77f67f2350b46d3bd3e2276",
+  "base": "06054f8c911bc0177927f98a6a9335e4e3678433",
+  "red_commit": "2784be785904c6e88b8ed30bbfed73170c65d513",
+  "vm_run_directory": "/home/gorgona/gba-runs/package-property-01-move-in-20261115",
+  "source_sha256": {
+    "api/src/gorgona_booking/api/property_leases.py": "7c17c5f4ffd0f1b30f63dc22a92e99e10de2058fdabc583b9c3b1997c35d90c0",
+    "api/src/gorgona_booking/business/property_lease_terms.py": "b680f4ab132de764869b0bf4ed9bb31eefcd64929ee91027ea2eebe3caae6902",
+    "api/src/gorgona_booking/business/property_move_in.py": "6b6a2042f4b67b37eb1aa697d9338e083e1a729bbfad279156f07f4ee8e9bb91",
+    "api/src/gorgona_booking/db/migrations/0117_property_move_in.sql": "49e13cfd2ba8d3e4114f662f936fbd00eedf97c70a368c54ce6d5da0ad7155f2",
+    "api/src/gorgona_booking/db/schema_guard.py": "439d9b2b949598c35fcefd5ad7179094d37a25bc48fa41799624e866289dfb3e",
+    "api/tests/integration/test_inventory_upgrade.py": "630b6f7d3665d8b5e91d5684e7945fb094fe627373dc7379132afd0df7d1b9b2",
+    "api/tests/integration/test_location_access.py": "06fc110c744ab23ad2d1d9482b8a5a89a859062934926536ddf9e15067e3f240",
+    "api/tests/integration/test_property_move_in.py": "8e99299641cc7140a2af24ae63566bc711d89d8595011a53f51ba624308af790",
+    "api/tests/integration/test_property_move_in_upgrade.py": "d1f9a7ea63aae817bf59352b447df406503b90c712ed63c8fdd06e2af86726df",
+    "api/tests/integration/test_stock_upgrade.py": "c255a48056bacf6bd7d6eb51e7993dc0d5dbf9c30c346da1e1d2a978ad4f1d0f",
+    "api/tests/unit/test_document_contracts.py": "50c1d4585094a70de97f9223bae87d6ab6f63c011b252d5edfb0d23f6a45168c"
+  },
+  "versions": {
+    "pytest": "9.1.1",
+    "psycopg": "3.3.6",
+    "ruff": "0.16.9",
+    "mypy": "2.3.1",
+    "fastapi": "0.142.1",
+    "pydantic": "2.13.5",
+    "stripe": "16.0.0",
+    "postgres": "18.6"
+  },
+  "checks": {
+    "red": {
+      "status": "FAIL",
+      "expected": true,
+      "outcome": "Move-in PUT returned 404.",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "/usr/lib/postgresql/18/bin/initdb",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/red/data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=/home/gorgona/gba-runs/package-property-01-move-in-20261115/red/init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-move-in-20261115/red",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 1.04,
+          "log_sha256": "a6b6aafc3068f861fdcc59b05ce1d558cc550d89b57b0e968815d7f1fe5defaa"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "start",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/red/data",
+            "-l",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/red/server.log",
+            "-w",
+            "-o",
+            "-p 60237 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-property-01-move-in-20261115/red"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-move-in-20261115/red",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.12,
+          "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/red/focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=/home/gorgona/gba-runs/package-property-01-move-in-20261115/red/focused.xml",
+            "tests/integration/test_property_move_in.py"
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 1,
+          "required": true,
+          "seconds": 9.52,
+          "log_sha256": "cb3511338d1714f9ffff6e4224e155c76bff610e44dbc07eaed3ae423e8007c8"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "stop",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/red/data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-move-in-20261115/red",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.1,
+          "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+        }
+      ]
+    },
+    "photo_green": {
+      "status": "PASS",
+      "counts": {
+        "tests": 1,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "passed": 1,
+        "seconds": 7.531
+      },
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "/usr/lib/postgresql/18/bin/initdb",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/photo-green/data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=/home/gorgona/gba-runs/package-property-01-move-in-20261115/photo-green/init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-move-in-20261115/photo-green",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 1.03,
+          "log_sha256": "59802c5278a1f4cf2572f402e08c061adef2441058131769ca3ce1515e94416a"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "start",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/photo-green/data",
+            "-l",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/photo-green/server.log",
+            "-w",
+            "-o",
+            "-p 33997 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-property-01-move-in-20261115/photo-green"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-move-in-20261115/photo-green",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.12,
+          "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/photo-green/focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=/home/gorgona/gba-runs/package-property-01-move-in-20261115/photo-green/focused.xml",
+            "tests/integration/test_property_move_in.py"
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 9.1,
+          "log_sha256": "413016d6a723661ae2791771f00b1320d42a43840c297f6eda52bce32f1379d6"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "stop",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/photo-green/data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-move-in-20261115/photo-green",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.1,
+          "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+        }
+      ]
+    },
+    "focused": {
+      "status": "PASS",
+      "counts": {
+        "tests": 172,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "passed": 172,
+        "seconds": 241.481
+      },
+      "summary": "172 passed in 241.48s (0:04:01)",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "/usr/lib/postgresql/18/bin/initdb",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/gates-verified/data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=/home/gorgona/gba-runs/package-property-01-move-in-20261115/gates-verified/init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-move-in-20261115/gates-verified",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 1.1,
+          "log_sha256": "532ceabebee4cbcda9247ca7a8acaab0a28b57c0a659ca5ca9dac1930c97fefd"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "start",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/gates-verified/data",
+            "-l",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/gates-verified/server.log",
+            "-w",
+            "-o",
+            "-p 38039 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-property-01-move-in-20261115/gates-verified"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-move-in-20261115/gates-verified",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.12,
+          "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/gates-verified/focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=/home/gorgona/gba-runs/package-property-01-move-in-20261115/gates-verified/focused.xml",
+            "tests/integration/test_property_move_in.py",
+            "tests/integration/test_property_move_in_upgrade.py",
+            "tests/integration/test_property_lease_terms.py",
+            "tests/integration/test_property_lease_terms_upgrade.py",
+            "tests/integration/test_property_leases.py",
+            "tests/integration/test_property_leases_upgrade.py",
+            "tests/integration/test_property_catalog.py",
+            "tests/integration/test_property_listings.py",
+            "tests/integration/test_property_showings.py",
+            "tests/integration/test_property_browser.py",
+            "tests/integration/test_agreements.py",
+            "tests/integration/test_documents.py",
+            "tests/integration/test_location_access.py",
+            "tests/integration/test_inventory_upgrade.py",
+            "tests/integration/test_stock_upgrade.py",
+            "tests/integration/test_workforce_guards.py",
+            "tests/integration/test_r4c_rental_extensions.py",
+            "tests/integration/test_r4c_upgrade.py",
+            "tests/unit/test_document_contracts.py"
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 243.11,
+          "log_sha256": "a7b64d3523a57d69400ed12797cd9a02430aee587786ecf521f4f13eba0c9bd0"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "stop",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-move-in-20261115/gates-verified/data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-move-in-20261115/gates-verified",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.1,
+          "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+        }
+      ]
+    },
+    "unit": {
+      "status": "PASS",
+      "counts": {
+        "tests": 877,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "passed": 877,
+        "seconds": 27.757
+      },
+      "summary": "877 passed in 27.76s",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "tests/unit",
+        "--junitxml=/home/gorgona/gba-runs/package-property-01-move-in-20261115/unit-final.xml"
+      ],
+      "exit_code": 0
+    },
+    "static": [
+      {
+        "check": "ruff-check",
+        "exit_code": 0,
+        "command": [
+          ".venv/bin/ruff",
+          "check",
+          "."
+        ],
+        "stdout": "All checks passed!",
+        "stderr": ""
+      },
+      {
+        "check": "ruff-format",
+        "exit_code": 0,
+        "command": [
+          ".venv/bin/ruff",
+          "format",
+          "--check",
+          "."
+        ],
+        "stdout": "556 files already formatted",
+        "stderr": ""
+      },
+      {
+        "check": "mypy",
+        "exit_code": 0,
+        "command": [
+          ".venv/bin/mypy"
+        ],
+        "stdout": "Success: no issues found in 556 source files",
+        "stderr": ""
+      },
+      {
+        "check": "diff",
+        "exit_code": 0,
+        "command": [
+          "git",
+          "diff",
+          "--check"
+        ],
+        "stdout": "",
+        "stderr": ""
+      }
+    ],
+    "existing_property_browser": {
+      "status": "PASS",
+      "case": "test_property_catalog_real_browser",
+      "pytest_seconds": 38.633,
+      "playwright_scenarios": 8,
+      "playwright_elapsed": "34.7s",
+      "web_build": {
+        "files": 204,
+        "sha256": "608a136b30f703f775f175a235d66f8f60695a5d73426efe074cde7467c72898"
+      }
+    }
+  },
+  "review": {
+    "conduct": "Independent source review, with expanded PostgreSQL checks run by the primary agent.",
+    "outcome": "Company scope, immutable file references, complete photo set and lock ordering agreed."
+  },
+  "parent_ci": {
+    "id": 43773951063,
+    "head_sha": "06054f8c911bc0177927f98a6a9335e4e3678433",
+    "observed": "in_progress"
+  },
+  "screen_ci": {
+    "id": 43768123789,
+    "head_sha": "987c4ec9239a6f8a22491d3f3cb673a495d4e90e",
+    "observed": "success"
+  },
+  "unverified": [
+    "New terms and move-in UI workflows, package readiness, and production rollout.",
+    "The full Actions run for this commit at local verification time."
+  ]
+}

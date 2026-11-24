@@ -5,7 +5,7 @@ Roles come from server-side memberships and platform roles, never from token cla
 
 from enum import StrEnum
 
-PERMISSIONS_VERSION = 10
+PERMISSIONS_VERSION = 25
 
 
 class Permission(StrEnum):
@@ -37,6 +37,56 @@ class Permission(StrEnum):
     TRANSPORT_MANAGE = "transport.manage"
     # ADR-0034: broker authority and carrier profiles; owners and managers, not delegated (N1).
     TRANSPORT_BROKER = "transport.broker"
+    # N4: a carrier company's managers answer the tenders addressed to it, only through a grant.
+    TRANSPORT_TENDER = "transport.tender"
+    # ADR-0035 (package O): construction; owners and managers, not delegated.
+    CONSTRUCTION_READ = "construction.read"
+    CONSTRUCTION_MANAGE = "construction.manage"
+    CONSTRUCTION_APPROVE = "construction.approve"
+    CONSTRUCTION_CUSTOMER_ANSWER = "construction.customer_answer"
+    # ADR-0036 (package R): rental; owners and managers, not delegated.
+    RENTAL_READ = "rental.read"
+    RENTAL_MANAGE = "rental.manage"
+    RENTAL_APPROVE = "rental.approve"
+    RENTAL_CUSTOMER_ANSWER = "rental.customer_answer"
+    PROPERTY_READ = "property.read"
+    PROPERTY_MANAGE = "property.manage"
+    PROPERTY_CONTRACTOR_WORK = "property.contractor_work"
+    # ADR-0037 (REST-01): restaurant floor, service, kitchen and management; not delegated.
+    RESTAURANT_READ = "restaurant.read"
+    RESTAURANT_KITCHEN = "restaurant.kitchen"
+    RESTAURANT_SERVICE = "restaurant.service"
+    RESTAURANT_MANAGE = "restaurant.manage"
+    # ADR-0038 (PRO-01): legal matters, projects and recurring engagements; not delegated.
+    PROJECTS_READ = "projects.read"
+    PROJECTS_WORK = "projects.work"
+    PROJECTS_MANAGE = "projects.manage"
+    # ADR-0039 (SUPPLY-01): 3PL WMS, lots/serials, manufacturing and trade; not delegated.
+    SUPPLY_READ = "supply.read"
+    SUPPLY_WORK = "supply.work"
+    SUPPLY_MANAGE = "supply.manage"
+    # ADR-0040 (MARKET-01): business storefronts and marketplaces; not delegated.
+    MARKET_READ = "market.read"
+    MARKET_MANAGE = "market.manage"
+    # ADR-0041 (ENTERPRISE-01): corporate SSO lifecycle and group reporting; not delegated.
+    ENTERPRISE_READ = "enterprise.read"
+    ENTERPRISE_MANAGE = "enterprise.manage"
+    # ADR-0042 (SPECIAL-01): specialized venues workflows; not delegated.
+    SPECIAL_READ = "special.read"
+    SPECIAL_WORK = "special.work"
+    SPECIAL_MANAGE = "special.manage"
+    # ADR-0043 (SPECIAL-02): consent-gated clinical, vet and social care; not delegated.
+    CARE_READ = "care.read"
+    CARE_WORK = "care.work"
+    CARE_MANAGE = "care.manage"
+    # ADR-0044 (SPECIAL-03): assets, inspections, maintenance and incidents; not delegated.
+    ASSETS_READ = "assets.read"
+    ASSETS_WORK = "assets.work"
+    ASSETS_MANAGE = "assets.manage"
+    # ADR-0045 (SPECIAL-04): staffing, advisory, orgs and public admin; not delegated.
+    CIVIC_READ = "civic.read"
+    CIVIC_WORK = "civic.work"
+    CIVIC_MANAGE = "civic.manage"
     MEMBERS_MANAGE = "members.manage"
     MEMBERS_MANAGE_ADMINS = "members.manage_admins"
     SETTINGS_MANAGE = "settings.manage"
@@ -52,9 +102,25 @@ _STAFF = frozenset(
         Permission.CATALOG_READ,
         Permission.STAFF_READ,
         Permission.WORKFORCE_SELF,
+        Permission.RESTAURANT_READ,
+        Permission.RESTAURANT_KITCHEN,
+        Permission.PROJECTS_READ,
+        Permission.PROJECTS_WORK,
+        Permission.SUPPLY_READ,
+        Permission.SUPPLY_WORK,
+        Permission.MARKET_READ,
+        Permission.ENTERPRISE_READ,
+        Permission.SPECIAL_READ,
+        Permission.SPECIAL_WORK,
+        Permission.CARE_READ,
+        Permission.CARE_WORK,
+        Permission.ASSETS_READ,
+        Permission.ASSETS_WORK,
+        Permission.CIVIC_READ,
+        Permission.CIVIC_WORK,
     }
 )
-_FRONT_DESK = _STAFF | {Permission.BOOKING_WRITE}
+_FRONT_DESK = _STAFF | {Permission.BOOKING_WRITE, Permission.RESTAURANT_SERVICE}
 _MANAGER = _FRONT_DESK | {
     Permission.COUNTERPARTIES_READ,
     Permission.COUNTERPARTIES_MANAGE,
@@ -77,6 +143,27 @@ _MANAGER = _FRONT_DESK | {
     Permission.TRANSPORT_EVENTS,
     Permission.TRANSPORT_MANAGE,
     Permission.TRANSPORT_BROKER,
+    Permission.TRANSPORT_TENDER,
+    Permission.CONSTRUCTION_READ,
+    Permission.CONSTRUCTION_MANAGE,
+    Permission.CONSTRUCTION_APPROVE,
+    Permission.CONSTRUCTION_CUSTOMER_ANSWER,
+    Permission.RENTAL_READ,
+    Permission.RENTAL_MANAGE,
+    Permission.RENTAL_APPROVE,
+    Permission.RENTAL_CUSTOMER_ANSWER,
+    Permission.PROPERTY_READ,
+    Permission.PROPERTY_MANAGE,
+    Permission.PROPERTY_CONTRACTOR_WORK,
+    Permission.RESTAURANT_MANAGE,
+    Permission.PROJECTS_MANAGE,
+    Permission.SUPPLY_MANAGE,
+    Permission.MARKET_MANAGE,
+    Permission.ENTERPRISE_MANAGE,
+    Permission.SPECIAL_MANAGE,
+    Permission.CARE_MANAGE,
+    Permission.ASSETS_MANAGE,
+    Permission.CIVIC_MANAGE,
     Permission.MEMBERS_MANAGE,
     Permission.SETTINGS_MANAGE,
     Permission.READINESS_READ,
@@ -109,9 +196,18 @@ TRANSPORT_DELEGABLE = frozenset(
         Permission.TRANSPORT_PLAN,
         Permission.TRANSPORT_ASSIGN,
         Permission.TRANSPORT_EVENTS,
+        Permission.TRANSPORT_TENDER,
     }
 )
-DELEGABLE_PERMISSIONS = BOOKING_DELEGABLE | TRANSPORT_DELEGABLE
+DELEGABLE_PERMISSIONS = (
+    BOOKING_DELEGABLE
+    | TRANSPORT_DELEGABLE
+    | {
+        Permission.CONSTRUCTION_CUSTOMER_ANSWER,
+        Permission.RENTAL_CUSTOMER_ANSWER,
+        Permission.PROPERTY_CONTRACTOR_WORK,
+    }
+)
 
 # What a platform admin may do inside a salon it is not a member of: read-only support.
 PLATFORM_SUPPORT_PERMISSIONS = frozenset(

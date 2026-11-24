@@ -1,0 +1,142 @@
+/* REST-01 Slice 5: Restaurant workspace styles (desktop + mobile 390px, zero horizontal scroll). */
+.restaurant-screen {
+  max-width: 100%;
+}
+
+.restaurant-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 20px;
+  border-bottom: 1px solid var(--border-subtle, #d4d4d8);
+  padding-bottom: 10px;
+}
+
+.restaurant-tab {
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle, #cbd5e1);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.restaurant-tab:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.restaurant-tab[aria-selected="true"] {
+  background: #1e293b;
+  color: #ffffff;
+  border-color: #1e293b;
+}
+
+.restaurant-tab[aria-selected="true"]:hover {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.restaurant-panel {
+  display: grid;
+  gap: 24px;
+}
+
+.restaurant-card {
+  border: 1px solid var(--border-subtle, #d4d4d8);
+  border-radius: 8px;
+  padding: 16px;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.restaurant-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 12px 16px;
+  margin-top: 12px;
+}
+
+.restaurant-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-inline-size: 0;
+  font-size: 0.9rem;
+}
+
+.restaurant-form-grid input,
+.restaurant-form-grid select,
+.restaurant-form-grid textarea {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle, #94a3b8);
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.restaurant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.restaurant-actions button {
+  min-height: 40px;
+  padding: 6px 12px;
+}
+
+.restaurant-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.restaurant-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.restaurant-table th,
+.restaurant-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+  vertical-align: top;
+}
+
+.restaurant-station-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.restaurant-ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.restaurant-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 10px 16px;
+  margin: 12px 0 0;
+}
+
+.restaurant-facts dt {
+  font-weight: 600;
+}
+
+.restaurant-facts dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}

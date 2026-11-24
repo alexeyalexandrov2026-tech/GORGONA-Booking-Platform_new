@@ -21,6 +21,8 @@ DOCUMENTS_MODULE = "documents"
 FINANCE_MODULE = "finance"
 INVENTORY_MODULE = "inventory"
 TRANSPORT_MODULE = "transport"
+CONSTRUCTION_MODULE = "construction"
+RENTAL_MODULE = "rental"
 
 
 def _disabled(module_id: str) -> ModuleDisabledError:

@@ -114,6 +114,8 @@ async def _check_resources(
         )
     if not all(row[2] for row in rows):
         raise ResourceUnavailableError("An inactive resource cannot be reserved")
+    if any(row[3] == "property_object" for row in rows):
+        raise ResourceUnavailableError("Property objects are reserved only by showings")
     if any(row[3] == "staff" for row in rows):
         raise ResourceUnavailableError("Workforce resources are reserved only by shifts")
     if any(row[3] in ("driver", "truck", "trailer") for row in rows):

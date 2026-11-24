@@ -1,0 +1,92 @@
+{
+  "package": "PROPERTY-01",
+  "slice": "Step 5c/6 UI: maintenance lifecycle, contractor work-order portal and move-out UI",
+  "date": "2026-11-20",
+  "branch": "codex/package-property-01-maintenance-ui",
+  "base_commit": "f2a43062dc4f279b25ac29dc745daad07a623897",
+  "code_commit": "46f7f3db3b1998c75a11e204232b3ba92cc31325",
+  "code_tree": "78c161950f965aa39b39f1307a6284db8a1359cc",
+  "migration": null,
+  "readiness_registry_changed": false,
+  "property_enableable": false,
+  "checks": {
+    "web_typecheck": {
+      "status": "PASS",
+      "command": "npm run typecheck"
+    },
+    "web_lint": {
+      "status": "PASS",
+      "command": "npm run lint"
+    },
+    "web_format_check": {
+      "status": "PASS",
+      "command": "npm run format:check"
+    },
+    "web_unit": {
+      "status": "PASS",
+      "command": "npm run test:unit",
+      "passed": 195,
+      "failed": 0
+    },
+    "web_build": {
+      "status": "PASS",
+      "command": "npm run build",
+      "static_pages": 37,
+      "routes_added": [
+        "/property/contractor"
+      ]
+    },
+    "api_ruff_check": {
+      "status": "PASS",
+      "command": ".venv/bin/ruff check src tests"
+    },
+    "api_ruff_format": {
+      "status": "PASS",
+      "command": ".venv/bin/ruff format --check src tests",
+      "files": 593
+    },
+    "api_mypy": {
+      "status": "PASS",
+      "command": ".venv/bin/mypy src tests",
+      "files": 593
+    },
+    "api_unit": {
+      "status": "PASS",
+      "command": ".venv/bin/pytest tests/unit -q",
+      "passed": 906,
+      "failed": 0
+    },
+    "focused_real_browser": {
+      "status": "PASS",
+      "tests": [
+        "tests/integration/test_property_browser.py (desktop + mobile, axe, PG read-back)",
+        "tests/integration/test_property_maintenance_browser.py (desktop + mobile, axe, keyboard, OIDC, idempotency retry, single-assignment isolation, branch read-only, PG read-back)"
+      ]
+    },
+    "full_parallel_suite": {
+      "status": "PASS",
+      "command": "uv run --locked python -m tools.run_parallel_tests --workers 6",
+      "expected_tests": 3014,
+      "executed_tests": 3014,
+      "unique_tests": 3014,
+      "duplicates": 0,
+      "passed": 3010,
+      "failed": 0,
+      "skipped": 4,
+      "count_ok": true,
+      "wall_seconds": 1173.61,
+      "browser_passed": 47,
+      "serial_passed": 216,
+      "skips": [
+        "tests.integration.test_tenant_site_embedding::test_tenant_site_embeds_the_real_wizard (GBA_REQUIRE_TENANT_SITE=1)",
+        "tests.container.test_container_image::test_migration_job_is_explicit_and_idempotent (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_image_runs_non_root_without_baked_secrets (GBA_REQUIRE_CONTAINER=1)",
+        "tests.container.test_container_image::test_api_container_serves_health_web_and_a_real_booking (GBA_REQUIRE_CONTAINER=1)"
+      ]
+    }
+  },
+  "open_scope": [
+    "Step 2d/4/6b: public tenant screening, security deposit custody/withholding, and owner accounting/settlement rules (regulated / owner-decision scope)",
+    "GitHub Actions exact-SHA CI pending push"
+  ]
+}

@@ -13,7 +13,21 @@ const configSchema = z.object({
 });
 export type AuthConfig = z.infer<typeof configSchema>;
 let managerPromise: Promise<UserManager | null> | null = null;
-let callbackPromise: Promise<void> | null = null;
+let callbackPromise: Promise<string> | null = null;
+
+function localReturnPath(value: unknown): string | undefined {
+  if (typeof value !== "string" || !value.startsWith("/")) return undefined;
+  try {
+    const target = new URL(value, window.location.origin);
+    if (
+      target.origin === window.location.origin &&
+      !target.pathname.startsWith("//")
+    )
+      return target.pathname + target.search + target.hash;
+  } catch {
+    return undefined;
+  }
+}
 
 function validateConfig(value: unknown): AuthConfig | null {
   const parsed = configSchema.safeParse(value);
@@ -99,11 +113,11 @@ export async function accessToken(): Promise<string | null> {
   return user.access_token;
 }
 
-export async function signIn(): Promise<void> {
+export async function signIn(returnPath?: string): Promise<void> {
   const manager = await authManager();
   if (!manager)
     throw new Error("Staff sign-in is not configured for this environment.");
-  await manager.signinRedirect();
+  await manager.signinRedirect({ state: localReturnPath(returnPath) });
 }
 
 export async function signOut(): Promise<void> {
@@ -118,16 +132,17 @@ export async function signOut(): Promise<void> {
   }
 }
 
-export function completeSignIn(): Promise<void> {
+export function completeSignIn(): Promise<string> {
   callbackPromise ??= (async () => {
     const manager = await authManager();
     if (!manager)
       throw new Error("Staff sign-in is not configured for this environment.");
     const callbackUrl = window.location.href;
     history.replaceState(null, "", "/auth/callback/");
-    await manager.signinRedirectCallback(callbackUrl);
+    const user = await manager.signinRedirectCallback(callbackUrl);
     if (!(await accessToken()))
       throw new Error("No valid access token was returned.");
+    return localReturnPath(user.state) ?? "/overview/";
   })();
   return callbackPromise;
 }

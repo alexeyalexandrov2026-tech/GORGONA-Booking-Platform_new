@@ -1,0 +1,7 @@
+/* R8a (package R): the rental screens; the shared management styles do the rest. */
+.rental-screen section {
+  margin-top: 28px;
+}
+.rental-screen form {
+  margin-top: 12px;
+}

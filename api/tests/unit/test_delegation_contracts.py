@@ -57,6 +57,26 @@ def test_terms_are_canonical() -> None:
     assert body.permissions == ("booking.read", "booking.write")
 
 
+def test_combined_booking_transport_and_customer_access_fits_the_current_database_limit() -> None:
+    permissions = [
+        "booking.read",
+        "booking.write",
+        "catalog.read",
+        "staff.read",
+        "transport.read",
+        "transport.plan",
+        "transport.assign",
+        "transport.events",
+        "construction.customer_answer",
+    ]
+    body = DelegationIssue.model_validate({**_ISSUE, "permissions": permissions})
+    assert body.permissions == tuple(sorted(permissions))
+    with pytest.raises(ValidationError):
+        DelegationIssue.model_validate(
+            {**_ISSUE, "permissions": [*permissions, "transport.tender"]}
+        )
+
+
 @pytest.mark.parametrize(
     "changes",
     [
@@ -81,7 +101,7 @@ def test_duplicate_delegates_are_rejected() -> None:
         )
 
 
-def test_only_booking_and_dispatch_work_is_delegable() -> None:
+def test_delegable_permissions_are_limited_to_named_actions() -> None:
     # ADR-0031: a carrier's dispatcher works by transport action; fleet registration never.
     assert {
         Permission.BOOKING_READ,
@@ -92,6 +112,11 @@ def test_only_booking_and_dispatch_work_is_delegable() -> None:
         Permission.TRANSPORT_PLAN,
         Permission.TRANSPORT_ASSIGN,
         Permission.TRANSPORT_EVENTS,
+        # N4: a carrier company's answers to the tenders addressed to it.
+        Permission.TRANSPORT_TENDER,
+        Permission.CONSTRUCTION_CUSTOMER_ANSWER,
+        Permission.RENTAL_CUSTOMER_ANSWER,
+        Permission.PROPERTY_CONTRACTOR_WORK,
     } == DELEGABLE_PERMISSIONS
     for never in (
         Permission.BUSINESS_READ,
@@ -103,6 +128,10 @@ def test_only_booking_and_dispatch_work_is_delegable() -> None:
         Permission.SETTINGS_MANAGE,
         Permission.READINESS_READ,
         Permission.TRANSPORT_MANAGE,
+        Permission.TRANSPORT_BROKER,
+        Permission.CONSTRUCTION_APPROVE,
+        Permission.RENTAL_MANAGE,
+        Permission.RENTAL_APPROVE,
     ):
         assert never not in DELEGABLE_PERMISSIONS
     # Every delegable permission is one a servicer role can hold; the role still limits it.
@@ -126,7 +155,7 @@ def test_delegated_handlers_must_support_location_scope() -> None:
         asyncio.run(misuse())
 
 
-def test_delegated_routes_are_exactly_the_booking_workspace() -> None:
+def test_delegated_routes_are_limited_to_the_booking_and_customer_workspaces() -> None:
     # Any new delegated route needs an explicit review; settings, clients, audit and
     # staff/catalog changes stay with the owner business.
     delegated = {
@@ -150,4 +179,44 @@ def test_delegated_routes_are_exactly_the_booking_workspace() -> None:
             'get("/salons/{salon_id}/staff/{resource_id}/schedule"',
             'get("/salons/{salon_id}/bookings/{booking_id}"',
         }
+    }
+    assert {
+        block.split(")", 1)[0]
+        for block in (Path(salons.__file__).parent / "construction.py")
+        .read_text(encoding="utf-8")
+        .split("@router.")[1:]
+        if "async with _customer_grant(" in block
+    } == {
+        'get("/projects/{project_id}/customer-proposal/{grant_id}"',
+        'post("/projects/{project_id}/customer-proposal/{grant_id}"',
+        'get("/projects/{project_id}/change-orders/{number}/customer-answer/{grant_id}"',
+        'post("/projects/{project_id}/change-orders/{number}/customer-answer/{grant_id}"',
+        'get("/projects/{project_id}/customer-acceptance/{grant_id}"',
+        'post("/projects/{project_id}/customer-acceptance/{grant_id}"',
+    }
+
+    assert {
+        block.split(")", 1)[0]
+        for block in (Path(salons.__file__).parent / "rental.py")
+        .read_text(encoding="utf-8")
+        .split("@router.")[1:]
+        if "async with _customer_grant(" in block
+    } == {
+        'get("/bookings/{booking_id}/customer-proposal/{grant_id}"',
+        'post("/bookings/{booking_id}/customer-proposal/{grant_id}"',
+        'get("/bookings/{booking_id}/customer-changes/{revision}/{grant_id}"',
+        'post("/bookings/{booking_id}/customer-changes/{revision}/{grant_id}"',
+        'get("/bookings/{booking_id}/customer-problems/{grant_id}"',
+        'post("/bookings/{booking_id}/customer-problems/{grant_id}"',
+    }
+
+    assert {
+        block.split(")", 1)[0]
+        for block in (Path(salons.__file__).parent / "property_maintenance.py")
+        .read_text(encoding="utf-8")
+        .split("@router.")[1:]
+        if "async with _contractor_grant(" in block
+    } == {
+        'get("/{request_id}/contractor-work/{grant_id}"',
+        'post("/{request_id}/contractor-work/{grant_id}/updates"',
     }

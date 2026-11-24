@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "source_commit": "01077e96c36d58b0d652edd95b6bdeca5f581149",
+  "base": "987c4ec9239a6f8a22491d3f3cb673a495d4e90e",
+  "source_sha256": {
+    "api/src/gorgona_booking/api/app.py": "b6566ce3cc62b0dbc5c606e159105e521d20e4110e096fb716da809a66e3dda4",
+    "api/src/gorgona_booking/api/property_leases.py": "8f87ebfa08c7c7aff7f82abfe5251e39a9f59fabc734c5e3ff0a700de8ebf3eb",
+    "api/src/gorgona_booking/business/property_leases.py": "9d0b969e5a796f18ed11c21400b1ae2b24c146b2ae3fa3a0acd73148727f896a",
+    "api/src/gorgona_booking/db/migrations/0115_property_leases.sql": "11e8b3eaa7b22b0ba6a237a771451f6ebe0328275918e4f9eb84ec8ecc0d4b2e",
+    "api/src/gorgona_booking/db/schema_guard.py": "464ba63008de0f0c346fb63373901f35ba361f0f38263a00d8125a39f5d1929c",
+    "api/tests/integration/test_inventory_upgrade.py": "8ce17c9b9d026a7d66dec55cadc1811baa5f0ed7153436a26d02d244f65d162f",
+    "api/tests/integration/test_location_access.py": "62e81fba3e0c2f556c2c20ac06ad570e09d36143890ae398e3632b055382a490",
+    "api/tests/integration/test_property_leases.py": "c2c4264bd6819e88f1164e34906a0307c75485ffeb68563815fe3cbb5e066777",
+    "api/tests/integration/test_property_leases_upgrade.py": "23cc5dd6d06ab822629a90f92fa7f486e834e8a749f3e91a1cb0f6d1341fe1cf",
+    "api/tests/integration/test_stock_upgrade.py": "2395ff4f206b03970d78ebaf37087ccd73e61cb5841fea1090f1d240f5f06a75",
+    "api/tests/unit/test_document_contracts.py": "dfa33f14a41544b0faea26a9b8d6d005f50ac0dd34a98adefbc2cd2f0412e12f"
+  },
+  "vm_run_directory": "/home/gorgona/gba-runs/package-property-01-leases-20261115",
+  "versions": {
+    "pytest": "9.1.1",
+    "psycopg": "3.3.6",
+    "ruff": "0.16.9",
+    "mypy": "2.3.1",
+    "fastapi": "0.142.1",
+    "pydantic": "2.13.5",
+    "stripe": "16.0.0",
+    "postgres": "18.6"
+  },
+  "pre_change": {
+    "status": "FAIL",
+    "expected": true,
+    "observed": "The signed lease API route returned 404.",
+    "check": {
+      "name": "focused",
+      "command": [
+        "/home/gorgona/gorgona/api/.venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "/home/gorgona/gba-runs/package-property-01-leases-20261115/red/focused-tmp",
+        "-q",
+        "-ra",
+        "--tb=short",
+        "--capture=tee-sys",
+        "--junitxml=/home/gorgona/gba-runs/package-property-01-leases-20261115/red/focused.xml",
+        "tests/integration/test_property_leases.py"
+      ],
+      "cwd": "/home/gorgona/gorgona/api",
+      "exit_code": 1,
+      "required": true,
+      "seconds": 9.52,
+      "log_sha256": "3f35cde508ae644338200cc6719a828917c1e6c088668f4507ad50ca039889c1"
+    }
+  },
+  "checks": {
+    "focused": {
+      "status": "PASS",
+      "counts": {
+        "tests": 148,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 148,
+        "seconds": 224.903
+      },
+      "summary": "148 passed in 224.90s (0:03:44)",
+      "steps": [
+        {
+          "name": "initdb",
+          "command": [
+            "/usr/lib/postgresql/18/bin/initdb",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-leases-20261115/gates-final/data",
+            "-U",
+            "gba_superuser",
+            "--pwfile=/home/gorgona/gba-runs/package-property-01-leases-20261115/gates-final/init-password.tmp",
+            "--auth=scram-sha-256",
+            "--locale=C",
+            "--encoding=UTF8",
+            "--data-checksums"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-leases-20261115/gates-final",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 1.64,
+          "log_sha256": "46662e2655d43546718b5f653788a6e2f8a6343dd68800ec14c72f000b1407d0"
+        },
+        {
+          "name": "pg-start",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "start",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-leases-20261115/gates-final/data",
+            "-l",
+            "/home/gorgona/gba-runs/package-property-01-leases-20261115/gates-final/server.log",
+            "-w",
+            "-o",
+            "-p 57387 -c max_connections=400 -c listen_addresses=127.0.0.1 -c unix_socket_directories=/home/gorgona/gba-runs/package-property-01-leases-20261115/gates-final"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-leases-20261115/gates-final",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 0.12,
+          "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+        },
+        {
+          "name": "focused",
+          "command": [
+            "/home/gorgona/gorgona/api/.venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "--basetemp",
+            "/home/gorgona/gba-runs/package-property-01-leases-20261115/gates-final/focused-tmp",
+            "-q",
+            "-ra",
+            "--tb=short",
+            "--capture=tee-sys",
+            "--junitxml=/home/gorgona/gba-runs/package-property-01-leases-20261115/gates-final/focused.xml",
+            "tests/integration/test_property_leases.py",
+            "tests/integration/test_property_leases_upgrade.py",
+            "tests/integration/test_property_catalog.py",
+            "tests/integration/test_property_listings.py",
+            "tests/integration/test_property_showings.py",
+            "tests/integration/test_agreements.py",
+            "tests/integration/test_documents.py",
+            "tests/integration/test_location_access.py",
+            "tests/integration/test_inventory_upgrade.py",
+            "tests/integration/test_stock_upgrade.py",
+            "tests/integration/test_workforce_guards.py",
+            "tests/unit/test_document_contracts.py"
+          ],
+          "cwd": "/home/gorgona/gorgona/api",
+          "exit_code": 0,
+          "required": true,
+          "seconds": 226.99,
+          "log_sha256": "1b496744d39d6e58f9dd70628201c5916a565ed0309f0d84284069ea575d052a"
+        },
+        {
+          "name": "pg-stop",
+          "command": [
+            "/usr/lib/postgresql/18/bin/pg_ctl",
+            "stop",
+            "-D",
+            "/home/gorgona/gba-runs/package-property-01-leases-20261115/gates-final/data",
+            "-m",
+            "fast",
+            "-w"
+          ],
+          "cwd": "/home/gorgona/gba-runs/package-property-01-leases-20261115/gates-final",
+          "exit_code": 0,
+          "required": false,
+          "seconds": 0.11,
+          "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+        }
+      ]
+    },
+    "unit": {
+      "status": "PASS",
+      "counts": {
+        "tests": 877,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 877,
+        "seconds": 48.432
+      },
+      "summary": "877 passed in 48.43s",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "tests/unit",
+        "--junitxml=/home/gorgona/gba-runs/package-property-01-leases-20261115/unit-final.xml"
+      ],
+      "exit_code": 0
+    },
+    "static": [
+      {
+        "check": "ruff-check",
+        "command": [
+          ".venv/bin/ruff",
+          "check",
+          "."
+        ],
+        "exit_code": 0,
+        "stdout": "All checks passed!",
+        "stderr": ""
+      },
+      {
+        "check": "ruff-format",
+        "command": [
+          ".venv/bin/ruff",
+          "format",
+          "--check",
+          "."
+        ],
+        "exit_code": 0,
+        "stdout": "550 files already formatted",
+        "stderr": ""
+      },
+      {
+        "check": "mypy",
+        "command": [
+          ".venv/bin/mypy"
+        ],
+        "exit_code": 0,
+        "stdout": "Success: no issues found in 550 source files",
+        "stderr": ""
+      },
+      {
+        "check": "diff",
+        "command": [
+          "git",
+          "diff",
+          "--check"
+        ],
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    ]
+  },
+  "review": {
+    "finding": "A repeatable-read snapshot can precede a superseding agreement event.",
+    "resolution": "Require READ COMMITTED before lease validation takes the agreement lock.",
+    "verification": "test_registration_requires_read_committed"
+  },
+  "parent_screen_ci": {
+    "run_id": 43768123789,
+    "head_sha": "987c4ec9239a6f8a22491d3f3cb673a495d4e90e",
+    "observed": "in_progress"
+  },
+  "unverified": [
+    "PROPERTY-01 readiness, module enablement and production deployment",
+    "Lease amendments, term extensions, early release, move-in and occupancy handover",
+    "A lease operations browser workflow",
+    "Full GitHub Actions result for the lease branch at local verification time"
+  ]
+}

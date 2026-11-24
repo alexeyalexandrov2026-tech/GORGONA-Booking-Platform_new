@@ -1,0 +1,13 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.10, pytest-9.1.1, pluggy-1.6.0 -- /home/gorgona/gorgona-ops-04/api/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/gorgona/gorgona-ops-04/api
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collecting ... collected 3 items
+
+tests/container/test_container_image.py::test_migration_job_is_explicit_and_idempotent PASSED [ 33%]
+tests/container/test_container_image.py::test_image_runs_non_root_without_baked_secrets PASSED [ 66%]
+tests/container/test_container_image.py::test_api_container_serves_health_web_and_a_real_booking PASSED [100%]
+
+============================== 3 passed in 23.85s ==============================

@@ -25,16 +25,11 @@ def test_load_baseline_reports_latency_and_single_contention_winner(
     world: BookingWorld, owner_conn: psycopg.Connection, test_database: ProvisionedDatabase
 ) -> None:
     port = free_port()
-    host = f"127.0.0.1:{port}"
     seed_customer_setup(owner_conn, world)
-    with owner_tenant_transaction(owner_conn, world.a.tenant_id):
-        owner_conn.execute(
-            "insert into gba.tenant_hosts (host, tenant_id) values (%s, %s)",
-            (host, world.a.tenant_id),
-        )
     app = create_app(Settings(environment="test", database_url=SecretStr(test_database.app_dsn)))
     args = load_baseline.parse_args(
-        ["--base-url", f"http://{host}", "--day", customer_day(), "--concurrency", "4",
+        ["--base-url", f"http://127.0.0.1:{port}", "--host", world.a.host,
+         "--day", customer_day(), "--concurrency", "4",
          "--duration", "1.5", "--contenders", "6", "--bookings", "4"]
     )  # fmt: skip
     with live_server(app, port):

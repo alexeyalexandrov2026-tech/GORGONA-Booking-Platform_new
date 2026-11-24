@@ -1,7 +1,16 @@
+import { specializedResponseSchema } from "./specialized-contracts";
+import { enterpriseResponseSchema } from "./enterprise-contracts";
+import { marketResponseSchema } from "./market-contracts";
+import { supplyResponseSchema } from "./supply-contracts";
+import { projectsResponseSchema } from "./projects-contracts";
 import { z } from "zod";
 import { ledgerResponseSchema } from "./ledger-contracts";
 import { inventoryResponseSchema } from "./inventory-contracts";
 import { transportResponseSchema } from "./transport-contracts";
+import { constructionResponseSchema } from "./construction-contracts";
+import { propertyResponseSchema } from "./property-contracts";
+import { restaurantResponseSchema } from "./restaurant-contracts";
+import { rentalResponseSchema } from "./rental-contracts";
 import {
   creditSchema,
   financialResponseSchema,
@@ -393,6 +402,24 @@ export function managementResponseSchema(
     if (workforce) return workforce;
     const transport = transportResponseSchema(business[1] ?? "", method);
     if (transport) return transport;
+    const construction = constructionResponseSchema(business[1] ?? "", method);
+    if (construction) return construction;
+    const rental = rentalResponseSchema(business[1] ?? "", method);
+    if (rental) return rental;
+    const property = propertyResponseSchema(business[1] ?? "", method);
+    if (property) return property;
+    const restaurant = restaurantResponseSchema(business[1] ?? "", method);
+    if (restaurant) return restaurant;
+    const projects = projectsResponseSchema(business[1] ?? "", method);
+    if (projects) return projects;
+    const supply = supplyResponseSchema(business[1] ?? "", method);
+    if (supply) return supply;
+    const market = marketResponseSchema(business[1] ?? "", method);
+    if (market) return market;
+    const enterprise = enterpriseResponseSchema(business[1] ?? "", method);
+    if (enterprise) return enterprise;
+    const specialized = specializedResponseSchema(business[1] ?? "", method);
+    if (specialized) return specialized;
     if (business[1] === "" && method === "GET") return businessSchema;
     if (business[1] === "/industry-catalog" && method === "GET")
       return industryCatalogSchema;

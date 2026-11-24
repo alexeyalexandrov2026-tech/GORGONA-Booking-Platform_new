@@ -480,7 +480,7 @@ export function Ledger({
             <summary>Chart of accounts ({accounts.length} loaded)</summary>
             <section aria-label="Chart of accounts">
               <h2>Chart of accounts</h2>
-              <div className="mgmt-table-container">
+              <div className="mgmt-table-container" tabIndex={0}>
                 <table className="mgmt-table">
                   <caption>Accounts · book version {book.revision}</caption>
                   <thead>

@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "source_commit": "1d325c0ecdcd7f40aa65adbdd37fe367b02d1d97",
+  "base": "1e8d6f601cf3e8521e5113b11f9e82e8a1e4d66e",
+  "status": "focused_verified",
+  "source_sha256": {
+    "api/tests/integration/test_property_browser.py": "168b4ff39d2251721804d7ae0c024ab4e99ce35b0ba5a23963a9217913e32333",
+    "api/tests/integration/test_workforce_guards.py": "9a4232490f480064bbebca8059d7e9e153b2a95640f797906ab9e3ba3ef1cd3f",
+    "web/app/property.css": "0a628862b15d63faadc942e6d2b1a07da9fe661a51a93f645f0670ec7dcff39d",
+    "web/components/property-operations.tsx": "fc515237feeec24cba82896857d40be07fbab604202da97a6441a0ee5db7652a",
+    "web/components/property.tsx": "1878f5f672c40163848519a95142ddb9993292d787f852f088d0bc6f1aff8f09",
+    "web/lib/property-api.ts": "904dc9d3fab8fbb34ee1b433ad5b7a28bf899aded5b2944c67af5934f0d02e66",
+    "web/lib/property-contracts.ts": "9276926ac91eca50afc0d2ff5251b9bbd276706d0510c11018153609fba38008",
+    "web/tests/property-contracts.spec.ts": "0ae7a69ff0716f20c6a00c5bdceeef5ab0cf66f168b3de1cda6d2922c0c4742d",
+    "web/tests/property.spec.ts": "3af46fad0e3a0b7e557ee7e09a6309aaedb6f9c93c514613226d7884e26e1cd6"
+  },
+  "vm_run_directory": "/home/gorgona/gba-runs/package-property-01-operations-screen-20261115",
+  "checks": {
+    "static-final": [
+      {
+        "name": "ruff-check",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 0.05,
+        "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+      },
+      {
+        "name": "ruff-format",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 0.06,
+        "log_sha256": "41cc075e596d444253ebb56ee5a5b7e254614b078ca5280eb0d20a3aaba0577e"
+      },
+      {
+        "name": "mypy",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 1.07,
+        "log_sha256": "893535620c88f5e9820abfba13c74696404fb968f55ba2fc82a351a9eb49088a"
+      },
+      {
+        "name": "web-typecheck",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 3.87,
+        "log_sha256": "37439f15bbc48c9844af67d4a088da9d892067ceab57dab44a1cd2730d3ebaf8"
+      },
+      {
+        "name": "web-lint",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 28.01,
+        "log_sha256": "444a17fd0efde2a58326fc9d3f117cccdd9dc6259f9c6a31638098bc043733a1"
+      },
+      {
+        "name": "web-format",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 7.97,
+        "log_sha256": "3f7187fb6a483373ab268b2e372f3c03415a99ea46b5defe7c1cfade43f01ddf"
+      },
+      {
+        "name": "web-unit",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 7.25,
+        "log_sha256": "cc50647fc4e3fb1476c695770d65eb7efd9b85db8ec08957877289e1210c4a2a"
+      },
+      {
+        "name": "web-build",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 7.45,
+        "log_sha256": "7c16b27ddca2ec3af8e33a3aac39b01a8354a0d43d5852ef17bf1c1ec28c7d56"
+      },
+      {
+        "name": "web-audit",
+        "exit_code": 0,
+        "required": false,
+        "seconds": 1.61,
+        "log_sha256": "5fdb2582868695a77d9969dca724515b44f67915626b1a979a7288dbcf249ab5"
+      },
+      {
+        "name": "web-audit-all",
+        "exit_code": 1,
+        "required": false,
+        "seconds": 3.34,
+        "log_sha256": "3a241e361269a5791d6dbcf4aba9d115d88333d86f3e175d00f43c8feda61f7b"
+      }
+    ],
+    "browser-final": [
+      {
+        "name": "initdb",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 0.99,
+        "log_sha256": "27f5a492c74ed8cf77d1008c54077dfdf995250849a2e09b9db56e2956d745fa"
+      },
+      {
+        "name": "pg-start",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 0.12,
+        "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+      },
+      {
+        "name": "focused",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 94.32,
+        "log_sha256": "e40937f3c2c96491b640519db11fcedaf84f54dd80c749fe666b35d5ce7283fc"
+      },
+      {
+        "name": "pg-stop",
+        "exit_code": 0,
+        "required": false,
+        "seconds": 0.1,
+        "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+      }
+    ],
+    "workforce-ci-green": [
+      {
+        "name": "initdb",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 1.1,
+        "log_sha256": "09eb36f276c9b97cb4b1c33d1a5c239896f1f2b374a1a18d080729c72370f6c7"
+      },
+      {
+        "name": "pg-start",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 0.12,
+        "log_sha256": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+      },
+      {
+        "name": "focused",
+        "exit_code": 0,
+        "required": true,
+        "seconds": 58.11,
+        "log_sha256": "ebb5ec7b6bc362b18128c07cd0af34fde1134c147391638a4832245d01e3b539"
+      },
+      {
+        "name": "pg-stop",
+        "exit_code": 0,
+        "required": false,
+        "seconds": 0.1,
+        "log_sha256": "ca19178a35ab4153b75b494963b66ce8243e1b94c173107c87b44d09db23652d"
+      }
+    ]
+  },
+  "focused_pytest": "18 passed in 92.47s (0:01:32)",
+  "workforce_fixture": {
+    "baseline_ci": 43739629756,
+    "finding": "A schema-damage test restored an outdated constraint excluding property_showing.",
+    "focused": "42 passed in 56.38s",
+    "test_file_only": "api/tests/integration/test_workforce_guards.py"
+  },
+  "chromium": {
+    "desktop": 4,
+    "mobile": 4,
+    "axe": "PASS in the exercised Property flows",
+    "no_horizontal_page_overflow": true,
+    "read_back": "Listing amount, scope, showing host and two released allocations",
+    "snapshots": [
+      "showing-conflict.png",
+      "showing-cancelled.png"
+    ]
+  },
+  "baseline": "Browser failed before the listing editor existed.",
+  "not_tested": [
+    "production",
+    "public storefront and applications",
+    "standalone RTL layout"
+  ]
+}
