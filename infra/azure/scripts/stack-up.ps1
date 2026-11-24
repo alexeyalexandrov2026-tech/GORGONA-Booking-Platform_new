@@ -25,7 +25,9 @@ param(
     [switch] $Preview,
     [switch] $Execute,
     # Non-interactive confirmation: must equal the stack name (gorgona-<Stack>) exactly.
-    [string] $ConfirmName
+    [string] $ConfirmName,
+    # Override deny-settings-mode (e.g. 'none' on personal MSA tenants where denyDelete is unsupported; RG locks still apply).
+    [ValidateSet('', 'none', 'denyDelete', 'denyWriteAndDelete')] [string] $DenyMode = ''
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -68,15 +70,16 @@ function New-UrlSafePassword([int] $Length = 40) {
 $region = if ($env:GBA_LOCATION) { $env:GBA_LOCATION } else { 'centralus' }
 $common = @('--location', $region, '--template-file', (Join-Path $root $policy.Template),
             '--parameters', (Join-Path $root "params\$paramFile"))
+$effectiveDeny = if ($DenyMode) { $DenyMode } else { $policy.Deny }
 $createArgs = @('stack', 'sub', 'create', '--name', $stackName) + $common + @(
-    '--action-on-unmanage', $policy.ActionOnUnmanage, '--deny-settings-mode', $policy.Deny, '--yes',
+    '--action-on-unmanage', $policy.ActionOnUnmanage, '--deny-settings-mode', $effectiveDeny, '--yes',
     '--output', 'none')
-if ($policy.Deny -ne 'none') { $createArgs += '--deny-settings-apply-to-child-scopes' }
+if ($effectiveDeny -ne 'none') { $createArgs += '--deny-settings-apply-to-child-scopes' }
 $previewArgs = @('deployment', 'sub', 'what-if', '--name', "$stackName-preview") + $common
 
 Write-Host "Stack         : $stackName ($Mode)"
 Write-Host "Template      : $($policy.Template)  params: $paramFile"
-Write-Host "On unmanage   : $($policy.ActionOnUnmanage)   deny settings: $($policy.Deny)"
+Write-Host "On unmanage   : $($policy.ActionOnUnmanage)   deny settings: $effectiveDeny"
 Write-Host "Secrets       : $(if ($Mode -eq 'create' -and $secretVars) { 'generated in memory: ' + ($secretVars -join ', ') } elseif ($secretVars) { 'read from Key Vault (getSecret)' } else { 'none' })"
 Write-Host "Preview cmd   : az $($previewArgs -join ' ')"
 Write-Host "Execute cmd   : az $($createArgs -join ' ')"

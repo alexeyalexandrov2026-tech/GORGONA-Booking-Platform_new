@@ -47,10 +47,12 @@ param gbaEnv string
 @description('Front Door profile ID (X-Azure-FDID) trusted by the API.')
 param frontDoorId string
 
-@description('OIDC issuer / audience / JWKS URL for staff APIs (public values).')
+@description('OIDC issuer / audience / JWKS URL and optional SPA client ID / scope (public values).')
 param authIssuer string
 param authAudience string
 param authJwksUrl string
+param authClientId string = ''
+param authScope string = ''
 
 @description('Replica bounds.')
 param minReplicas int
@@ -141,6 +143,8 @@ resource api 'Microsoft.App/containerApps@2026-01-01' = {
             { name: 'GBA_AUTH_ISSUER', value: authIssuer }
             { name: 'GBA_AUTH_AUDIENCE', value: authAudience }
             { name: 'GBA_AUTH_JWKS_URL', value: authJwksUrl }
+            { name: 'GBA_AUTH_CLIENT_ID', value: authClientId }
+            { name: 'GBA_AUTH_SCOPE', value: authScope }
             { name: 'OTEL_SERVICE_NAME', value: 'gorgona-api-${gbaEnv}' }
             { name: 'AZURE_CLIENT_ID', value: apiIdentityClientId }
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }

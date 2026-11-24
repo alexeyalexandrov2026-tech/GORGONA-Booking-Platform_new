@@ -37,10 +37,12 @@ param appInsightsConnectionString string
 @description('Shared Application Insights component name (main-shared: appi-gorgona-shared).')
 param appInsightsName string = 'appi-gorgona-shared'
 
-@description('OIDC provider for staff APIs (public values). Required by the staging start guard.')
+@description('OIDC provider for staff APIs and optional browser SPA client (public values).')
 param authIssuer string
 param authAudience string
 param authJwksUrl string
+param authClientId string = ''
+param authScope string = ''
 
 @description('PostgreSQL sizing.')
 param postgresSku string
@@ -231,6 +233,8 @@ module apps 'modules/containerapps.bicep' = {
     authIssuer: authIssuer
     authAudience: authAudience
     authJwksUrl: authJwksUrl
+    authClientId: authClientId
+    authScope: authScope
     minReplicas: minReplicas
     maxReplicas: maxReplicas
     dbPoolMaxSize: dbPoolMaxSize

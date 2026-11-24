@@ -74,3 +74,39 @@ def test_envelope_must_carry_scope_provenance_and_version() -> None:
     with pytest.raises(EvidenceRejectedError) as exc:
         parse(envelope(uuid4(), "catalog", catalog, scope="training"))
     assert exc.value.code == "catalog_is_knowledge_not_training"
+
+
+def test_bootstrap_grants_public_schema_to_owner(monkeypatch: pytest.MonkeyPatch) -> None:
+    import psycopg
+
+    from gorgona_ai import db as ai_db
+
+    executed: list[str] = []
+
+    class FakeCursor:
+        def fetchone(self) -> tuple[int] | None:
+            return (1,)
+
+    class FakeConn:
+        def __enter__(self) -> FakeConn:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def execute(self, query: object, params: object = None) -> FakeCursor:
+            if hasattr(query, "as_string"):
+                executed.append(str(query.as_string()))
+            else:
+                executed.append(str(query))
+            return FakeCursor()
+
+    monkeypatch.setattr(psycopg, "connect", lambda *a, **kw: FakeConn())
+    ai_db.bootstrap(
+        "postgresql://admin:pw@localhost/postgres",
+        "gorgona_ai",
+        "owner-pw",
+        "worker-pw",
+    )
+    assert any("grant usage, create on schema public to" in q.lower() for q in executed)
+    assert any("create extension if not exists vector" in q.lower() for q in executed)

@@ -82,6 +82,9 @@ def bootstrap(admin_dsn: str, database: str, owner_password: str, worker_passwor
     # allowlisted extensions); the migration's `create extension if not exists` is then a no-op.
     db_dsn = psycopg.conninfo.make_conninfo(admin_dsn, dbname=database)
     with psycopg.connect(db_dsn, autocommit=True) as conn:
+        conn.execute(
+            sql.SQL("grant usage, create on schema public to {}").format(sql.Identifier(OWNER_ROLE))
+        )
         conn.execute("create extension if not exists vector")
 
 
