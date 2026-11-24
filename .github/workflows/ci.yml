@@ -14,8 +14,6 @@ concurrency:
 jobs:
   api:
     runs-on: ubuntu-24.04
-    # Package L runs took 2562-2653 s of the former 2700 s limit and L3 (2487 tests) was
-    # cancelled at it; 75 minutes leaves room for the remaining slices.
     timeout-minutes: 75
     defaults:
       run:
@@ -58,11 +56,7 @@ jobs:
 
       - name: Start PostgreSQL 18
         run: |
-          docker run -d --name gba-postgres \
-            -e POSTGRES_USER=gba_superuser \
-            -e POSTGRES_PASSWORD=ci-only-not-a-secret \
-            -p 127.0.0.1:55432:5432 \
-            postgres:18 -c max_connections=250
+          docker run -d --name gba-postgres             -e POSTGRES_USER=gba_superuser             -e POSTGRES_PASSWORD=ci-only-not-a-secret             -p 127.0.0.1:55432:5432             postgres:18 -c max_connections=350 -c fsync=off -c synchronous_commit=off -c full_page_writes=off
           for _ in $(seq 1 60); do
             docker exec gba-postgres pg_isready -h 127.0.0.1 -U gba_superuser && break
             sleep 1
@@ -76,7 +70,8 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run ruff check .
       - run: uv run mypy
-      - run: uv run pytest --junitxml=pytest-results.xml
+      - name: Run full API, browser, serial and container suite in parallel
+        run: uv run --locked python -m tools.run_parallel_tests --workers 3 --out-dir /tmp/ci-parallel
 
       # Log text needs a GitHub sign-in; annotations do not. Name what failed.
       - name: Name the failed tests
@@ -87,28 +82,52 @@ jobs:
           from pathlib import Path
           from xml.etree import ElementTree
 
-          report = Path("pytest-results.xml")
-          if not report.exists():
-              raise SystemExit(0)
-          source = report.read_text(encoding="utf-8")
-          # This job's own pytest report. Refuse any document type or entity declaration.
-          if "<!DOCTYPE" in source or "<!ENTITY" in source:
-              raise SystemExit(0)
+          reports = sorted(Path("/tmp/ci-parallel").glob("*.xml"))
+          legacy = Path("pytest-results.xml")
+          if legacy.exists():
+              reports.append(legacy)
           shown = 0
-          for case in ElementTree.fromstring(source).iter("testcase"):
-              for found in [*case.findall("failure"), *case.findall("error")]:
-                  text = (found.get("message") or "") + "\n" + (found.text or "")
-                  # A browser failure says what it expected; otherwise take the first error.
-                  at = text.find("Error: expect")
-                  at = text.find("Error:") if at < 0 else at
-                  excerpt = text[max(at - 250, 0) :][:1700]
-                  excerpt = re.sub(r"eyJ[\w-]{10,}\.[\w-]+\.[\w-]+", "<token>", excerpt)
-                  excerpt = re.sub(r"postgres(?:ql)?://\S+", "<dsn>", excerpt)
-                  excerpt = excerpt.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
-                  name = f"{case.get('classname')} {case.get('name')}"
-                  name = name.replace("%", "%25").replace(":", "%3A").replace(",", "%2C")
-                  print(f"::error title={name}::{excerpt}")
-                  shown += 1
-                  if shown == 10:
-                      raise SystemExit(0)
+          for report in reports:
+              source = report.read_text(encoding="utf-8")
+              if "<!DOCTYPE" in source or "<!ENTITY" in source:
+                  continue
+              for case in ElementTree.fromstring(source).iter("testcase"):
+                  for found in [*case.findall("failure"), *case.findall("error")]:
+                      text = (found.get("message") or "") + "\n" + (found.text or "")
+                      at = text.find("Error: expect")
+                      at = text.find("Error:") if at < 0 else at
+                      excerpt = text[max(at - 250, 0) :][:1700]
+                      excerpt = re.sub(r"eyJ[\w-]{10,}\.[\w-]+\.[\w-]+", "<token>", excerpt)
+                      excerpt = re.sub(r"postgres(?:ql)?://\S+", "<dsn>", excerpt)
+                      excerpt = excerpt.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+                      name = f"{case.get('classname')} {case.get('name')}"
+                      name = name.replace("%", "%25").replace(":", "%3A").replace(",", "%2C")
+                      print(f"::error title={name}::{excerpt}")
+                      shown += 1
+                      if shown == 10:
+                          raise SystemExit(0)
           PY
+
+  ai:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: ai
+    env:
+      GBA_REQUIRE_AI_POSTGRES: "1"
+      GBA_REQUIRE_AI_CONTAINER: "1"
+      GBA_AI_IMAGE: gorgona-ai:ci
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install 3.14
+      - run: uv sync --locked
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy
+      - name: Build the AI worker image
+        run: docker build --pull -t gorgona-ai:ci .
+      - run: uv run pytest -v

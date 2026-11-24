@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -62,7 +63,29 @@ class RestoreDrillResult(_Strict):
     reconciliation: ReconciliationReport
 
 
-def _find_pg_tool(name: str, pg_bin: str | None = None) -> str:
+def _parse_pg_major_version(version_output: str) -> int | None:
+    match = re.search(r"\b(\d+)(?:\.\d+)?\b", version_output)
+    return int(match.group(1)) if match else None
+
+
+def _pg_tool_major_version(path: str) -> int | None:
+    proc = subprocess.run(  # noqa: S603
+        [path, "--version"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    return _parse_pg_major_version(proc.stdout.strip())
+
+
+def _find_pg_tool(
+    name: str,
+    pg_bin: str | None = None,
+    *,
+    min_major: int | None = None,
+) -> str | None:
     candidates: list[str] = []
     if pg_bin:
         candidates.append(str(Path(pg_bin) / name))
@@ -72,8 +95,56 @@ def _find_pg_tool(name: str, pg_bin: str | None = None) -> str:
         candidates.append(found)
     for path in candidates:
         if os.path.isfile(path) and os.access(path, os.X_OK):
+            if min_major is not None:
+                ver = _pg_tool_major_version(path)
+                if ver is None or ver < min_major:
+                    continue
             return path
-    raise FileNotFoundError(f"PostgreSQL utility {name!r} not found")
+    return None
+
+
+def _run_pg_tool(
+    tool: str,
+    args: list[str],
+    *,
+    tmp_dir: Path,
+    pg_bin: str | None,
+    server_major: int,
+) -> subprocess.CompletedProcess[str]:
+    host_bin = _find_pg_tool(tool, pg_bin, min_major=server_major)
+    if host_bin is not None:
+        return subprocess.run(  # noqa: S603
+            [host_bin, *args],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    docker = shutil.which("docker")
+    if docker is None:
+        raise FileNotFoundError(
+            f"PostgreSQL {server_major}+ utility {tool!r} not found and docker is unavailable"
+        )
+    mapped_args = [
+        arg.replace(str(tmp_dir), "/ops01") if str(tmp_dir) in arg else arg for arg in args
+    ]
+    cmd = [
+        docker,
+        "run",
+        "--rm",
+        "--network",
+        "host",
+        "-v",
+        f"{tmp_dir}:/ops01",
+    ]
+    if hasattr(os, "getuid") and hasattr(os, "getgid"):
+        cmd.extend(["-u", f"{os.getuid()}:{os.getgid()}"])
+    cmd.extend([f"postgres:{server_major}", tool, *mapped_args])
+    return subprocess.run(  # noqa: S603
+        cmd,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def capture_reconciliation_snapshot(admin_db_dsn: str) -> ReconciliationSnapshot:
@@ -190,8 +261,9 @@ def verify_pg_dump_restore(
     pg_bin: str | None = None,
 ) -> RestoreDrillResult:
     """Run real pg_dump -> pg_restore into a clean target DB, measuring RTO and reconciling."""
-    pg_dump = _find_pg_tool("pg_dump", pg_bin)
-    pg_restore = _find_pg_tool("pg_restore", pg_bin)
+    with psycopg.connect(admin_dsn) as ver_conn:
+        vrow = ver_conn.execute("show server_version_num").fetchone()
+        server_major = int(vrow[0]) // 10000 if vrow is not None else 18
 
     source_admin_dsn = make_conninfo(admin_dsn, dbname=source_database)
     target_admin_dsn = make_conninfo(admin_dsn, dbname=target_database)
@@ -229,11 +301,12 @@ def verify_pg_dump_restore(
     with tempfile.TemporaryDirectory(prefix="gorgona-ops01-") as tmp:
         dump_file = Path(tmp) / f"{source_database}.dump"
         t0 = time.perf_counter()
-        dump_proc = subprocess.run(  # noqa: S603
-            [pg_dump, "--format=custom", "--file", str(dump_file), source_admin_dsn],
-            capture_output=True,
-            text=True,
-            check=False,
+        dump_proc = _run_pg_tool(
+            "pg_dump",
+            ["--format=custom", "--file", str(dump_file), source_admin_dsn],
+            tmp_dir=Path(tmp),
+            pg_bin=pg_bin,
+            server_major=server_major,
         )
         dump_seconds = round(time.perf_counter() - t0, 3)
         if dump_proc.returncode != 0:
@@ -241,11 +314,12 @@ def verify_pg_dump_restore(
         dump_bytes = dump_file.stat().st_size
 
         t1 = time.perf_counter()
-        restore_proc = subprocess.run(  # noqa: S603
-            [pg_restore, "--exit-on-error", "--dbname", target_admin_dsn, str(dump_file)],
-            capture_output=True,
-            text=True,
-            check=False,
+        restore_proc = _run_pg_tool(
+            "pg_restore",
+            ["--exit-on-error", "--dbname", target_admin_dsn, str(dump_file)],
+            tmp_dir=Path(tmp),
+            pg_bin=pg_bin,
+            server_major=server_major,
         )
         restore_seconds = round(time.perf_counter() - t1, 3)
         if restore_proc.returncode != 0:

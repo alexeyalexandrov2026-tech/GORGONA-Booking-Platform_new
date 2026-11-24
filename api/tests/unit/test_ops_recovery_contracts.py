@@ -5,6 +5,7 @@ from uuid import uuid7
 from tools.ops_recovery_drill import (
     LedgerCurrencyBalance,
     ReconciliationSnapshot,
+    _parse_pg_major_version,
     reconcile_snapshots,
 )
 
@@ -102,3 +103,9 @@ def test_pg_dump_check_expr_flattens_nested_and_without_weakening_or() -> None:
     assert _pg_dump_check_expr(with_or) == with_or
     or_top = "((kind = 'a'::text) OR ((amount >= 1) AND (amount <= 100)))"
     assert _pg_dump_check_expr(or_top) == or_top
+
+
+def test_parse_pg_major_version_extracts_major() -> None:
+    assert _parse_pg_major_version("pg_dump (PostgreSQL) 18.7 (Ubuntu 18.7-1)") == 18
+    assert _parse_pg_major_version("pg_dump (PostgreSQL) 16.16 (Ubuntu 16.16-1)") == 16
+    assert _parse_pg_major_version("unknown") is None

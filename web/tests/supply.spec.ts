@@ -314,6 +314,16 @@ test("end-to-end 3PL WMS goods-owner isolation, manufacturing output/return lot 
     `Created trade order ${ordCode}`,
   );
 
+  // Explicitly select this run's trade order (mobile runs after desktop in the same business)
+  const ordSelect = page.getByLabel(/^Selected trade order/);
+  const ordValue = await ordSelect
+    .locator("option")
+    .filter({ hasText: ordCode })
+    .first()
+    .getAttribute("value");
+  expect(ordValue).toBeTruthy();
+  await ordSelect.selectOption(ordValue!);
+
   // Negative proof: cannot ship company trade order from 3PL bin/lot
   await page.getByLabel(/^Shipment bin/).selectOption({ label: binTplCode });
   await page.getByLabel(/^Shipment lot/).selectOption({ label: lotTplCode });

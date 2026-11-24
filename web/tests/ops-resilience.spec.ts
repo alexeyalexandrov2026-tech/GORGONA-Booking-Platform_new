@@ -148,7 +148,9 @@ test("OPS-03: mobile/desktop layout, keyboard traversal, 503 outage, 409 offline
     const link = page.locator(`a[href="${href}"]`).first();
     if (await link.isVisible()) {
       await link.click();
-      await expect(page).toHaveURL(new RegExp(`${href.replace(/\//g, "\\/")}$`));
+      await expect(page).toHaveURL(
+        new RegExp(`${href.replace(/\//g, "\\/")}$`),
+      );
       await expect(page).toHaveTitle(/.+/);
       await expect(page.locator("main")).toBeVisible();
       await checkAccessibilityAndLayout(page);
