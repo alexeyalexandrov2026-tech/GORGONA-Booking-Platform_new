@@ -28,8 +28,8 @@ param mlIdentityId string
 @description('User-assigned managed identity principal ID for RBAC role assignments.')
 param mlIdentityPrincipalId string
 
-@description('CPU cluster VM size (must be an Azure ML-supported size in the region; D4s_v5 is not, D4ds_v5 is).')
-param cpuVmSize string = 'Standard_D4ds_v5'
+@description('CPU cluster VM size (must be an Azure ML-supported size in the region; Standard_D4ds_v4 fits the 6 vCPU standardDDSv4Family quota in centralus).')
+param cpuVmSize string = 'Standard_D4ds_v4'
 
 @description('CPU cluster max nodes.')
 param cpuMaxNodes int = 2
