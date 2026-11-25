@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { FeePolicySection } from "../../components/fee-policy";
+import { NotificationsPanel } from "../../components/notifications-panel";
 import { ManagementLayout } from "../../components/management-layout";
 import { WEEKDAYS } from "../../lib/business-time";
 import {
@@ -479,6 +480,7 @@ function SettingsContent({
           </div>
 
           <FeePolicySection salonId={salonId} />
+          <NotificationsPanel salonId={salonId} />
         </div>
       )}
     </div>

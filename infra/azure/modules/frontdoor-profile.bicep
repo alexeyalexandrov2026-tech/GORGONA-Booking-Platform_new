@@ -19,6 +19,9 @@ param bookingWriteRateLimit int = 30
 @description('Max requests to /v1/ per client IP per minute (initial).')
 param apiRateLimit int = 600
 
+@description('Optional Log Analytics workspace ID for Front Door WAF and Access logs.')
+param logAnalyticsWorkspaceId string = ''
+
 resource profile 'Microsoft.Cdn/profiles@2025-12-01' = {
   name: 'afd-${namePrefix}'
   location: 'global'
@@ -139,6 +142,20 @@ resource waf 'Microsoft.Network/FrontDoorWebApplicationFirewallPolicies@2025-11-
         }
       ]
     }
+  }
+}
+
+#disable-next-line use-recent-api-versions
+resource diagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!empty(logAnalyticsWorkspaceId)) {
+  scope: profile
+  name: 'to-log-analytics'
+  properties: {
+    workspaceId: logAnalyticsWorkspaceId
+    logs: [
+      { category: 'FrontDoorAccessLog', enabled: true }
+      { category: 'FrontDoorWebApplicationFirewallLog', enabled: true }
+    ]
+    metrics: [{ category: 'AllMetrics', enabled: true }]
   }
 }
 
