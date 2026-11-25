@@ -123,9 +123,7 @@ class CopilotResult:
     insights: list[CopilotInsight]
 
 
-def parse_assistant_intent(
-    message: str, *, today: date, max_day: date
-) -> dict[str, Any]:
+def parse_assistant_intent(message: str, *, today: date, max_day: date) -> dict[str, Any]:
     """Deterministic multilingual (EN/RU/ES) intent parser for date, window, budget, and sort."""
     lower = message.lower()
     target_days: list[date] = []
@@ -247,9 +245,7 @@ def _rank_variants(
     max_price_cents: int | None,
     sort_by: str,
 ) -> list[VariantView]:
-    filtered = [
-        v for v in variants if max_price_cents is None or v.price_cents <= max_price_cents
-    ]
+    filtered = [v for v in variants if max_price_cents is None or v.price_cents <= max_price_cents]
     if not filtered:
         filtered = list(variants)
 
@@ -559,7 +555,7 @@ async def ask_owner_copilot(
                    coalesce(sum(total_cents), 0) AS upcoming_cents
             FROM gba.bookings
             WHERE tenant_id = %s AND status = 'CONFIRMED'
-              AND start_at >= %s AND start_at < %s
+              AND starts_at >= %s AND starts_at < %s
             """,
             (tenant_id, now, horizon),
         )
