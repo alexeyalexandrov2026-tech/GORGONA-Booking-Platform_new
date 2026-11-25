@@ -16,7 +16,7 @@ from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.db.pool import tenant_transaction
 from gorgona_booking.growth.service import (
-    ConciergeTone,
+    AssistantTone,
     GrowthSettingsRecord,
     PreferredWindow,
     WaitlistEntryRecord,
@@ -42,8 +42,8 @@ class GrowthSettingsResponse(BaseModel):
     review_delay_hours: int
     rebooking_days_after: int
     waitlist_auto_offer: bool
-    ai_concierge_enabled: bool
-    ai_concierge_tone: str
+    ai_assistant_enabled: bool
+    ai_assistant_tone: str
     updated_at: datetime | None
 
 
@@ -54,8 +54,8 @@ class GrowthSettingsUpdateRequest(BaseModel):
     review_delay_hours: int = Field(default=2, ge=0, le=168)
     rebooking_days_after: int = Field(default=28, ge=7, le=365)
     waitlist_auto_offer: bool = True
-    ai_concierge_enabled: bool = True
-    ai_concierge_tone: ConciergeTone = "warm_professional"
+    ai_assistant_enabled: bool = True
+    ai_assistant_tone: AssistantTone = "warm_professional"
 
 
 class CustomerWaitlistRequest(BaseModel):
@@ -115,8 +115,8 @@ def _to_settings_response(rec: GrowthSettingsRecord) -> GrowthSettingsResponse:
         review_delay_hours=rec.review_delay_hours,
         rebooking_days_after=rec.rebooking_days_after,
         waitlist_auto_offer=rec.waitlist_auto_offer,
-        ai_concierge_enabled=rec.ai_concierge_enabled,
-        ai_concierge_tone=rec.ai_concierge_tone,
+        ai_assistant_enabled=rec.ai_assistant_enabled,
+        ai_assistant_tone=rec.ai_assistant_tone,
         updated_at=rec.updated_at,
     )
 
@@ -223,8 +223,8 @@ async def put_business_growth_settings(
                 review_delay_hours=body.review_delay_hours,
                 rebooking_days_after=body.rebooking_days_after,
                 waitlist_auto_offer=body.waitlist_auto_offer,
-                ai_concierge_enabled=body.ai_concierge_enabled,
-                ai_concierge_tone=body.ai_concierge_tone,
+                ai_assistant_enabled=body.ai_assistant_enabled,
+                ai_assistant_tone=body.ai_assistant_tone,
                 updated_by_user_id=principal.user_id,
             )
     except ValueError as exc:

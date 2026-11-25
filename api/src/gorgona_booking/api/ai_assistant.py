@@ -1,4 +1,4 @@
-"""HTTP routes for the tenant-isolated Customer AI Concierge and Owner AI Business Copilot."""
+"""HTTP routes for the tenant-isolated Customer AI Assistant and Owner AI Business Copilot."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
-from gorgona_booking.ai_concierge.service import ask_customer_concierge, ask_owner_copilot
+from gorgona_booking.ai_assistant.service import ask_customer_assistant, ask_owner_copilot
 from gorgona_booking.api.businesses import CurrentPrincipal
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.holds import get_tenant_id
@@ -18,11 +18,11 @@ from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.db.pool import tenant_transaction
 from gorgona_booking.tenancy.authorization import authorized_tenant
 
-router = APIRouter(tags=["ai-concierge"])
+router = APIRouter(tags=["ai-assistant"])
 type HostTenant = Annotated[UUID, Depends(get_tenant_id)]
 
 
-class CustomerConciergeRequest(BaseModel):
+class CustomerAssistantRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     message: str = Field(min_length=2, max_length=500)
     location_id: UUID | None = None
@@ -47,7 +47,7 @@ class RecommendedSlotResponse(BaseModel):
     duration_minutes: int
 
 
-class CustomerConciergeResponse(BaseModel):
+class CustomerAssistantResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
     version: Literal[1] = 1
     engine: Literal["gemini", "grounded"]
@@ -82,17 +82,17 @@ class OwnerCopilotResponse(BaseModel):
     insights: list[CopilotInsightResponse]
 
 
-@router.post("/v1/customer/concierge", response_model=CustomerConciergeResponse)
-async def post_customer_concierge(
-    body: CustomerConciergeRequest,
+@router.post("/v1/customer/assistant", response_model=CustomerAssistantResponse)
+async def post_customer_assistant(
+    body: CustomerAssistantRequest,
     request: Request,
     response: Response,
     tenant_id: HostTenant,
-) -> CustomerConciergeResponse:
+) -> CustomerAssistantResponse:
     response.headers["Cache-Control"] = "no-store"
     try:
         async with tenant_transaction(runtime_pool(request), tenant_id) as conn:
-            res = await ask_customer_concierge(
+            res = await ask_customer_assistant(
                 conn,
                 tenant_id=tenant_id,
                 message=body.message,
@@ -101,7 +101,7 @@ async def post_customer_concierge(
             )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
-    return CustomerConciergeResponse(
+    return CustomerAssistantResponse(
         engine=res.engine,
         business_name=res.business_name,
         reply=res.reply,

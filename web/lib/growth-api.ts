@@ -19,7 +19,7 @@ export const recommendedSlotSchema = z.object({
 });
 export type RecommendedSlot = z.infer<typeof recommendedSlotSchema>;
 
-export const customerConciergeSchema = z.object({
+export const customerAssistantSchema = z.object({
   version: z.literal(1),
   engine: z.enum(["gemini", "grounded"]),
   business_name: z.string(),
@@ -28,7 +28,7 @@ export const customerConciergeSchema = z.object({
   waitlist_suggested: z.boolean(),
   cancellation_summary: z.string(),
 });
-export type CustomerConciergeResponse = z.infer<typeof customerConciergeSchema>;
+export type CustomerAssistantResponse = z.infer<typeof customerAssistantSchema>;
 
 export const waitlistEntrySchema = z.object({
   id: z.string(),
@@ -60,8 +60,8 @@ export const growthSettingsSchema = z.object({
   review_delay_hours: z.number().int(),
   rebooking_days_after: z.number().int(),
   waitlist_auto_offer: z.boolean(),
-  ai_concierge_enabled: z.boolean(),
-  ai_concierge_tone: z.string(),
+  ai_assistant_enabled: z.boolean(),
+  ai_assistant_tone: z.string(),
   updated_at: z.string().nullable(),
 });
 export type GrowthSettings = z.infer<typeof growthSettingsSchema>;
@@ -93,12 +93,12 @@ async function authHeaders(): Promise<HeadersInit> {
   };
 }
 
-export async function askCustomerConcierge(input: {
+export async function askCustomerAssistant(input: {
   message: string;
   location_id?: string;
   preferred_day?: string;
-}): Promise<CustomerConciergeResponse> {
-  const res = await fetch("/v1/customer/concierge", {
+}): Promise<CustomerAssistantResponse> {
+  const res = await fetch("/v1/customer/assistant", {
     method: "POST",
     credentials: "same-origin",
     cache: "no-store",
@@ -106,7 +106,7 @@ export async function askCustomerConcierge(input: {
     body: JSON.stringify(input),
   });
   if (!res.ok) {
-    let msg = "AI Concierge is unavailable right now.";
+    let msg = "AI Assistant is unavailable right now.";
     try {
       const data = (await res.json()) as { detail?: string };
       if (typeof data.detail === "string") msg = data.detail;
@@ -115,7 +115,7 @@ export async function askCustomerConcierge(input: {
     }
     throw new Error(msg);
   }
-  return customerConciergeSchema.parse(await res.json());
+  return customerAssistantSchema.parse(await res.json());
 }
 
 export async function joinCustomerWaitlist(input: {
@@ -168,9 +168,9 @@ export async function saveGrowthSettings(
     review_delay_hours: number;
     rebooking_days_after: number;
     waitlist_auto_offer: boolean;
-    ai_concierge_enabled: boolean;
-    ai_concierge_tone:
-      "warm_professional" | "concise_direct" | "luxury_concierge";
+    ai_assistant_enabled: boolean;
+    ai_assistant_tone:
+      "warm_professional" | "concise_direct" | "executive_hospitality";
   },
 ): Promise<GrowthSettings> {
   const headers = await authHeaders();

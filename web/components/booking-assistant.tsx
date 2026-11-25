@@ -3,12 +3,12 @@
 import React, { useId, useState } from "react";
 import { appointmentTime, money } from "../lib/api";
 import {
-  askCustomerConcierge,
-  type CustomerConciergeResponse,
+  askCustomerAssistant,
+  type CustomerAssistantResponse,
   type RecommendedSlot,
 } from "../lib/growth-api";
 
-export function BookingConcierge({
+export function BookingAssistant({
   locationId,
   onPickSlot,
 }: {
@@ -18,7 +18,7 @@ export function BookingConcierge({
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<CustomerConciergeResponse | null>(null);
+  const [result, setResult] = useState<CustomerAssistantResponse | null>(null);
   const inputId = useId();
 
   async function handleAsk(e: React.FormEvent) {
@@ -28,7 +28,7 @@ export function BookingConcierge({
     setLoading(true);
     setError(null);
     try {
-      const data = await askCustomerConcierge({
+      const data = await askCustomerAssistant({
         message: clean,
         location_id: locationId,
       });
@@ -52,7 +52,7 @@ export function BookingConcierge({
       }}
     >
       <summary style={{ cursor: "pointer", fontWeight: 600, color: "#1f1a17" }}>
-        AI Booking Concierge — ask in plain language (EN / RU / ES)
+        AI Booking Assistant — ask in plain language (EN / RU / ES)
       </summary>
       <div style={{ marginTop: "12px", display: "grid", gap: "12px" }}>
         <p style={{ margin: 0, fontSize: "0.88rem", color: "#3f3832" }}>
@@ -64,7 +64,7 @@ export function BookingConcierge({
           style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
         >
           <label htmlFor={inputId} className="skip">
-            Ask AI Booking Concierge
+            Ask AI Booking Assistant
           </label>
           <input
             id={inputId}

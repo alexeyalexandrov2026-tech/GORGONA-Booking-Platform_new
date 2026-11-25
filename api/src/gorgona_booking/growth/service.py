@@ -16,7 +16,7 @@ from gorgona_booking.notifications.service import (
     validate_and_mask_recipient,
 )
 
-ConciergeTone = Literal["warm_professional", "concise_direct", "luxury_concierge"]
+AssistantTone = Literal["warm_professional", "concise_direct", "executive_hospitality"]
 PreferredWindow = Literal["any", "morning", "afternoon", "evening"]
 WaitlistStatus = Literal["waiting", "offered", "booked", "expired", "cancelled"]
 
@@ -29,8 +29,8 @@ class GrowthSettingsRecord:
     review_delay_hours: int
     rebooking_days_after: int
     waitlist_auto_offer: bool
-    ai_concierge_enabled: bool
-    ai_concierge_tone: str
+    ai_assistant_enabled: bool
+    ai_assistant_tone: str
     updated_at: datetime | None
 
 
@@ -66,8 +66,8 @@ def _default_growth_settings(tenant_id: UUID) -> GrowthSettingsRecord:
         review_delay_hours=2,
         rebooking_days_after=28,
         waitlist_auto_offer=True,
-        ai_concierge_enabled=True,
-        ai_concierge_tone="warm_professional",
+        ai_assistant_enabled=True,
+        ai_assistant_tone="warm_professional",
         updated_at=None,
     )
 
@@ -80,8 +80,8 @@ def _row_to_settings(row: dict[str, Any]) -> GrowthSettingsRecord:
         review_delay_hours=int(row["review_delay_hours"]),
         rebooking_days_after=int(row["rebooking_days_after"]),
         waitlist_auto_offer=bool(row["waitlist_auto_offer"]),
-        ai_concierge_enabled=bool(row["ai_concierge_enabled"]),
-        ai_concierge_tone=str(row["ai_concierge_tone"]),
+        ai_assistant_enabled=bool(row["ai_assistant_enabled"]),
+        ai_assistant_tone=str(row["ai_assistant_tone"]),
         updated_at=row["updated_at"],
     )
 
@@ -134,8 +134,8 @@ async def upsert_growth_settings(
     review_delay_hours: int,
     rebooking_days_after: int,
     waitlist_auto_offer: bool,
-    ai_concierge_enabled: bool,
-    ai_concierge_tone: str,
+    ai_assistant_enabled: bool,
+    ai_assistant_tone: str,
     updated_by_user_id: UUID | None,
 ) -> GrowthSettingsRecord:
     clean_url = google_review_url.strip() if google_review_url else None
@@ -148,8 +148,8 @@ async def upsert_growth_settings(
             """
             INSERT INTO gba.growth_settings (
                 tenant_id, google_review_url, reminder_hours_before, review_delay_hours,
-                rebooking_days_after, waitlist_auto_offer, ai_concierge_enabled,
-                ai_concierge_tone, updated_by_user_id, updated_at
+                rebooking_days_after, waitlist_auto_offer, ai_assistant_enabled,
+                ai_assistant_tone, updated_by_user_id, updated_at
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now())
             ON CONFLICT (tenant_id) DO UPDATE SET
@@ -158,8 +158,8 @@ async def upsert_growth_settings(
                 review_delay_hours = EXCLUDED.review_delay_hours,
                 rebooking_days_after = EXCLUDED.rebooking_days_after,
                 waitlist_auto_offer = EXCLUDED.waitlist_auto_offer,
-                ai_concierge_enabled = EXCLUDED.ai_concierge_enabled,
-                ai_concierge_tone = EXCLUDED.ai_concierge_tone,
+                ai_assistant_enabled = EXCLUDED.ai_assistant_enabled,
+                ai_assistant_tone = EXCLUDED.ai_assistant_tone,
                 updated_by_user_id = EXCLUDED.updated_by_user_id,
                 updated_at = now()
             RETURNING *
@@ -171,8 +171,8 @@ async def upsert_growth_settings(
                 review_delay_hours,
                 rebooking_days_after,
                 waitlist_auto_offer,
-                ai_concierge_enabled,
-                ai_concierge_tone,
+                ai_assistant_enabled,
+                ai_assistant_tone,
                 updated_by_user_id,
             ),
         )

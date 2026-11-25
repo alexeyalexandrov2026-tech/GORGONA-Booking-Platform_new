@@ -25,7 +25,7 @@ import {
   Appointment,
   DetailsForm,
 } from "./booking-parts";
-import { BookingConcierge } from "./booking-concierge";
+import { BookingAssistant } from "./booking-assistant";
 import { WaitlistForm } from "./waitlist-form";
 import { downloadBookingIcs, googleCalendarUrl } from "../lib/calendar-export";
 import type { RecommendedSlot } from "../lib/growth-api";
@@ -259,7 +259,7 @@ export function Journey({ salon }: { salon: Bootstrap }) {
   const style = salon.branding.accent
     ? ({ "--accent": salon.branding.accent } as CSSProperties)
     : undefined;
-  function applyConciergeSlot(picked: RecommendedSlot) {
+  function applyAssistantSlot(picked: RecommendedSlot) {
     setLocationId(picked.location_id);
     setLines([{ variant_id: picked.variant_id, add_on_ids: [] }]);
     setArtistId(picked.resource_id);
@@ -346,9 +346,9 @@ export function Journey({ salon }: { salon: Bootstrap }) {
                   Begin with a little care.
                 </h2>
                 <p className="muted">Select your service and finish.</p>
-                <BookingConcierge
+                <BookingAssistant
                   locationId={locationId}
-                  onPickSlot={applyConciergeSlot}
+                  onPickSlot={applyAssistantSlot}
                 />
                 <label>
                   Location

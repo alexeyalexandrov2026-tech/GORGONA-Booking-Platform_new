@@ -1,4 +1,4 @@
-"""PG18 integration tests for Growth Settings, Smart Waitlist, AI Concierge, and Owner Copilot."""
+"""PG18 integration tests for Growth Settings, Smart Waitlist, AI Assistant, and Owner Copilot."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ client = shared.client
 idp = shared.idp
 
 
-async def test_waitlist_growth_settings_concierge_and_copilot_end_to_end(
+async def test_waitlist_growth_settings_assistant_and_copilot_end_to_end(
     client: httpx.AsyncClient,
     idp: FakeIdp,
     owner_conn: psycopg.Connection,
@@ -53,14 +53,14 @@ async def test_waitlist_growth_settings_concierge_and_copilot_end_to_end(
     location_id = boot_data["locations"][0]["id"]
     variant_id = boot_data["variants"][0]["id"]
 
-    # 1. Customer AI Concierge returns grounded live availability strictly for Host A
-    concierge = await client.post(
-        "/v1/customer/concierge",
+    # 1. Customer AI Assistant returns grounded live availability strictly for Host A
+    assistant = await client.post(
+        "/v1/customer/assistant",
         headers={"Host": host_a},
         json={"message": "Do you have any open time tomorrow?"},
     )
-    assert concierge.status_code == 200, concierge.text
-    cdata = concierge.json()
+    assert assistant.status_code == 200, assistant.text
+    cdata = assistant.json()
     assert cdata["version"] == 1
     assert cdata["engine"] == "grounded"
     assert cdata["business_name"]
@@ -114,8 +114,8 @@ async def test_waitlist_growth_settings_concierge_and_copilot_end_to_end(
             "review_delay_hours": 3,
             "rebooking_days_after": 21,
             "waitlist_auto_offer": True,
-            "ai_concierge_enabled": True,
-            "ai_concierge_tone": "luxury_concierge",
+            "ai_assistant_enabled": True,
+            "ai_assistant_tone": "executive_hospitality",
         },
     )
     assert updated.status_code == 200, updated.text
@@ -169,15 +169,15 @@ async def test_waitlist_growth_settings_concierge_and_copilot_end_to_end(
     assert offered.json()["status"] == "offered"
     assert offered.json()["offer_notification_id"] is not None
 
-    # 6. Human control over AI: disabling ai_concierge_enabled blocks customer concierge cleanly
+    # 6. Human control over AI: disabling ai_assistant_enabled blocks customer assistant cleanly
     disable = await client.put(
         f"/v1/businesses/{seed_a.tenant_id}/growth/settings",
         headers=headers_a,
-        json={"ai_concierge_enabled": False},
+        json={"ai_assistant_enabled": False},
     )
     assert disable.status_code == 200
     blocked = await client.post(
-        "/v1/customer/concierge",
+        "/v1/customer/assistant",
         headers={"Host": host_a},
         json={"message": "Any slots tomorrow?"},
     )

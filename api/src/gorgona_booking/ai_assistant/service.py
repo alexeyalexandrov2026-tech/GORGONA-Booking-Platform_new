@@ -1,4 +1,4 @@
-"""Grounded AI Booking Concierge (customer) and Business Copilot (owner).
+"""Grounded AI Booking Assistant (customer) and Business Copilot (owner).
 
 Security & truthfulness invariants:
 - Every customer query runs strictly inside a Host-resolved `tenant_transaction`.
@@ -96,7 +96,7 @@ class RecommendedSlot:
 
 
 @dataclass(frozen=True)
-class ConciergeResult:
+class AssistantResult:
     engine: Literal["gemini", "grounded"]
     business_name: str
     reply: str
@@ -123,7 +123,7 @@ class CopilotResult:
     insights: list[CopilotInsight]
 
 
-def parse_concierge_intent(
+def parse_assistant_intent(
     message: str, *, today: date, max_day: date
 ) -> dict[str, Any]:
     """Deterministic multilingual (EN/RU/ES) intent parser for date, window, budget, and sort."""
@@ -377,20 +377,20 @@ def _deterministic_customer_reply(
     )
 
 
-async def ask_customer_concierge(
+async def ask_customer_assistant(
     conn: RuntimeConnection,
     *,
     tenant_id: UUID,
     message: str,
     location_id: UUID | None = None,
     preferred_day: date | None = None,
-) -> ConciergeResult:
+) -> AssistantResult:
     settings = await get_growth_settings(conn, tenant_id=tenant_id)
     boot = await customer_queries.bootstrap(conn)
-    if not settings.ai_concierge_enabled:
-        raise ValueError("AI Concierge is currently disabled by this business")
+    if not settings.ai_assistant_enabled:
+        raise ValueError("AI Assistant is currently disabled by this business")
     if not boot.locations or not boot.variants:
-        return ConciergeResult(
+        return AssistantResult(
             engine="grounded",
             business_name=boot.name,
             reply=f"{boot.name} is preparing its bookable services. Please check back shortly.",
@@ -400,7 +400,7 @@ async def ask_customer_concierge(
         )
 
     loc = next((item for item in boot.locations if item.id == location_id), boot.locations[0])
-    intent = parse_concierge_intent(message, today=loc.today, max_day=loc.last_day)
+    intent = parse_assistant_intent(message, today=loc.today, max_day=loc.last_day)
     days: list[date] = (
         [preferred_day]
         if (preferred_day is not None and loc.today <= preferred_day <= loc.last_day)
@@ -438,7 +438,7 @@ async def ask_customer_concierge(
                 )
             except Exception as exc:
                 _LOG.debug(
-                    "Skipping concierge availability probe for variant %s: %s", variant.id, exc
+                    "Skipping assistant availability probe for variant %s: %s", variant.id, exc
                 )
                 continue
             for slot in avail.slots:
@@ -474,7 +474,7 @@ async def ask_customer_concierge(
     gemini_reply = await asyncio.to_thread(
         _call_gemini_sync,
         (
-            f"You are the booking concierge for {boot.name}. Tone: {settings.ai_concierge_tone}. "
+            f"You are the booking assistant for {boot.name}. Tone: {settings.ai_assistant_tone}. "
             "Answer strictly using the verified catalog, live slots, and cancellation policy "
             "provided in JSON. Never invent prices, times, or promises. Reply in the same language "
             "as customer_message in 2-3 concise sentences."
@@ -509,7 +509,7 @@ async def ask_customer_concierge(
     )
 
     if gemini_reply:
-        return ConciergeResult(
+        return AssistantResult(
             engine="gemini",
             business_name=boot.name,
             reply=gemini_reply,
@@ -518,7 +518,7 @@ async def ask_customer_concierge(
             cancellation_summary=boot.cancellation.summary,
         )
 
-    return ConciergeResult(
+    return AssistantResult(
         engine="grounded",
         business_name=boot.name,
         reply=_deterministic_customer_reply(
@@ -622,7 +622,7 @@ async def ask_owner_copilot(
         "notifications_sent_count": int(nrow["sent_count"]),
         "notifications_failed_count": int(nrow["failed_count"]),
         "google_review_url_configured": bool(growth.google_review_url),
-        "ai_concierge_enabled": growth.ai_concierge_enabled,
+        "ai_assistant_enabled": growth.ai_assistant_enabled,
         "reminder_hours_before": growth.reminder_hours_before,
         "rebooking_days_after": growth.rebooking_days_after,
     }
@@ -663,7 +663,7 @@ async def ask_owner_copilot(
                 category="activation",
                 title="Publish at least one bookable service and active team member",
                 detail=(
-                    "Your online booking page and AI Booking Concierge need at least one "
+                    "Your online booking page and AI Booking Assistant need at least one "
                     "published service and active resource to present live availability."
                 ),
                 action_path="/services/",

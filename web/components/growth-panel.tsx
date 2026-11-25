@@ -18,7 +18,7 @@ export function GrowthPanel({ salonId }: { salonId: string }) {
   const [waitlistAutoOffer, setWaitlistAutoOffer] = useState(true);
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiTone, setAiTone] = useState<
-    "warm_professional" | "concise_direct" | "luxury_concierge"
+    "warm_professional" | "concise_direct" | "executive_hospitality"
   >("warm_professional");
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,10 +42,10 @@ export function GrowthPanel({ salonId }: { salonId: string }) {
         setReviewDelayHours(s.review_delay_hours);
         setRebookingDays(s.rebooking_days_after);
         setWaitlistAutoOffer(s.waitlist_auto_offer);
-        setAiEnabled(s.ai_concierge_enabled);
+        setAiEnabled(s.ai_assistant_enabled);
         setAiTone(
-          s.ai_concierge_tone as
-            "warm_professional" | "concise_direct" | "luxury_concierge",
+          s.ai_assistant_tone as
+            "warm_professional" | "concise_direct" | "executive_hospitality",
         );
         setWaitlist(w);
         setError(null);
@@ -74,10 +74,10 @@ export function GrowthPanel({ salonId }: { salonId: string }) {
         review_delay_hours: reviewDelayHours,
         rebooking_days_after: rebookingDays,
         waitlist_auto_offer: waitlistAutoOffer,
-        ai_concierge_enabled: aiEnabled,
-        ai_concierge_tone: aiTone,
+        ai_assistant_enabled: aiEnabled,
+        ai_assistant_tone: aiTone,
       });
-      setFeedback("Growth, Google Review, and AI Concierge settings saved.");
+      setFeedback("Growth, Google Review, and AI Assistant settings saved.");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -120,10 +120,10 @@ export function GrowthPanel({ salonId }: { salonId: string }) {
           id="growth-automation-heading"
           style={{ margin: "0 0 6px", fontSize: "1.1rem" }}
         >
-          AI Concierge, Google Reviews &amp; Smart Waitlist
+          AI Assistant, Google Reviews &amp; Smart Waitlist
         </h3>
         <p style={{ margin: 0, color: "#3f3832", fontSize: "0.9rem" }}>
-          Control customer AI booking concierge, post-visit Google review
+          Control customer AI booking assistant, post-visit Google review
           booster, automated reminder cadence, and cancellation recovery
           waitlist.
         </p>
@@ -214,7 +214,7 @@ export function GrowthPanel({ salonId }: { salonId: string }) {
                 />
               </label>
               <label htmlFor={toneId} style={{ display: "grid", gap: "4px" }}>
-                AI Concierge tone
+                AI Assistant tone
                 <select
                   id={toneId}
                   value={aiTone}
@@ -223,7 +223,7 @@ export function GrowthPanel({ salonId }: { salonId: string }) {
                       e.target.value as
                         | "warm_professional"
                         | "concise_direct"
-                        | "luxury_concierge",
+                        | "executive_hospitality",
                     )
                   }
                 >
@@ -231,7 +231,9 @@ export function GrowthPanel({ salonId }: { salonId: string }) {
                     Warm &amp; Professional
                   </option>
                   <option value="concise_direct">Concise &amp; Direct</option>
-                  <option value="luxury_concierge">Luxury Concierge</option>
+                  <option value="executive_hospitality">
+                    Executive & Hospitality
+                  </option>
                 </select>
               </label>
             </div>
@@ -245,7 +247,7 @@ export function GrowthPanel({ salonId }: { salonId: string }) {
                   checked={aiEnabled}
                   onChange={(e) => setAiEnabled(e.target.checked)}
                 />
-                Enable Customer AI Booking Concierge on /book/
+                Enable Customer AI Booking Assistant on /book/
               </label>
               <label
                 style={{ display: "flex", alignItems: "center", gap: "8px" }}

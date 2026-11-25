@@ -169,7 +169,7 @@ def _items(conn: psycopg.Connection, dataset_id: UUID, purpose: str) -> list[tup
     ]
 
 
-# --- inference used by evaluation (and by the future concierge) --------------------
+# --- inference used by evaluation (and by the future assistant) --------------------
 
 
 def predict(conn: psycopg.Connection, model_id: UUID, text: str) -> tuple[str | None, float]:

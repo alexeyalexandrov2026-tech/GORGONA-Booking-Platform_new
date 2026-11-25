@@ -1,15 +1,15 @@
-"""Unit tests for AI Concierge multilingual intent parsing and growth notification templates."""
+"""Unit tests for AI Assistant multilingual intent parsing and growth notification templates."""
 
 from __future__ import annotations
 
 from datetime import date
 
-from gorgona_booking.ai_concierge.service import parse_concierge_intent
+from gorgona_booking.ai_assistant.service import parse_assistant_intent
 from gorgona_booking.notifications.service import TEMPLATES, render_template
 
 
-def test_parse_concierge_intent_english_tomorrow_afternoon_and_budget() -> None:
-    intent = parse_concierge_intent(
+def test_parse_assistant_intent_english_tomorrow_afternoon_and_budget() -> None:
+    intent = parse_assistant_intent(
         "Anything open tomorrow afternoon for a haircut under $65?",
         today=date(2026, 12, 1),
         max_day=date(2027, 1, 30),
@@ -21,8 +21,8 @@ def test_parse_concierge_intent_english_tomorrow_afternoon_and_budget() -> None:
     assert "haircut" in intent["tokens"]
 
 
-def test_parse_concierge_intent_russian_and_spanish() -> None:
-    ru = parse_concierge_intent(
+def test_parse_assistant_intent_russian_and_spanish() -> None:
+    ru = parse_assistant_intent(
         "Есть свободное время завтра утром до 50?",
         today=date(2026, 12, 1),
         max_day=date(2027, 1, 30),
@@ -32,7 +32,7 @@ def test_parse_concierge_intent_russian_and_spanish() -> None:
     assert ru["max_price_cents"] == 5000
     assert ru["language"] == "ru"
 
-    es = parse_concierge_intent(
+    es = parse_assistant_intent(
         "Hola, cita mañana tarde barato",
         today=date(2026, 12, 1),
         max_day=date(2027, 1, 30),

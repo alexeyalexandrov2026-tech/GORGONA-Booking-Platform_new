@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from gorgona_booking.api import (
     agreements,
-    ai_concierge,
+    ai_assistant,
     businesses,
     configurations,
     construction,
@@ -215,7 +215,7 @@ def create_app(
     app.include_router(self_service.router)
     app.include_router(notifications.router)
     app.include_router(growth.router)
-    app.include_router(ai_concierge.router)
+    app.include_router(ai_assistant.router)
     app.include_router(setup.router)
     app.include_router(platform.router)
     app.include_router(customer.router)

@@ -1,7 +1,7 @@
 {
   "name": "GORGONA Business Platform",
   "short_name": "GORGONA",
-  "description": "Universal multi-industry booking, operations, finance, and AI concierge platform.",
+  "description": "Universal multi-industry booking, operations, finance, and AI assistant platform.",
   "start_url": "/overview/",
   "scope": "/",
   "display": "standalone",

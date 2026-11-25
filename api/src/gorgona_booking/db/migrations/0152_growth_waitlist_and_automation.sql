@@ -11,9 +11,9 @@ CREATE TABLE gba.growth_settings (
     review_delay_hours integer NOT NULL DEFAULT 2 CHECK (review_delay_hours BETWEEN 0 AND 168),
     rebooking_days_after integer NOT NULL DEFAULT 28 CHECK (rebooking_days_after BETWEEN 7 AND 365),
     waitlist_auto_offer boolean NOT NULL DEFAULT true,
-    ai_concierge_enabled boolean NOT NULL DEFAULT true,
-    ai_concierge_tone text NOT NULL DEFAULT 'warm_professional' CHECK (
-        ai_concierge_tone IN ('warm_professional', 'concise_direct', 'luxury_concierge')
+    ai_assistant_enabled boolean NOT NULL DEFAULT true,
+    ai_assistant_tone text NOT NULL DEFAULT 'warm_professional' CHECK (
+        ai_assistant_tone IN ('warm_professional', 'concise_direct', 'executive_hospitality')
     ),
     updated_by_user_id uuid REFERENCES gba.users(id) ON DELETE SET NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
