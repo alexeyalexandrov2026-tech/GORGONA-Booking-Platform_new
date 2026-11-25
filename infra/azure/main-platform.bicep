@@ -44,6 +44,15 @@ param authJwksUrl string
 param authClientId string = ''
 param authScope string = ''
 
+@description('Transactional notifications mode and optional live Email/SMS provider wiring.')
+@allowed(['sandbox', 'live'])
+param notificationsMode string = 'sandbox'
+param acsEmailEndpoint string = ''
+param acsEmailSender string = ''
+param enableLiveEmailSecrets bool = false
+param twilioAccountSid string = ''
+param twilioFromNumber string = ''
+param enableLiveSmsSecrets bool = false
 @description('PostgreSQL sizing.')
 param postgresSku string
 @allowed(['Burstable', 'GeneralPurpose', 'MemoryOptimized'])
@@ -208,7 +217,12 @@ module apiTelemetry 'modules/appinsights-publisher.bicep' = {
 module frontDoor 'modules/frontdoor-profile.bicep' = {
   name: '${namePrefix}-frontdoor'
   scope: rg
-  params: { namePrefix: namePrefix, tags: tags, endpointNames: frontDoorEndpointNames }
+  params: {
+    namePrefix: namePrefix
+    tags: tags
+    endpointNames: frontDoorEndpointNames
+    logAnalyticsWorkspaceId: logAnalyticsWorkspaceId
+  }
 }
 
 module apps 'modules/containerapps.bicep' = {
@@ -239,6 +253,13 @@ module apps 'modules/containerapps.bicep' = {
     maxReplicas: maxReplicas
     dbPoolMaxSize: dbPoolMaxSize
     databaseName: databaseName
+    notificationsMode: notificationsMode
+    acsEmailEndpoint: acsEmailEndpoint
+    acsEmailSender: acsEmailSender
+    enableLiveEmailSecrets: enableLiveEmailSecrets
+    twilioAccountSid: twilioAccountSid
+    twilioFromNumber: twilioFromNumber
+    enableLiveSmsSecrets: enableLiveSmsSecrets
   }
   // Key Vault references and registry pulls are resolved at creation time.
   dependsOn: [apiSecrets, jobSecrets, apiPull, jobsPull]

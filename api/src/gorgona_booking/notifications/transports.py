@@ -8,11 +8,13 @@ import hmac
 import http.client
 import json
 import os
+import smtplib
 import ssl
 import urllib.parse
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from email.message import EmailMessage
 from email.utils import format_datetime
 from typing import Protocol
 
@@ -248,6 +250,72 @@ class TwilioSmsTransport:
             ) from exc
 
 
+class SmtpEmailTransport:
+    """Cloud-agnostic TLS SMTP transport (SendGrid, Postmark, Mailgun, Google Workspace)."""
+
+    name = "smtp_email"
+    sandbox = False
+
+    def __init__(
+        self,
+        *,
+        host: str,
+        port: int,
+        username: str,
+        password: str,
+        sender_address: str,
+        timeout_s: float = 15.0,
+    ) -> None:
+        self._host = host
+        self._port = port
+        self._username = username
+        self._password = password
+        self._sender = sender_address
+        self._timeout_s = timeout_s
+
+    def send(
+        self,
+        *,
+        channel: str,
+        recipient: str,
+        subject: str,
+        body: str,
+        idempotency_key: str,
+    ) -> DeliveryReceipt:
+        if channel != "email":
+            raise TransportDeliveryError("SMTP transport only supports email", retryable=False)
+        msg = EmailMessage()
+        msg["From"] = self._sender
+        msg["To"] = recipient
+        msg["Subject"] = subject
+        msg["X-Idempotency-Key"] = idempotency_key
+        msg.set_content(body)
+        ctx = ssl.create_default_context()
+        try:
+            if self._port == 465:
+                with smtplib.SMTP_SSL(
+                    self._host, self._port, timeout=self._timeout_s, context=ctx
+                ) as client:
+                    client.login(self._username, self._password)
+                    client.send_message(msg)
+            else:
+                with smtplib.SMTP(self._host, self._port, timeout=self._timeout_s) as client:
+                    client.starttls(context=ctx)
+                    client.login(self._username, self._password)
+                    client.send_message(msg)
+            msg_id = f"smtp-{uuid.uuid5(uuid.NAMESPACE_URL, idempotency_key).hex[:16]}"
+            return DeliveryReceipt(
+                provider_name=self.name, provider_message_id=msg_id, sandbox=False
+            )
+        except smtplib.SMTPResponseException as exc:
+            retryable = 400 <= exc.smtp_code < 500
+            raise TransportDeliveryError(
+                f"SMTP error {exc.smtp_code}", retryable=retryable
+            ) from exc
+        except (OSError, smtplib.SMTPException) as exc:
+            raise TransportDeliveryError(f"SMTP network error: {exc}", retryable=True) from exc
+
+
 def resolve_notification_transports(
     env: dict[str, str] | None = None,
 ) -> tuple[dict[str, NotificationTransport], dict[str, dict[str, object]]]:
@@ -256,11 +324,24 @@ def resolve_notification_transports(
     mode = (source.get("GBA_NOTIFICATIONS_MODE") or "sandbox").strip().lower()
     sandbox = SandboxNotificationTransport()
 
+    email_provider = (source.get("GBA_EMAIL_PROVIDER") or "acs").strip().lower()
     acs_missing = [
         k
         for k in ("GBA_ACS_EMAIL_ENDPOINT", "GBA_ACS_EMAIL_ACCESS_KEY", "GBA_ACS_EMAIL_SENDER")
         if not source.get(k, "").strip()
     ]
+    smtp_missing = [
+        k
+        for k in (
+            "GBA_SMTP_HOST",
+            "GBA_SMTP_PORT",
+            "GBA_SMTP_USERNAME",
+            "GBA_SMTP_PASSWORD",
+            "GBA_SMTP_SENDER",
+        )
+        if not source.get(k, "").strip()
+    ]
+    email_missing = smtp_missing if email_provider == "smtp" else acs_missing
     twilio_missing = [
         k
         for k in ("GBA_TWILIO_ACCOUNT_SID", "GBA_TWILIO_AUTH_TOKEN", "GBA_TWILIO_FROM_NUMBER")
@@ -268,7 +349,15 @@ def resolve_notification_transports(
     ]
 
     email_transport: NotificationTransport = sandbox
-    if mode == "live" and not acs_missing:
+    if mode == "live" and email_provider == "smtp" and not smtp_missing:
+        email_transport = SmtpEmailTransport(
+            host=source["GBA_SMTP_HOST"].strip(),
+            port=int(source["GBA_SMTP_PORT"].strip()),
+            username=source["GBA_SMTP_USERNAME"].strip(),
+            password=source["GBA_SMTP_PASSWORD"].strip(),
+            sender_address=source["GBA_SMTP_SENDER"].strip(),
+        )
+    elif mode == "live" and email_provider != "smtp" and not acs_missing:
         email_transport = AzureCommunicationEmailTransport(
             endpoint=source["GBA_ACS_EMAIL_ENDPOINT"].strip(),
             access_key=source["GBA_ACS_EMAIL_ACCESS_KEY"].strip(),
@@ -287,8 +376,8 @@ def resolve_notification_transports(
         "email": {
             "mode": "live" if not email_transport.sandbox else "sandbox",
             "provider": email_transport.name,
-            "production_credentials_configured": len(acs_missing) == 0,
-            "missing_production_env_vars": acs_missing,
+            "production_credentials_configured": len(email_missing) == 0,
+            "missing_production_env_vars": email_missing,
         },
         "sms": {
             "mode": "live" if not sms_transport.sandbox else "sandbox",

@@ -69,7 +69,10 @@ from gorgona_booking.api.errors import install_error_handlers
 from gorgona_booking.api.framing import FramingPolicyMiddleware
 from gorgona_booking.api.health import ReadinessProbe
 from gorgona_booking.api.request_id import RequestIdMiddleware
-from gorgona_booking.api.trusted_proxy import AzureFrontDoorMiddleware
+from gorgona_booking.api.trusted_proxy import (
+    AzureFrontDoorMiddleware,
+    GoogleCloudLoadBalancerMiddleware,
+)
 from gorgona_booking.auth.verifier import OidcJwtVerifier, RemoteJwksKeySource, TokenVerifier
 from gorgona_booking.booking.service import BookingService
 from gorgona_booking.config import Settings, assert_environment_allowed
@@ -144,6 +147,11 @@ def create_app(
     if settings.trusted_proxy == "azure_front_door" and settings.front_door_id is not None:
         # Added before RequestIdMiddleware, so it runs inside it: refusals carry a request ID.
         app.add_middleware(AzureFrontDoorMiddleware, front_door_id=settings.front_door_id)
+    elif settings.trusted_proxy == "google_cloud_lb" and settings.edge_token is not None:
+        app.add_middleware(
+            GoogleCloudLoadBalancerMiddleware,
+            edge_secret=settings.edge_token.get_secret_value(),
+        )
     # Inside RequestIdMiddleware (so the request ID is known), outside everything else.
     app.add_middleware(AccessLogMiddleware)
     app.add_middleware(RequestIdMiddleware)

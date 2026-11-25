@@ -67,6 +67,19 @@ param httpConcurrency int = 50
 @description('Booking database name created by bootstrap.')
 param databaseName string = 'gorgona_booking'
 
+@description('Transactional notifications mode: sandbox (zero spend) or live (ACS Email + Twilio SMS).')
+@allowed(['sandbox', 'live'])
+param notificationsMode string = 'sandbox'
+
+@description('Optional live Azure Communication Services Email config (non-secret values).')
+param acsEmailEndpoint string = ''
+param acsEmailSender string = ''
+param enableLiveEmailSecrets bool = false
+
+@description('Optional live Twilio SMS config (non-secret values).')
+param twilioAccountSid string = ''
+param twilioFromNumber string = ''
+param enableLiveSmsSecrets bool = false
 var registries = [{ server: registryServer, identity: apiIdentityId }]
 var jobRegistries = [{ server: registryServer, identity: jobsIdentityId }]
 var resources = { cpu: json('0.5'), memory: '1Gi' }
@@ -116,13 +129,33 @@ resource api 'Microsoft.App/containerApps@2026-01-01' = {
         traffic: [{ latestRevision: true, weight: 100 }]
       }
       registries: registries
-      secrets: [
-        {
-          name: 'database-url'
-          keyVaultUrl: '${keyVaultUri}secrets/database-url'
-          identity: apiIdentityId
-        }
-      ]
+      secrets: concat(
+        [
+          {
+            name: 'database-url'
+            keyVaultUrl: '${keyVaultUri}secrets/database-url'
+            identity: apiIdentityId
+          }
+        ],
+        enableLiveEmailSecrets
+          ? [
+              {
+                name: 'acs-email-access-key'
+                keyVaultUrl: '${keyVaultUri}secrets/acs-email-access-key'
+                identity: apiIdentityId
+              }
+            ]
+          : [],
+        enableLiveSmsSecrets
+          ? [
+              {
+                name: 'twilio-auth-token'
+                keyVaultUrl: '${keyVaultUri}secrets/twilio-auth-token'
+                identity: apiIdentityId
+              }
+            ]
+          : []
+      )
     }
     template: {
       terminationGracePeriodSeconds: 30
@@ -131,24 +164,33 @@ resource api 'Microsoft.App/containerApps@2026-01-01' = {
           name: 'api'
           image: image
           resources: resources
-          env: [
-            { name: 'GBA_ENV', value: gbaEnv }
-            { name: 'GBA_HOST', value: '0.0.0.0' }
-            { name: 'GBA_PORT', value: '8000' }
-            { name: 'GBA_DATABASE_URL', secretRef: 'database-url' }
-            { name: 'GBA_DB_POOL_MAX_SIZE', value: string(dbPoolMaxSize) }
-            { name: 'GBA_CUSTOMER_WEB_DIR', value: '/app/web' }
-            { name: 'GBA_TRUSTED_PROXY', value: 'azure_front_door' }
-            { name: 'GBA_FRONT_DOOR_ID', value: frontDoorId }
-            { name: 'GBA_AUTH_ISSUER', value: authIssuer }
-            { name: 'GBA_AUTH_AUDIENCE', value: authAudience }
-            { name: 'GBA_AUTH_JWKS_URL', value: authJwksUrl }
-            { name: 'GBA_AUTH_CLIENT_ID', value: authClientId }
-            { name: 'GBA_AUTH_SCOPE', value: authScope }
-            { name: 'OTEL_SERVICE_NAME', value: 'gorgona-api-${gbaEnv}' }
-            { name: 'AZURE_CLIENT_ID', value: apiIdentityClientId }
-            { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
-          ]
+          env: concat(
+            [
+              { name: 'GBA_ENV', value: gbaEnv }
+              { name: 'GBA_HOST', value: '0.0.0.0' }
+              { name: 'GBA_PORT', value: '8000' }
+              { name: 'GBA_DATABASE_URL', secretRef: 'database-url' }
+              { name: 'GBA_DB_POOL_MAX_SIZE', value: string(dbPoolMaxSize) }
+              { name: 'GBA_CUSTOMER_WEB_DIR', value: '/app/web' }
+              { name: 'GBA_TRUSTED_PROXY', value: 'azure_front_door' }
+              { name: 'GBA_FRONT_DOOR_ID', value: frontDoorId }
+              { name: 'GBA_AUTH_ISSUER', value: authIssuer }
+              { name: 'GBA_AUTH_AUDIENCE', value: authAudience }
+              { name: 'GBA_AUTH_JWKS_URL', value: authJwksUrl }
+              { name: 'GBA_AUTH_CLIENT_ID', value: authClientId }
+              { name: 'GBA_AUTH_SCOPE', value: authScope }
+              { name: 'OTEL_SERVICE_NAME', value: 'gorgona-api-${gbaEnv}' }
+              { name: 'AZURE_CLIENT_ID', value: apiIdentityClientId }
+              { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
+              { name: 'GBA_NOTIFICATIONS_MODE', value: notificationsMode }
+              { name: 'GBA_ACS_EMAIL_ENDPOINT', value: acsEmailEndpoint }
+              { name: 'GBA_ACS_EMAIL_SENDER', value: acsEmailSender }
+              { name: 'GBA_TWILIO_ACCOUNT_SID', value: twilioAccountSid }
+              { name: 'GBA_TWILIO_FROM_NUMBER', value: twilioFromNumber }
+            ],
+            enableLiveEmailSecrets ? [{ name: 'GBA_ACS_EMAIL_ACCESS_KEY', secretRef: 'acs-email-access-key' }] : [],
+            enableLiveSmsSecrets ? [{ name: 'GBA_TWILIO_AUTH_TOKEN', secretRef: 'twilio-auth-token' }] : []
+          )
           probes: [
             {
               type: 'Startup'

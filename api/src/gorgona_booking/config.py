@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, m
 
 type Environment = Literal["local", "test", "ci", "staging", "production"]
 # "none": only the Host header names the tenant (M1-M3). "azure_front_door": see ADR-0012.
-type TrustedProxy = Literal["none", "azure_front_door"]
+type TrustedProxy = Literal["none", "azure_front_door", "google_cloud_lb"]
 
 # Environment variable -> Settings field. Nothing else is read from the environment.
 _ENV_FIELDS: Mapping[str, str] = {
@@ -23,6 +23,7 @@ _ENV_FIELDS: Mapping[str, str] = {
     "GBA_CUSTOMER_WEB_DIR": "customer_web_dir",
     "GBA_TRUSTED_PROXY": "trusted_proxy",
     "GBA_FRONT_DOOR_ID": "front_door_id",
+    "GBA_EDGE_SECRET": "edge_token",
     "GBA_AUTH_ISSUER": "auth_issuer",
     "GBA_AUTH_AUDIENCE": "auth_audience",
     "GBA_AUTH_JWKS_URL": "auth_jwks_url",
@@ -56,6 +57,7 @@ class Settings(BaseModel):
     # Trusted reverse proxy. Front Door mode requires the profile ID (X-Azure-FDID).
     trusted_proxy: TrustedProxy = "none"
     front_door_id: str | None = None
+    edge_token: SecretStr | None = None
     # External OIDC provider (ADR-0007). All three or none.
     auth_issuer: str | None = None
     auth_audience: str | None = None
@@ -98,10 +100,23 @@ class Settings(BaseModel):
 
     @model_validator(mode="after")
     def _proxy_settings(self) -> Self:
-        if self.trusted_proxy == "azure_front_door" and self.front_door_id is None:
-            raise ValueError("GBA_TRUSTED_PROXY=azure_front_door requires GBA_FRONT_DOOR_ID")
-        if self.trusted_proxy == "none" and self.front_door_id is not None:
-            raise ValueError("GBA_FRONT_DOOR_ID requires GBA_TRUSTED_PROXY=azure_front_door")
+        if self.trusted_proxy == "azure_front_door":
+            if self.front_door_id is None:
+                raise ValueError("GBA_TRUSTED_PROXY=azure_front_door requires GBA_FRONT_DOOR_ID")
+            if self.edge_token is not None:
+                raise ValueError("GBA_EDGE_SECRET requires GBA_TRUSTED_PROXY=google_cloud_lb")
+        elif self.trusted_proxy == "google_cloud_lb":
+            if self.edge_token is None or len(self.edge_token.get_secret_value().strip()) < 32:
+                raise ValueError(
+                    "GBA_TRUSTED_PROXY=google_cloud_lb requires GBA_EDGE_SECRET (>= 32 chars)"
+                )
+            if self.front_door_id is not None:
+                raise ValueError("GBA_FRONT_DOOR_ID requires GBA_TRUSTED_PROXY=azure_front_door")
+        else:
+            if self.front_door_id is not None:
+                raise ValueError("GBA_FRONT_DOOR_ID requires GBA_TRUSTED_PROXY=azure_front_door")
+            if self.edge_token is not None:
+                raise ValueError("GBA_EDGE_SECRET requires GBA_TRUSTED_PROXY=google_cloud_lb")
         return self
 
     @model_validator(mode="after")
@@ -156,8 +171,15 @@ def assert_environment_allowed(settings: Settings) -> None:
     missing = []
     if not settings.auth_configured:
         missing.append("an OIDC provider (GBA_AUTH_ISSUER/AUDIENCE/JWKS_URL)")
-    if settings.trusted_proxy != "azure_front_door" or settings.front_door_id is None:
-        missing.append("the trusted Front Door boundary (GBA_TRUSTED_PROXY, GBA_FRONT_DOOR_ID)")
+    has_azure_edge = (
+        settings.trusted_proxy == "azure_front_door" and settings.front_door_id is not None
+    )
+    has_gcp_edge = settings.trusted_proxy == "google_cloud_lb" and settings.edge_token is not None
+    if not (has_azure_edge or has_gcp_edge):
+        missing.append(
+            "the trusted Front Door boundary (GBA_TRUSTED_PROXY, GBA_FRONT_DOOR_ID) "
+            "or Google Cloud LB boundary (GBA_EDGE_SECRET)"
+        )
     if settings.environment == "production" and settings.production_authorization is None:
         missing.append(
             "an explicit production authorization (GBA_PRODUCTION_AUTHORIZATION, set only by "

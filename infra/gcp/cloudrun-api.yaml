@@ -1,0 +1,78 @@
+# GORGONA Platform API - Google Cloud Run v2 Service Blueprint
+# Ingress restricted strictly to Global External Application Load Balancer + Cloud Armor.
+# Deploy with: gcloud run services replace infra/gcp/cloudrun-api.yaml --region=us-central1
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: gorgona-api
+  annotations:
+    run.googleapis.com/ingress: internal-and-cloud-load-balancing
+    run.googleapis.com/launch-stage: GA
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "2"
+        autoscaling.knative.dev/maxScale: "10"
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+        run.googleapis.com/network-interfaces: '[{"network":"gorgona-vpc","subnetwork":"gorgona-run-subnet"}]'
+        run.googleapis.com/cpu-throttling: "false"
+    spec:
+      serviceAccountName: gorgona-api-sa@PROJECT_ID.iam.gserviceaccount.com
+      containerConcurrency: 50
+      timeoutSeconds: 60
+      containers:
+        - image: us-central1-docker.pkg.dev/PROJECT_ID/gorgona/gorgona-api@sha256:REPLACE_WITH_VERIFIED_DIGEST
+          ports:
+            - name: http1
+              containerPort: 8000
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          env:
+            - name: GBA_ENV
+              value: production
+            - name: GBA_HOST
+              value: "0.0.0.0"
+            - name: GBA_PORT
+              value: "8000"
+            - name: GBA_CUSTOMER_WEB_DIR
+              value: /app/web
+            - name: GBA_DB_POOL_MAX_SIZE
+              value: "10"
+            - name: GBA_TRUSTED_PROXY
+              value: google_cloud_lb
+            - name: GBA_AUTH_ISSUER
+              value: "https://securetoken.google.com/PROJECT_ID"
+            - name: GBA_AUTH_AUDIENCE
+              value: "PROJECT_ID"
+            - name: GBA_AUTH_JWKS_URL
+              value: "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"
+            - name: GBA_NOTIFICATIONS_MODE
+              value: sandbox
+            - name: GBA_EMAIL_PROVIDER
+              value: smtp
+            - name: GBA_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: gorgona-database-url
+                  key: latest
+            - name: GBA_EDGE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: gorgona-edge-secret
+                  key: latest
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
