@@ -1,0 +1,34 @@
+# GORGONA Database Migration Job - Google Cloud Run Jobs Blueprint
+# Runs explicit forward-only migrations (gba-db migrate) using gba_owner credentials.
+# Deploy with: gcloud run jobs replace infra/gcp/cloudrun-migrate-job.yaml --region=us-central1
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: gorgona-migrate
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+        run.googleapis.com/network-interfaces: '[{"network":"gorgona-vpc","subnetwork":"gorgona-run-subnet"}]'
+    spec:
+      taskCount: 1
+      template:
+        spec:
+          serviceAccountName: gorgona-jobs-sa@PROJECT_ID.iam.gserviceaccount.com
+          maxRetries: 0
+          timeoutSeconds: 900
+          containers:
+            - image: us-central1-docker.pkg.dev/PROJECT_ID/gorgona/gorgona-api@sha256:REPLACE_WITH_VERIFIED_DIGEST
+              command: ["gba-db"]
+              args: ["migrate"]
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+              env:
+                - name: GBA_MIGRATION_DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: gorgona-migration-database-url
+                      key: latest

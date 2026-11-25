@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useId, useState } from "react";
+import React, { useEffect, useId, useState } from "react";
 import {
   fetchNotificationOutbox,
   fetchNotificationReadiness,
@@ -16,6 +16,7 @@ export function NotificationsPanel({ salonId }: { salonId: string }) {
   const [outbox, setOutbox] = useState<NotificationOutboxItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [channel, setChannel] = useState<"email" | "sms">("email");
   const [templateCode, setTemplateCode] = useState("booking_confirmation");
@@ -27,26 +28,29 @@ export function NotificationsPanel({ salonId }: { salonId: string }) {
   const templateId = useId();
   const recipientId = useId();
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [r, o] = await Promise.all([
-        fetchNotificationReadiness(salonId),
-        fetchNotificationOutbox(salonId, 10),
-      ]);
-      setReadiness(r);
-      setOutbox(o);
-      setError(null);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [salonId]);
-
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    let active = true;
+    Promise.all([
+      fetchNotificationReadiness(salonId),
+      fetchNotificationOutbox(salonId, 10),
+    ])
+      .then(([r, o]) => {
+        if (!active) return;
+        setReadiness(r);
+        setOutbox(o);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [salonId, refreshKey]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +76,7 @@ export function NotificationsPanel({ salonId }: { salonId: string }) {
         `Dispatched (${item.status}) via ${item.provider_name} to ${item.recipient_masked}.`,
       );
       setRecipient("");
-      await loadData();
+      setRefreshKey((k) => k + 1);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
