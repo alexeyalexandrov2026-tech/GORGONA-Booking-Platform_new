@@ -154,10 +154,22 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       setSalonId(selected?.salon_id ?? null);
       setActiveSalonId(selected?.salon_id ?? null);
     })()
-      .catch(() => {
+      .catch((err: unknown) => {
         if (active) {
           setMe(null);
-          setError("We couldn’t verify your account. Sign in again or retry.");
+          const msg = err instanceof Error ? err.message : "";
+          if (
+            msg.includes("not linked") ||
+            msg.includes("IDENTITY_NOT_LINKED")
+          ) {
+            setError(
+              "Your sign-in is verified but not linked to a business yet. Create your business workspace to get started.",
+            );
+          } else {
+            setError(
+              "We couldn’t verify your account. Sign in again or retry.",
+            );
+          }
         }
       })
       .finally(() => {
@@ -230,6 +242,9 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         <div className="mgmt-header-actions">
           {me ? (
             <>
+              <Link href="/onboarding/" className="mgmt-nav-link">
+                + New business
+              </Link>
               <span>{me.display_name}</span>
               <button
                 className="secondary"
@@ -314,11 +329,15 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
               </section>
             ) : !salonId ? (
               <section className="mgmt-empty-state">
-                <h2>No active studios</h2>
+                <h2>No active businesses yet</h2>
                 <p>
-                  Your account has no active salon membership. Contact your
-                  studio owner for access.
+                  Your account has no active business membership yet. Register a
+                  new business workspace yourself, or ask an owner for an
+                  invitation.
                 </p>
+                <Link href="/onboarding/" className="mgmt-nav-link active">
+                  Create your business workspace
+                </Link>
               </section>
             ) : (
               children({ salonId, me, refresh })
@@ -326,6 +345,22 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
           </>
         )}
       </main>
+      <footer
+        style={{
+          padding: "1rem 1.5rem",
+          fontSize: "0.85rem",
+          color: "#3f3832",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "1rem",
+          borderTop: "1px solid rgba(0,0,0,0.12)",
+        }}
+      >
+        <span>GORGONA Platform</span>
+        <Link href="/onboarding/">Register business</Link>
+        <Link href="/legal/terms/">Terms of Service</Link>
+        <Link href="/legal/privacy/">Privacy Policy</Link>
+      </footer>
     </div>
   );
 }

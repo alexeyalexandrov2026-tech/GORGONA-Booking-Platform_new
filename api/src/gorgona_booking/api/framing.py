@@ -35,6 +35,8 @@ class FramingPolicyMiddleware:
         async def send_with_policy(message: Message) -> None:
             if message["type"] == "http.response.start":
                 headers = MutableHeaders(scope=message)
+                headers.setdefault("x-content-type-options", "nosniff")
+                headers.setdefault("referrer-policy", "strict-origin-when-cross-origin")
                 if is_api:
                     # Multiple CSP policies are enforced together. Keep any
                     # existing default-src/sandbox policy, and add a separate

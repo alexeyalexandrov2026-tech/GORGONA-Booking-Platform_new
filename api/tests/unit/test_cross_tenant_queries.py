@@ -53,6 +53,11 @@ _ALLOWED = (
         "operator onboarding checks that a host is free",
     ),
     (
+        "onboarding/self_service.py",
+        "from gba.memberships m join gba.tenants t on t.id = m.tenant_id",
+        "/v1/onboarding/status lists the caller's own active businesses",
+    ),
+    (
         "business/departments.py",
         "select 1 from gba.{} where tenant_id = %s and id = %s",
         "reference check over fixed table names (legal entities, locations)",

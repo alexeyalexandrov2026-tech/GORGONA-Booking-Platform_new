@@ -288,6 +288,7 @@ K_TABLES = {
     "asset_inspections",
     "asset_work_orders",
     "asset_safety_incidents",
+    "self_service_signups",
     "civic_programs",
     "civic_cases",
     "civic_allocations",
