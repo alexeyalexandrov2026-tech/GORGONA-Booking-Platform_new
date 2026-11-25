@@ -127,10 +127,21 @@ async def test_lifecycle_keeps_every_version_and_replays(
         "counterparties",
         BOOKING,
         "workforce",
+        "projects",
         "documents",
         "finance",
         "finance_documents",
         "inventory",
+        "assets",
+        "analytics",
+        "transport",
+        "construction",
+        "rental",
+        "property",
+        "restaurant",
+        "supply",
+        "hospitality_events",
+        "storefronts",
     ]
     assert len(catalog["modules"]) == 28
     registry = (
@@ -267,7 +278,7 @@ async def test_invalid_configurations_are_explained(
     unknown = await config.draft(owner_a, a, 0, ["organization"])
     assert unknown.json()["error"]["code"] == "INVALID_REQUEST"
     for version, modules, codes in (
-        (1, ["analytics"], {("MODULE_NOT_READY", "analytics")}),
+        (1, ["automation_ai"], {("MODULE_NOT_READY", "automation_ai")}),
         (
             2,
             ["sales"],
@@ -665,7 +676,7 @@ async def test_registry_v2_preserves_published_v1_finance_and_admits_h_only_when
         patch.setattr(config_service, "MODULE_REGISTRY_VERSION", 1)
         await config.publish(owner_a, a, 0, [BOOKING, "finance", "counterparties"])
     current = (await config.get(owner_a, a)).json()
-    assert current["registry_version"] == 16
+    assert current["registry_version"] == 17
     assert current["published"]["registry_version"] == 1
     assert "finance" in current["effective_module_ids"]
     assert "finance_documents" not in current["effective_module_ids"]
@@ -698,7 +709,7 @@ async def test_registry_v2_preserves_published_v1_finance_and_admits_h_only_when
     published = await config.step(owner_a, a, 2, "publish", 2)
     assert published.status_code == 200, published.text
     final = (await config.get(owner_a, a)).json()
-    assert final["published"]["registry_version"] == 16
+    assert final["published"]["registry_version"] == 17
     assert "finance_documents" in final["effective_module_ids"]
 
 

@@ -155,8 +155,21 @@ FORGED = (
 
 
 async def test_without_acceptance_drivers_and_vehicles_are_not_ready(
-    client: httpx.AsyncClient, world: BookingWorld, manager_a: FakeUser, idp: FakeIdp
+    client: httpx.AsyncClient,
+    world: BookingWorld,
+    manager_a: FakeUser,
+    idp: FakeIdp,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from gorgona_booking.business import modules
+    from gorgona_booking.business.readiness_registry import Readiness
+
+    current = modules.MODULES_BY_ID["transport"]
+    monkeypatch.setitem(
+        modules.MODULES_BY_ID,
+        "transport",
+        current.model_copy(update={"enableable": False, "readiness": Readiness.IMPLEMENTED}),
+    )
     headers = idp.bearer(manager_a.subject, email=manager_a.email)
     base = f"/v1/businesses/{world.a.tenant_id}/transport"
     refused = await client.put(

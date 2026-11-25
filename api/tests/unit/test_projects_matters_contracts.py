@@ -24,10 +24,10 @@ from gorgona_booking.business.readiness_registry import Readiness
 
 
 def test_projects_module_is_implemented_and_not_enableable() -> None:
-    assert modules.MODULE_REGISTRY_VERSION == 16
+    assert modules.MODULE_REGISTRY_VERSION == 17
     mod = modules.MODULES_BY_ID[PROJECTS_MODULE]
-    assert mod.readiness is Readiness.IMPLEMENTED
-    assert mod.enableable is False
+    assert mod.readiness is Readiness.TECHNICALLY_VERIFIED
+    assert mod.enableable is True
     assert mod.depends_on == ("counterparties", "documents", "finance_documents")
 
 

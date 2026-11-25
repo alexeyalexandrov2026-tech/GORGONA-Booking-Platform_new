@@ -13,10 +13,10 @@ from gorgona_booking.business.special_venues import EventInput, ProgramInput, Ro
 
 
 def test_hospitality_events_module_and_special_permissions_registered() -> None:
-    assert modules.MODULE_REGISTRY_VERSION == 16
+    assert modules.MODULE_REGISTRY_VERSION == 17
     mod = modules.MODULES_BY_ID["hospitality_events"]
-    assert mod.readiness == Readiness.IMPLEMENTED
-    assert mod.enableable is False
+    assert mod.readiness == Readiness.TECHNICALLY_VERIFIED
+    assert mod.enableable is True
     assert set(mod.depends_on) == {"counterparties"}
     assert PERMISSIONS_VERSION == 25
     for perm in (Permission.SPECIAL_READ, Permission.SPECIAL_WORK, Permission.SPECIAL_MANAGE):

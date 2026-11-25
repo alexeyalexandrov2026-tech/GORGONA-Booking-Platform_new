@@ -1,6 +1,13 @@
 # GORGONA — реестр реализации
 
-## Current checkpoint — 2026-11-25: 16-Point Commercial Launch Readiness Audit & Live Azure Staging Rollout (migrations 0001..0151)
+## Current checkpoint — 2026-11-25 (US Release v2.0): Google Cloud + Cloudflare Workers AI + 11 Unlocked Commercial Verticals + AI Business Architect + App Hub + R2 Media
+
+- **Active Cloud (ADR-0047):** Migrated 100% to **Google Cloud** (`gorgona-platform-gcp`, `us-central1`, Cloud Run `4 vCPU / 4 GiB`, private Cloud SQL PG18 `4 vCPU / 16 GiB`, Global External HTTPS LB + Cloud Armor WAF, Cloud Scheduler + `pgvector` AI Learning Plane). Legacy Azure billable resources fully decommissioned.
+- **AI Stack:** **Cloudflare Workers AI** live (`@cf/meta/llama-3.3-70b-instruct-fp8-fast` for Customer AI Booking Assistant, Owner Business Copilot, and AI Business Architect; `@cf/meta/llama-4-scout-17b-16e-instruct` Vision for price/menu import; `@cf/qwen/qwen3-embedding-0.6b` 256d Matryoshka embeddings in `ai/`).
+- **Modules (`MODULE_REGISTRY_VERSION = 17`):** Owner-authorized enablement of all 11 verified commercial vertical modules (`projects`, `assets`, `analytics`, `transport`, `construction`, `rental`, `property`, `restaurant`, `supply`, `hospitality_events`, `storefronts`). Regulated US modules `clinical_care` (HIPAA/BAA) and `public_civic` (FedRAMP/SEC) remain `implemented` (`enableable=False`) until compliance sign-off.
+- **US Release v2.0 Additions:** AI Business Architect onboarding, GORGONA App Hub (`/integrations/`, Scoped API Keys, Signed Webhooks, Native MCP endpoint `/v1/mcp`, migration `0153`), Cloudflare R2 brand media engine (migration `0154`), Live Unit Economics (`USD`), redesigned US landing `/` & adaptive workspace shell with `Cmd+K`.
+
+## Historical checkpoint — 2026-11-25: 16-Point Commercial Launch Readiness Audit & Live Azure Staging Rollout (migrations 0001..0151)
 
 All core PRs merged cleanly into `main` (`3676f13`, PRs `#25`, `#26`, `#27`, `#29`) and deployed live to Azure Staging (`ca-gorgona-staging-api--0000004`, image `gorgonaacrga8b00.azurecr.io/gorgona-api@sha256:2e8cca3d0b5dc72953800215e8c2640676cd6f5746afb7cc2003fae2e33174ae`, migrations `0150`–`0151` succeeded via `caj-gorgona-staging-migrate-hepzafi`):
 

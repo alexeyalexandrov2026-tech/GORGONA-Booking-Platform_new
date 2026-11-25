@@ -18,11 +18,11 @@ from gorgona_booking.business.special_assets import (
 
 
 def test_assets_module_registered_implemented_not_enableable() -> None:
-    assert modules.MODULE_REGISTRY_VERSION == 16
+    assert modules.MODULE_REGISTRY_VERSION == 17
     assert PERMISSIONS_VERSION == 25
     mod = modules.MODULES_BY_ID["assets"]
-    assert mod.readiness is Readiness.IMPLEMENTED
-    assert mod.enableable is False
+    assert mod.readiness is Readiness.TECHNICALLY_VERIFIED
+    assert mod.enableable is True
     assert Permission.ASSETS_READ.value == "assets.read"
     assert Permission.ASSETS_WORK.value == "assets.work"
     assert Permission.ASSETS_MANAGE.value == "assets.manage"

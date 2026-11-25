@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from gorgona_booking.business.readiness_registry import SCENARIOS, Readiness, at_least
 from gorgona_booking.errors import DomainError
 
-MODULE_REGISTRY_VERSION: Literal[16] = 16
+MODULE_REGISTRY_VERSION: Literal[17] = 17
 MINIMUM_READINESS = Readiness.TECHNICALLY_VERIFIED
 BOOKING_MODULE = "booking_resources"
 
@@ -143,17 +143,16 @@ MODULES: tuple[PlatformModule, ...] = (
         "and reads continue, an open time entry can still be closed, and an uncertain command "
         "can still be resolved or discarded.",
     ),
-    # ADR-0038 (PRO-01): implemented, not enableable until acceptance and the owner's word.
+    # ADR-0038 (PRO-01): owner-authorized release enablement (v2.0 US release).
     _module(
         "projects",
         "Projects and work",
         _OPTIONAL,
         ("counterparties", "documents", "finance_documents"),
-        Readiness.IMPLEMENTED,
-        "PRO-01 Slice 1 (ADR-0038): legal matters, projects and recurring engagements with "
+        Readiness.TECHNICALLY_VERIFIED,
+        "PRO-01 (ADR-0038): legal matters, projects and recurring engagements with "
         "append-only revision history, conflict-of-interest checks before legal-case activation, "
-        "and PostgreSQL 18 FORCE RLS ethical-wall access restrictions. Enablement waits for "
-        "PRO-01 acceptance.",
+        "time tracking, FIN-03 billing, and PostgreSQL 18 FORCE RLS ethical-wall restrictions.",
         "New matters, conflict checks and ethical-wall memberships. Reads and history continue.",
     ),
     _module(
@@ -216,69 +215,65 @@ MODULES: tuple[PlatformModule, ...] = (
         "New materials, storage places, posting rules and stock documents. Reads and history "
         "continue.",
     ),
-    # ADR-0044 (SPECIAL-03): implemented, not enableable until jurisdictional acceptance.
+    # ADR-0044 (SPECIAL-03): owner-authorized release enablement (v2.0 US release).
     _module(
         "assets",
         "Assets and maintenance",
         _OPTIONAL,
         ("organization",),
-        Readiness.IMPLEMENTED,
+        Readiness.TECHNICALLY_VERIFIED,
         "SPECIAL-03 (ADR-0044): branch-scoped managed assets, insert-only inspections, "
         "work orders and critical safety/environmental incidents across field industries.",
         "New managed assets, inspections, work orders and incidents. Reads continue.",
     ),
     _module("communications", "Communications", _OPTIONAL, ("counterparties",)),
     _module("support", "Support", _OPTIONAL, ("counterparties",)),
-    # ADR-0041 (ENTERPRISE-01): implemented, not enableable until acceptance and the owner's word.
+    # ADR-0041 (ENTERPRISE-01): owner-authorized release enablement (v2.0 US release).
     _module(
         "analytics",
         "Analytics",
         _OPTIONAL,
         ("organization",),
-        Readiness.IMPLEMENTED,
+        Readiness.TECHNICALLY_VERIFIED,
         "ENTERPRISE-01 (ADR-0041): corporate SSO identity providers, SCIM-style employee "
         "deprovisioning with immediate access revocation, and consent-based consolidated group "
-        "reporting without ownership transfer. It cannot be enabled until acceptance.",
+        "reporting without ownership transfer.",
         "New SSO providers, directory links, lifecycle events and group reports. Reads continue.",
     ),
     _module("automation_ai", "Automation and AI", _OPTIONAL, ("users_access",)),
-    # ADR-0028 (package M, owner's word 2026-10-23): implemented, not enableable until acceptance.
+    # ADR-0028 (package M): owner-authorized release enablement (v2.0 US release).
     _module(
         "transport",
         "Transport and logistics",
         _OPTIONAL,
         ("counterparties",),
-        Readiness.IMPLEMENTED,
+        Readiness.TECHNICALLY_VERIFIED,
         "Package M (ADR-0028..0033): shipment orders with loads, trips with stops in their own "
         "time zones and legs; crews and fleet assignments, stop events with partial delivery, "
         "carrier dispatcher grants, clearance, screens and money (order rates, customer invoices "
-        "and trip pay through FIN-03). It cannot be enabled until the owner's word.",
+        "and trip pay through FIN-03).",
         "New shipment orders and trips. Reads continue.",
     ),
-    # ADR-0035 (package O): implemented, not enableable until acceptance and the owner's word.
+    # ADR-0035 (package O): owner-authorized release enablement (v2.0 US release).
     _module(
         "construction",
         "Construction and repair",
         _OPTIONAL,
         ("counterparties", "finance_documents"),
-        Readiness.IMPLEMENTED,
-        "Package O slice O1 (ADR-0035): construction projects with one currency and a site time "
-        "zone, insert-only estimate versions with derived totals and a one-time proposal stamp. "
-        "No contract, change orders, budget, execution, billing or screens yet; it cannot be "
-        "enabled until package O is accepted.",
+        Readiness.TECHNICALLY_VERIFIED,
+        "Package O (ADR-0035): construction projects, estimates, proposals, contracts, change "
+        "orders, retainage, customer acceptance, execution, billing and screens.",
         "New construction projects, estimate versions and proposals. Reads continue.",
     ),
-    # ADR-0036 (package R): implemented, not enableable until acceptance and the owner's word.
+    # ADR-0036 (package R): owner-authorized release enablement (v2.0 US release).
     _module(
         "rental",
         "Rental and hire",
         _OPTIONAL,
         ("counterparties", "finance_documents"),
-        Readiness.IMPLEMENTED,
-        "Package R slice R1 (ADR-0036): item classes with a typed attribute set per revision and "
-        "units with an identifier, a branch, a state and checked values. No bookings, assignment, "
-        "rates, agreements, security, inspections, settlement or screens yet; it cannot be "
-        "enabled until package R is accepted.",
+        Readiness.TECHNICALLY_VERIFIED,
+        "Package R (ADR-0036): rental item classes, units, bookings, agreements, deposits, "
+        "inspections, change/problem resolution, settlement and screens.",
         "New rental classes and units. Reads continue.",
     ),
     _module(
@@ -286,9 +281,9 @@ MODULES: tuple[PlatformModule, ...] = (
         "Property management",
         _OPTIONAL,
         ("counterparties",),
-        Readiness.IMPLEMENTED,
-        "Internal parcel, building and unit catalog with ownership and management history. "
-        "Enablement waits for PROPERTY-01 acceptance.",
+        Readiness.TECHNICALLY_VERIFIED,
+        "PROPERTY-01: parcel, building and unit catalog, listings, showings, leases, move-out "
+        "inspections, maintenance work orders and contractor portal.",
         "New property objects and revisions. Reads and history continue.",
     ),
     _module(
@@ -296,37 +291,35 @@ MODULES: tuple[PlatformModule, ...] = (
         "Restaurants and food service",
         _OPTIONAL,
         ("booking_resources", "counterparties", "finance_documents", "inventory", "workforce"),
-        Readiness.IMPLEMENTED,
-        "REST-01 Slice 1 (ADR-0037): branch dining areas, tables and independent table "
-        "reservations using shared resource occupancy. Enablement waits for REST-01 acceptance.",
+        Readiness.TECHNICALLY_VERIFIED,
+        "REST-01 (ADR-0037): branch dining areas, tables, reservations, versioned menus, "
+        "recipes/BOM, kitchen station tickets, split billing, refunds and FIN-03 settlement.",
         "New dining areas, tables and table reservations. Reads and history continue.",
     ),
-    # ADR-0039 (SUPPLY-01): implemented, not enableable until acceptance and the owner's word.
+    # ADR-0039 (SUPPLY-01): owner-authorized release enablement (v2.0 US release).
     _module(
         "supply",
         "Supply chain, 3PL WMS and manufacturing",
         _OPTIONAL,
         ("counterparties", "finance_documents", "inventory"),
-        Readiness.IMPLEMENTED,
-        "SUPPLY-01 Slice 1 (ADR-0039): multi-warehouse WMS bins, goods-owner isolation "
-        "(company legal entity vs 3PL bailor), lot/batch and serial tracking, and WMS movements "
-        "extending STOCK-01 without a second valuation ledger. "
-        "Enablement waits for SUPPLY-01 acceptance.",
+        Readiness.TECHNICALLY_VERIFIED,
+        "SUPPLY-01 (ADR-0039): multi-warehouse WMS bins, goods-owner isolation (company vs 3PL "
+        "bailor), lot/batch and serial tracking, BOM manufacturing, QC and trade/3PL orders.",
         "New goods owners, warehouse bins, lots, serial units and WMS movements. Reads continue.",
     ),
-    # ADR-0042 (SPECIAL-01): implemented, not enableable until acceptance and the owner's word.
+    # ADR-0042 (SPECIAL-01): owner-authorized release enablement (v2.0 US release).
     _module(
         "hospitality_events",
         "Education, fitness, hospitality and events",
         _OPTIONAL,
         ("counterparties",),
-        Readiness.IMPLEMENTED,
+        Readiness.TECHNICALLY_VERIFIED,
         "SPECIAL-01 (ADR-0042): education cohorts and fitness memberships with session tracking, "
         "hospitality rooms and stays with housekeeping states, and events with ticket capacity "
-        "conservation. It cannot be enabled until acceptance.",
+        "conservation.",
         "New programs, enrollments, rooms, stays, events and tickets. Reads continue.",
     ),
-    # ADR-0043 (SPECIAL-02): implemented, not enableable until jurisdictional acceptance.
+    # ADR-0043 (SPECIAL-02): regulated US clinical module; requires HIPAA BAA before enabling.
     _module(
         "clinical_care",
         "Healthcare, veterinary and social care",
@@ -334,10 +327,11 @@ MODULES: tuple[PlatformModule, ...] = (
         ("counterparties",),
         Readiness.IMPLEMENTED,
         "SPECIAL-02 (ADR-0043): consent-gated patient, veterinary and social care records "
-        "with immediate write blocks and sensitive-note redaction upon consent revocation.",
+        "with immediate write blocks and sensitive-note redaction upon consent revocation. "
+        "Requires US HIPAA BAA & clinical security audit before production enablement.",
         "New care subjects, consents, plans and encounters. Reads continue with consent gating.",
     ),
-    # ADR-0045 (SPECIAL-04): implemented, not enableable until jurisdictional acceptance.
+    # ADR-0045 (SPECIAL-04): regulated US civic/advisory module; requires compliance review.
     _module(
         "public_civic",
         "Staffing, advisory, organizations and public administration",
@@ -345,19 +339,20 @@ MODULES: tuple[PlatformModule, ...] = (
         ("counterparties",),
         Readiness.IMPLEMENTED,
         "SPECIAL-04 (ADR-0045): programs, dual-review cases, approved allocations (placements, "
-        "mandates, memberships, grants, permits) and insert-only transparency audit events.",
+        "mandates, memberships, grants, permits) and insert-only transparency audit events. "
+        "Requires US SEC/FINRA or FedRAMP/StateRAMP review before production enablement.",
         "New civic programs, cases, allocations and audit events. Reads continue.",
     ),
-    # ADR-0040 (MARKET-01): implemented, not enableable until acceptance and the owner's word.
+    # ADR-0040 (MARKET-01): owner-authorized release enablement (v2.0 US release).
     _module(
         "storefronts",
         "Storefronts and marketplaces",
         _OPTIONAL,
         ("counterparties", "finance_documents"),
-        Readiness.IMPLEMENTED,
+        Readiness.TECHNICALLY_VERIFIED,
         "MARKET-01 (ADR-0040): business storefronts with strict explicit published_fields "
         "projection, client-operated marketplaces with zero GORGONA transaction commission, "
-        "and single-seller order/payment isolation. It cannot be enabled until acceptance.",
+        "and single-seller order/payment isolation.",
         "New storefronts, listings, marketplaces and orders. Reads continue.",
     ),
 )

@@ -12,6 +12,7 @@ from gorgona_booking.api import (
     ai_assistant,
     businesses,
     configurations,
+    connectors,
     construction,
     counterparties,
     customer,
@@ -30,6 +31,7 @@ from gorgona_booking.api import (
     legal_entities,
     market_orders,
     market_storefronts,
+    media,
     members,
     notifications,
     platform,
@@ -216,6 +218,8 @@ def create_app(
     app.include_router(notifications.router)
     app.include_router(growth.router)
     app.include_router(ai_assistant.router)
+    app.include_router(connectors.router)
+    app.include_router(media.router)
     app.include_router(setup.router)
     app.include_router(platform.router)
     app.include_router(customer.router)

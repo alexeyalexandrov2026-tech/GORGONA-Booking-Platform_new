@@ -22,10 +22,10 @@ from gorgona_booking.business.readiness_registry import Readiness
 
 
 def test_storefronts_module_and_market_permissions_registered_conservatively() -> None:
-    assert modules.MODULE_REGISTRY_VERSION == 16
+    assert modules.MODULE_REGISTRY_VERSION == 17
     mod = modules.MODULES_BY_ID["storefronts"]
-    assert mod.readiness == Readiness.IMPLEMENTED
-    assert mod.enableable is False
+    assert mod.readiness == Readiness.TECHNICALLY_VERIFIED
+    assert mod.enableable is True
     assert set(mod.depends_on) == {"counterparties", "finance_documents"}
     assert PERMISSIONS_VERSION == 25
     for perm in (Permission.MARKET_READ, Permission.MARKET_MANAGE):

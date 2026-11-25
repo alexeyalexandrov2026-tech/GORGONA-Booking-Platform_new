@@ -199,11 +199,18 @@ async def test_projects_module_cannot_be_enabled_without_readiness_override(
     )
     assert draft.status_code == 200, draft.text
     ver = draft.json()["version"]
-    val = await client.post(
-        f"{ba}/configuration/versions/{ver}/validate",
-        headers={**hdr, "Idempotency-Key": f"pro-noready-val-{uuid7()}"},
-        json={"expected_revision": 1},
-    )
+    current = modules.MODULES_BY_ID["projects"]
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setitem(
+            modules.MODULES_BY_ID,
+            "projects",
+            current.model_copy(update={"enableable": False, "readiness": Readiness.IMPLEMENTED}),
+        )
+        val = await client.post(
+            f"{ba}/configuration/versions/{ver}/validate",
+            headers={**hdr, "Idempotency-Key": f"pro-noready-val-{uuid7()}"},
+            json={"expected_revision": 1},
+        )
     assert val.status_code == 422, val.text
     assert val.json()["error"]["code"] == "CONFIGURATION_INVALID"
     problems = val.json()["error"]["details"]["problems"]

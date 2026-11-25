@@ -129,7 +129,15 @@ async def enabled(
     return catalog
 
 
-async def test_unaccepted_module_refuses_writes(catalog: Catalog) -> None:
+async def test_unaccepted_module_refuses_writes(
+    catalog: Catalog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    current = modules.MODULES_BY_ID["property"]
+    monkeypatch.setitem(
+        modules.MODULES_BY_ID,
+        "property",
+        current.model_copy(update={"enableable": False, "readiness": Readiness.IMPLEMENTED}),
+    )
     response = await catalog.put(uuid7(), catalog.body())
     assert response.status_code == 409, response.text
     assert response.json()["error"]["code"] == "MODULE_NOT_READY"

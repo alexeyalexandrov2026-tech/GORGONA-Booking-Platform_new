@@ -234,7 +234,18 @@ async def test_showing_waits_on_the_shared_host_lock(
     assert response.is_success, response.text
 
 
-async def test_unaccepted_module_refuses_showings(catalog: Catalog) -> None:
+async def test_unaccepted_module_refuses_showings(
+    catalog: Catalog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from gorgona_booking.business import modules
+    from gorgona_booking.business.readiness_registry import Readiness
+
+    current = modules.MODULES_BY_ID["property"]
+    monkeypatch.setitem(
+        modules.MODULES_BY_ID,
+        "property",
+        current.model_copy(update={"enableable": False, "readiness": Readiness.IMPLEMENTED}),
+    )
     refused = await book(catalog, uuid7(), str(uuid7()))
     assert refused.status_code == 409, refused.text
     assert refused.json()["error"]["code"] == "MODULE_NOT_READY"
