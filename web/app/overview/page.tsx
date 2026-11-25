@@ -3,6 +3,7 @@
 import Link from "next/link";
 import React, { useEffect, useState, useCallback } from "react";
 import { ManagementLayout } from "../../components/management-layout";
+import { OwnerCopilotPanel } from "../../components/owner-copilot-panel";
 import {
   businessDateTime,
   businessTimeToInstant,
@@ -271,6 +272,8 @@ function OverviewContent({
           <div className="mgmt-kpi-number">{stats.total_services_count}</div>
         </div>
       </div>
+
+      <OwnerCopilotPanel salonId={salonId} />
 
       <div className="mgmt-section-header">
         <h2>Today’s Schedule</h2>

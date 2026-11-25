@@ -1,0 +1,758 @@
+"""Grounded AI Booking Concierge (customer) and Business Copilot (owner).
+
+Security & truthfulness invariants:
+- Every customer query runs strictly inside a Host-resolved `tenant_transaction`.
+- Every owner query runs strictly inside `authorized_tenant` with `BUSINESS_READ`.
+- Neither surface ever fabricates availability, prices, or policies: slots are queried
+  live via `customer.queries.availability`, and owner insights come from real PG18 queries.
+- Optional Gemini synthesis (`GBA_GEMINI_API_KEY`) strictly narrates the verified facts
+  with stdlib HTTPS (zero extra dependencies) and falls back cleanly to deterministic output.
+- Human control over AI (AGENTS.md): Copilot is strictly read-only and proposes actions.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import http.client
+import json
+import logging
+import os
+import re
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, Literal
+from uuid import UUID
+from zoneinfo import ZoneInfo
+
+from psycopg import AsyncConnection
+from psycopg.rows import dict_row
+
+from gorgona_booking.customer import queries as customer_queries
+from gorgona_booking.customer.contracts import AvailabilityQuery, BootstrapView, VariantView
+from gorgona_booking.db.pool import RuntimeConnection
+from gorgona_booking.growth.service import get_growth_settings
+
+_LOG = logging.getLogger(__name__)
+_CYRILLIC_RE = re.compile(r"[\u0430-\u044f\u0451]")
+_WORD_RE = re.compile(r"[a-z\u0430-\u044f\u04510-9]{3,}")
+_PRICE_CAP_RE = re.compile(
+    r"(?:under|below|max|less than|<=|\u0434\u043e|menos de)\s*\$?\s*(\d{1,5})",
+    re.IGNORECASE,
+)
+_ISO_DATE_RE = re.compile(r"\b(20\d{2}-\d{2}-\d{2})\b")
+_WEEKDAY_MAP = {
+    "monday": 0,
+    "mon": 0,
+    "понедельник": 0,
+    "lunes": 0,
+    "tuesday": 1,
+    "tue": 1,
+    "вторник": 1,
+    "martes": 1,
+    "wednesday": 2,
+    "wed": 2,
+    "среда": 2,
+    "среду": 2,
+    "miércoles": 2,
+    "miercoles": 2,
+    "thursday": 3,
+    "thu": 3,
+    "четверг": 3,
+    "jueves": 3,
+    "friday": 4,
+    "fri": 4,
+    "пятница": 4,
+    "пятницу": 4,
+    "viernes": 4,
+    "saturday": 5,
+    "sat": 5,
+    "суббота": 5,
+    "субботу": 5,
+    "sábado": 5,
+    "sabado": 5,
+    "sunday": 6,
+    "sun": 6,
+    "воскресенье": 6,
+    "domingo": 6,
+}
+
+
+@dataclass(frozen=True)
+class RecommendedSlot:
+    location_id: UUID
+    location_name: str
+    variant_id: UUID
+    service_name: str
+    variant_name: str
+    resource_id: UUID
+    resource_name: str
+    day: date
+    start_at: datetime
+    end_at: datetime
+    timezone: str
+    price_cents: int
+    currency: str
+    duration_minutes: int
+
+
+@dataclass(frozen=True)
+class ConciergeResult:
+    engine: Literal["gemini", "grounded"]
+    business_name: str
+    reply: str
+    recommended_slots: list[RecommendedSlot]
+    waitlist_suggested: bool
+    cancellation_summary: str
+
+
+@dataclass(frozen=True)
+class CopilotInsight:
+    priority: Literal["high", "medium", "low"]
+    category: str
+    title: str
+    detail: str
+    action_path: str
+
+
+@dataclass(frozen=True)
+class CopilotResult:
+    engine: Literal["gemini", "grounded"]
+    business_name: str
+    reply: str
+    metrics: dict[str, Any]
+    insights: list[CopilotInsight]
+
+
+def parse_concierge_intent(
+    message: str, *, today: date, max_day: date
+) -> dict[str, Any]:
+    """Deterministic multilingual (EN/RU/ES) intent parser for date, window, budget, and sort."""
+    lower = message.lower()
+    target_days: list[date] = []
+
+    iso_match = _ISO_DATE_RE.search(lower)
+    if iso_match:
+        try:
+            parsed = date.fromisoformat(iso_match.group(1))
+            if today <= parsed <= max_day:
+                target_days.append(parsed)
+        except ValueError:
+            pass
+
+    if any(w in lower for w in ("tomorrow", "завтра", "mañana", "manana")):
+        cand = today + timedelta(days=1)
+        if cand <= max_day and cand not in target_days:
+            target_days.append(cand)
+    elif any(w in lower for w in ("today", "сегодня", "hoy", "now", "сейчас")):
+        if today not in target_days:
+            target_days.append(today)
+    elif any(w in lower for w in ("weekend", "выходн", "fin de semana")):
+        days_until_sat = (5 - today.weekday()) % 7
+        for offset in (days_until_sat, days_until_sat + 1):
+            cand = today + timedelta(days=offset)
+            if today <= cand <= max_day and cand not in target_days:
+                target_days.append(cand)
+    else:
+        for word, wd in _WEEKDAY_MAP.items():
+            if word in lower:
+                delta = (wd - today.weekday()) % 7
+                if delta == 0:
+                    delta = 7
+                cand = today + timedelta(days=delta)
+                if cand <= max_day and cand not in target_days:
+                    target_days.append(cand)
+                break
+
+    if not target_days:
+        target_days.append(today)
+        nxt = today + timedelta(days=1)
+        if nxt <= max_day:
+            target_days.append(nxt)
+
+    window: str = "any"
+    if any(w in lower for w in ("morning", "утром", "утро", "am", "mañana temprano")):
+        window = "morning"
+    elif any(w in lower for w in ("afternoon", "днем", "днём", "после обеда", "tarde")):
+        window = "afternoon"
+    elif any(w in lower for w in ("evening", "вечер", "вечером", "night", "noche")):
+        window = "evening"
+
+    max_price_cents: int | None = None
+    pm = _PRICE_CAP_RE.search(lower)
+    if pm:
+        max_price_cents = int(pm.group(1)) * 100
+
+    sort_by = "relevance"
+    if any(w in lower for w in ("cheap", "lowest", "budget", "дешев", "бюджет", "barat")):
+        sort_by = "price"
+    elif any(w in lower for w in ("fast", "quick", "short", "быстр", "коротк", "rápid", "rapid")):
+        sort_by = "duration"
+
+    language = "en"
+    if _CYRILLIC_RE.search(lower):
+        language = "ru"
+    elif any(w in lower for w in ("hola", "mañana", "cita", "precio", "tarde", "buenos")):
+        language = "es"
+
+    tokens = [
+        t
+        for t in _WORD_RE.findall(lower)
+        if t
+        not in {
+            "the",
+            "and",
+            "for",
+            "with",
+            "have",
+            "any",
+            "open",
+            "slot",
+            "slots",
+            "time",
+            "times",
+            "book",
+            "booking",
+            "appointment",
+            "tomorrow",
+            "today",
+            "morning",
+            "afternoon",
+            "evening",
+            "under",
+            "please",
+            "can",
+            "you",
+            "есть",
+            "запис",
+            "время",
+            "завтра",
+            "сегодня",
+        }
+    ]
+
+    return {
+        "target_days": target_days[:2],
+        "window": window,
+        "max_price_cents": max_price_cents,
+        "sort_by": sort_by,
+        "language": language,
+        "tokens": tokens,
+    }
+
+
+def _rank_variants(
+    variants: list[VariantView],
+    *,
+    tokens: list[str],
+    max_price_cents: int | None,
+    sort_by: str,
+) -> list[VariantView]:
+    filtered = [
+        v for v in variants if max_price_cents is None or v.price_cents <= max_price_cents
+    ]
+    if not filtered:
+        filtered = list(variants)
+
+    def _score(v: VariantView) -> tuple[int, int, int]:
+        haystack = f"{v.service_name} {v.name} {' '.join(v.provides)}".lower()
+        hits = sum(1 for t in tokens if t in haystack)
+        if sort_by == "price":
+            return (-hits, v.price_cents, v.duration_minutes)
+        if sort_by == "duration":
+            return (-hits, v.duration_minutes, v.price_cents)
+        return (-hits, v.price_cents, v.duration_minutes)
+
+    return sorted(filtered, key=_score)
+
+
+def _matches_window(instant: datetime, tz_name: str, window: str) -> bool:
+    if window == "any":
+        return True
+    hour = instant.astimezone(ZoneInfo(tz_name)).hour
+    if window == "morning":
+        return hour < 12
+    if window == "afternoon":
+        return 12 <= hour < 17
+    if window == "evening":
+        return hour >= 17
+    return True
+
+
+def _call_gemini_sync(system_prompt: str, user_payload: dict[str, Any]) -> str | None:
+    """Optional Gemini grounded synthesis via stdlib HTTPS. Returns None if unconfigured/failed."""
+    api_key = os.environ.get("GBA_GEMINI_API_KEY", "").strip()
+    if not api_key:
+        return None
+    model = os.environ.get("GBA_GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
+    body = json.dumps(
+        {
+            "systemInstruction": {"parts": [{"text": system_prompt}]},
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": json.dumps(user_payload, ensure_ascii=False)}],
+                }
+            ],
+            "generationConfig": {"temperature": 0.3, "maxOutputTokens": 320},
+        }
+    ).encode("utf-8")
+    conn = http.client.HTTPSConnection("generativelanguage.googleapis.com", 443, timeout=10.0)
+    try:
+        conn.request(
+            "POST",
+            f"/v1beta/models/{model}:generateContent",
+            body=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": api_key,
+            },
+        )
+        resp = conn.getresponse()
+        raw = resp.read()
+        if resp.status != 200:
+            return None
+        parsed = json.loads(raw.decode("utf-8"))
+        candidates = parsed.get("candidates") or []
+        if not candidates:
+            return None
+        parts = (candidates[0].get("content") or {}).get("parts") or []
+        text = "".join(str(p.get("text", "")) for p in parts if isinstance(p, dict)).strip()
+        return text[:1200] if text else None
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+def _format_money(cents: int, currency: str) -> str:
+    return f"{currency} {cents / 100:.2f}"
+
+
+def _deterministic_customer_reply(
+    *,
+    boot: BootstrapView,
+    slots: list[RecommendedSlot],
+    language: str,
+    waitlist_suggested: bool,
+) -> str:
+    if slots:
+        top = slots[0]
+        local_time = top.start_at.astimezone(ZoneInfo(top.timezone)).strftime("%b %d at %I:%M %p")
+        price_txt = _format_money(top.price_cents, top.currency)
+        if language == "ru":
+            return (
+                f"Нашёл {len(slots)} свободных слотов в {boot.name}. "
+                f"Ближайший вариант: {top.service_name} ({top.variant_name}) "
+                f"({top.resource_name}) — {local_time}, {price_txt} "
+                f"({top.duration_minutes} мин). "
+                "Нажмите на подходящий слот ниже, чтобы перейти к бронированию."
+            )
+        if language == "es":
+            return (
+                f"Encontré {len(slots)} horarios disponibles en {boot.name}. "
+                f"Opción más cercana: {top.service_name} ({top.variant_name}) con "
+                f"{top.resource_name} — {local_time}, {price_txt} ({top.duration_minutes} min). "
+                "Seleccione cualquier horario abajo para reservar al instante."
+            )
+        return (
+            f"I found {len(slots)} live open times at {boot.name}. "
+            f"Earliest match: {top.service_name} ({top.variant_name}) with {top.resource_name} "
+            f"on {local_time} for {price_txt} ({top.duration_minutes} min). "
+            "Select any verified slot below to continue straight to reservation."
+        )
+    if waitlist_suggested:
+        if language == "ru":
+            return (
+                f"На выбранные даты в {boot.name} свободных окон сейчас нет. "  # noqa: RUF001
+                "Оставьте заявку в умном листе ожидания — мы сразу уведомим вас, "
+                "как только освободится окно."
+            )
+        return (
+            f"There are no open times matching your request at {boot.name} right now. "
+            "Join the smart waitlist below to be notified as soon as a spot opens."
+        )
+    return (
+        f"Welcome to {boot.name}. We offer {len(boot.variants)} bookable service option(s). "
+        "Ask about any service, price, policy, or date and I will check live availability."
+    )
+
+
+async def ask_customer_concierge(
+    conn: RuntimeConnection,
+    *,
+    tenant_id: UUID,
+    message: str,
+    location_id: UUID | None = None,
+    preferred_day: date | None = None,
+) -> ConciergeResult:
+    settings = await get_growth_settings(conn, tenant_id=tenant_id)
+    boot = await customer_queries.bootstrap(conn)
+    if not settings.ai_concierge_enabled:
+        raise ValueError("AI Concierge is currently disabled by this business")
+    if not boot.locations or not boot.variants:
+        return ConciergeResult(
+            engine="grounded",
+            business_name=boot.name,
+            reply=f"{boot.name} is preparing its bookable services. Please check back shortly.",
+            recommended_slots=[],
+            waitlist_suggested=False,
+            cancellation_summary=boot.cancellation.summary,
+        )
+
+    loc = next((item for item in boot.locations if item.id == location_id), boot.locations[0])
+    intent = parse_concierge_intent(message, today=loc.today, max_day=loc.last_day)
+    days: list[date] = (
+        [preferred_day]
+        if (preferred_day is not None and loc.today <= preferred_day <= loc.last_day)
+        else intent["target_days"]
+    )
+    ranked_variants = _rank_variants(
+        boot.variants,
+        tokens=intent["tokens"],
+        max_price_cents=intent["max_price_cents"],
+        sort_by=intent["sort_by"],
+    )
+
+    artist_names = {a.id: a.name for a in boot.artists}
+    lower_msg = message.lower()
+    matched_artist = next(
+        (a.id for a in boot.artists if a.location_id == loc.id and a.name.lower() in lower_msg),
+        None,
+    )
+
+    recommended: list[RecommendedSlot] = []
+    seen: set[tuple[UUID, datetime]] = set()
+    for variant in ranked_variants[:3]:
+        for day_item in days:
+            if len(recommended) >= 6:
+                break
+            try:
+                avail = await customer_queries.availability(
+                    conn,
+                    AvailabilityQuery(
+                        location_id=loc.id,
+                        variant_id=variant.id,
+                        resource_id=matched_artist,
+                        day=day_item,
+                    ),
+                )
+            except Exception as exc:
+                _LOG.debug(
+                    "Skipping concierge availability probe for variant %s: %s", variant.id, exc
+                )
+                continue
+            for slot in avail.slots:
+                if not _matches_window(slot.start_at, avail.timezone, intent["window"]):
+                    continue
+                dedupe_key = (variant.id, slot.start_at)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                recommended.append(
+                    RecommendedSlot(
+                        location_id=loc.id,
+                        location_name=loc.name,
+                        variant_id=variant.id,
+                        service_name=variant.service_name,
+                        variant_name=variant.name,
+                        resource_id=slot.resource_id,
+                        resource_name=artist_names.get(slot.resource_id, "Specialist"),
+                        day=day_item,
+                        start_at=slot.start_at,
+                        end_at=slot.end_at,
+                        timezone=avail.timezone,
+                        price_cents=avail.quote.total_cents,
+                        currency=avail.quote.currency,
+                        duration_minutes=avail.quote.booking_duration_minutes,
+                    )
+                )
+                if len(recommended) >= 6:
+                    break
+
+    waitlist_suggested = len(recommended) == 0 and settings.waitlist_auto_offer
+
+    gemini_reply = await asyncio.to_thread(
+        _call_gemini_sync,
+        (
+            f"You are the booking concierge for {boot.name}. Tone: {settings.ai_concierge_tone}. "
+            "Answer strictly using the verified catalog, live slots, and cancellation policy "
+            "provided in JSON. Never invent prices, times, or promises. Reply in the same language "
+            "as customer_message in 2-3 concise sentences."
+        ),
+        {
+            "customer_message": message[:500],
+            "business_name": boot.name,
+            "cancellation_policy": boot.cancellation.summary,
+            "verified_catalog_top": [
+                {
+                    "service": v.service_name,
+                    "variant": v.name,
+                    "price": _format_money(v.price_cents, v.currency),
+                    "duration_minutes": v.duration_minutes,
+                }
+                for v in ranked_variants[:6]
+            ],
+            "verified_open_slots": [
+                {
+                    "service": s.service_name,
+                    "variant": s.variant_name,
+                    "specialist": s.resource_name,
+                    "local_time": s.start_at.astimezone(ZoneInfo(s.timezone)).strftime(
+                        "%Y-%m-%d %I:%M %p %Z"
+                    ),
+                    "price": _format_money(s.price_cents, s.currency),
+                }
+                for s in recommended
+            ],
+            "waitlist_suggested": waitlist_suggested,
+        },
+    )
+
+    if gemini_reply:
+        return ConciergeResult(
+            engine="gemini",
+            business_name=boot.name,
+            reply=gemini_reply,
+            recommended_slots=recommended,
+            waitlist_suggested=waitlist_suggested,
+            cancellation_summary=boot.cancellation.summary,
+        )
+
+    return ConciergeResult(
+        engine="grounded",
+        business_name=boot.name,
+        reply=_deterministic_customer_reply(
+            boot=boot,
+            slots=recommended,
+            language=intent["language"],
+            waitlist_suggested=waitlist_suggested,
+        ),
+        recommended_slots=recommended,
+        waitlist_suggested=waitlist_suggested,
+        cancellation_summary=boot.cancellation.summary,
+    )
+
+
+async def ask_owner_copilot(
+    conn: AsyncConnection[Any],
+    *,
+    tenant_id: UUID,
+    question: str | None = None,
+) -> CopilotResult:
+    """Read-only owner AI copilot grounded strictly in live tenant PostgreSQL 18 facts."""
+    growth = await get_growth_settings(conn, tenant_id=tenant_id)
+    now = datetime.now(UTC)
+    horizon = now + timedelta(days=7)
+
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            "SELECT display_name, booking_state FROM gba.tenants WHERE id = %s",
+            (tenant_id,),
+        )
+        trow = await cur.fetchone()
+        business_name = str(trow["display_name"]) if trow else "GORGONA Business"
+        booking_state = str(trow["booking_state"]) if trow else "draft"
+
+        await cur.execute(
+            """
+            SELECT count(*) AS upcoming_count,
+                   coalesce(sum(total_cents), 0) AS upcoming_cents
+            FROM gba.bookings
+            WHERE tenant_id = %s AND status = 'CONFIRMED'
+              AND start_at >= %s AND start_at < %s
+            """,
+            (tenant_id, now, horizon),
+        )
+        brow = await cur.fetchone() or {"upcoming_count": 0, "upcoming_cents": 0}
+
+        await cur.execute(
+            """
+            SELECT count(*) AS waiting_count,
+                   coalesce(sum(v.price_cents), 0) AS recoverable_cents
+            FROM gba.waitlist_entries w
+            JOIN gba.service_variants v ON v.tenant_id = w.tenant_id AND v.id = w.variant_id
+            WHERE w.tenant_id = %s AND w.status = 'waiting'
+            """,
+            (tenant_id,),
+        )
+        wrow = await cur.fetchone() or {"waiting_count": 0, "recoverable_cents": 0}
+
+        await cur.execute(
+            """
+            SELECT
+                count(*) FILTER (WHERE status = 'sent') AS sent_count,
+                count(*) FILTER (WHERE status IN ('failed', 'dead_lettered')) AS failed_count
+            FROM gba.notification_outbox
+            WHERE tenant_id = %s
+            """,
+            (tenant_id,),
+        )
+        nrow = await cur.fetchone() or {"sent_count": 0, "failed_count": 0}
+
+        await cur.execute(
+            "SELECT count(*) AS cnt FROM gba.locations WHERE tenant_id = %s",
+            (tenant_id,),
+        )
+        loc_count = int((await cur.fetchone() or {"cnt": 0})["cnt"])
+
+        await cur.execute(
+            """
+            SELECT count(*) AS cnt FROM gba.service_variants
+            WHERE tenant_id = %s AND status = 'published' AND is_bookable
+            """,
+            (tenant_id,),
+        )
+        bookable_count = int((await cur.fetchone() or {"cnt": 0})["cnt"])
+
+        await cur.execute(
+            "SELECT count(*) AS cnt FROM gba.resources WHERE tenant_id = %s AND is_active",
+            (tenant_id,),
+        )
+        staff_count = int((await cur.fetchone() or {"cnt": 0})["cnt"])
+
+    metrics: dict[str, Any] = {
+        "booking_state": booking_state,
+        "locations_count": loc_count,
+        "active_staff_count": staff_count,
+        "bookable_services_count": bookable_count,
+        "upcoming_7d_confirmed_bookings": int(brow["upcoming_count"]),
+        "upcoming_7d_booked_value_cents": int(brow["upcoming_cents"]),
+        "waiting_waitlist_count": int(wrow["waiting_count"]),
+        "waitlist_recoverable_value_cents": int(wrow["recoverable_cents"]),
+        "notifications_sent_count": int(nrow["sent_count"]),
+        "notifications_failed_count": int(nrow["failed_count"]),
+        "google_review_url_configured": bool(growth.google_review_url),
+        "ai_concierge_enabled": growth.ai_concierge_enabled,
+        "reminder_hours_before": growth.reminder_hours_before,
+        "rebooking_days_after": growth.rebooking_days_after,
+    }
+
+    insights: list[CopilotInsight] = []
+    if metrics["waiting_waitlist_count"] > 0:
+        rec_usd = metrics["waitlist_recoverable_value_cents"] / 100
+        wait_cnt = metrics["waiting_waitlist_count"]
+        insights.append(
+            CopilotInsight(
+                priority="high",
+                category="revenue_recovery",
+                title=f"Recover ${rec_usd:,.2f} from {wait_cnt} waitlisted client(s)",
+                detail=(
+                    "Clients are actively waiting for open slots. Notify them with one click in "
+                    "Settings -> Growth & Waitlist to fill cancellations automatically."
+                ),
+                action_path="/settings/",
+            )
+        )
+    if not growth.google_review_url:
+        insights.append(
+            CopilotInsight(
+                priority="high",
+                category="local_seo",
+                title="Connect your Google Business Profile review link",
+                detail=(
+                    "Adding your Google Review URL enables post-visit review booster messages and "
+                    "drives zero-commission organic bookings from Google Search and Maps."
+                ),
+                action_path="/settings/",
+            )
+        )
+    if bookable_count == 0 or staff_count == 0:
+        insights.append(
+            CopilotInsight(
+                priority="high",
+                category="activation",
+                title="Publish at least one bookable service and active team member",
+                detail=(
+                    "Your online booking page and AI Booking Concierge need at least one "
+                    "published service and active resource to present live availability."
+                ),
+                action_path="/services/",
+            )
+        )
+    if metrics["notifications_failed_count"] > 0:
+        insights.append(
+            CopilotInsight(
+                priority="medium",
+                category="reliability",
+                title=f"Review {metrics['notifications_failed_count']} failed notification(s)",
+                detail=(
+                    "Inspect the Email/SMS outbox in Settings to verify recipient formats "
+                    "or provider credentials."
+                ),
+                action_path="/settings/",
+            )
+        )
+    insights.append(
+        CopilotInsight(
+            priority="low",
+            category="retention",
+            title=(
+                f"Automated cadence: {growth.reminder_hours_before}h reminders & "
+                f"{growth.rebooking_days_after}d rebooking"
+            ),
+            detail=(
+                "Use prepaid packages/gift certificates (/prepaid/) and zero-commission "
+                "marketplace publishing (/marketplace/) to lock in repeat revenue."
+            ),
+            action_path="/prepaid/",
+        )
+    )
+
+    clean_q = (question or "").strip()[:500]
+    gemini_reply = await asyncio.to_thread(
+        _call_gemini_sync,
+        (
+            f"You are the read-only AI Business Copilot for {business_name} on GORGONA. "
+            "Use ONLY the live JSON metrics and insights provided. Never invent revenue or claims. "
+            "Reply concisely in the owner's language (Russian if Russian, else English) with "
+            "concrete next actions."
+        ),
+        {
+            "owner_question": (
+                clean_q or "Give me a concise executive summary and top growth actions."
+            ),
+            "business_name": business_name,
+            "live_metrics": metrics,
+            "insights": [
+                {"priority": i.priority, "title": i.title, "detail": i.detail} for i in insights
+            ],
+        },
+    )
+
+    if gemini_reply:
+        return CopilotResult(
+            engine="gemini",
+            business_name=business_name,
+            reply=gemini_reply,
+            metrics=metrics,
+            insights=insights,
+        )
+
+    is_ru = bool(_CYRILLIC_RE.search(clean_q.lower()))
+    booked_usd = metrics["upcoming_7d_booked_value_cents"] / 100
+    wait_usd = metrics["waitlist_recoverable_value_cents"] / 100
+    if is_ru:
+        summary = (
+            f"Сводка по {business_name}: на ближайшие 7 дней подтверждено "
+            f"{metrics['upcoming_7d_confirmed_bookings']} записей на сумму ${booked_usd:,.2f}. "
+            f"В листе ожидания: {metrics['waiting_waitlist_count']} заявок "  # noqa: RUF001
+            f"(потенциал ${wait_usd:,.2f}). "
+            f"Активных услуг: {bookable_count}, сотрудников: {staff_count}. "
+            f"Главный приоритет: {insights[0].title}."
+        )
+    else:
+        summary = (
+            f"{business_name} live pulse: {metrics['upcoming_7d_confirmed_bookings']} confirmed "
+            f"booking(s) over the next 7 days (${booked_usd:,.2f} booked value), "
+            f"{metrics['waiting_waitlist_count']} waitlisted client(s) (${wait_usd:,.2f} "
+            f"recoverable), {bookable_count} published service(s), {staff_count} active team "
+            f"member(s). Top priority: {insights[0].title}."
+        )
+
+    return CopilotResult(
+        engine="grounded",
+        business_name=business_name,
+        reply=summary,
+        metrics=metrics,
+        insights=insights,
+    )

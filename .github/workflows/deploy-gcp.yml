@@ -1,0 +1,114 @@
+# Build, scan, push to Google Artifact Registry, run PG18 migrations, and deploy to Cloud Run.
+# Uses Google Cloud Workload Identity Federation (no static JSON service-account keys).
+# Required repository variables:
+#   GCP_PROJECT_ID, GCP_REGION, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_DEPLOY_SERVICE_ACCOUNT,
+#   GCP_ARTIFACT_REPO, GCP_SMOKE_HOST
+name: deploy-gcp
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type deploy-gcp to confirm
+        required: true
+        type: string
+      deploy_ai:
+        description: Also build and update AI Cloud Run Jobs
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: deploy-gcp
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    if: github.event.inputs.confirm == 'deploy-gcp'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preflight GCP deployment configuration
+        env:
+          PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          REGION: ${{ vars.GCP_REGION }}
+          WIF: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          SA: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          REPO: ${{ vars.GCP_ARTIFACT_REPO }}
+        run: |
+          for v in PROJECT REGION WIF SA REPO; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing repository variable for GCP deploy ($v)"
+              exit 1
+            fi
+          done
+
+      - name: Authenticate to Google Cloud via Workload Identity Federation
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+
+      - name: Build and push gorgona-api image by digest
+        id: build_api
+        env:
+          IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_ARTIFACT_REPO }}/gorgona-api
+        run: |
+          TAG="sha-${GITHUB_SHA::12}"
+          docker build -t "${IMAGE_BASE}:${TAG}" -f Dockerfile .
+          docker push "${IMAGE_BASE}:${TAG}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE_BASE}:${TAG}")
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Update and run gorgona-migrate Cloud Run Job
+        run: |
+          gcloud run jobs update gorgona-migrate \
+            --image="${{ steps.build_api.outputs.digest }}" \
+            --region="${{ vars.GCP_REGION }}" \
+            --project="${{ vars.GCP_PROJECT_ID }}" --quiet
+          gcloud run jobs execute gorgona-migrate \
+            --region="${{ vars.GCP_REGION }}" \
+            --project="${{ vars.GCP_PROJECT_ID }}" --wait
+
+      - name: Roll out gorgona-api Cloud Run service
+        run: |
+          gcloud run services update gorgona-api \
+            --image="${{ steps.build_api.outputs.digest }}" \
+            --region="${{ vars.GCP_REGION }}" \
+            --project="${{ vars.GCP_PROJECT_ID }}" --quiet
+
+      - name: Build and update AI Cloud Run Jobs
+        if: ${{ inputs.deploy_ai }}
+        env:
+          IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_ARTIFACT_REPO }}/gorgona-ai
+        run: |
+          TAG="sha-${GITHUB_SHA::12}"
+          docker build -t "${IMAGE_BASE}:${TAG}" -f ai/Dockerfile .
+          docker push "${IMAGE_BASE}:${TAG}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE_BASE}:${TAG}")
+          for job in gorgona-ai-migrate gorgona-ai-tick gorgona-ai-health; do
+            gcloud run jobs update "$job" \
+              --image="${DIGEST}" \
+              --region="${{ vars.GCP_REGION }}" \
+              --project="${{ vars.GCP_PROJECT_ID }}" --quiet
+          done
+          gcloud run jobs execute gorgona-ai-migrate \
+            --region="${{ vars.GCP_REGION }}" \
+            --project="${{ vars.GCP_PROJECT_ID }}" --wait
+
+      - name: Post-deploy HTTPS smoke test
+        if: ${{ vars.GCP_SMOKE_HOST != '' }}
+        run: |
+          curl --fail --silent --show-error "https://${{ vars.GCP_SMOKE_HOST }}/health/ready"
+          echo ""

@@ -25,6 +25,10 @@ import {
   Appointment,
   DetailsForm,
 } from "./booking-parts";
+import { BookingConcierge } from "./booking-concierge";
+import { WaitlistForm } from "./waitlist-form";
+import { downloadBookingIcs, googleCalendarUrl } from "../lib/calendar-export";
+import type { RecommendedSlot } from "../lib/growth-api";
 type Step = "service" | "time" | "details" | "review" | "confirmed";
 const steps: Step[] = ["service", "time", "details", "review"];
 
@@ -255,8 +259,44 @@ export function Journey({ salon }: { salon: Bootstrap }) {
   const style = salon.branding.accent
     ? ({ "--accent": salon.branding.accent } as CSSProperties)
     : undefined;
+  function applyConciergeSlot(picked: RecommendedSlot) {
+    setLocationId(picked.location_id);
+    setLines([{ variant_id: picked.variant_id, add_on_ids: [] }]);
+    setArtistId(picked.resource_id);
+    setDay(picked.day);
+    setSlot({
+      resource_id: picked.resource_id,
+      start_at: picked.start_at,
+      end_at: picked.end_at,
+    });
+    setQuote(null);
+    move("time");
+  }
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: salon.name,
+    potentialAction: {
+      "@type": "ReserveAction",
+      target: {
+        "@type": "EntryPoint",
+        actionPlatform: [
+          "http://schema.org/DesktopWebPlatform",
+          "http://schema.org/MobileWebPlatform",
+        ],
+      },
+      result: {
+        "@type": "Reservation",
+        name: `Book with ${salon.name}`,
+      },
+    },
+  };
   return (
     <div className="studio" style={style}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <a className="skip" href="#booking">
         Skip to booking
       </a>
@@ -306,6 +346,10 @@ export function Journey({ salon }: { salon: Bootstrap }) {
                   Begin with a little care.
                 </h2>
                 <p className="muted">Select your service and finish.</p>
+                <BookingConcierge
+                  locationId={locationId}
+                  onPickSlot={applyConciergeSlot}
+                />
                 <label>
                   Location
                   <select
@@ -498,6 +542,14 @@ export function Journey({ salon }: { salon: Bootstrap }) {
                     {busy ? "Reserving…" : "Continue to details"}
                   </button>
                 </div>
+                {variant && (
+                  <WaitlistForm
+                    locationId={locationId}
+                    variantId={variant.id}
+                    resourceId={artistId || null}
+                    day={day}
+                  />
+                )}
               </>
             )}
             {step === "details" && (
@@ -584,6 +636,45 @@ export function Journey({ salon }: { salon: Bootstrap }) {
                 <p className="reference" data-testid="booking-reference">
                   {booking.booking_id}
                 </p>
+                <div className="actions" style={{ marginTop: "12px" }}>
+                  <a
+                    className="button secondary"
+                    href={googleCalendarUrl({
+                      uid: booking.booking_id,
+                      title: `${salon.name} — ${booking.quote.lines
+                        .filter((l) => l.kind === "variant")
+                        .map((l) => l.name)
+                        .join(", ")}`,
+                      description: `Booking reference: ${booking.booking_id}`,
+                      location: `${salon.name} (${location.name})`,
+                      startIso: booking.start_at,
+                      endIso: booking.end_at,
+                    })}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Add to Google Calendar
+                  </a>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      downloadBookingIcs({
+                        uid: booking.booking_id,
+                        title: `${salon.name} — ${booking.quote.lines
+                          .filter((l) => l.kind === "variant")
+                          .map((l) => l.name)
+                          .join(", ")}`,
+                        description: `Booking reference: ${booking.booking_id}`,
+                        location: `${salon.name} (${location.name})`,
+                        startIso: booking.start_at,
+                        endIso: booking.end_at,
+                      })
+                    }
+                  >
+                    Download .ics (Apple / Outlook)
+                  </button>
+                </div>
                 <p className="fine">{salon.cancellation.summary}</p>
               </>
             )}

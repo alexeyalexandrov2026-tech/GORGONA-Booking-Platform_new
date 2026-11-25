@@ -18,6 +18,10 @@ RECEIPT_WRITER_GROUP = "gba_receipt_writer"
 RECEIPT_WORKER_GROUP = "gba_receipt_worker"
 _IDENTIFIER = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
 _SAFE_ATTRIBUTES = sql.SQL("NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS")
+# Managed PG16+/18 admin roles (Cloud SQL cloudsqlsuperuser, Azure azure_pg_admin) are not
+# true SUPERUSERs: PG rejects ALTER ROLE ... NOSUPERUSER when the caller lacks SUPERUSER,
+# even on non-superuser targets. We already verify target rolsuper is False before altering.
+_MANAGED_ALTER_ATTRIBUTES = sql.SQL("NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS")
 
 
 class BootstrapError(RuntimeError):
@@ -83,20 +87,50 @@ class BootstrapSpec:
 def bootstrap(admin_conninfo: str, spec: BootstrapSpec) -> None:
     spec.validate()
     with psycopg.connect(admin_conninfo, autocommit=True) as conn:
-        _ensure_role(conn, RUNTIME_GROUP, password=None)
-        _ensure_role(conn, RECEIPT_WRITER_GROUP, password=None)
-        _ensure_role(conn, RECEIPT_WORKER_GROUP, password=None)
-        _ensure_role(conn, spec.owner_role, password=spec.owner_password)
-        _ensure_role(conn, spec.app_role, password=spec.app_password)
+        caller_row = conn.execute(
+            "select current_user, rolsuper from pg_catalog.pg_roles where rolname = current_user"
+        ).fetchone()
+        admin_user = str(caller_row[0]) if caller_row is not None else ""
+        caller_is_superuser = bool(caller_row and caller_row[1])
+
+        _ensure_role(conn, RUNTIME_GROUP, password=None, caller_is_superuser=caller_is_superuser)
+        _ensure_role(
+            conn, RECEIPT_WRITER_GROUP, password=None, caller_is_superuser=caller_is_superuser
+        )
+        _ensure_role(
+            conn, RECEIPT_WORKER_GROUP, password=None, caller_is_superuser=caller_is_superuser
+        )
+        _ensure_role(
+            conn,
+            spec.owner_role,
+            password=spec.owner_password,
+            caller_is_superuser=caller_is_superuser,
+        )
+        _ensure_role(
+            conn,
+            spec.app_role,
+            password=spec.app_password,
+            caller_is_superuser=caller_is_superuser,
+        )
         if spec.receipt_writer_role is not None:
-            _ensure_role(conn, spec.receipt_writer_role, password=spec.receipt_writer_password)
+            _ensure_role(
+                conn,
+                spec.receipt_writer_role,
+                password=spec.receipt_writer_password,
+                caller_is_superuser=caller_is_superuser,
+            )
             conn.execute(
                 sql.SQL("grant {} to {}").format(
                     sql.Identifier(RECEIPT_WRITER_GROUP), sql.Identifier(spec.receipt_writer_role)
                 )
             )
         if spec.receipt_worker_role is not None:
-            _ensure_role(conn, spec.receipt_worker_role, password=spec.receipt_worker_password)
+            _ensure_role(
+                conn,
+                spec.receipt_worker_role,
+                password=spec.receipt_worker_password,
+                caller_is_superuser=caller_is_superuser,
+            )
             conn.execute(
                 sql.SQL("grant {} to {}").format(
                     sql.Identifier(RECEIPT_WORKER_GROUP), sql.Identifier(spec.receipt_worker_role)
@@ -137,6 +171,14 @@ def bootstrap(admin_conninfo: str, spec: BootstrapSpec) -> None:
             (spec.database,),
         ).fetchone()
         if owner is None:
+            # On managed PG16+/18 (Cloud SQL cloudsqlsuperuser / Azure), CREATEROLE grants
+            # ADMIN without SET ROLE by default; grant membership so CREATE DATABASE OWNER works.
+            if not caller_is_superuser and admin_user and admin_user != spec.owner_role:
+                conn.execute(
+                    sql.SQL("grant {} to {}").format(
+                        sql.Identifier(spec.owner_role), sql.Identifier(admin_user)
+                    )
+                )
             conn.execute(
                 sql.SQL("create database {} owner {} encoding 'UTF8' template template0").format(
                     sql.Identifier(spec.database), sql.Identifier(spec.owner_role)
@@ -144,8 +186,6 @@ def bootstrap(admin_conninfo: str, spec: BootstrapSpec) -> None:
             )
         elif owner[0] != spec.owner_role:
             raise BootstrapError(f"database {spec.database} is owned by {owner[0]}, not the owner")
-        admin_user_row = conn.execute("select current_user").fetchone()
-        admin_user = str(admin_user_row[0]) if admin_user_row is not None else ""
         if admin_user and admin_user != spec.owner_role:
             conn.execute(
                 sql.SQL("grant connect on database {} to {}").format(
@@ -186,18 +226,28 @@ def bootstrap(admin_conninfo: str, spec: BootstrapSpec) -> None:
                 )
 
 
-def _ensure_role(conn: psycopg.Connection, name: str, password: str | None) -> None:
+def _ensure_role(
+    conn: psycopg.Connection,
+    name: str,
+    password: str | None,
+    *,
+    caller_is_superuser: bool = True,
+) -> None:
     row = conn.execute(
         "select rolsuper from pg_catalog.pg_roles where rolname = %s", (name,)
     ).fetchone()
     if row is not None and row[0]:
         raise BootstrapError(f"role {name} is a superuser; refusing to reuse or alter it")
 
+    exists = row is not None
+    attributes = (
+        _MANAGED_ALTER_ATTRIBUTES if (exists and not caller_is_superuser) else _SAFE_ATTRIBUTES
+    )
     statement = sql.SQL("{} role {} {} {}").format(
-        sql.SQL("alter" if row is not None else "create"),
+        sql.SQL("alter" if exists else "create"),
         sql.Identifier(name),
         sql.SQL("LOGIN" if password is not None else "NOLOGIN"),
-        _SAFE_ATTRIBUTES,
+        attributes,
     )
     if password is not None:
         hashed = conn.pgconn.encrypt_password(
