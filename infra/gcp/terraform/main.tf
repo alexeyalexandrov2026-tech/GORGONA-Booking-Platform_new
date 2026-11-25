@@ -310,6 +310,28 @@ resource "google_cloud_run_v2_service" "api" {
           }
         }
       }
+      env {
+        name  = "GBA_CF_MODEL"
+        value = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+      }
+      env {
+        name = "GBA_CF_ACCOUNT_ID"
+        value_source {
+          secret_key_ref {
+            secret  = "gorgona-cf-account-id"
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "GBA_CF_API_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret  = "gorgona-cf-api-token"
+            version = "latest"
+          }
+        }
+      }
     }
   }
 }

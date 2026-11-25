@@ -50,7 +50,7 @@ class RecommendedSlotResponse(BaseModel):
 class CustomerAssistantResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
     version: Literal[1] = 1
-    engine: Literal["gemini", "grounded"]
+    engine: Literal["cloudflare", "gemini", "grounded"]
     business_name: str
     reply: str
     recommended_slots: list[RecommendedSlotResponse]
@@ -75,7 +75,7 @@ class CopilotInsightResponse(BaseModel):
 class OwnerCopilotResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
     version: Literal[1] = 1
-    engine: Literal["gemini", "grounded"]
+    engine: Literal["cloudflare", "gemini", "grounded"]
     business_name: str
     reply: str
     metrics: dict[str, Any]

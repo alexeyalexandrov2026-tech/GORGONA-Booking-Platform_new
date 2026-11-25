@@ -90,7 +90,7 @@ export function BookingAssistant({
 
         {result && (
           <div style={{ display: "grid", gap: "10px" }}>
-            <p
+            <div
               role="status"
               style={{
                 margin: 0,
@@ -100,10 +100,19 @@ export function BookingAssistant({
                 border: "1px solid var(--line)",
                 color: "#1f1a17",
                 fontSize: "0.92rem",
+                display: "grid",
+                gap: "6px",
               }}
             >
-              {result.reply}
-            </p>
+              <p style={{ margin: 0 }}>{result.reply}</p>
+              <small style={{ color: "#4e463f", fontSize: "0.78rem" }}>
+                {result.engine === "cloudflare"
+                  ? "Powered by Cloudflare Workers AI · Live verified availability"
+                  : result.engine === "gemini"
+                    ? "Powered by Gemini · Live verified availability"
+                    : "Grounded live availability"}
+              </small>
+            </div>
             {result.recommended_slots.length > 0 && (
               <div
                 style={{

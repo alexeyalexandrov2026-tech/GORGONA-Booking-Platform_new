@@ -21,7 +21,7 @@ export type RecommendedSlot = z.infer<typeof recommendedSlotSchema>;
 
 export const customerAssistantSchema = z.object({
   version: z.literal(1),
-  engine: z.enum(["gemini", "grounded"]),
+  engine: z.enum(["cloudflare", "gemini", "grounded"]),
   business_name: z.string(),
   reply: z.string(),
   recommended_slots: z.array(recommendedSlotSchema),
@@ -76,7 +76,7 @@ export const copilotInsightSchema = z.object({
 
 export const ownerCopilotSchema = z.object({
   version: z.literal(1),
-  engine: z.enum(["gemini", "grounded"]),
+  engine: z.enum(["cloudflare", "gemini", "grounded"]),
   business_name: z.string(),
   reply: z.string(),
   metrics: z.record(z.string(), z.unknown()),

@@ -4,7 +4,13 @@ from uuid import uuid4
 
 import pytest
 
-from gorgona_ai.embedder import DIMENSIONS, HashingEmbedder, cosine
+from gorgona_ai.embedder import (
+    DIMENSIONS,
+    CloudflareEmbedder,
+    HashingEmbedder,
+    cosine,
+    default_embedder,
+)
 from gorgona_ai.evidence import EvidenceRejectedError, normalise, parse
 from tests.conftest import envelope
 
@@ -110,3 +116,50 @@ def test_bootstrap_grants_public_schema_to_owner(monkeypatch: pytest.MonkeyPatch
     )
     assert any("grant usage, create on schema public to" in q.lower() for q in executed)
     assert any("create extension if not exists vector" in q.lower() for q in executed)
+
+
+def test_cloudflare_embedder_matryoshka_256_and_selection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import http.client
+    import json
+
+    class FakeResp:
+        status = 200
+
+        def read(self) -> bytes:
+            vec = [float(i + 1) for i in range(1024)]
+            return json.dumps({"data": [{"embedding": vec}]}).encode("utf-8")
+
+    class FakeConn:
+        def __init__(self, host: str, port: int, timeout: float = 20.0) -> None:
+            assert host == "api.cloudflare.com"
+
+        def request(self, *args: object, **kwargs: object) -> None:
+            return None
+
+        def getresponse(self) -> FakeResp:
+            return FakeResp()
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(http.client, "HTTPSConnection", FakeConn)
+    emb = CloudflareEmbedder("acc-123", "tok-abc")
+    vec = emb.embed("мужская стрижка")
+    assert len(vec) == DIMENSIONS
+    assert abs(cosine(vec, vec) - 1.0) < 1e-6
+    assert emb.embed("   ") == [0.0] * DIMENSIONS
+    assert emb.version.startswith("cf-")
+
+    monkeypatch.delenv("GAI_CF_ACCOUNT_ID", raising=False)
+    monkeypatch.delenv("GAI_CF_API_TOKEN", raising=False)
+    assert isinstance(default_embedder(), HashingEmbedder)
+
+    monkeypatch.setenv("GAI_CF_ACCOUNT_ID", "acc-123")
+    monkeypatch.setenv("GAI_CF_API_TOKEN", "tok-abc")
+    monkeypatch.delenv("GAI_EMBEDDER", raising=False)
+    assert isinstance(default_embedder(), CloudflareEmbedder)
+
+    monkeypatch.setenv("GAI_EMBEDDER", "hash")
+    assert isinstance(default_embedder(), HashingEmbedder)

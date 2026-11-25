@@ -94,7 +94,7 @@ jobs:
           IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GCP_ARTIFACT_REPO }}/gorgona-ai
         run: |
           TAG="sha-${GITHUB_SHA::12}"
-          docker build -t "${IMAGE_BASE}:${TAG}" -f ai/Dockerfile .
+          docker build -t "${IMAGE_BASE}:${TAG}" -f ai/Dockerfile ai
           docker push "${IMAGE_BASE}:${TAG}"
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE_BASE}:${TAG}")
           for job in gorgona-ai-migrate gorgona-ai-tick gorgona-ai-health; do

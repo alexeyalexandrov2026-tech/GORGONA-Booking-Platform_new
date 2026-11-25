@@ -5,8 +5,9 @@ Security & truthfulness invariants:
 - Every owner query runs strictly inside `authorized_tenant` with `BUSINESS_READ`.
 - Neither surface ever fabricates availability, prices, or policies: slots are queried
   live via `customer.queries.availability`, and owner insights come from real PG18 queries.
-- Optional Gemini synthesis (`GBA_GEMINI_API_KEY`) strictly narrates the verified facts
-  with stdlib HTTPS (zero extra dependencies) and falls back cleanly to deterministic output.
+- Optional LLM synthesis via Cloudflare Workers AI (`GBA_CF_ACCOUNT_ID` + `GBA_CF_API_TOKEN`)
+  or Gemini (`GBA_GEMINI_API_KEY`) strictly narrates the verified facts with stdlib HTTPS
+  (zero extra dependencies) and falls back cleanly to deterministic output.
 - Human control over AI (AGENTS.md): Copilot is strictly read-only and proposes actions.
 """
 
@@ -33,6 +34,8 @@ from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.growth.service import get_growth_settings
 
 _LOG = logging.getLogger(__name__)
+_DEFAULT_CF_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+_THINK_BLOCK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL | re.IGNORECASE)
 _CYRILLIC_RE = re.compile(r"[\u0430-\u044f\u0451]")
 _WORD_RE = re.compile(r"[a-z\u0430-\u044f\u04510-9]{3,}")
 _PRICE_CAP_RE = re.compile(
@@ -97,7 +100,7 @@ class RecommendedSlot:
 
 @dataclass(frozen=True)
 class AssistantResult:
-    engine: Literal["gemini", "grounded"]
+    engine: Literal["cloudflare", "gemini", "grounded"]
     business_name: str
     reply: str
     recommended_slots: list[RecommendedSlot]
@@ -116,7 +119,7 @@ class CopilotInsight:
 
 @dataclass(frozen=True)
 class CopilotResult:
-    engine: Literal["gemini", "grounded"]
+    engine: Literal["cloudflare", "gemini", "grounded"]
     business_name: str
     reply: str
     metrics: dict[str, Any]
@@ -274,6 +277,69 @@ def _matches_window(instant: datetime, tz_name: str, window: str) -> bool:
     return True
 
 
+def _strip_reasoning_tags(text: str) -> str:
+    """Remove any model reasoning tags without altering verified prose."""
+    return _THINK_BLOCK_RE.sub("", text).strip()
+
+
+def _call_cloudflare_sync(system_prompt: str, user_payload: dict[str, Any]) -> str | None:
+    """Optional Cloudflare Workers AI synthesis via OpenAI-compatible stdlib HTTPS."""
+    account_id = os.environ.get("GBA_CF_ACCOUNT_ID", "").strip()
+    api_token = os.environ.get("GBA_CF_API_TOKEN", "").strip()
+    if not account_id or not api_token:
+        return None
+    model = os.environ.get("GBA_CF_MODEL", _DEFAULT_CF_MODEL).strip() or _DEFAULT_CF_MODEL
+    body = json.dumps(
+        {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
+            ],
+            "temperature": 0.25,
+            "max_tokens": 360,
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    conn = http.client.HTTPSConnection("api.cloudflare.com", 443, timeout=15.0)
+    try:
+        conn.request(
+            "POST",
+            f"/client/v4/accounts/{account_id}/ai/v1/chat/completions",
+            body=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_token}",
+            },
+        )
+        resp = conn.getresponse()
+        raw = resp.read()
+        if resp.status != 200:
+            _LOG.warning(
+                "Cloudflare Workers AI returned HTTP %s for model %s",
+                resp.status,
+                model,
+            )
+            return None
+        parsed = json.loads(raw.decode("utf-8"))
+        choices = parsed.get("choices") or []
+        if not choices or not isinstance(choices[0], dict):
+            return None
+        msg = choices[0].get("message") or {}
+        if not isinstance(msg, dict):
+            return None
+        content = msg.get("content")
+        if not isinstance(content, str):
+            return None
+        clean = _strip_reasoning_tags(content)
+        return clean[:1200] if clean else None
+    except Exception as exc:
+        _LOG.warning("Cloudflare Workers AI call failed: %s", type(exc).__name__)
+        return None
+    finally:
+        conn.close()
+
+
 def _call_gemini_sync(system_prompt: str, user_payload: dict[str, Any]) -> str | None:
     """Optional Gemini grounded synthesis via stdlib HTTPS. Returns None if unconfigured/failed."""
     api_key = os.environ.get("GBA_GEMINI_API_KEY", "").strip()
@@ -318,6 +384,27 @@ def _call_gemini_sync(system_prompt: str, user_payload: dict[str, Any]) -> str |
         return None
     finally:
         conn.close()
+
+
+def _synthesize_reply_sync(
+    system_prompt: str,
+    user_payload: dict[str, Any],
+) -> tuple[Literal["cloudflare", "gemini"], str] | None:
+    """Select the configured LLM provider (Cloudflare Workers AI -> Gemini) with safe fallback."""
+    provider = os.environ.get("GBA_AI_PROVIDER", "auto").strip().lower() or "auto"
+    if provider == "grounded":
+        return None
+    if provider in ("auto", "cloudflare"):
+        cf_reply = _call_cloudflare_sync(system_prompt, user_payload)
+        if cf_reply:
+            return ("cloudflare", cf_reply)
+        if provider == "cloudflare":
+            return None
+    if provider in ("auto", "gemini"):
+        gemini_reply = _call_gemini_sync(system_prompt, user_payload)
+        if gemini_reply:
+            return ("gemini", gemini_reply)
+    return None
 
 
 def _format_money(cents: int, currency: str) -> str:
@@ -467,12 +554,14 @@ async def ask_customer_assistant(
 
     waitlist_suggested = len(recommended) == 0 and settings.waitlist_auto_offer
 
-    gemini_reply = await asyncio.to_thread(
-        _call_gemini_sync,
+    synthesized = await asyncio.to_thread(
+        _synthesize_reply_sync,
         (
-            f"You are the booking assistant for {boot.name}. Tone: {settings.ai_assistant_tone}. "
+            f"You are the AI Booking Assistant for {boot.name}. "
+            f"Tone: {settings.ai_assistant_tone}. "
             "Answer strictly using the verified catalog, live slots, and cancellation policy "
-            "provided in JSON. Never invent prices, times, or promises. Reply in the same language "
+            "provided in JSON. Keep exact service, variant, and specialist names from JSON. "
+            "Never invent prices, times, or promises. Reply naturally in the same language "
             "as customer_message in 2-3 concise sentences."
         ),
         {
@@ -504,11 +593,12 @@ async def ask_customer_assistant(
         },
     )
 
-    if gemini_reply:
+    if synthesized:
+        engine, ai_reply = synthesized
         return AssistantResult(
-            engine="gemini",
+            engine=engine,
             business_name=boot.name,
-            reply=gemini_reply,
+            reply=ai_reply,
             recommended_slots=recommended,
             waitlist_suggested=waitlist_suggested,
             cancellation_summary=boot.cancellation.summary,
@@ -695,13 +785,13 @@ async def ask_owner_copilot(
     )
 
     clean_q = (question or "").strip()[:500]
-    gemini_reply = await asyncio.to_thread(
-        _call_gemini_sync,
+    synthesized = await asyncio.to_thread(
+        _synthesize_reply_sync,
         (
             f"You are the read-only AI Business Copilot for {business_name} on GORGONA. "
             "Use ONLY the live JSON metrics and insights provided. Never invent revenue or claims. "
-            "Reply concisely in the owner's language (Russian if Russian, else English) with "
-            "concrete next actions."
+            "Reply naturally and concisely in the owner's language (Russian if Russian, else "
+            "English) with concrete next actions."
         ),
         {
             "owner_question": (
@@ -715,11 +805,12 @@ async def ask_owner_copilot(
         },
     )
 
-    if gemini_reply:
+    if synthesized:
+        engine, ai_reply = synthesized
         return CopilotResult(
-            engine="gemini",
+            engine=engine,
             business_name=business_name,
-            reply=gemini_reply,
+            reply=ai_reply,
             metrics=metrics,
             insights=insights,
         )

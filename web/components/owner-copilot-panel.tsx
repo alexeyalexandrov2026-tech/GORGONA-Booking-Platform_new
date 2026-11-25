@@ -83,7 +83,11 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
         </div>
         {data && (
           <span className="mgmt-status-pill status-confirmed">
-            {data.engine === "gemini" ? "Gemini Live" : "Grounded Live"}
+            {data.engine === "cloudflare"
+              ? "Cloudflare Workers AI"
+              : data.engine === "gemini"
+                ? "Gemini Live"
+                : "Grounded Live"}
           </span>
         )}
       </div>
