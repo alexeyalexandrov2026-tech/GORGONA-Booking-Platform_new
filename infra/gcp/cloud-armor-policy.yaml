@@ -1,0 +1,61 @@
+# Reference Cloud Armor WAF policy for GORGONA on Google Cloud Global External HTTPS LB.
+# Matches live policy `gorgona-waf-policy` (JSON body parsing STANDARD + OWASP CRS v3.3 Level 1).
+name: gorgona-waf-policy
+advancedOptionsConfig:
+  jsonParsing: STANDARD
+  logLevel: NORMAL
+rules:
+  - priority: 100
+    action: deny(403)
+    description: Block non-REST HTTP methods at edge
+    match:
+      expr:
+        expression: >-
+          request.method != 'GET' && request.method != 'HEAD' && request.method != 'POST'
+          && request.method != 'PUT' && request.method != 'PATCH' && request.method != 'DELETE'
+          && request.method != 'OPTIONS'
+  - priority: 1000
+    action: deny(403)
+    description: OWASP SQLi protection (Paranoia Level 1 for JSON REST APIs)
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('sqli-v33-stable', {'sensitivity': 1})"
+  - priority: 1010
+    action: deny(403)
+    description: OWASP XSS protection
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('xss-v33-stable', {'sensitivity': 1})"
+  - priority: 1020
+    action: deny(403)
+    description: OWASP LFI/Path Traversal protection
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('lfi-v33-stable', {'sensitivity': 1})"
+  - priority: 1030
+    action: deny(403)
+    description: OWASP RCE protection
+    match:
+      expr:
+        expression: "evaluatePreconfiguredWaf('rce-v33-stable', {'sensitivity': 1})"
+  - priority: 2000
+    action: throttle
+    description: API 600 req/min rate limit per IP
+    match:
+      expr:
+        expression: "request.path.startsWith('/v1/')"
+    rateLimitOptions:
+      conformAction: allow
+      exceedAction: deny(429)
+      enforceOnKey: IP
+      rateLimitThreshold:
+        count: 600
+        intervalSec: 60
+  - priority: 2147483647
+    action: allow
+    description: Default allow
+    match:
+      versionedExpr: SRC_IPS_V1
+      config:
+        srcIpRanges:
+          - "*"

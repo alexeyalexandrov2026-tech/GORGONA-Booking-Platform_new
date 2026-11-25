@@ -5,8 +5,11 @@ committed; a redelivered message maps to the same idempotency key (SHA-256 of th
 body). A body that is not a JSON object is dead-lettered and never retried.
 """
 
+import base64
 import hashlib
+import http.client
 import json
+import os
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -85,6 +88,111 @@ class ServiceBusSource:
     def close(self) -> None:
         self._receiver.close()
         self._client.close()
+
+
+class PubSubSource:
+    """Google Cloud Pub/Sub pull receiver authenticated via GCP Metadata Server or token.
+
+    Uses the standard library HTTPS client so the AI worker image needs no extra cloud SDK
+    dependencies. Suitable for Cloud Run Jobs running with a least-privilege service account
+    granted ``roles/pubsub.subscriber`` on the target subscription.
+    """
+
+    def __init__(
+        self,
+        project: str,
+        subscription: str,
+        *,
+        access_token: str | None = None,
+        api_host: str = "pubsub.googleapis.com",
+        timeout: float = 15.0,
+    ) -> None:
+        self._project = project.strip()
+        self._subscription = subscription.strip()
+        self._access_token = access_token or os.environ.get("GAI_PUBSUB_ACCESS_TOKEN")
+        self._api_host = api_host
+        self._timeout = timeout
+        if not self._project or not self._subscription:
+            raise ValueError("PubSubSource requires non-empty project and subscription")
+
+    @property
+    def _subscription_path(self) -> str:
+        return f"/v1/projects/{self._project}/subscriptions/{self._subscription}"
+
+    def _bearer_token(self) -> str:
+        if self._access_token:
+            return self._access_token
+        conn = http.client.HTTPConnection("metadata.google.internal", 80, timeout=5.0)
+        try:
+            conn.request(
+                "GET",
+                "/computeMetadata/v1/instance/service-accounts/default/token",
+                headers={"Metadata-Flavor": "Google"},
+            )
+            resp = conn.getresponse()
+            raw = resp.read()
+            if resp.status != 200:
+                raise RuntimeError(f"GCP metadata token request failed with HTTP {resp.status}")
+            payload = json.loads(raw.decode("utf-8"))
+            token = str(payload["access_token"])
+            self._access_token = token
+            return token
+        finally:
+            conn.close()
+
+    def _post_json(self, suffix: str, body: dict[str, Any]) -> dict[str, Any]:
+        conn = http.client.HTTPSConnection(self._api_host, 443, timeout=self._timeout)
+        try:
+            conn.request(
+                "POST",
+                f"{self._subscription_path}:{suffix}",
+                body=json.dumps(body).encode("utf-8"),
+                headers={
+                    "Authorization": f"Bearer {self._bearer_token()}",
+                    "Content-Type": "application/json",
+                },
+            )
+            resp = conn.getresponse()
+            raw = resp.read()
+            if resp.status >= 400:
+                raise RuntimeError(f"Pub/Sub {suffix} failed with HTTP {resp.status}")
+            if not raw:
+                return {}
+            parsed = json.loads(raw.decode("utf-8"))
+            return parsed if isinstance(parsed, dict) else {}
+        finally:
+            conn.close()
+
+    def receive(self, max_messages: int) -> list[Message]:
+        data = self._post_json("pull", {"maxMessages": max(1, int(max_messages))})
+        items = data.get("receivedMessages")
+        if not isinstance(items, list):
+            return []
+        messages: list[Message] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            ack_id = item.get("ackId")
+            msg = item.get("message")
+            if not isinstance(ack_id, str) or not isinstance(msg, dict):
+                continue
+            encoded = msg.get("data", "")
+            raw_bytes = base64.b64decode(encoded) if isinstance(encoded, str) and encoded else b""
+            messages.append(Message(raw_bytes, handle=ack_id))
+        return messages
+
+    def complete(self, message: Message) -> None:
+        if isinstance(message.handle, str) and message.handle:
+            self._post_json("acknowledge", {"ackIds": [message.handle]})
+
+    def dead_letter(self, message: Message, reason: str) -> None:
+        # Malformed payloads are never retried; acknowledge to stop poison-pill loops.
+        # Subscription-level dead-letter policies handle delivery-failure retries upstream.
+        _ = reason
+        self.complete(message)
+
+    def close(self) -> None:
+        return None
 
 
 class ListSource:

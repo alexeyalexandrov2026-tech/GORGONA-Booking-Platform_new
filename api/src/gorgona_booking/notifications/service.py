@@ -40,6 +40,23 @@ TEMPLATES: dict[str, tuple[str, str]] = {
         "Invoice {reference} from {business_name}",
         "Invoice {reference} for {amount} has been issued by {business_name}.",
     ),
+    "waitlist_slot_available": (
+        "A spot opened up at {business_name}!",
+        "Good news! An opening for {service_name} at {business_name} is available at {starts_at}. "
+        "Book now: {action_url}",
+    ),
+    "review_request": (
+        "How was your visit to {business_name}?",
+        "Thank you for choosing {business_name}! Share a quick review here: {action_url}",
+    ),
+    "rebooking_reminder": (
+        "Time for your next visit with {business_name}",
+        "Ready to book your next {service_name} at {business_name}? Reserve online: {action_url}",
+    ),
+    "gift_card_issued": (
+        "You received a {amount} gift certificate for {business_name}",
+        "Gift certificate {reference} for {amount} at {business_name} is ready to redeem.",
+    ),
 }
 
 
@@ -92,6 +109,8 @@ def render_template(template_code: str, variables: dict[str, str]) -> tuple[str,
         "starts_at": variables.get("starts_at", "scheduled time"),
         "role": variables.get("role", "team member"),
         "amount": variables.get("amount", "0.00"),
+        "service_name": variables.get("service_name", "appointment"),
+        "action_url": variables.get("action_url", ""),
     }
     return subj_tmpl.format(**safe_vars)[:240], body_tmpl.format(**safe_vars)[:2000]
 

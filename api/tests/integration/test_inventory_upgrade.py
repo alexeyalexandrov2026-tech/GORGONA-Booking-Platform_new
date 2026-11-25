@@ -290,6 +290,8 @@ K_TABLES = {
     "asset_safety_incidents",
     "self_service_signups",
     "notification_outbox",
+    "growth_settings",
+    "waitlist_entries",
     "civic_programs",
     "civic_cases",
     "civic_allocations",

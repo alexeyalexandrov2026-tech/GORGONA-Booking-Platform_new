@@ -1,0 +1,18 @@
+{
+  "name": "GORGONA Business Platform",
+  "short_name": "GORGONA",
+  "description": "Universal multi-industry booking, operations, finance, and AI assistant platform.",
+  "start_url": "/overview/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f9f6f1",
+  "theme_color": "#1f1a17",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

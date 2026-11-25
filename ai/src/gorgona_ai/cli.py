@@ -25,7 +25,7 @@ from uuid import UUID
 import psycopg
 
 from gorgona_ai import db, evidence, netcheck, pipeline
-from gorgona_ai.intake import ServiceBusSource, pump
+from gorgona_ai.intake import PubSubSource, ServiceBusSource, pump
 from gorgona_ai.jobs.runtime import drain
 from gorgona_ai.observability import configure_logging, health
 
@@ -103,11 +103,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(json.dumps(drain(conn, pipeline.HANDLERS, worker=_worker())))
             return 0
         if args.command == "pump-evidence":
-            source = ServiceBusSource(
-                _env("GAI_SERVICEBUS_NAMESPACE"),
-                os.environ.get("GAI_EVIDENCE_QUEUE", "evidence-events"),
-                os.environ.get("AZURE_CLIENT_ID"),
+            backend = os.environ.get("GAI_INTAKE_BACKEND", "").strip().lower()
+            use_pubsub = backend == "pubsub" or (
+                not backend
+                and bool(os.environ.get("GAI_PUBSUB_PROJECT"))
+                and bool(os.environ.get("GAI_PUBSUB_SUBSCRIPTION"))
             )
+            source: PubSubSource | ServiceBusSource
+            if use_pubsub:
+                source = PubSubSource(
+                    _env("GAI_PUBSUB_PROJECT"),
+                    _env("GAI_PUBSUB_SUBSCRIPTION"),
+                )
+            else:
+                source = ServiceBusSource(
+                    _env("GAI_SERVICEBUS_NAMESPACE"),
+                    os.environ.get("GAI_EVIDENCE_QUEUE", "evidence-events"),
+                    os.environ.get("AZURE_CLIENT_ID"),
+                )
             try:
                 counts = pump(conn, source)
             finally:

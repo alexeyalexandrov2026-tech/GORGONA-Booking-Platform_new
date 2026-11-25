@@ -20,11 +20,11 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from gorgona_ai.db import tenant_transaction, vector_literal
-from gorgona_ai.embedder import Embedder, HashingEmbedder
+from gorgona_ai.embedder import Embedder, default_embedder
 from gorgona_ai.evidence import ingest
 from gorgona_ai.jobs.runtime import Handler, JobRun, PermanentJobError, enqueue
 
-EMBEDDER: Embedder = HashingEmbedder()
+EMBEDDER: Embedder = default_embedder()
 K_NEIGHBOURS = 3
 POLICY_VERSION = 1
 MIN_BENCHMARK_ITEMS = 5
@@ -169,7 +169,7 @@ def _items(conn: psycopg.Connection, dataset_id: UUID, purpose: str) -> list[tup
     ]
 
 
-# --- inference used by evaluation (and by the future concierge) --------------------
+# --- inference used by evaluation (and by the future assistant) --------------------
 
 
 def predict(conn: psycopg.Connection, model_id: UUID, text: str) -> tuple[str | None, float]:
