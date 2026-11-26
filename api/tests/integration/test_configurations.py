@@ -167,7 +167,7 @@ async def test_lifecycle_keeps_every_version_and_replays(
 
     validated = (await config.step(owner_a, a, 1, "validate", 1)).json()
     assert (validated["state"], validated["revision"]) == ("validated", 2)
-    assert validated["validation"] == {"registry_version": 16, "problems": [], "warnings": []}
+    assert validated["validation"] == {"registry_version": 17, "problems": [], "warnings": []}
     publish_key = str(uuid7())
     published = (await config.step(owner_a, a, 1, "publish", 2, key=publish_key)).json()
     assert (published["state"], published["revision"]) == ("published", 3)

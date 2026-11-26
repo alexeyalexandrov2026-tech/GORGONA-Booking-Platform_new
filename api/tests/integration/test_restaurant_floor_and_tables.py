@@ -564,16 +564,37 @@ async def test_restaurant_module_gate_blocks_when_not_enableable(
     idp: FakeIdp,
     world: BookingWorld,
     owner_a: FakeUser,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    url = f"/v1/businesses/{world.a.tenant_id}/restaurant/areas/{uuid7()}"
+    payload = {
+        "schema_version": 1,
+        "expected_revision": 0,
+        "location_id": str(world.a.location_id),
+        "name": "Blocked",
+        "service_style": "dining",
+    }
+    resp_disabled = await client.put(
+        url,
+        json=payload,
+        headers={
+            **idp.bearer(owner_a.subject, email=owner_a.email),
+            "Idempotency-Key": str(uuid7()),
+        },
+    )
+    assert resp_disabled.status_code == 409
+    assert resp_disabled.json()["error"]["code"] == "MODULE_DISABLED"
+
+    monkeypatch.setitem(
+        modules.MODULES_BY_ID,
+        "restaurant",
+        modules.MODULES_BY_ID["restaurant"].model_copy(
+            update={"enableable": False, "readiness": Readiness.IMPLEMENTED}
+        ),
+    )
     resp = await client.put(
         f"/v1/businesses/{world.a.tenant_id}/restaurant/areas/{uuid7()}",
-        json={
-            "schema_version": 1,
-            "expected_revision": 0,
-            "location_id": str(world.a.location_id),
-            "name": "Blocked",
-            "service_style": "dining",
-        },
+        json=payload,
         headers={
             **idp.bearer(owner_a.subject, email=owner_a.email),
             "Idempotency-Key": str(uuid7()),
