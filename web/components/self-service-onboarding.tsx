@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AiBusinessArchitect } from "./ai-business-architect";
+import "../app/us-release-v2.css";
 import { accessToken, authManager, signIn } from "../lib/auth";
 import { setActiveSalonId } from "../lib/management-api";
 import {
@@ -13,6 +15,12 @@ import {
   type OnboardingStatus,
   type RegisterBusinessResult,
 } from "../lib/onboarding-api";
+
+type OnboardingMode = "ai" | "manual";
+const MODES: { id: OnboardingMode; label: string }[] = [
+  { id: "ai", label: "AI Business Architect" },
+  { id: "manual", label: "Manual Setup" },
+];
 
 const COMMON_TIMEZONES = [
   "America/New_York",
@@ -51,6 +59,11 @@ export function SelfServiceOnboarding() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<RegisterBusinessResult | null>(null);
+  const [mode, setMode] = useState<OnboardingMode>("ai");
+  const tabRefs = useRef<Record<OnboardingMode, HTMLButtonElement | null>>({
+    ai: null,
+    manual: null,
+  });
 
   const [businessName, setBusinessName] = useState("");
   const [slug, setSlug] = useState("");
@@ -148,6 +161,31 @@ export function SelfServiceOnboarding() {
     );
   };
 
+  const selectMode = (next: OnboardingMode, focus: boolean) => {
+    setMode(next);
+    if (focus) tabRefs.current[next]?.focus();
+  };
+
+  const handleTabKey = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const index = MODES.findIndex((m) => m.id === mode);
+    let next: number | null = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown")
+      next = (index + 1) % MODES.length;
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp")
+      next = (index - 1 + MODES.length) % MODES.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = MODES.length - 1;
+    if (next === null) return;
+    e.preventDefault();
+    const target = MODES[next];
+    if (target) selectMode(target.id, true);
+  };
+
+  const handleCreated = (res: RegisterBusinessResult) => {
+    setActiveSalonId(res.business_id);
+    setCreated(res);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -205,9 +243,10 @@ export function SelfServiceOnboarding() {
       <main className="mgmt-main" id="main-content">
         <h1>Create your GORGONA business workspace</h1>
         <p>
-          Register your company, select one or more of the 39 supported
-          industries, and launch your management cabinet immediately without
-          waiting for administrator approval.
+          Describe your business to the AI Business Architect and approve the
+          drafted setup, or use Manual Setup to select one or more of the 39
+          supported industries yourself. Either way, your management cabinet
+          launches immediately without waiting for administrator approval.
         </p>
 
         {error && (
@@ -246,6 +285,17 @@ export function SelfServiceOnboarding() {
               <strong>Enabled modules:</strong>{" "}
               {created.effective_module_ids.join(", ")}
             </p>
+            {created.created_services_count +
+              created.created_resources_count +
+              created.created_hours_count >
+              0 && (
+              <p>
+                <strong>Approved starter setup:</strong>{" "}
+                {created.created_services_count} services,{" "}
+                {created.created_resources_count} resources, and{" "}
+                {created.created_hours_count} days of weekly hours.
+              </p>
+            )}
             {created.pending_module_ids.length > 0 && (
               <p className="hold-note">
                 Additional specialized modules (
@@ -264,152 +314,209 @@ export function SelfServiceOnboarding() {
             </div>
           </section>
         ) : (
-          <form onSubmit={(e) => void handleSubmit(e)} className="mgmt-card">
-            <h2>1. Company & primary location</h2>
-            <div className="form-grid">
-              <label>
-                Business name
-                <input
-                  type="text"
-                  required
-                  maxLength={200}
-                  value={businessName}
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setBusinessName(next);
-                    if (!slugEdited) setSlug(slugify(next));
-                  }}
-                  placeholder="Acme Studio LLC"
-                />
-              </label>
-              <label>
-                URL slug (lowercase letters, digits, hyphens)
-                <input
-                  type="text"
-                  required
-                  minLength={2}
-                  maxLength={63}
-                  pattern="^[a-z0-9]+(-[a-z0-9]+)*$"
-                  value={slug}
-                  onChange={(e) => {
-                    setSlugEdited(true);
-                    setSlug(e.target.value.toLowerCase());
-                  }}
-                  placeholder="acme-studio"
-                />
-              </label>
-              <label>
-                Primary location name
-                <input
-                  type="text"
-                  required
-                  maxLength={200}
-                  value={locationName}
-                  onChange={(e) => setLocationName(e.target.value)}
-                />
-              </label>
-              <label>
-                Location IANA time zone
-                <select
-                  value={timezone}
-                  onChange={(e) => setTimezone(e.target.value)}
-                >
-                  {COMMON_TIMEZONES.map((tz) => (
-                    <option key={tz} value={tz}>
-                      {tz}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <h2 style={{ marginTop: "1.5rem" }}>2. Business formats</h2>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
-              {FORMAT_OPTIONS.map((f) => (
-                <label key={f.id} style={{ display: "flex", gap: "0.4rem" }}>
-                  <input
-                    type="checkbox"
-                    checked={formats.includes(f.id)}
-                    onChange={() => toggleFormat(f.id)}
-                  />
-                  {f.label}
-                </label>
-              ))}
-            </div>
-
-            <h2 style={{ marginTop: "1.5rem" }}>
-              3. Industries ({selectedIndustries.length} of {presets.length}{" "}
-              selected)
-            </h2>
-            <label>
-              Search 39 industries by name, activity, or NAICS sector
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search beauty, construction, rental, healthcare, 54…"
-              />
-            </label>
+          <>
             <div
-              tabIndex={0}
-              className="mgmt-table-container"
-              style={{
-                maxHeight: "320px",
-                overflowY: "auto",
-                marginTop: "0.75rem",
-                border: "1px solid var(--line, #d0d7de)",
-                padding: "0.75rem",
-              }}
+              role="tablist"
+              aria-label="Choose how to set up your business"
+              className="usr-tablist"
             >
-              {filteredPresets.map((ind) => (
-                <label
-                  key={ind.id}
-                  style={{
-                    display: "block",
-                    padding: "0.4rem 0",
-                    borderBottom: "1px solid rgba(0,0,0,0.06)",
+              {MODES.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="tab"
+                  id={`onboarding-tab-${m.id}`}
+                  aria-selected={mode === m.id}
+                  aria-controls={`onboarding-panel-${m.id}`}
+                  tabIndex={mode === m.id ? 0 : -1}
+                  className="usr-tab"
+                  ref={(el) => {
+                    tabRefs.current[m.id] = el;
                   }}
+                  onClick={() => selectMode(m.id, false)}
+                  onKeyDown={handleTabKey}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedIndustries.includes(ind.id)}
-                    onChange={() => toggleIndustry(ind.id)}
-                    style={{ marginRight: "0.5rem" }}
-                  />
-                  <strong>
-                    #{ind.id} {ind.name}
-                  </strong>{" "}
-                  <span>(NAICS {ind.naics_sectors.join(", ")})</span>
-                  <div style={{ fontSize: "0.85rem", color: "#3f3832" }}>
-                    {ind.examples}
-                  </div>
-                </label>
+                  {m.label}
+                </button>
               ))}
             </div>
+            <div
+              role="tabpanel"
+              id="onboarding-panel-ai"
+              aria-labelledby="onboarding-tab-ai"
+              hidden={mode !== "ai"}
+              tabIndex={0}
+            >
+              <AiBusinessArchitect
+                presets={presets}
+                onCreated={handleCreated}
+              />
+            </div>
+            <div
+              role="tabpanel"
+              id="onboarding-panel-manual"
+              aria-labelledby="onboarding-tab-manual"
+              hidden={mode !== "manual"}
+              tabIndex={0}
+            >
+              <form
+                onSubmit={(e) => void handleSubmit(e)}
+                className="mgmt-card"
+              >
+                <h2>1. Company & primary location</h2>
+                <div className="form-grid">
+                  <label>
+                    Business name
+                    <input
+                      type="text"
+                      required
+                      maxLength={200}
+                      value={businessName}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setBusinessName(next);
+                        if (!slugEdited) setSlug(slugify(next));
+                      }}
+                      placeholder="Acme Studio LLC"
+                    />
+                  </label>
+                  <label>
+                    URL slug (lowercase letters, digits, hyphens)
+                    <input
+                      type="text"
+                      required
+                      minLength={2}
+                      maxLength={63}
+                      pattern="^[a-z0-9]+(-[a-z0-9]+)*$"
+                      value={slug}
+                      onChange={(e) => {
+                        setSlugEdited(true);
+                        setSlug(e.target.value.toLowerCase());
+                      }}
+                      placeholder="acme-studio"
+                    />
+                  </label>
+                  <label>
+                    Primary location name
+                    <input
+                      type="text"
+                      required
+                      maxLength={200}
+                      value={locationName}
+                      onChange={(e) => setLocationName(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Location IANA time zone
+                    <select
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                    >
+                      {COMMON_TIMEZONES.map((tz) => (
+                        <option key={tz} value={tz}>
+                          {tz}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
 
-            <section style={{ marginTop: "1.25rem" }}>
-              <h3>Modules activated on creation</h3>
-              <p>
-                <strong>Core + verified modules:</strong> organization,
-                users_access, {modulePreview.enableable.join(", ")}
-              </p>
-              {modulePreview.pending.length > 0 && (
-                <p className="hold-note">
-                  Specialized modules awaiting acceptance (not auto-enabled):{" "}
-                  {modulePreview.pending.join(", ")}
+                <h2 style={{ marginTop: "1.5rem" }}>2. Business formats</h2>
+                <div
+                  style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}
+                >
+                  {FORMAT_OPTIONS.map((f) => (
+                    <label
+                      key={f.id}
+                      style={{ display: "flex", gap: "0.4rem" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formats.includes(f.id)}
+                        onChange={() => toggleFormat(f.id)}
+                      />
+                      {f.label}
+                    </label>
+                  ))}
+                </div>
+
+                <h2 style={{ marginTop: "1.5rem" }}>
+                  3. Industries ({selectedIndustries.length} of {presets.length}{" "}
+                  selected)
+                </h2>
+                <label>
+                  Search 39 industries by name, activity, or NAICS sector
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search beauty, construction, rental, healthcare, 54…"
+                  />
+                </label>
+                <div
+                  tabIndex={0}
+                  className="mgmt-table-container"
+                  style={{
+                    maxHeight: "320px",
+                    overflowY: "auto",
+                    marginTop: "0.75rem",
+                    border: "1px solid var(--line, #d0d7de)",
+                    padding: "0.75rem",
+                  }}
+                >
+                  {filteredPresets.map((ind) => (
+                    <label
+                      key={ind.id}
+                      style={{
+                        display: "block",
+                        padding: "0.4rem 0",
+                        borderBottom: "1px solid rgba(0,0,0,0.06)",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedIndustries.includes(ind.id)}
+                        onChange={() => toggleIndustry(ind.id)}
+                        style={{ marginRight: "0.5rem" }}
+                      />
+                      <strong>
+                        #{ind.id} {ind.name}
+                      </strong>{" "}
+                      <span>(NAICS {ind.naics_sectors.join(", ")})</span>
+                      <div style={{ fontSize: "0.85rem", color: "#3f3832" }}>
+                        {ind.examples}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                <section style={{ marginTop: "1.25rem" }}>
+                  <h3>Modules activated on creation</h3>
+                  <p>
+                    <strong>Core + verified modules:</strong> organization,
+                    users_access, {modulePreview.enableable.join(", ")}
+                  </p>
+                  {modulePreview.pending.length > 0 && (
+                    <p className="hold-note">
+                      Specialized modules awaiting acceptance (not
+                      auto-enabled): {modulePreview.pending.join(", ")}
+                    </p>
+                  )}
+                </section>
+
+                <p style={{ fontSize: "0.85rem", marginTop: "1rem" }}>
+                  By creating a workspace, you agree to the{" "}
+                  <Link href="/legal/terms/">Terms of Service</Link> and{" "}
+                  <Link href="/legal/privacy/">Privacy Policy</Link>.
                 </p>
-              )}
-            </section>
-
-            <p style={{ fontSize: "0.85rem", marginTop: "1rem" }}>
-              By creating a workspace, you agree to the{" "}
-              <Link href="/legal/terms/">Terms of Service</Link> and{" "}
-              <Link href="/legal/privacy/">Privacy Policy</Link>.
-            </p>
-            <button type="submit" disabled={submitting}>
-              {submitting ? "Creating workspace…" : "Create business workspace"}
-            </button>
-          </form>
+                <button type="submit" disabled={submitting}>
+                  {submitting
+                    ? "Creating workspace…"
+                    : "Create business workspace"}
+                </button>
+              </form>
+            </div>
+          </>
         )}
       </main>
     </div>

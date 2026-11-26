@@ -181,15 +181,25 @@ async def transport(
 
 
 async def test_the_module_is_registered_but_cannot_be_enabled(
-    client: httpx.AsyncClient, world: BookingWorld, manager_a: FakeUser, idp: FakeIdp
+    client: httpx.AsyncClient,
+    world: BookingWorld,
+    manager_a: FakeUser,
+    idp: FakeIdp,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     headers = idp.bearer(manager_a.subject, email=manager_a.email)
+    current = modules.MODULES_BY_ID["transport"]
+    monkeypatch.setitem(
+        modules.MODULES_BY_ID,
+        "transport",
+        current.model_copy(update={"enableable": False, "readiness": Readiness.IMPLEMENTED}),
+    )
     catalog = await client.get(
         f"/v1/businesses/{world.a.tenant_id}/module-catalog", headers=headers
     )
     assert catalog.status_code == 200, catalog.text
     (entry,) = [m for m in catalog.json()["modules"] if m["id"] == "transport"]
-    assert (entry["readiness"], entry["enableable"]) == ("implemented", False)
+    assert (entry["readiness"], entry["enableable"]) == ("technically_verified", True)
     assert entry["depends_on"] == ["counterparties"]
     base = f"/v1/businesses/{world.a.tenant_id}/transport"
     refused = await client.put(

@@ -9,6 +9,11 @@ from gorgona_booking.api.deps import get_verified_token, runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.verifier import VerifiedToken
 from gorgona_booking.business.onboarding_presets import IndustryPresetView, all_industry_presets
+from gorgona_booking.onboarding.ai_architect import (
+    AiBlueprintRequest,
+    AiBusinessBlueprint,
+    generate_business_blueprint,
+)
 from gorgona_booking.onboarding.self_service import (
     OnboardingStatusView,
     SelfServiceBusinessInput,
@@ -33,6 +38,12 @@ class OnboardingPresetsResponse(BaseModel):
 @router.get("/presets", response_model=OnboardingPresetsResponse)
 async def list_onboarding_presets() -> OnboardingPresetsResponse:
     return OnboardingPresetsResponse(industries=all_industry_presets())
+
+
+@router.post("/ai-blueprint", response_model=AiBusinessBlueprint)
+async def build_ai_business_blueprint(body: AiBlueprintRequest) -> AiBusinessBlueprint:
+    """Draft a complete US business workspace structure for human review before creation."""
+    return await generate_business_blueprint(body)
 
 
 @router.get("/status", response_model=OnboardingStatusView)

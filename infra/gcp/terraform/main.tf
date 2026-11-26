@@ -332,6 +332,33 @@ resource "google_cloud_run_v2_service" "api" {
           }
         }
       }
+      env {
+        name = "GBA_R2_ACCESS_KEY_ID"
+        value_source {
+          secret_key_ref {
+            secret  = "gorgona-r2-access-key-id"
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "GBA_R2_SECRET_ACCESS_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = "gorgona-r2-secret-access-key"
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "GBA_R2_ENDPOINT"
+        value_source {
+          secret_key_ref {
+            secret  = "gorgona-r2-endpoint"
+            version = "latest"
+          }
+        }
+      }
     }
   }
 }

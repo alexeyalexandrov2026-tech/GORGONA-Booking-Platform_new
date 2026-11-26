@@ -18,7 +18,7 @@ from gorgona_booking.business.special_civic import (
 
 
 def test_public_civic_module_registered_implemented_not_enableable() -> None:
-    assert modules.MODULE_REGISTRY_VERSION == 16
+    assert modules.MODULE_REGISTRY_VERSION == 17
     assert PERMISSIONS_VERSION == 25
     mod = modules.MODULES_BY_ID["public_civic"]
     assert mod.readiness is Readiness.IMPLEMENTED

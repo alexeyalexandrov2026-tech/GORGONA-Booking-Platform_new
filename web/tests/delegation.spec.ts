@@ -73,7 +73,7 @@ test("servicing business accepts limited access, books for the owner and ends ac
     // Work in the owner business as a named delegate: bookings only, one location.
     // In-app navigation keeps the session and reloads the account's businesses.
     await page.getByRole("link", { name: "Overview", exact: true }).click();
-    await page.getByLabel("Active Salon").selectOption(partner);
+    await page.getByLabel("Active Business").selectOption(partner);
     await expect(
       page.getByText("You are serving", { exact: false }),
     ).toBeVisible();
@@ -118,7 +118,7 @@ test("servicing business accepts limited access, books for the owner and ends ac
     await expect(page.getByRole("dialog")).toHaveCount(0);
 
     // End the relationship from the servicing side; the owner's business disappears.
-    await page.getByLabel("Active Salon").selectOption(own);
+    await page.getByLabel("Active Business").selectOption(own);
     await page
       .getByRole("link", { name: "Business profile", exact: true })
       .click();
@@ -134,7 +134,7 @@ test("servicing business accepts limited access, books for the owner and ends ac
     await expect(
       page.getByRole("heading", { name: /Today’s Overview/ }),
     ).toBeVisible();
-    await expect(page.getByLabel("Active Salon")).toHaveCount(0);
+    await expect(page.getByLabel("Active Business")).toHaveCount(0);
     await page
       .getByRole("link", { name: "Business profile", exact: true })
       .click();

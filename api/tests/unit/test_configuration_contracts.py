@@ -92,15 +92,31 @@ def test_module_registry_is_consistent() -> None:
 
     for module_id in ids:
         walk(module_id, ())
+    # Module registry v17 (US release v2.0): the owner enabled the verified commercial modules.
+    # The regulated clinical_care and public_civic modules stay implemented-only until their
+    # HIPAA / public-sector reviews, and the planned modules stay unavailable.
     assert [m.id for m in MODULES if m.enableable] == [
         "counterparties",
         BOOKING_MODULE,
         "workforce",
+        "projects",
         "documents",
         "finance",
         "finance_documents",
         "inventory",
+        "assets",
+        "analytics",
+        "transport",
+        "construction",
+        "rental",
+        "property",
+        "restaurant",
+        "supply",
+        "hospitality_events",
+        "storefronts",
     ]
+    for regulated in ("clinical_care", "public_civic"):
+        assert not MODULES_BY_ID[regulated].enableable, regulated
     assert BASELINE_MODULE_IDS == (BOOKING_MODULE,)
 
 

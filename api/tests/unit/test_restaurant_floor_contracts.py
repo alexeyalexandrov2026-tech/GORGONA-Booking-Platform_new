@@ -23,10 +23,10 @@ from gorgona_booking.business.restaurant_floor import (
 
 
 def test_restaurant_module_is_implemented_and_not_enableable() -> None:
-    assert modules.MODULE_REGISTRY_VERSION == 16
+    assert modules.MODULE_REGISTRY_VERSION == 17
     mod = modules.MODULES_BY_ID["restaurant"]
-    assert mod.readiness is Readiness.IMPLEMENTED
-    assert mod.enableable is False
+    assert mod.readiness is Readiness.TECHNICALLY_VERIFIED
+    assert mod.enableable is True
     assert set(mod.depends_on) == {
         "booking_resources",
         "counterparties",

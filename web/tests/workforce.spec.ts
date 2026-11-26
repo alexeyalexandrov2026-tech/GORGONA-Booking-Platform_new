@@ -47,7 +47,7 @@ async function signIn(page: Page, who: Person, choose = true) {
   // The owner belongs to two businesses; the scenario runs in the first one.
   if (who === "owner")
     await page
-      .getByRole("combobox", { name: "Active Salon" })
+      .getByRole("combobox", { name: "Active Business" })
       .selectOption(business);
 }
 async function signOut(page: Page) {
@@ -482,7 +482,7 @@ test("schedule, own shifts and timesheets with real gates, recovery and roles", 
   ).toBeDisabled();
   await accessible(page);
   await page
-    .getByRole("combobox", { name: "Active Salon" })
+    .getByRole("combobox", { name: "Active Business" })
     .selectOption(otherBusiness);
   await expect(
     page.getByText("Scheduling is turned off for this business.", {
@@ -491,7 +491,7 @@ test("schedule, own shifts and timesheets with real gates, recovery and roles", 
   ).toBeVisible();
   await expect(recoveryOf(page)).toHaveCount(0);
   await page
-    .getByRole("combobox", { name: "Active Salon" })
+    .getByRole("combobox", { name: "Active Business" })
     .selectOption(business);
   await expect(statusOf(page)).toHaveText("Your earlier action was recorded.");
   await expect(recoveryOf(page)).toHaveCount(0);

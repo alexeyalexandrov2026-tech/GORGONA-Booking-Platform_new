@@ -240,7 +240,7 @@ test("an owner plans with the forms and a carrier's dispatcher works through the
 
   // The dispatcher works in the owner's business through the grant.
   await signIn(page, dispatcher);
-  await page.getByLabel("Active Salon").selectOption(owner);
+  await page.getByLabel("Active Business").selectOption(owner);
   await expect(
     page.getByText("You are serving", { exact: false }),
   ).toBeVisible();

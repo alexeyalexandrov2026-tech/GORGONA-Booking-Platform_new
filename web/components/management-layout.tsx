@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { accessToken, authManager, signIn, signOut } from "../lib/auth";
 import {
   fetchMe,
@@ -19,41 +19,135 @@ interface ManagementLayoutProps {
     refresh: () => void;
   }) => React.ReactNode;
 }
-const NAV_ITEMS = [
-  { href: "/business/", label: "Business profile" },
-  { href: "/overview/", label: "Overview" },
-  { href: "/calendar/", label: "Calendar" },
-  { href: "/bookings/", label: "Bookings" },
-  { href: "/services/", label: "Services" },
-  { href: "/staff/", label: "Staff" },
-  { href: "/reservations/", label: "Reservations" },
-  { href: "/schedule/", label: "Schedule" },
-  { href: "/my-shifts/", label: "My shifts" },
-  { href: "/timesheets/", label: "Timesheets" },
-  { href: "/clients/", label: "Clients" },
-  { href: "/materials/", label: "Materials" },
-  { href: "/stock-documents/", label: "Stock documents" },
-  { href: "/counterparties/", label: "Counterparties" },
-  { href: "/documents/", label: "Documents" },
-  { href: "/ledger/", label: "Ledger" },
-  { href: "/finance/", label: "Financial documents" },
-  { href: "/prepaid/", label: "Prepaid" },
-  { href: "/transport/", label: "Transport" },
-  { href: "/construction/", label: "Construction" },
-  { href: "/rental/", label: "Rental" },
-  { href: "/property/", label: "Property" },
-  { href: "/restaurant/", label: "Restaurant" },
-  { href: "/projects/", label: "Projects" },
-  { href: "/supply/", label: "Supply Chain" },
-  { href: "/marketplace/", label: "Marketplace" },
-  { href: "/enterprise/", label: "Enterprise" },
-  { href: "/specialized/", label: "Specialized" },
-  { href: "/provider-admission/", label: "Provider admission" },
-  { href: "/settings/", label: "Settings" },
+
+interface NavItem {
+  readonly href: string;
+  readonly label: string;
+  readonly group: "Core" | "Team" | "Finance" | "Industry" | "Platform";
+  readonly moduleId?: string;
+}
+
+const NAV_ITEMS: readonly NavItem[] = [
+  { href: "/business/", label: "Business profile", group: "Core" },
+  { href: "/overview/", label: "Overview", group: "Core" },
+  { href: "/calendar/", label: "Calendar", group: "Core" },
+  { href: "/bookings/", label: "Bookings", group: "Core" },
+  { href: "/services/", label: "Services", group: "Core" },
+  { href: "/clients/", label: "Clients", group: "Core" },
+  { href: "/staff/", label: "Staff", group: "Team" },
+  {
+    href: "/reservations/",
+    label: "Reservations",
+    group: "Team",
+    moduleId: "resource_reservations",
+  },
+  {
+    href: "/schedule/",
+    label: "Schedule",
+    group: "Team",
+    moduleId: "workforce_scheduling",
+  },
+  {
+    href: "/my-shifts/",
+    label: "My shifts",
+    group: "Team",
+    moduleId: "workforce_scheduling",
+  },
+  {
+    href: "/timesheets/",
+    label: "Timesheets",
+    group: "Team",
+    moduleId: "workforce_scheduling",
+  },
+  {
+    href: "/materials/",
+    label: "Materials",
+    group: "Finance",
+    moduleId: "inventory",
+  },
+  {
+    href: "/stock-documents/",
+    label: "Stock documents",
+    group: "Finance",
+    moduleId: "inventory",
+  },
+  { href: "/counterparties/", label: "Counterparties", group: "Finance" },
+  { href: "/documents/", label: "Documents", group: "Finance" },
+  { href: "/ledger/", label: "Ledger", group: "Finance" },
+  { href: "/finance/", label: "Financial documents", group: "Finance" },
+  { href: "/prepaid/", label: "Prepaid", group: "Finance" },
+  {
+    href: "/transport/",
+    label: "Transport",
+    group: "Industry",
+    moduleId: "transport",
+  },
+  {
+    href: "/construction/",
+    label: "Construction",
+    group: "Industry",
+    moduleId: "construction",
+  },
+  {
+    href: "/rental/",
+    label: "Rental",
+    group: "Industry",
+    moduleId: "rental",
+  },
+  {
+    href: "/property/",
+    label: "Property",
+    group: "Industry",
+    moduleId: "property_management",
+  },
+  {
+    href: "/restaurant/",
+    label: "Restaurant",
+    group: "Industry",
+    moduleId: "restaurant_operations",
+  },
+  {
+    href: "/projects/",
+    label: "Projects",
+    group: "Industry",
+    moduleId: "project_delivery",
+  },
+  {
+    href: "/supply/",
+    label: "Supply Chain",
+    group: "Industry",
+    moduleId: "supply_chain",
+  },
+  {
+    href: "/marketplace/",
+    label: "Marketplace",
+    group: "Industry",
+    moduleId: "marketplace_operations",
+  },
+  {
+    href: "/enterprise/",
+    label: "Enterprise",
+    group: "Industry",
+    moduleId: "enterprise_governance",
+  },
+  {
+    href: "/specialized/",
+    label: "Specialized",
+    group: "Industry",
+    moduleId: "specialized_operations",
+  },
+  {
+    href: "/provider-admission/",
+    label: "Provider admission",
+    group: "Platform",
+  },
+  { href: "/integrations/", label: "App Hub", group: "Platform" },
+  { href: "/settings/", label: "Settings", group: "Platform" },
 ];
 
 export function ManagementLayout({ children }: ManagementLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [me, setMe] = useState<MeView | null>(null);
   const [salonId, setSalonId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,11 +155,21 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const [authBusy, setAuthBusy] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState("");
+  const [paletteIndex, setPaletteIndex] = useState(0);
+  const paletteInputRef = useRef<HTMLInputElement | null>(null);
+
   const membership = me?.memberships.find((item) => item.salon_id === salonId);
   const locationLimited = membership?.location_id != null;
   const delegation = membership?.delegation;
+  const isCompanyManager =
+    !locationLimited &&
+    !delegation &&
+    ["owner", "manager"].includes(membership?.role ?? "");
   const granted = (right: string) =>
     delegation?.permissions.some((p) => p === right) ?? false;
+
   // Delegated work is limited to what the grant names (bookings, transport since M6b);
   // company areas stay with the owner business.
   const permittedNav = NAV_ITEMS.filter(
@@ -76,10 +180,9 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         "/ledger/",
         "/finance/",
         "/provider-admission/",
+        "/integrations/",
       ].includes(item.href) ||
-        (!locationLimited &&
-          !delegation &&
-          ["owner", "manager"].includes(membership?.role ?? ""))) &&
+        isCompanyManager) &&
       // Resource reservations, the schedule and materials are staff management, also
       // within one branch. Own shifts and time belong to every member, never a delegate.
       (![
@@ -107,14 +210,50 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
     : locationLimited
       ? permittedNav.filter(
           (item) =>
-            !["/business/", "/settings/", "/services/"].includes(item.href),
+            ![
+              "/business/",
+              "/settings/",
+              "/services/",
+              "/integrations/",
+            ].includes(item.href),
         )
       : permittedNav;
+
+  const paletteEntries = (() => {
+    const base = navItems.map((item) => ({
+      href: item.href,
+      label: item.label,
+      group: item.group as string,
+    }));
+    const actions = [
+      {
+        href: "/onboarding/",
+        label: "Create new business (AI Business Architect)",
+        group: "Action",
+      },
+      {
+        href: "/book/",
+        label: "Customer booking page",
+        group: "Action",
+      },
+    ];
+    const all = [...base, ...actions];
+    const q = paletteQuery.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter(
+      (entry) =>
+        entry.label.toLowerCase().includes(q) ||
+        entry.group.toLowerCase().includes(q) ||
+        entry.href.toLowerCase().includes(q),
+    );
+  })();
+
   const refresh = useCallback(() => {
     setLoading(true);
     setError(null);
     setTick((t) => t + 1);
   }, []);
+
   useEffect(() => {
     let active = true;
     let removeExpired: (() => void) | undefined;
@@ -180,6 +319,42 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       removeExpired?.();
     };
   }, [tick]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        if (!me) return;
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+        setPaletteQuery("");
+        setPaletteIndex(0);
+      } else if (event.key === "Escape" && paletteOpen) {
+        event.preventDefault();
+        setPaletteOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [me, paletteOpen]);
+
+  useEffect(() => {
+    if (paletteOpen) {
+      paletteInputRef.current?.focus();
+    }
+  }, [paletteOpen]);
+
+  const openPalette = () => {
+    setPaletteQuery("");
+    setPaletteIndex(0);
+    setPaletteOpen(true);
+  };
+
+  const navigateFromPalette = (href: string) => {
+    setPaletteOpen(false);
+    setPaletteQuery("");
+    router.push(href);
+  };
+
   const startSignIn = async () => {
     setAuthBusy(true);
     setError(null);
@@ -194,6 +369,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
     setAuthBusy(true);
     setMe(null);
     setSalonId(null);
+    setPaletteOpen(false);
     try {
       await signOut();
     } catch {
@@ -204,6 +380,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       setAuthBusy(false);
     }
   };
+
   return (
     <div className="management-shell">
       <a className="skip" href="#main-content">
@@ -212,12 +389,12 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       <header className="mgmt-header">
         <div className="mgmt-brand-area">
           <Link href="/overview/" className="mgmt-brand">
-            GORGONA <span>Studio Manager</span>
+            GORGONA <span>Business OS</span>
           </Link>
           {me && me.memberships.length > 1 ? (
             <select
               className="mgmt-salon-select"
-              aria-label="Active Salon"
+              aria-label="Active Business"
               value={salonId ?? ""}
               onChange={(e) => {
                 setActiveSalonId(e.target.value);
@@ -226,7 +403,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
             >
               {me.memberships.map((m) => (
                 <option key={m.salon_id} value={m.salon_id}>
-                  {m.salon_name ?? "Salon"} ({m.role})
+                  {m.salon_name ?? "Business"} ({m.role})
                 </option>
               ))}
             </select>
@@ -234,7 +411,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
             <div className="mgmt-salon-badge">
               <strong>
                 {me.memberships.find((m) => m.salon_id === salonId)
-                  ?.salon_name ?? "Active Salon"}
+                  ?.salon_name ?? "Active Business"}
               </strong>
             </div>
           ) : null}
@@ -242,6 +419,16 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         <div className="mgmt-header-actions">
           {me ? (
             <>
+              <button
+                type="button"
+                className="secondary mgmt-cmd-trigger"
+                onClick={openPalette}
+                aria-haspopup="dialog"
+                aria-expanded={paletteOpen}
+              >
+                <span>Quick jump</span>
+                <kbd aria-hidden="true">⌘K</kbd>
+              </button>
               <Link href="/onboarding/" className="mgmt-nav-link">
                 + New business
               </Link>
@@ -266,19 +453,26 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       </header>
       <nav className="mgmt-nav" aria-label="Management Navigation">
         <ul className="mgmt-nav-list">
-          {navItems.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={
-                  "mgmt-nav-link " + (pathname === item.href ? "active" : "")
-                }
-                aria-current={pathname === item.href ? "page" : undefined}
+          {navItems.map((item, idx) => {
+            const prev = idx > 0 ? navItems[idx - 1] : null;
+            const groupChanged = Boolean(prev && prev.group !== item.group);
+            return (
+              <li
+                key={item.href}
+                className={groupChanged ? "mgmt-nav-group-start" : undefined}
               >
-                {item.label}
-              </Link>
-            </li>
-          ))}
+                <Link
+                  href={item.href}
+                  className={
+                    "mgmt-nav-link" + (pathname === item.href ? " active" : "")
+                  }
+                  aria-current={pathname === item.href ? "page" : undefined}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
       <main className="mgmt-main" id="main-content">
@@ -312,10 +506,10 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
             )}
             {!me ? (
               <section className="mgmt-auth-gate">
-                <h1>Manage your studio</h1>
+                <h1>Manage your business</h1>
                 <p>
                   {configured
-                    ? "Sign in with your studio account to manage bookings, services and clients."
+                    ? "Sign in with your business account to manage bookings, services and clients."
                     : "Staff sign-in is not available in this environment yet. The account provider must be configured before the dashboard can be used."}
                 </p>
                 {configured && (
@@ -345,6 +539,92 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
           </>
         )}
       </main>
+      {paletteOpen && (
+        <div
+          className="mgmt-modal-backdrop"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setPaletteOpen(false);
+          }}
+        >
+          <div
+            className="mgmt-modal-card mgmt-cmd-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Quick navigation"
+          >
+            <div className="mgmt-cmd-head">
+              <label htmlFor="mgmt-cmd-input" className="mgmt-cmd-label">
+                Jump to screen or action
+              </label>
+              <button
+                type="button"
+                className="secondary mgmt-btn-small"
+                onClick={() => setPaletteOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <input
+              ref={paletteInputRef}
+              id="mgmt-cmd-input"
+              type="search"
+              className="mgmt-cmd-input"
+              placeholder="Type a module, screen, or action (e.g. App Hub, Finance, Transport)…"
+              value={paletteQuery}
+              onChange={(event) => {
+                setPaletteQuery(event.target.value);
+                setPaletteIndex(0);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowDown") {
+                  event.preventDefault();
+                  setPaletteIndex((idx) =>
+                    paletteEntries.length
+                      ? (idx + 1) % paletteEntries.length
+                      : 0,
+                  );
+                } else if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  setPaletteIndex((idx) =>
+                    paletteEntries.length
+                      ? (idx - 1 + paletteEntries.length) %
+                        paletteEntries.length
+                      : 0,
+                  );
+                } else if (event.key === "Enter") {
+                  const chosen = paletteEntries[paletteIndex];
+                  if (chosen) {
+                    event.preventDefault();
+                    navigateFromPalette(chosen.href);
+                  }
+                }
+              }}
+            />
+            <ul className="mgmt-cmd-list" role="listbox" aria-label="Results">
+              {paletteEntries.length === 0 ? (
+                <li className="mgmt-cmd-empty">No matching screens found.</li>
+              ) : (
+                paletteEntries.map((entry, idx) => (
+                  <li key={`${entry.group}-${entry.href}`}>
+                    <button
+                      type="button"
+                      className={
+                        "mgmt-cmd-item" +
+                        (idx === paletteIndex ? " selected" : "")
+                      }
+                      onMouseEnter={() => setPaletteIndex(idx)}
+                      onClick={() => navigateFromPalette(entry.href)}
+                    >
+                      <span>{entry.label}</span>
+                      <span className="mgmt-cmd-meta">{entry.group}</span>
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+        </div>
+      )}
       <footer
         style={{
           padding: "1rem 1.5rem",
@@ -356,8 +636,9 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
           borderTop: "1px solid rgba(0,0,0,0.12)",
         }}
       >
-        <span>GORGONA Platform</span>
+        <span>GORGONA US Business OS</span>
         <Link href="/onboarding/">Register business</Link>
+        <Link href="/integrations/">App Hub</Link>
         <Link href="/legal/terms/">Terms of Service</Link>
         <Link href="/legal/privacy/">Privacy Policy</Link>
       </footer>

@@ -29,6 +29,13 @@ import { BookingAssistant } from "./booking-assistant";
 import { WaitlistForm } from "./waitlist-form";
 import { downloadBookingIcs, googleCalendarUrl } from "../lib/calendar-export";
 import type { RecommendedSlot } from "../lib/growth-api";
+import {
+  fetchCustomerMedia,
+  latestOfKind,
+  safeMediaUrl,
+  type MediaAsset,
+} from "../lib/media-api";
+import "../app/us-release-v2.css";
 type Step = "service" | "time" | "details" | "review" | "confirmed";
 const steps: Step[] = ["service", "time", "details", "review"];
 
@@ -56,6 +63,30 @@ export function Journey({ salon }: { salon: Bootstrap }) {
   const confirmAttempt = useRef<{ signature: string; key: string } | null>(
     null,
   );
+  // Brand media (Cloudflare R2) is optional: absent, failing or older backends keep the defaults.
+  const [media, setMedia] = useState<MediaAsset[]>([]);
+  const [brokenMedia, setBrokenMedia] = useState<string[]>([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchCustomerMedia(controller.signal)
+      .then((list) => {
+        if (!controller.signal.aborted) setMedia(list);
+      })
+      .catch(() => {
+        /* no brand media: the storefront renders without it */
+      });
+    return () => controller.abort();
+  }, []);
+  const mediaLogo = safeMediaUrl(latestOfKind(media, "logo"));
+  const logoUrl =
+    mediaLogo && !brokenMedia.includes(mediaLogo)
+      ? mediaLogo
+      : salon.branding.logo_url;
+  const mediaCover = safeMediaUrl(latestOfKind(media, "cover"));
+  const coverUrl =
+    mediaCover && !brokenMedia.includes(mediaCover) ? mediaCover : null;
+  const markBroken = (url: string) =>
+    setBrokenMedia((list) => (list.includes(url) ? list : [...list, url]));
   const heading = useRef<HTMLHeadingElement>(null);
   const focusLine = useRef<number | null>(null);
   const location = salon.locations.find((l) => l.id === locationId)!;
@@ -301,18 +332,34 @@ export function Journey({ salon }: { salon: Bootstrap }) {
         Skip to booking
       </a>
       <header className="masthead">
-        {salon.branding.logo_url && (
+        {logoUrl && (
           <Image
-            src={salon.branding.logo_url}
+            key={logoUrl}
+            src={logoUrl}
             alt={`${salon.name} logo`}
             width={88}
             height={88}
             unoptimized
+            onError={() => {
+              if (logoUrl === mediaLogo) markBroken(logoUrl);
+            }}
           />
         )}
         <span className="studio-name">{salon.name}</span>
         <span className="masthead-note">A moment, just for you</span>
       </header>
+      {coverUrl && (
+        <Image
+          key={coverUrl}
+          src={coverUrl}
+          alt=""
+          width={1600}
+          height={600}
+          unoptimized
+          className="usr-storefront-cover"
+          onError={() => markBroken(coverUrl)}
+        />
+      )}
       <main id="booking">
         <div className="intro">
           <p className="eyebrow">Reserve your visit</p>

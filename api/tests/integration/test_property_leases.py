@@ -340,6 +340,17 @@ async def test_interval_constraint_is_required(test_database: ProvisionedDatabas
             await assert_location_scope_ready(owner)
 
 
-async def test_unaccepted_property_module_refuses_registration(catalog: Catalog) -> None:
+async def test_unaccepted_property_module_refuses_registration(
+    catalog: Catalog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from gorgona_booking.business import modules
+    from gorgona_booking.business.readiness_registry import Readiness
+
+    current = modules.MODULES_BY_ID["property"]
+    monkeypatch.setitem(
+        modules.MODULES_BY_ID,
+        "property",
+        current.model_copy(update={"enableable": False, "readiness": Readiness.IMPLEMENTED}),
+    )
     denied = await register(catalog, uuid7(), lease_body(uuid7(), str(uuid7())))
     assert (denied.status_code, denied.json()["error"]["code"]) == (409, "MODULE_NOT_READY")

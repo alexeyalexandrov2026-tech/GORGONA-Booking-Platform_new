@@ -13,7 +13,7 @@ from gorgona_booking.business.special_care import CareEncounterInput, CareSubjec
 
 
 def test_clinical_care_module_and_care_permissions_registered() -> None:
-    assert modules.MODULE_REGISTRY_VERSION == 16
+    assert modules.MODULE_REGISTRY_VERSION == 17
     mod = modules.MODULES_BY_ID["clinical_care"]
     assert mod.readiness == Readiness.IMPLEMENTED
     assert mod.enableable is False

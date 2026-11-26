@@ -35,6 +35,11 @@ from gorgona_booking.business.service import save_profile
 from gorgona_booking.db.pool import RuntimeConnection, RuntimePool, set_tenant_context
 from gorgona_booking.db.provisioning import normalize_email
 from gorgona_booking.errors import ConflictError, DomainError
+from gorgona_booking.onboarding.ai_architect import (
+    BlueprintHoursItem,
+    BlueprintResourceItem,
+    BlueprintServiceItem,
+)
 
 SLUG_PATTERN = r"^[a-z0-9]+(-[a-z0-9]+)*$"
 
@@ -55,6 +60,10 @@ class SelfServiceBusinessInput(BaseModel):
     )
     custom_activity_name: str | None = Field(default=None, max_length=200)
     module_ids: tuple[str, ...] | None = None
+    starter_services: tuple[BlueprintServiceItem, ...] = Field(default=(), max_length=12)
+    starter_resources: tuple[BlueprintResourceItem, ...] = Field(default=(), max_length=8)
+    starter_hours: tuple[BlueprintHoursItem, ...] = Field(default=(), max_length=7)
+    cancellation_summary: str | None = Field(default=None, max_length=300)
 
     @field_validator("business_name", "location_name")
     @classmethod
@@ -144,6 +153,9 @@ class SelfServiceBusinessResult(BaseModel):
     industry_ids: tuple[int, ...]
     effective_module_ids: tuple[str, ...]
     pending_module_ids: tuple[str, ...]
+    created_services_count: int = 0
+    created_resources_count: int = 0
+    created_hours_count: int = 0
 
 
 def _request_hash(body: SelfServiceBusinessInput) -> str:
@@ -367,6 +379,83 @@ async def register_business(
         )
 
         effective = (*CORE_MODULE_IDS, *sorted(selected_modules))
+
+        # Apply human-approved AI Architect starter blueprint inside the same atomic PG18 tx
+        created_service_ids: list[UUID] = []
+        created_resource_ids: list[UUID] = []
+        created_hours_count = 0
+        for svc in body.starter_services:
+            service_id = uuid7()
+            variant_id = uuid7()
+            await conn.execute(
+                "insert into gba.services (tenant_id, id, code, name) values (%s, %s, %s, %s)",
+                (tenant_id, service_id, svc.code, svc.name),
+            )
+            await conn.execute(
+                "insert into gba.service_variants "
+                "(tenant_id, id, service_id, code, name, status, price_cents, currency, "
+                "booking_duration_minutes, is_bookable) "
+                "values (%s, %s, %s, %s, %s, 'published', %s, %s, %s, true)",
+                (
+                    tenant_id,
+                    variant_id,
+                    service_id,
+                    f"{svc.code[:58]}_STD",
+                    f"{svc.name} (Standard)"[:200],
+                    svc.price_cents,
+                    svc.currency,
+                    svc.duration_minutes,
+                ),
+            )
+            created_service_ids.append(service_id)
+
+        for res_item in body.starter_resources:
+            res_id = uuid7()
+            await conn.execute(
+                "insert into gba.resources (tenant_id, id, location_id, kind, display_name) "
+                "values (%s, %s, %s, %s, %s)",
+                (tenant_id, res_id, location_id, res_item.kind, res_item.display_name),
+            )
+            created_resource_ids.append(res_id)
+
+        for res_id in created_resource_ids:
+            for service_id in created_service_ids:
+                await conn.execute(
+                    "insert into gba.resource_services (tenant_id, resource_id, service_id) "
+                    "values (%s, %s, %s) on conflict do nothing",
+                    (tenant_id, res_id, service_id),
+                )
+
+        for hr in body.starter_hours:
+            if hr.closes_minute <= hr.opens_minute:
+                continue
+            await conn.execute(
+                "insert into gba.business_hours "
+                "(tenant_id, id, location_id, weekday, opens_minute, closes_minute) "
+                "values (%s, %s, %s, %s, %s, %s)",
+                (tenant_id, uuid7(), location_id, hr.weekday, hr.opens_minute, hr.closes_minute),
+            )
+            created_hours_count += 1
+            for res_id in created_resource_ids:
+                await conn.execute(
+                    "insert into gba.resource_hours "
+                    "(tenant_id, resource_id, weekday, opens_minute, closes_minute) "
+                    "values (%s, %s, %s, %s, %s)",
+                    (tenant_id, res_id, hr.weekday, hr.opens_minute, hr.closes_minute),
+                )
+
+        if body.cancellation_summary and body.cancellation_summary.strip():
+            await conn.execute(
+                "insert into gba.salon_policies (tenant_id, cancellation_policy) "
+                "values (%s, %s) "
+                "on conflict (tenant_id) do update set "
+                "cancellation_policy = excluded.cancellation_policy, updated_at = now()",
+                (
+                    tenant_id,
+                    Jsonb({"version": 1, "summary": body.cancellation_summary.strip()}),
+                ),
+            )
+
         await conn.execute(
             "insert into gba.audit_events "
             "(tenant_id, actor, action, target_type, target_id, details, request_id) "
@@ -382,6 +471,9 @@ async def register_business(
                         "industry_ids": list(body.industry_ids),
                         "effective_module_ids": list(effective),
                         "pending_module_ids": list(pending_modules),
+                        "created_services_count": len(created_service_ids),
+                        "created_resources_count": len(created_resource_ids),
+                        "created_hours_count": created_hours_count,
                     }
                 ),
             ),
@@ -401,6 +493,9 @@ async def register_business(
             industry_ids=body.industry_ids,
             effective_module_ids=effective,
             pending_module_ids=pending_modules,
+            created_services_count=len(created_service_ids),
+            created_resources_count=len(created_resource_ids),
+            created_hours_count=created_hours_count,
         )
         await conn.execute(
             "update gba.self_service_signups set response_body = %s "

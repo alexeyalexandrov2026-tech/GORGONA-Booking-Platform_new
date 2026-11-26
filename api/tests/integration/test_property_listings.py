@@ -68,7 +68,18 @@ async def unit(c: Catalog, location: UUID | None = None) -> UUID:
     return object_id
 
 
-async def test_unaccepted_module_refuses_listing_writes(catalog: Catalog) -> None:
+async def test_unaccepted_module_refuses_listing_writes(
+    catalog: Catalog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from gorgona_booking.business import modules
+    from gorgona_booking.business.readiness_registry import Readiness
+
+    current = modules.MODULES_BY_ID["property"]
+    monkeypatch.setitem(
+        modules.MODULES_BY_ID,
+        "property",
+        current.model_copy(update={"enableable": False, "readiness": Readiness.IMPLEMENTED}),
+    )
     response = await put_listing(catalog, uuid7(), listing())
     assert response.status_code == 409, response.text
     assert response.json()["error"]["code"] == "MODULE_NOT_READY"
