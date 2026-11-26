@@ -232,6 +232,7 @@ def create_app(
         client_id = settings.auth_client_id
         scope = settings.auth_scope
         google_api_key = os.environ.get("GBA_GOOGLE_IDENTITY_API_KEY", "").strip()
+        google_oauth_client_id = os.environ.get("GBA_GOOGLE_OAUTH_CLIENT_ID", "").strip()
 
         @app.get("/auth-config.json", include_in_schema=False)
         async def auth_config() -> JSONResponse:
@@ -243,6 +244,8 @@ def create_app(
             if google_api_key:
                 payload["provider"] = "google_identity"
                 payload["api_key"] = google_api_key
+                if google_oauth_client_id:
+                    payload["google_oauth_client_id"] = google_oauth_client_id
             return JSONResponse(
                 content=payload,
                 headers={"Cache-Control": "no-store"},

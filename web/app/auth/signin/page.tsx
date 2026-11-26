@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   accessToken,
   googleSendPasswordReset,
+  googleSignInWithIdToken,
   googleSignInWithPassword,
   googleSignUpWithPassword,
   loadAuthConfig,
@@ -14,6 +15,30 @@ import {
 import "../../us-release-v2.css";
 
 type Mode = "signin" | "signup" | "reset";
+
+interface GoogleAccountsId {
+  initialize: (options: {
+    client_id: string;
+    callback: (response: { credential?: string }) => void;
+    ux_mode?: "popup" | "redirect";
+  }) => void;
+  renderButton: (
+    parent: HTMLElement,
+    options: {
+      theme?: "outline" | "filled_blue" | "filled_black";
+      size?: "large" | "medium" | "small";
+      text?: "continue_with" | "signin_with" | "signup_with";
+      shape?: "rectangular" | "pill";
+      width?: number;
+    },
+  ) => void;
+}
+
+declare global {
+  interface Window {
+    google?: { accounts?: { id?: GoogleAccountsId } };
+  }
+}
 
 function safeNextPath(): string {
   if (typeof window === "undefined") return "/overview/";
@@ -27,10 +52,14 @@ export default function SignInPage() {
   const nameId = useId();
   const emailId = useId();
   const passwordId = useId();
+  const googleBtnRef = useRef<HTMLDivElement | null>(null);
 
   const [mode, setMode] = useState<Mode>("signin");
   const [ready, setReady] = useState(false);
   const [isGoogleIdentity, setIsGoogleIdentity] = useState(false);
+  const [googleOAuthClientId, setGoogleOAuthClientId] = useState<string | null>(
+    null,
+  );
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,6 +78,7 @@ export default function SignInPage() {
       }
       if (cfg?.provider === "google_identity") {
         setIsGoogleIdentity(true);
+        setGoogleOAuthClientId(cfg.google_oauth_client_id ?? null);
       } else if (cfg) {
         await signIn(safeNextPath());
         return;
@@ -59,6 +89,80 @@ export default function SignInPage() {
       active = false;
     };
   }, [router]);
+
+  useEffect(() => {
+    if (!ready || !isGoogleIdentity || !googleOAuthClientId) return;
+    let cancelled = false;
+
+    const mountButton = () => {
+      const gid = window.google?.accounts?.id;
+      const container = googleBtnRef.current;
+      if (!gid || !container || cancelled) return;
+      container.innerHTML = "";
+      gid.initialize({
+        client_id: googleOAuthClientId,
+        ux_mode: "popup",
+        callback: (response) => {
+          const cred = response.credential;
+          if (!cred) {
+            setError("Google did not return a credential. Please try again.");
+            return;
+          }
+          setError(null);
+          setBusy(true);
+          void googleSignInWithIdToken(cred)
+            .then(() => {
+              if (!cancelled) router.replace(safeNextPath());
+            })
+            .catch((err: unknown) => {
+              if (!cancelled) {
+                setError(
+                  err instanceof Error
+                    ? err.message
+                    : "Google sign-in failed. Please try again.",
+                );
+                setBusy(false);
+              }
+            });
+        },
+      });
+      gid.renderButton(container, {
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "rectangular",
+        width: 340,
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      mountButton();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[src="https://accounts.google.com/gsi/client"]',
+    );
+    if (existing) {
+      existing.addEventListener("load", mountButton);
+      return () => {
+        cancelled = true;
+        existing.removeEventListener("load", mountButton);
+      };
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = mountButton;
+    document.head.appendChild(script);
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, isGoogleIdentity, googleOAuthClientId, router]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -142,6 +246,29 @@ export default function SignInPage() {
             </p>
           ) : (
             <>
+              {googleOAuthClientId && mode !== "reset" && (
+                <div style={{ marginBottom: "18px" }}>
+                  <div
+                    ref={googleBtnRef}
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      minHeight: "44px",
+                    }}
+                  />
+                  <p
+                    className="usr-muted"
+                    style={{
+                      textAlign: "center",
+                      margin: "14px 0 0",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    or continue with business email
+                  </p>
+                </div>
+              )}
+
               <div
                 className="usr-tablist"
                 role="tablist"
