@@ -88,6 +88,8 @@ async def test_stripe_checkout_webhook_sync_refund_and_tenant_isolation(
             "customer_name": "Acme Corp",
             "customer_email": "ap@acme.test",
             "allow_ach": True,
+            "success_url": "https://gorgona.example.test/integrations/?payment=success",
+            "cancel_url": "https://gorgona.example.test/integrations/?payment=cancelled",
         },
     )
     assert created.status_code == 201, created.text

@@ -118,8 +118,10 @@ def _to_response(rec: PaymentSessionRecord) -> PaymentSessionResponse:
 
 
 def _default_return_base(request: Request) -> str:
-    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
     host = request.headers.get("host") or request.url.netloc
+    hostname = host.split(":", 1)[0].lower()
+    raw_scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    scheme = raw_scheme if hostname in ("127.0.0.1", "localhost") else "https"
     return f"{scheme}://{host}"
 
 
