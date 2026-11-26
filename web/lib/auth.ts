@@ -12,6 +12,7 @@ const configSchema = z.object({
   resource: z.string().max(1024).optional(),
   provider: z.enum(["oidc", "google_identity"]).optional(),
   api_key: z.string().min(10).max(255).optional(),
+  google_oauth_client_id: z.string().min(10).max(255).optional(),
 });
 export type AuthConfig = z.infer<typeof configSchema>;
 
@@ -371,5 +372,29 @@ export async function googleSendPasswordReset(email: string): Promise<void> {
   await googleIdentityPost("accounts:sendOobCode", {
     requestType: "PASSWORD_RESET",
     email: email.trim(),
+  });
+}
+
+export async function googleSignInWithIdToken(
+  googleIdToken: string,
+): Promise<void> {
+  const origin =
+    typeof window === "undefined"
+      ? "https://www.amarkal-platform.com"
+      : window.location.origin;
+  const data = await googleIdentityPost("accounts:signInWithIdp", {
+    postBody: `id_token=${encodeURIComponent(googleIdToken)}&providerId=google.com`,
+    requestUri: origin,
+    returnIdpCredential: true,
+    returnSecureToken: true,
+  });
+  const idToken = String(data.idToken ?? "");
+  const expiresIn = Number(data.expiresIn ?? 3600);
+  if (!idToken) throw new Error("No identity token returned from Google.");
+  writeGoogleSession({
+    idToken,
+    expiresAt: Date.now() / 1000 + expiresIn,
+    email: String(data.email ?? ""),
+    displayName: String(data.displayName ?? data.fullName ?? ""),
   });
 }
