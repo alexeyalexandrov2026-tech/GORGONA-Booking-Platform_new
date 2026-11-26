@@ -1,5 +1,6 @@
 """FastAPI application factory."""
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -230,15 +231,20 @@ def create_app(
         authority = settings.auth_issuer
         client_id = settings.auth_client_id
         scope = settings.auth_scope
+        google_api_key = os.environ.get("GBA_GOOGLE_IDENTITY_API_KEY", "").strip()
 
         @app.get("/auth-config.json", include_in_schema=False)
         async def auth_config() -> JSONResponse:
+            payload: dict[str, str] = {
+                "authority": authority,
+                "client_id": client_id,
+                "scope": scope,
+            }
+            if google_api_key:
+                payload["provider"] = "google_identity"
+                payload["api_key"] = google_api_key
             return JSONResponse(
-                content={
-                    "authority": authority,
-                    "client_id": client_id,
-                    "scope": scope,
-                },
+                content=payload,
                 headers={"Cache-Control": "no-store"},
             )
 
