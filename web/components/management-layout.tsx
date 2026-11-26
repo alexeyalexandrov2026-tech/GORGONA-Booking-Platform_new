@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { accessToken, authManager, signIn, signOut } from "../lib/auth";
+import {
+  accessToken,
+  authManager,
+  isAuthConfigured,
+  signIn,
+  signOut,
+} from "../lib/auth";
 import {
   fetchMe,
   getActiveSalonId,
@@ -258,9 +264,12 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
     let active = true;
     let removeExpired: (() => void) | undefined;
     void (async () => {
-      const manager = await authManager();
+      const [manager, ready] = await Promise.all([
+        authManager(),
+        isAuthConfigured(),
+      ]);
       if (!active) return;
-      setConfigured(Boolean(manager));
+      setConfigured(ready);
       const expired = () => {
         setMe(null);
         setSalonId(null);

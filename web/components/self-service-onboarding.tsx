@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AiBusinessArchitect } from "./ai-business-architect";
 import "../app/us-release-v2.css";
-import { accessToken, authManager, signIn } from "../lib/auth";
+import { accessToken, isAuthConfigured, signIn } from "../lib/auth";
 import { setActiveSalonId } from "../lib/management-api";
 import {
   fetchOnboardingPresets,
@@ -83,12 +83,12 @@ export function SelfServiceOnboarding() {
     let active = true;
     void (async () => {
       try {
-        const [manager, list] = await Promise.all([
-          authManager(),
+        const [ready, list] = await Promise.all([
+          isAuthConfigured(),
           fetchOnboardingPresets(),
         ]);
         if (!active) return;
-        setConfigured(Boolean(manager));
+        setConfigured(ready);
         setPresets(list);
         const tok = await accessToken();
         if (!active) return;
