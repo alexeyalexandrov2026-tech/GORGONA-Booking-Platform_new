@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { accessToken, authManager, signIn, signOut } from "../lib/auth";
 import {
-  fetchConfiguration,
   fetchMe,
   getActiveSalonId,
   setActiveSalonId,
@@ -151,10 +150,6 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
   const router = useRouter();
   const [me, setMe] = useState<MeView | null>(null);
   const [salonId, setSalonId] = useState<string | null>(null);
-  const [moduleState, setModuleState] = useState<{
-    salonId: string;
-    modules: readonly string[];
-  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -224,31 +219,22 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         )
       : permittedNav;
 
-  const enabledModules = new Set(
-    isCompanyManager && moduleState?.salonId === salonId
-      ? moduleState.modules
-      : [],
-  );
-
   const paletteEntries = (() => {
     const base = navItems.map((item) => ({
       href: item.href,
       label: item.label,
       group: item.group as string,
-      activeModule: item.moduleId ? enabledModules.has(item.moduleId) : false,
     }));
     const actions = [
       {
         href: "/onboarding/",
         label: "Create new business (AI Business Architect)",
         group: "Action",
-        activeModule: false,
       },
       {
         href: "/book/",
         label: "Customer booking page",
         group: "Action",
-        activeModule: false,
       },
     ];
     const all = [...base, ...actions];
@@ -333,26 +319,6 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       removeExpired?.();
     };
   }, [tick]);
-
-  useEffect(() => {
-    if (!salonId || !isCompanyManager) return;
-    let active = true;
-    void fetchConfiguration(salonId)
-      .then((cfg) => {
-        if (active) {
-          setModuleState({
-            salonId,
-            modules: cfg.effective_module_ids,
-          });
-        }
-      })
-      .catch(() => {
-        if (active) setModuleState({ salonId, modules: [] });
-      });
-    return () => {
-      active = false;
-    };
-  }, [salonId, isCompanyManager]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -490,9 +456,6 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
           {navItems.map((item, idx) => {
             const prev = idx > 0 ? navItems[idx - 1] : null;
             const groupChanged = Boolean(prev && prev.group !== item.group);
-            const moduleOn = Boolean(
-              item.moduleId && enabledModules.has(item.moduleId),
-            );
             return (
               <li
                 key={item.href}
@@ -501,9 +464,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
                 <Link
                   href={item.href}
                   className={
-                    "mgmt-nav-link" +
-                    (pathname === item.href ? " active" : "") +
-                    (moduleOn ? " mgmt-nav-module-on" : "")
+                    "mgmt-nav-link" + (pathname === item.href ? " active" : "")
                   }
                   aria-current={pathname === item.href ? "page" : undefined}
                 >
@@ -655,10 +616,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
                       onClick={() => navigateFromPalette(entry.href)}
                     >
                       <span>{entry.label}</span>
-                      <span className="mgmt-cmd-meta">
-                        {entry.activeModule ? "Enabled · " : ""}
-                        {entry.group}
-                      </span>
+                      <span className="mgmt-cmd-meta">{entry.group}</span>
                     </button>
                   </li>
                 ))

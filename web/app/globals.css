@@ -1045,7 +1045,7 @@ footer {
   }
 }
 
-/* US Release v2: grouped nav indicators & Cmd+K command palette */
+/* US Release v2: grouped nav dividers & Cmd+K command palette */
 .mgmt-nav-group-start {
   border-left: 1px solid var(--line);
   margin-left: 6px;
@@ -1054,15 +1054,12 @@ footer {
 .mgmt-nav-link {
   white-space: nowrap;
 }
-.mgmt-nav-module-on::after {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: #2f6f3e;
-  margin-left: 6px;
-  vertical-align: middle;
+@media (max-width: 760px) {
+  .mgmt-nav-group-start {
+    border-left: 0;
+    margin-left: 0;
+    padding-left: 0;
+  }
 }
 .mgmt-cmd-trigger {
   min-height: 38px;
