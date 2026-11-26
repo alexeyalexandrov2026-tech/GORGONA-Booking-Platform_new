@@ -31,11 +31,11 @@ export function buildIcsContent(event: CalendarEventInput): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//GORGONA//Booking Platform//EN",
+    "PRODID:-//AMARKAL Platform//US Business OS//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
-    `UID:${escapeIcs(event.uid)}@gorgona.app`,
+    `UID:${escapeIcs(event.uid)}@amarkal-platform.com`,
     `DTSTAMP:${nowStamp}`,
     `DTSTART:${toUtcStamp(event.startIso)}`,
     `DTEND:${toUtcStamp(event.endIso)}`,
@@ -65,7 +65,7 @@ export function downloadBookingIcs(event: CalendarEventInput): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `gorgona-booking-${event.uid.slice(0, 8)}.ics`;
+  anchor.download = `amarkal-event-${event.uid.slice(0, 8)}.ics`;
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);

@@ -634,17 +634,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
           </div>
         </div>
       )}
-      <footer
-        style={{
-          padding: "1rem 1.5rem",
-          fontSize: "0.85rem",
-          color: "#3f3832",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "1rem",
-          borderTop: "1px solid rgba(0,0,0,0.12)",
-        }}
-      >
+      <footer className="mgmt-footer">
         <span>AMARKAL Platform</span>
         <Link href="/onboarding/">Register business</Link>
         <Link href="/integrations/">App Hub</Link>

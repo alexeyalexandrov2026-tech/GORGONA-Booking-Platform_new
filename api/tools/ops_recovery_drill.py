@@ -136,8 +136,10 @@ def _run_pg_tool(
         "-v",
         f"{tmp_dir}:/ops01",
     ]
-    if hasattr(os, "getuid") and hasattr(os, "getgid"):
-        cmd.extend(["-u", f"{os.getuid()}:{os.getgid()}"])
+    getuid = getattr(os, "getuid", None)
+    getgid = getattr(os, "getgid", None)
+    if callable(getuid) and callable(getgid):
+        cmd.extend(["-u", f"{getuid()}:{getgid()}"])
     cmd.extend([f"postgres:{server_major}", tool, *mapped_args])
     return subprocess.run(  # noqa: S603
         cmd,

@@ -72,7 +72,7 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
             id="owner-copilot-heading"
             style={{ margin: 0, fontSize: "1.1rem" }}
           >
-            GORGONA AI Business Copilot
+            AMARKAL AI Business Copilot
           </h3>
           <p
             style={{ margin: "4px 0 0", color: "#3f3832", fontSize: "0.88rem" }}

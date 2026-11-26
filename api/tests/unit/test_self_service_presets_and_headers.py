@@ -53,4 +53,23 @@ async def test_framing_middleware_adds_nosniff_and_referrer_policy() -> None:
     assert res.status_code == 200
     assert res.headers.get("x-content-type-options") == "nosniff"
     assert res.headers.get("referrer-policy") == "strict-origin-when-cross-origin"
+    assert res.headers.get("permissions-policy") == "camera=(), microphone=(), geolocation=()"
+    assert res.headers.get("strict-transport-security") is None
     assert "frame-ancestors 'none'" in res.headers.get("content-security-policy", "")
+
+
+async def test_framing_middleware_sets_hsts_on_https_or_production() -> None:
+    app = FastAPI()
+    app.add_middleware(FramingPolicyMiddleware, allow_loopback=False)
+
+    @app.get("/v1/ping")
+    async def ping() -> dict[str, bool]:
+        return {"ok": True}
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        res = await client.get("/v1/ping")
+    assert res.status_code == 200
+    assert res.headers.get("strict-transport-security") == "max-age=31536000; includeSubDomains"
+    assert res.headers.get("permissions-policy") == "camera=(), microphone=(), geolocation=()"

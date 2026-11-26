@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /legal/
+Disallow: /auth/
+Disallow: /v1/
+Disallow: /overview/
+Disallow: /onboarding/
+Disallow: /integrations/
+Disallow: /settings/

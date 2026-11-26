@@ -419,7 +419,7 @@ export function MarketScreen({
         title: lstTitle.trim(),
         description: lstDesc.trim() || null,
         category: lstCategory.trim() || "equipment",
-        brand: "GorgonaPartner",
+        brand: "AmarkalPartner",
         currency: "USD",
         price_minor: Number(lstPrice) || 0,
         available_quantity: Number(lstQty) || 0,
@@ -476,7 +476,7 @@ export function MarketScreen({
       setSelectedMpId(created.marketplace_id);
       setChkMpId(created.marketplace_id);
       setNotice(
-        `Saved marketplace ${created.slug} (GORGONA commission ${created.gorgona_commission_bps} bps)`,
+        `Saved marketplace ${created.slug} (AMARKAL commission ${created.gorgona_commission_bps} bps)`,
       );
       await reloadAll({ mpId: created.marketplace_id });
     } catch (err) {
@@ -653,7 +653,7 @@ export function MarketScreen({
         <h1>Storefronts &amp; Client-Operated Marketplaces</h1>
         <p>
           Explicit published_fields allow-list storefronts, client-operated
-          marketplaces with zero GORGONA transaction commission, and
+          marketplaces with zero AMARKAL transaction commission, and
           single-seller order/invoice isolation.
         </p>
       </header>
@@ -985,7 +985,7 @@ export function MarketScreen({
           className="market-panel"
         >
           <div className="market-card">
-            <h2>Client-Operated Marketplaces (Zero GORGONA Commission)</h2>
+            <h2>Client-Operated Marketplaces (Zero AMARKAL Commission)</h2>
             <form onSubmit={handleSaveMarketplace}>
               <div className="market-form-grid">
                 <label>
@@ -1043,7 +1043,7 @@ export function MarketScreen({
                   <tr>
                     <th>Slug</th>
                     <th>Title</th>
-                    <th>GORGONA Commission</th>
+                    <th>AMARKAL Commission</th>
                     <th>Operator Fee (bps)</th>
                   </tr>
                 </thead>
@@ -1399,7 +1399,7 @@ export function MarketScreen({
           </div>
 
           <div className="market-card">
-            <h2>Separate Operator Commercial Fees (Zero GORGONA Commission)</h2>
+            <h2>Separate Operator Commercial Fees (Zero AMARKAL Commission)</h2>
             <div
               className="market-table-wrap"
               tabIndex={0}
@@ -1410,7 +1410,7 @@ export function MarketScreen({
                 <thead>
                   <tr>
                     <th>Order</th>
-                    <th>GORGONA Commission</th>
+                    <th>AMARKAL Commission</th>
                     <th>Operator Fee</th>
                     <th>Status</th>
                   </tr>

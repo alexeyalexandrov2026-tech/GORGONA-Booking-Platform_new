@@ -132,7 +132,7 @@ async function readJson<T>(
   if (!parsed.success)
     throw new ManagementApiError(
       "INVALID_RESPONSE",
-      "GORGONA App Hub returned incomplete information. Please retry.",
+      "AMARKAL App Hub returned incomplete information. Please retry.",
       response.status,
     );
   return parsed.data;

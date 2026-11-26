@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     "AMARKAL Platform — US Business OS across 39 industries, 0% commission",
   description:
     "Run any US business on AMARKAL Platform: operations, scheduling, clients, staff, finance, and AI automation for 39 NAICS industries. 0% commission.",
+  robots: { index: true, follow: true },
 };
 
 const NAV = [

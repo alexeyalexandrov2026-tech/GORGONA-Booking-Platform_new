@@ -264,7 +264,7 @@ export function SelfServiceOnboarding() {
             <h2>Sign in to register your business</h2>
             <p>
               {configured
-                ? "Sign in with your Microsoft account to create your company workspace and become its initial owner."
+                ? "Sign in with Google or your business email to create your company workspace and become its initial owner."
                 : "Sign-in is not configured in this environment yet."}
             </p>
             {configured && (

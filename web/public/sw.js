@@ -1,6 +1,6 @@
-// Safe network-first service worker for GORGONA PWA installability.
+// Safe network-first service worker for AMARKAL Platform PWA installability.
 // Strictly bypasses /v1/ API and /auth-config.json to guarantee zero stale or cross-tenant caching.
-const CACHE_NAME = "gorgona-shell-v1";
+const CACHE_NAME = "amarkal-shell-v2";
 
 self.addEventListener("install", () => {
   self.skipWaiting();

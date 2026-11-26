@@ -121,6 +121,9 @@ test("financial documents: real gates, recovery, partial settlement, correction,
   expect(JSON.stringify(storage)).not.toContain("100.00");
   expect(JSON.stringify(storage)).not.toContain(invoiceNumber);
   await page.unrouteAll({ behavior: "wait" });
+  // Restore real wall-clock time before re-authenticating so OIDC JWT `iat`
+  // checks stay synchronized with the IdP regardless of UTC time of day.
+  await page.clock.setSystemTime(new Date());
   await page.reload();
   // Tokens intentionally live only in memory. Reauthenticate after reload;
   // command recovery survives separately as minimal actor-bound metadata.
