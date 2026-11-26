@@ -31,12 +31,23 @@ class FramingPolicyMiddleware:
             await self.app(scope, receive, send)
             return
         is_api = scope["path"].startswith("/v1/")
+        req_headers = Headers(scope=scope)
+        forwarded_proto = req_headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+        is_https = (
+            not self._allow_loopback or scope.get("scheme") == "https" or forwarded_proto == "https"
+        )
 
         async def send_with_policy(message: Message) -> None:
             if message["type"] == "http.response.start":
                 headers = MutableHeaders(scope=message)
                 headers.setdefault("x-content-type-options", "nosniff")
                 headers.setdefault("referrer-policy", "strict-origin-when-cross-origin")
+                headers.setdefault("permissions-policy", "camera=(), microphone=(), geolocation=()")
+                if is_https:
+                    headers.setdefault(
+                        "strict-transport-security",
+                        "max-age=31536000; includeSubDomains",
+                    )
                 if is_api:
                     # Multiple CSP policies are enforced together. Keep any
                     # existing default-src/sandbox policy, and add a separate

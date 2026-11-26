@@ -120,6 +120,24 @@
   border-color: var(--line);
   border-bottom: 1px solid #fff;
 }
+.usr-signin-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.usr-signin-tabs .usr-tab {
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  text-align: center;
+}
+@media (max-width: 420px) {
+  .usr-signin-tabs .usr-tab {
+    font-size: 0.82rem;
+    padding: 8px 6px;
+  }
+}
 
 /* Badges and pills. */
 .usr-badge {

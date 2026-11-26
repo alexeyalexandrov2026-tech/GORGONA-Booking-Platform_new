@@ -625,6 +625,44 @@ footer {
   border-bottom: 1px solid var(--line);
   padding: 0 32px;
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(111, 95, 81, 0.35) transparent;
+}
+.mgmt-nav::-webkit-scrollbar {
+  height: 5px;
+}
+.mgmt-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.mgmt-nav::-webkit-scrollbar-thumb {
+  background: rgba(111, 95, 81, 0.3);
+  border-radius: 999px;
+}
+.mgmt-footer {
+  padding: 1rem 2rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.25rem;
+  border-top: 1px solid var(--line);
+  background: #faf7f2;
+}
+.mgmt-footer a,
+.legal-inline-link {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid rgba(31, 26, 23, 0.25);
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.mgmt-footer a:hover,
+.legal-inline-link:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 .mgmt-nav-list {
   display: flex;

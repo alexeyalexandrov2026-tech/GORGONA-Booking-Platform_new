@@ -91,7 +91,14 @@ export default function SignInPage() {
   }, [router]);
 
   useEffect(() => {
-    if (!ready || !isGoogleIdentity || !googleOAuthClientId) return;
+    if (
+      !ready ||
+      !isGoogleIdentity ||
+      !googleOAuthClientId ||
+      mode === "reset"
+    ) {
+      return;
+    }
     let cancelled = false;
 
     const mountButton = () => {
@@ -162,7 +169,7 @@ export default function SignInPage() {
     return () => {
       cancelled = true;
     };
-  }, [ready, isGoogleIdentity, googleOAuthClientId, router]);
+  }, [ready, isGoogleIdentity, googleOAuthClientId, mode, router]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -270,7 +277,7 @@ export default function SignInPage() {
               )}
 
               <div
-                className="usr-tablist"
+                className="usr-tablist usr-signin-tabs"
                 role="tablist"
                 aria-label="Authentication mode"
               >

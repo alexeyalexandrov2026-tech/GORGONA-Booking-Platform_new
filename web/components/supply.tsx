@@ -1079,7 +1079,7 @@ export function SupplyScreen({
                   <input
                     value={ownName}
                     onChange={(e) => setOwnName(e.target.value)}
-                    placeholder="Gorgona Supply Corp"
+                    placeholder="AMARKAL Supply Corp"
                   />
                 </label>
                 <label>

@@ -64,7 +64,7 @@ export function NotificationsPanel({ salonId }: { salonId: string }) {
         template_code: templateCode,
         recipient: recipient.trim(),
         variables: {
-          business_name: "GORGONA Workspace",
+          business_name: "AMARKAL Workspace",
           reference: `TEST-${Date.now().toString().slice(-6)}`,
           starts_at: "2026-12-01 10:00",
           role: "staff",

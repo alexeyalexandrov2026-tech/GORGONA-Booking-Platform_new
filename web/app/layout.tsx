@@ -6,6 +6,12 @@ export const metadata: Metadata = {
   description:
     "Run any US business across 39 NAICS industries: operations, clients, staff, finance, and AI automation.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+  },
   appleWebApp: {
     capable: true,
     title: "AMARKAL Platform",

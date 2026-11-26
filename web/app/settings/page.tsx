@@ -181,7 +181,7 @@ function SettingsContent({
           {/* Brand media for the public storefront (Cloudflare R2) */}
           <BrandMediaManager businessId={salonId} />
 
-          {/* External services connect only through GORGONA App Hub */}
+          {/* External services connect only through AMARKAL App Hub */}
           <div className="mgmt-kpi-card" style={{ padding: "24px" }}>
             <h3 style={{ margin: "0 0 8px", fontSize: "1.1rem" }}>
               Integrations
@@ -191,7 +191,7 @@ function SettingsContent({
               for AI agents are managed in one place.
             </p>
             <Link href="/integrations/" className="button secondary">
-              Open GORGONA App Hub
+              Open AMARKAL App Hub
             </Link>
           </div>
 
