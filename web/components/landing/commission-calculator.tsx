@@ -28,7 +28,9 @@ export function CommissionCalculator() {
       <div className="lp-calc-fields">
         <div className="lp-calc-field">
           <div className="lp-calc-row">
-            <label htmlFor={revenueId}>Monthly revenue from bookings</label>
+            <label htmlFor={revenueId}>
+              Monthly revenue from orders &amp; services
+            </label>
             <output className="lp-calc-value" htmlFor={revenueId}>
               {usd.format(revenue)}
             </output>
@@ -72,7 +74,7 @@ export function CommissionCalculator() {
           <dd className="lp-calc-sub">{usd.format(monthly)} every month</dd>
         </div>
         <div className="lp-calc-result lp-calc-result--zero">
-          <dt>With GORGONA</dt>
+          <dt>With AMARKAL Platform</dt>
           <dd>{usd.format(0)}</dd>
           <dd className="lp-calc-sub">0% commission, always</dd>
         </div>

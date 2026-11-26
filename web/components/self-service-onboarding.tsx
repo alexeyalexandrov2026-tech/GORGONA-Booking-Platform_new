@@ -223,7 +223,7 @@ export function SelfServiceOnboarding() {
       <header className="mgmt-header">
         <div className="mgmt-brand-area">
           <Link href="/overview/" className="mgmt-brand">
-            GORGONA <span>Self-Service Onboarding</span>
+            AMARKAL <span>Platform</span>
           </Link>
         </div>
         <div className="mgmt-header-actions">
@@ -241,7 +241,7 @@ export function SelfServiceOnboarding() {
         </div>
       </header>
       <main className="mgmt-main" id="main-content">
-        <h1>Create your GORGONA business workspace</h1>
+        <h1>Create your AMARKAL Platform workspace</h1>
         <p>
           Describe your business to the AI Business Architect and approve the
           drafted setup, or use Manual Setup to select one or more of the 39

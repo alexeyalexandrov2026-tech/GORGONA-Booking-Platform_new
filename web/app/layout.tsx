@@ -2,12 +2,13 @@ import type { Metadata, Viewport } from "next";
 import { PwaRegister } from "../components/pwa-register";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "GORGONA — Book & Manage Your Business",
-  description: "Choose your service, specialist and time.",
+  title: "AMARKAL Platform — US Business OS",
+  description:
+    "Run any US business across 39 NAICS industries: operations, clients, staff, finance, and AI automation.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "GORGONA",
+    title: "AMARKAL Platform",
     statusBarStyle: "default",
   },
   robots: { index: false, follow: false },

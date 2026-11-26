@@ -43,7 +43,7 @@ const RESOURCE_KIND_LABELS: Record<ResourceKind, string> = {
 };
 
 const CONNECTOR_NAMES: Record<string, string> = {
-  native_mcp: "GORGONA Native MCP Server",
+  native_mcp: "AMARKAL Native MCP Server",
   zapier_make: "Zapier / Make / n8n",
   quickbooks_online: "QuickBooks Online (US)",
   google_calendar: "Google Calendar & Outlook",
@@ -646,7 +646,7 @@ export function AiBusinessArchitect({
           </div>
           {blueprint.engine === "grounded" && (
             <p className="hold-note">
-              Live AI drafting was unavailable, so GORGONA used its
+              Live AI drafting was unavailable, so AMARKAL Platform used its
               deterministic US starter template. Check every service, price, and
               hour before you approve.
             </p>
@@ -1106,7 +1106,7 @@ export function AiBusinessArchitect({
               <p className="usr-muted">
                 These are suggestions only. Nothing is connected automatically;
                 after launch you can connect them in{" "}
-                <Link href="/integrations/">GORGONA App Hub</Link>.
+                <Link href="/integrations/">AMARKAL App Hub</Link>.
               </p>
               <ul>
                 {blueprint.recommended_connectors.map((id) => (
