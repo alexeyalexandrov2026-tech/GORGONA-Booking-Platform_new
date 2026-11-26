@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Literal
 from uuid import UUID
 
@@ -19,6 +20,10 @@ from gorgona_booking.notifications.service import (
 AssistantTone = Literal["warm_professional", "concise_direct", "executive_hospitality"]
 PreferredWindow = Literal["any", "morning", "afternoon", "evening"]
 WaitlistStatus = Literal["waiting", "offered", "booked", "expired", "cancelled"]
+
+# The platform is US-only: every unit-economics figure is whole US cents.
+UNIT_ECONOMICS_CURRENCY: Literal["USD"] = "USD"
+UNIT_ECONOMICS_WINDOW_DAYS = 30
 
 
 @dataclass(frozen=True)
@@ -56,6 +61,21 @@ class WaitlistEntryRecord:
     offered_at: datetime | None
     offer_notification_id: UUID | None
     created_at: datetime
+
+
+@dataclass(frozen=True)
+class UnitEconomicsRecord:
+    """Live trailing-window unit economics of one business, in whole US cents."""
+
+    tenant_id: UUID
+    window_days: int
+    currency: Literal["USD"]
+    bookings_count_30d: int
+    gross_revenue_cents: int
+    average_ticket_cents: int
+    material_cogs_cents: int
+    net_margin_cents: int
+    margin_percent: float
 
 
 def _default_growth_settings(tenant_id: UUID) -> GrowthSettingsRecord:
@@ -404,3 +424,87 @@ async def offer_waitlist_slot(
         "currency": row["currency"],
     }
     return _row_to_waitlist(merged), notif.id
+
+
+def build_unit_economics(
+    *,
+    tenant_id: UUID,
+    bookings_count: int,
+    gross_revenue_cents: int,
+    material_cogs_cents: int,
+    window_days: int = UNIT_ECONOMICS_WINDOW_DAYS,
+) -> UnitEconomicsRecord:
+    """Derive margin and average ticket from the two live sums (whole cents, no float money)."""
+    net_margin_cents = gross_revenue_cents - material_cogs_cents
+    if gross_revenue_cents > 0:
+        percent = (Decimal(net_margin_cents) * 100 / Decimal(gross_revenue_cents)).quantize(
+            Decimal("0.1"), rounding=ROUND_HALF_UP
+        )
+        # `or 0.0` turns a negative zero (a margin that rounds to -0.0) into plain 0.0.
+        margin_percent = float(percent) or 0.0
+    else:
+        margin_percent = 0.0
+    if bookings_count > 0:
+        # Half-up integer division: the ticket stays in whole cents.
+        average_ticket_cents = (2 * gross_revenue_cents + bookings_count) // (2 * bookings_count)
+    else:
+        average_ticket_cents = 0
+    return UnitEconomicsRecord(
+        tenant_id=tenant_id,
+        window_days=window_days,
+        currency=UNIT_ECONOMICS_CURRENCY,
+        bookings_count_30d=bookings_count,
+        gross_revenue_cents=gross_revenue_cents,
+        average_ticket_cents=average_ticket_cents,
+        material_cogs_cents=material_cogs_cents,
+        net_margin_cents=net_margin_cents,
+        margin_percent=margin_percent,
+    )
+
+
+async def get_unit_economics(conn: AsyncConnection[Any], *, tenant_id: UUID) -> UnitEconomicsRecord:
+    """Trailing-30-day revenue, material cost and margin, read live from PostgreSQL.
+
+    Revenue is every CONFIRMED booking that started inside the window (a booking in the
+    future is not yet earned, so the window is closed at now()). Material cost is what left
+    inventory through write-offs (used, damaged, lost, expired, other) at the moving-average
+    value; returns to a supplier also move stock out but are not a cost, so they are left out.
+    Amounts of stock valuations are visible to company-wide members only (restrictive RLS), and
+    the route requires such a member. Every statement filters by tenant on top of FORCE RLS.
+    """
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            """
+            SELECT count(*) AS bookings_count,
+                   coalesce(sum(total_cents), 0) AS gross_revenue_cents
+            FROM gba.bookings
+            WHERE tenant_id = %s
+              AND status = 'CONFIRMED'
+              AND starts_at >= now() - (%s::int * interval '1 day')
+              AND starts_at < now()
+            """,
+            (tenant_id, UNIT_ECONOMICS_WINDOW_DAYS),
+        )
+        revenue = await cur.fetchone()
+        await cur.execute(
+            """
+            SELECT coalesce(sum(v.amount_minor), 0) AS material_cogs_cents
+            FROM gba.stock_valuations v
+            JOIN gba.stock_documents d
+              ON d.tenant_id = v.tenant_id AND d.id = v.document_id
+            WHERE v.tenant_id = %s
+              AND v.direction = 'out'
+              AND d.kind = 'write_off'
+              AND d.document_date >= current_date - %s::int
+            """,
+            (tenant_id, UNIT_ECONOMICS_WINDOW_DAYS),
+        )
+        cogs = await cur.fetchone()
+    if revenue is None or cogs is None:
+        raise RuntimeError("Failed to read unit economics")
+    return build_unit_economics(
+        tenant_id=tenant_id,
+        bookings_count=int(revenue["bookings_count"]),
+        gross_revenue_cents=int(revenue["gross_revenue_cents"]),
+        material_cogs_cents=int(cogs["material_cogs_cents"]),
+    )

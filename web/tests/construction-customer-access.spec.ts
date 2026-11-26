@@ -108,7 +108,7 @@ test("an operator links the customer, offers access and shares working document 
   await expect(
     customer.getByRole("heading", { name: /Today’s Overview/ }),
   ).toBeVisible();
-  const businessChoice = customer.getByLabel("Active Salon");
+  const businessChoice = customer.getByLabel("Active Business");
   if (await businessChoice.count())
     await businessChoice.selectOption(fixture.company);
   await customer

@@ -199,7 +199,9 @@ async def put_connector_installation(
                 user_id=principal.user_id,
             )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
 
 
 @router.delete(
@@ -276,7 +278,9 @@ async def post_business_api_key(
                 user_id=principal.user_id,
             )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
     return ApiKeyCreatedResponse(key=ApiKeyItemResponse(**row), secret_token=raw_secret)
 
 
@@ -349,7 +353,9 @@ async def post_business_webhook(
                 user_id=principal.user_id,
             )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
     return WebhookCreatedResponse(endpoint=WebhookEndpointResponse(**row), signing_secret=secret)
 
 
@@ -495,17 +501,23 @@ async def post_native_mcp(
                     "tools": [
                         {
                             "name": "get_business_summary",
-                            "description": "Return tenant business name, booking state, and active counts.",
+                            "description": (
+                                "Return tenant business name, booking state, and active counts."
+                            ),
                             "inputSchema": {"type": "object", "properties": {}},
                         },
                         {
                             "name": "list_services",
-                            "description": "List published bookable services with USD prices and durations.",
+                            "description": (
+                                "List published bookable services with USD prices and durations."
+                            ),
                             "inputSchema": {"type": "object", "properties": {}},
                         },
                         {
                             "name": "ask_business_copilot",
-                            "description": "Ask the read-only grounded GORGONA AI Business Copilot.",
+                            "description": (
+                                "Ask the read-only grounded GORGONA AI Business Copilot."
+                            ),
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {"question": {"type": "string"}},
@@ -575,7 +587,9 @@ async def post_native_mcp(
                     "jsonrpc": "2.0",
                     "id": body.id,
                     "result": {
-                        "content": [{"type": "text", "text": f"Found {len(items)} bookable services."}],
+                        "content": [
+                            {"type": "text", "text": f"Found {len(items)} bookable services."}
+                        ],
                         "structuredContent": {"services": items},
                     },
                 }

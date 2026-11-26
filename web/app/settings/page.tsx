@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import React, { useEffect, useState, useCallback } from "react";
+import { BrandMediaManager } from "../../components/brand-media-manager";
 import { FeePolicySection } from "../../components/fee-policy";
 import { GrowthPanel } from "../../components/growth-panel";
 import { NotificationsPanel } from "../../components/notifications-panel";
@@ -70,7 +72,7 @@ function SettingsContent({
     <div>
       <div className="mgmt-section-header">
         <div>
-          <h2>Salon Profile & Settings</h2>
+          <h2>Business Profile & Settings</h2>
           <p
             style={{
               color: "var(--muted)",
@@ -78,8 +80,8 @@ function SettingsContent({
               fontSize: "0.9rem",
             }}
           >
-            Operational policies, authorized embed origins, confirmed business
-            facts, and salon metadata.
+            Operational policies, brand media, authorized embed origins,
+            confirmed business facts, and business metadata.
           </p>
         </div>
         <div>
@@ -96,7 +98,7 @@ function SettingsContent({
 
       {error && (
         <div className="mgmt-error-banner" role="alert">
-          <h3>Error loading salon settings</h3>
+          <h3>Error loading business settings</h3>
           <p>{error}</p>
           <button
             type="button"
@@ -110,7 +112,7 @@ function SettingsContent({
 
       {loading && !error && (
         <div className="mgmt-loading" aria-live="polite">
-          <p>Loading salon configuration from database...</p>
+          <p>Loading business configuration from database...</p>
         </div>
       )}
 
@@ -119,7 +121,7 @@ function SettingsContent({
           {/* Section 1: Business Identity */}
           <div className="mgmt-kpi-card" style={{ padding: "24px" }}>
             <h3 style={{ margin: "0 0 16px", fontSize: "1.1rem" }}>
-              Salon Identity
+              Business Identity
             </h3>
             <div
               style={{
@@ -169,11 +171,28 @@ function SettingsContent({
                 borderTop: "1px solid var(--line)",
               }}
             >
-              <span className="mgmt-kpi-label">Unique Salon Tenant ID</span>
+              <span className="mgmt-kpi-label">Unique Business ID</span>
               <div>
                 <code style={{ fontSize: "0.85rem" }}>{settings.salon_id}</code>
               </div>
             </div>
+          </div>
+
+          {/* Brand media for the public storefront (Cloudflare R2) */}
+          <BrandMediaManager businessId={salonId} />
+
+          {/* External services connect only through GORGONA App Hub */}
+          <div className="mgmt-kpi-card" style={{ padding: "24px" }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: "1.1rem" }}>
+              Integrations
+            </h3>
+            <p style={{ margin: "0 0 12px", color: "var(--muted)" }}>
+              Connectors, scoped API keys, signed webhooks, and the MCP server
+              for AI agents are managed in one place.
+            </p>
+            <Link href="/integrations/" className="button secondary">
+              Open GORGONA App Hub
+            </Link>
           </div>
 
           {/* Section 2: Operating Locations */}
@@ -210,7 +229,7 @@ function SettingsContent({
           {/* Section 3: Salon Business Hours */}
           <div>
             <h3 style={{ margin: "0 0 12px", fontSize: "1.1rem" }}>
-              Salon Business Hours
+              Business Hours
             </h3>
             <div className="mgmt-table-container" tabIndex={0}>
               <table className="mgmt-table">
@@ -280,7 +299,7 @@ function SettingsContent({
                 fontSize: "0.85rem",
               }}
             >
-              Origins permitted by CORS and CSP to embed this salon&apos;s
+              Origins permitted by CORS and CSP to embed this business&apos;s
               hosted booking widget and make public booking API calls.
             </p>
             <div className="mgmt-table-container" tabIndex={0}>

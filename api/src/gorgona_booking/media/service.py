@@ -258,9 +258,7 @@ async def read_media_asset_bytes(
     return (ctype, bytes(blob))
 
 
-async def delete_media_asset(
-    conn: RuntimeConnection, *, tenant_id: UUID, asset_id: UUID
-) -> bool:
+async def delete_media_asset(conn: RuntimeConnection, *, tenant_id: UUID, asset_id: UUID) -> bool:
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             """

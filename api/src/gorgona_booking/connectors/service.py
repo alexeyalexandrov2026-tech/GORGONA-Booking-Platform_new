@@ -164,9 +164,7 @@ def _mask_config(raw_config: dict[str, Any]) -> dict[str, str]:
             continue
         low_k = clean_k.lower()
         if any(s in low_k for s in ("secret", "token", "key", "password")):
-            masked[clean_k] = (
-                f"{clean_v[:4]}***{clean_v[-2:]}" if len(clean_v) > 8 else "***"
-            )
+            masked[clean_k] = f"{clean_v[:4]}***{clean_v[-2:]}" if len(clean_v) > 8 else "***"
         else:
             masked[clean_k] = clean_v
     return masked
@@ -290,9 +288,7 @@ async def create_api_key(
     return dict(row), raw_secret
 
 
-async def revoke_api_key(
-    conn: RuntimeConnection, *, tenant_id: UUID, key_id: UUID
-) -> bool:
+async def revoke_api_key(conn: RuntimeConnection, *, tenant_id: UUID, key_id: UUID) -> bool:
     cur = await conn.execute(
         """
         UPDATE gba.api_keys
@@ -361,9 +357,7 @@ async def create_webhook(
         raise ValueError("Webhook URL must use https://")
     clean_events = sorted({e.strip() for e in events if e.strip()})
     if not clean_events or not set(clean_events).issubset(ALLOWED_WEBHOOK_EVENTS):
-        raise ValueError(
-            f"Events must be a non-empty subset of {sorted(ALLOWED_WEBHOOK_EVENTS)}"
-        )
+        raise ValueError(f"Events must be a non-empty subset of {sorted(ALLOWED_WEBHOOK_EVENTS)}")
     signing_secret = f"whsec_{secrets.token_urlsafe(28)}"
     prefix = signing_secret[:14]
     digest = _sha256_hex(signing_secret)
@@ -384,9 +378,7 @@ async def create_webhook(
     return dict(row), signing_secret
 
 
-async def delete_webhook(
-    conn: RuntimeConnection, *, tenant_id: UUID, endpoint_id: UUID
-) -> bool:
+async def delete_webhook(conn: RuntimeConnection, *, tenant_id: UUID, endpoint_id: UUID) -> bool:
     cur = await conn.execute(
         "DELETE FROM gba.webhook_endpoints WHERE tenant_id = %s AND id = %s",
         (tenant_id, endpoint_id),

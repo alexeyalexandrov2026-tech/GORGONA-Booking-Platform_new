@@ -50,6 +50,9 @@ export const registerBusinessResultSchema = z.object({
   industry_ids: z.array(z.number().int()),
   effective_module_ids: z.array(z.string()),
   pending_module_ids: z.array(z.string()),
+  created_services_count: z.number().int().optional().default(0),
+  created_resources_count: z.number().int().optional().default(0),
+  created_hours_count: z.number().int().optional().default(0),
 });
 export type RegisterBusinessResult = z.infer<
   typeof registerBusinessResultSchema
@@ -63,7 +66,85 @@ export interface RegisterBusinessInput {
   industry_ids: number[];
   business_formats: string[];
   custom_activity_name?: string | null;
+  /** Human-approved AI Business Architect starter data (optional). */
+  starter_services?: StarterService[];
+  starter_resources?: StarterResource[];
+  starter_hours?: StarterHours[];
+  cancellation_summary?: string | null;
 }
+
+export const RESOURCE_KINDS = ["artist", "chair", "room", "equipment"] as const;
+export type ResourceKind = (typeof RESOURCE_KINDS)[number];
+
+export interface StarterService {
+  code: string;
+  name: string;
+  duration_minutes: number;
+  price_cents: number;
+  currency: "USD";
+}
+export interface StarterResource {
+  display_name: string;
+  kind: ResourceKind;
+}
+export interface StarterHours {
+  weekday: number;
+  opens_minute: number;
+  closes_minute: number;
+}
+
+/** Limits enforced by POST /v1/onboarding/ai-blueprint and /v1/onboarding/businesses. */
+export const BLUEPRINT_LIMITS = {
+  descriptionMin: 8,
+  descriptionMax: 2000,
+  imageDataUrlMax: 5_500_000,
+  imageBytesMax: 4_000_000,
+  servicesMax: 12,
+  resourcesMax: 8,
+  serviceNameMin: 2,
+  serviceNameMax: 160,
+  resourceNameMin: 2,
+  resourceNameMax: 120,
+  durationMin: 10,
+  durationMax: 480,
+  priceCentsMax: 5_000_000,
+  cancellationMax: 300,
+} as const;
+
+export const aiBlueprintSchema = z.object({
+  schema_version: z.literal(1),
+  engine: z.string(),
+  model: z.string(),
+  business_name: z.string(),
+  slug: z.string(),
+  location_name: z.string(),
+  timezone: z.string(),
+  industry_ids: z.array(z.number().int()),
+  business_formats: z.array(z.string()),
+  enableable_module_ids: z.array(z.string()),
+  pending_module_ids: z.array(z.string()),
+  services: z.array(
+    z.object({
+      code: z.string(),
+      name: z.string(),
+      duration_minutes: z.number().int(),
+      price_cents: z.number().int(),
+      currency: z.string(),
+    }),
+  ),
+  resources: z.array(z.object({ display_name: z.string(), kind: z.string() })),
+  business_hours: z.array(
+    z.object({
+      weekday: z.number().int(),
+      opens_minute: z.number().int(),
+      closes_minute: z.number().int(),
+    }),
+  ),
+  cancellation_summary: z.string(),
+  recommended_connectors: z.array(z.string()),
+  rationale: z.string(),
+});
+export type AiBlueprint = z.infer<typeof aiBlueprintSchema>;
 
 async function authHeaders(): Promise<HeadersInit> {
   const token = await accessToken();
@@ -92,6 +173,71 @@ export async function fetchOnboardingStatus(): Promise<OnboardingStatus> {
   return onboardingStatusSchema.parse(await res.json());
 }
 
+async function errorText(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await res.json()) as {
+      error?: {
+        message?: string;
+        details?: { loc?: unknown[]; msg?: string }[];
+      };
+      detail?: string;
+    };
+    const first = body.error?.details?.[0];
+    if (body.error?.message && first?.msg)
+      return `${body.error.message}: ${first.msg}`;
+    if (body.error?.message) return body.error.message;
+    if (typeof body.detail === "string") return body.detail;
+  } catch {
+    /* ignore non-JSON error body */
+  }
+  return fallback;
+}
+
+/** Draft a business blueprint for human review. Nothing is created by this call. */
+export async function requestAiBlueprint(
+  input: { description: string; price_list_image_data_url?: string | null },
+  signal?: AbortSignal,
+): Promise<AiBlueprint> {
+  let res: Response;
+  try {
+    res = await fetch("/v1/onboarding/ai-blueprint", {
+      method: "POST",
+      headers: {
+        ...(await authHeaders()),
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+      body: JSON.stringify({
+        description: input.description,
+        price_list_image_data_url: input.price_list_image_data_url ?? null,
+      }),
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(60000)])
+        : AbortSignal.timeout(60000),
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw new Error(
+      "We couldn’t reach the AI Business Architect. Check your connection and try again.",
+    );
+  }
+  if (!res.ok)
+    throw new Error(
+      await errorText(
+        res,
+        "The AI Business Architect could not draft a blueprint.",
+      ),
+    );
+  const parsed = aiBlueprintSchema.safeParse(
+    await res.json().catch(() => null),
+  );
+  if (!parsed.success)
+    throw new Error(
+      "The AI Business Architect returned an incomplete blueprint. Please try again.",
+    );
+  return parsed.data;
+}
+
 export async function registerSelfServiceBusiness(
   input: RegisterBusinessInput,
   idempotencyKey: string,
@@ -106,19 +252,9 @@ export async function registerSelfServiceBusiness(
     },
     body: JSON.stringify(input),
   });
-  if (!res.ok) {
-    let message = "Could not create your business workspace.";
-    try {
-      const body = (await res.json()) as {
-        error?: { message?: string };
-        detail?: string;
-      };
-      if (body.error?.message) message = body.error.message;
-      else if (typeof body.detail === "string") message = body.detail;
-    } catch {
-      /* ignore non-JSON error body */
-    }
-    throw new Error(message);
-  }
+  if (!res.ok)
+    throw new Error(
+      await errorText(res, "Could not create your business workspace."),
+    );
   return registerBusinessResultSchema.parse(await res.json());
 }

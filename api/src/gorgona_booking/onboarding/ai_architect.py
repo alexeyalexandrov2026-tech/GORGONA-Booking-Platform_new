@@ -326,8 +326,7 @@ def _deterministic_blueprint(description: str) -> AiBusinessBlueprint:
         BlueprintResourceItem(display_name="Service Station 1", kind="artist"),
     )
     hours = tuple(
-        BlueprintHoursItem(weekday=wd, opens_minute=540, closes_minute=1080)
-        for wd in range(1, 7)
+        BlueprintHoursItem(weekday=wd, opens_minute=540, closes_minute=1080) for wd in range(1, 7)
     )
     return AiBusinessBlueprint(
         engine="grounded",
@@ -361,7 +360,10 @@ def _call_cf_blueprint_sync(
     if not account_id or not api_token:
         return None
     use_vision = bool(
-        image_data_url and image_data_url.startswith(("data:image/png;base64,", "data:image/jpeg;base64,", "data:image/webp;base64,"))
+        image_data_url
+        and image_data_url.startswith(
+            ("data:image/png;base64,", "data:image/jpeg;base64,", "data:image/webp;base64,")
+        )
     )
     model = (
         os.environ.get("GBA_CF_VISION_MODEL", _VISION_MODEL_DEFAULT).strip()
@@ -382,9 +384,11 @@ def _call_cf_blueprint_sync(
         "America/Phoenix, America/Los_Angeles, America/Anchorage, or Pacific/Honolulu)\n"
         "- industry_ids (array of 1..3 integers from 1..39)\n"
         "- business_formats (array of strings from: b2c, b2b, marketplace, franchise, holding)\n"
-        "- services (array of 3..6 objects: {name, duration_minutes (15..480), price_usd (number)})\n"
+        "- services (array of 3..6 objects: "
+        "{name, duration_minutes (15..480), price_usd (number)})\n"
         "- resources (array of 1..4 objects: {display_name, kind: 'artist'|'room'|'equipment'})\n"
-        "- business_hours (array of objects: {weekday (1=Mon..7=Sun), opens_hour (0..23), closes_hour (1..24)})\n"
+        "- business_hours (array of objects: "
+        "{weekday (1=Mon..7=Sun), opens_hour (0..23), closes_hour (1..24)})\n"
         "- cancellation_summary (1 concise sentence)\n"
         "- rationale (1-2 concise sentences explaining the architecture chosen)"
     )
@@ -476,7 +480,7 @@ async def generate_business_blueprint(req: AiBlueprintRequest) -> AiBusinessBlue
                 iv = int(item)
                 if iv in INDUSTRY_IDS and iv not in ind_list:
                     ind_list.append(iv)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 continue
     industry_ids = tuple(sorted(ind_list[:4])) if ind_list else fallback.industry_ids
     preset = resolve_onboarding_modules(industry_ids)
@@ -505,12 +509,12 @@ async def generate_business_blueprint(req: AiBlueprintRequest) -> AiBusinessBlue
                 continue
             try:
                 dur = max(10, min(480, int(s.get("duration_minutes") or 60)))
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 dur = 60
             try:
                 price_usd = float(s.get("price_usd", 0))
                 cents = max(0, min(5_000_000, round(price_usd * 100)))
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 cents = 0
             code = _safe_code(s_name, idx)
             if code in seen_codes:
@@ -554,7 +558,7 @@ async def generate_business_blueprint(req: AiBlueprintRequest) -> AiBusinessBlue
                 wd = int(h.get("weekday") or 0)
                 oh = int(h.get("opens_hour", 9))
                 ch = int(h.get("closes_hour", 18))
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 continue
             if not (1 <= wd <= 7) or wd in seen_days:
                 continue
@@ -564,7 +568,9 @@ async def generate_business_blueprint(req: AiBlueprintRequest) -> AiBusinessBlue
             hours_out.append(
                 BlueprintHoursItem(weekday=wd, opens_minute=opens_m, closes_minute=closes_m)
             )
-    business_hours = tuple(sorted(hours_out, key=lambda x: x.weekday)) if hours_out else fallback.business_hours
+    business_hours = (
+        tuple(sorted(hours_out, key=lambda x: x.weekday)) if hours_out else fallback.business_hours
+    )
 
     cancel_txt = str(raw.get("cancellation_summary") or "").strip()[:300]
     rationale_txt = str(raw.get("rationale") or "").strip()[:500]

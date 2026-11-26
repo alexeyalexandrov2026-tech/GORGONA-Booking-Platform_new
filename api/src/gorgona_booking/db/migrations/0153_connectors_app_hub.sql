@@ -1,6 +1,6 @@
 -- 0153_connectors_app_hub.sql
 -- GORGONA App Hub: tenant-isolated Scoped API Keys, Signed Outbound Webhooks,
--- and Connector Installations (invoker-only, FORCE RLS, zero SECURITY DEFINER).
+-- and Connector Installations (invoker-rights only, FORCE RLS, no definer-rights functions).
 
 CREATE TABLE gba.api_keys (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

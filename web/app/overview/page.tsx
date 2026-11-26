@@ -4,6 +4,7 @@ import Link from "next/link";
 import React, { useEffect, useState, useCallback } from "react";
 import { ManagementLayout } from "../../components/management-layout";
 import { OwnerCopilotPanel } from "../../components/owner-copilot-panel";
+import { UnitEconomicsCard } from "../../components/unit-economics-card";
 import {
   businessDateTime,
   businessTimeToInstant,
@@ -183,13 +184,13 @@ function OverviewContent({
   };
 
   if (loading) {
-    return <p className="muted">Loading salon overview...</p>;
+    return <p className="muted">Loading business overview...</p>;
   }
 
   if (error || !overview) {
     return (
       <div className="mgmt-error-banner" role="alert">
-        <h3>Could not load salon overview</h3>
+        <h3>Could not load business overview</h3>
         <p>{error || "Unknown error"}</p>
         <button type="button" onClick={loadData}>
           Retry
@@ -272,6 +273,8 @@ function OverviewContent({
           <div className="mgmt-kpi-number">{stats.total_services_count}</div>
         </div>
       </div>
+
+      <UnitEconomicsCard businessId={salonId} />
 
       <OwnerCopilotPanel salonId={salonId} />
 

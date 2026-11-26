@@ -60,7 +60,7 @@ def _to_response(row: dict[str, object]) -> MediaAssetResponse:
         sha256=str(row["sha256"]),
         storage_backend=str(row["storage_backend"]),
         public_url=f"/v1/customer/media/{aid}",
-        created_at=row["created_at"],  # type: ignore[arg-type]
+        created_at=row["created_at"],
     )
 
 

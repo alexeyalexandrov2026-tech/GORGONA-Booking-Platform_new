@@ -19,9 +19,11 @@ from gorgona_booking.growth.service import (
     AssistantTone,
     GrowthSettingsRecord,
     PreferredWindow,
+    UnitEconomicsRecord,
     WaitlistEntryRecord,
     WaitlistStatus,
     get_growth_settings,
+    get_unit_economics,
     join_waitlist,
     list_waitlist,
     offer_waitlist_slot,
@@ -107,6 +109,20 @@ class UpdateWaitlistStatusRequest(BaseModel):
     status: WaitlistStatus
 
 
+class UnitEconomicsResponse(BaseModel):
+    """Trailing-window unit economics in whole US cents (the platform is USD-only)."""
+
+    model_config = ConfigDict(frozen=True)
+    window_days: int
+    currency: Literal["USD"]
+    bookings_count_30d: int
+    gross_revenue_cents: int
+    average_ticket_cents: int
+    material_cogs_cents: int
+    net_margin_cents: int
+    margin_percent: float
+
+
 def _to_settings_response(rec: GrowthSettingsRecord) -> GrowthSettingsResponse:
     return GrowthSettingsResponse(
         tenant_id=rec.tenant_id,
@@ -142,6 +158,19 @@ def _to_waitlist_response(rec: WaitlistEntryRecord) -> WaitlistEntryResponse:
         offered_at=rec.offered_at,
         offer_notification_id=rec.offer_notification_id,
         created_at=rec.created_at,
+    )
+
+
+def _to_unit_economics_response(rec: UnitEconomicsRecord) -> UnitEconomicsResponse:
+    return UnitEconomicsResponse(
+        window_days=rec.window_days,
+        currency=rec.currency,
+        bookings_count_30d=rec.bookings_count_30d,
+        gross_revenue_cents=rec.gross_revenue_cents,
+        average_ticket_cents=rec.average_ticket_cents,
+        material_cogs_cents=rec.material_cogs_cents,
+        net_margin_cents=rec.net_margin_cents,
+        margin_percent=rec.margin_percent,
     )
 
 
@@ -232,6 +261,26 @@ async def put_business_growth_settings(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
     return _to_settings_response(rec)
+
+
+@router.get("/v1/salons/{salon_id}/growth/unit-economics", response_model=UnitEconomicsResponse)
+@router.get("/v1/businesses/{salon_id}/growth/unit-economics", response_model=UnitEconomicsResponse)
+async def get_business_unit_economics(
+    salon_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> UnitEconomicsResponse:
+    # Material cost comes from stock valuations, whose amounts only company-wide members with
+    # finance access may see (the stock API gates the same money at FINANCE_READ).
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.FINANCE_READ,
+        request_id=get_request_id(request),
+    ) as session:
+        rec = await get_unit_economics(session.conn, tenant_id=salon_id)
+    return _to_unit_economics_response(rec)
 
 
 @router.get("/v1/salons/{salon_id}/growth/waitlist", response_model=list[WaitlistEntryResponse])

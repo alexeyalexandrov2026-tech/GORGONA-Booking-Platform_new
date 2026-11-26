@@ -88,7 +88,7 @@ async function signIn(page: Page, who: Person) {
   // The owner belongs to two businesses; the scenarios start in the first one.
   if (who === "owner")
     await page
-      .getByRole("combobox", { name: "Active Salon" })
+      .getByRole("combobox", { name: "Active Business" })
       .selectOption(business);
 }
 async function signOut(page: Page) {
@@ -521,7 +521,7 @@ test("a company that never enabled the module shows closed screens", async ({
 }) => {
   await signIn(page, "owner");
   await page
-    .getByRole("combobox", { name: "Active Salon" })
+    .getByRole("combobox", { name: "Active Business" })
     .selectOption(otherBusiness);
   await open(page, "Schedule");
   await expect(

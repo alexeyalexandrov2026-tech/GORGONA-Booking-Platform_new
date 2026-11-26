@@ -128,7 +128,12 @@ async def test_ai_architect_onboarding_app_hub_mcp_media_and_unit_economics(
     mcp_svcs = await client.post(
         "/v1/mcp",
         headers={"Authorization": f"Bearer {raw_token}"},
-        json={"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "list_services"}},
+        json={
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {"name": "list_services"},
+        },
     )
     assert mcp_svcs.status_code == 200, mcp_svcs.text
     assert len(mcp_svcs.json()["result"]["structuredContent"]["services"]) == len(bp["services"])

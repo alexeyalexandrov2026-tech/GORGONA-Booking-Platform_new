@@ -116,7 +116,7 @@ def test_r2_image_magic_validation_and_sigv4() -> None:
     assert _detect_image_type(b"\x89PNG\r\n\x1a\nxxxx") == ("image/png", "png")
     assert _detect_image_type(b"\xff\xd8\xff\xe0xxxx") == ("image/jpeg", "jpg")
     assert _detect_image_type(b"RIFF\x00\x00\x00\x00WEBPxxxx") == ("image/webp", "webp")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="PNG, JPEG, or WEBP only"):
         _detect_image_type(b"<svg><script>alert(1)</script></svg>")
 
     hdrs = _sigv4_headers(
