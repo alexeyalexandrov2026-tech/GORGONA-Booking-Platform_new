@@ -297,6 +297,8 @@ K_TABLES = {
     "webhook_deliveries",
     "connector_installations",
     "media_assets",
+    "payment_sessions",
+    "payment_webhook_events",
     "civic_programs",
     "civic_cases",
     "civic_allocations",
