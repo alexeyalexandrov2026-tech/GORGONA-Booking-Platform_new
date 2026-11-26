@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — GORGONA Platform",
+  title: "Privacy Policy — AMARKAL Platform",
   description: "Data protection, tenant isolation, and US privacy disclosures.",
 };
 
@@ -13,10 +13,10 @@ export default function PrivacyPolicyPage() {
       style={{ maxWidth: "820px", margin: "2rem auto" }}
     >
       <p>
-        <Link href="/">← Back to GORGONA</Link> ·{" "}
+        <Link href="/">← Back to AMARKAL Platform</Link> ·{" "}
         <Link href="/legal/terms/">Terms of Service</Link>
       </p>
-      <h1>GORGONA Platform Privacy Policy (United States)</h1>
+      <h1>AMARKAL Platform Privacy Policy (United States)</h1>
       <p>
         <strong>Effective date:</strong> Pending Commercial Launch (Pre-Launch
         Draft for Legal Counsel Review)
@@ -26,8 +26,8 @@ export default function PrivacyPolicyPage() {
       <p>
         We process business account records, staff identity links (OpenID
         Connect issuer/subject identifiers), operational records created by
-        tenants, and customer booking contact details entered during appointment
-        or service workflows.
+        tenants, and customer contact details entered during service or order
+        workflows.
       </p>
 
       <h2>2. Strict Multi-Tenant Isolation</h2>
@@ -47,8 +47,8 @@ export default function PrivacyPolicyPage() {
 
       <h2>4. US State Privacy Rights (CCPA/CPRA and Similar Laws)</h2>
       <p>
-        GORGONA acts as a service provider / processor for customer data
-        controlled by each tenant business. Requests to access, correct, or
+        AMARKAL Platform acts as a service provider / processor for customer
+        data controlled by each tenant business. Requests to access, correct, or
         delete personal data should be directed to the relevant business tenant
         or to the platform privacy contact listed prior to commercial launch. We
         do not sell personal information.
@@ -56,10 +56,10 @@ export default function PrivacyPolicyPage() {
 
       <h2>5. Security &amp; Retention</h2>
       <p>
-        All production and staging traffic uses TLS 1.2+ behind Azure Front Door
-        WAF with private database and Key Vault endpoints. Audit logs record
-        access and administrative mutations while excluding secrets and raw
-        credentials.
+        All production and staging traffic uses TLS 1.2+ behind Google Cloud
+        Global HTTPS Load Balancer with Cloud Armor WAF, private Cloud SQL
+        PostgreSQL 18, and Google Secret Manager. Audit logs record access and
+        administrative mutations while excluding secrets and raw credentials.
       </p>
     </main>
   );

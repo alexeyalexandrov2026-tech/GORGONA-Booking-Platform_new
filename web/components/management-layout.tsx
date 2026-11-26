@@ -233,7 +233,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       },
       {
         href: "/book/",
-        label: "Customer booking page",
+        label: "Client portal",
         group: "Action",
       },
     ];
@@ -389,7 +389,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       <header className="mgmt-header">
         <div className="mgmt-brand-area">
           <Link href="/overview/" className="mgmt-brand">
-            GORGONA <span>Business OS</span>
+            AMARKAL <span>Platform</span>
           </Link>
           {me && me.memberships.length > 1 ? (
             <select
@@ -636,7 +636,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
           borderTop: "1px solid rgba(0,0,0,0.12)",
         }}
       >
-        <span>GORGONA US Business OS</span>
+        <span>AMARKAL Platform</span>
         <Link href="/onboarding/">Register business</Link>
         <Link href="/integrations/">App Hub</Link>
         <Link href="/legal/terms/">Terms of Service</Link>

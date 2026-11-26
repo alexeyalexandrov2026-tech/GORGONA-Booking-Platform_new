@@ -9,9 +9,10 @@ import { INDUSTRIES } from "../components/landing/industries";
 import "./landing.css";
 
 export const metadata: Metadata = {
-  title: "GORGONA US Business OS — 39 industries, 0% commission",
+  title:
+    "AMARKAL Platform — US Business OS across 39 industries, 0% commission",
   description:
-    "Run any US business on one platform: booking, clients, staff, finance and an AI Booking Assistant for 39 NAICS industries. 0% commission.",
+    "Run any US business on AMARKAL Platform: operations, scheduling, clients, staff, finance, and AI automation for 39 NAICS industries. 0% commission.",
 };
 
 const NAV = [
@@ -24,7 +25,7 @@ const NAV = [
 const WINDOW_NAV = [
   "Overview",
   "Calendar",
-  "Bookings",
+  "Orders",
   "Clients",
   "Finance",
   "App Hub",
@@ -50,9 +51,9 @@ const TRUST = [
 ] as const;
 
 const PRINCIPLES = [
-  "Your customers stay yours. They book on your page, under your name.",
-  "We never take a percentage of your bookings or your sales.",
-  "No bidding for visibility. Your booking page and customer list belong to you.",
+  "Your customers stay yours. They interact on your portal, under your brand.",
+  "We never take a percentage of your orders, services, or sales.",
+  "No bidding for visibility. Your client portal and customer list belong to you.",
   "Export or automate whenever you like. API keys, webhooks and MCP are in the box.",
 ] as const;
 
@@ -96,8 +97,8 @@ function Icon({ children }: { children: ReactNode }) {
 
 const FEATURES: readonly { title: string; text: string; icon: ReactNode }[] = [
   {
-    title: "Booking and calendar",
-    text: "Services, specialists and resources with one shared view of availability, plus a booking page for your customers.",
+    title: "Scheduling & operations",
+    text: "Services, specialists and resources with one shared view of availability, plus a branded portal for your customers.",
     icon: (
       <Icon>
         <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
@@ -148,8 +149,8 @@ const FEATURES: readonly { title: string; text: string; icon: ReactNode }[] = [
     ),
   },
   {
-    title: "AI Booking Assistant",
-    text: "Helps customers choose a service and a time on your booking page. They still book through the same checked flow.",
+    title: "AMARKAL AI Assistant",
+    text: "Helps customers choose a service and a time on your client portal through the same verified workflow.",
     icon: (
       <Icon>
         <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3zM18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z" />
@@ -170,7 +171,7 @@ export default function HomePage() {
           <Link href="/" className="lp-brand">
             <span className="lp-brand-mark" aria-hidden="true" />
             <span>
-              GORGONA <span className="lp-brand-sub">US Business OS</span>
+              AMARKAL <span className="lp-brand-sub">Platform</span>
             </span>
           </Link>
           <nav className="lp-nav" aria-label="Page sections">
@@ -200,13 +201,13 @@ export default function HomePage() {
           aria-labelledby="lp-hero-title"
         >
           <div className="lp-hero-copy">
-            <p className="lp-eyebrow">GORGONA US Business OS</p>
+            <p className="lp-eyebrow">AMARKAL Platform · US Business OS</p>
             <h1 id="lp-hero-title">Run any US business on one platform.</h1>
             <p className="lp-lead">
-              Booking, clients, staff, documents and finance in one workspace
-              that adapts to {INDUSTRIES.length} US industries, with an AI
-              Booking Assistant for your customers. Describe your business,
-              approve the AI’s draft and get going. 0% commission, always.
+              Operations, scheduling, clients, staff, documents and finance in
+              one workspace that adapts to {INDUSTRIES.length} US industries,
+              with an AI Assistant for your customers. Describe your business,
+              approve the AI’s draft and launch. 0% commission, always.
             </p>
             <div className="lp-cta-row">
               <Link
@@ -216,7 +217,7 @@ export default function HomePage() {
                 Create your business
               </Link>
               <Link href="/book/" className="lp-btn lp-btn--ghost lp-btn--lg">
-                Book an appointment
+                Open client portal
               </Link>
             </div>
             <ul className="lp-facts">
@@ -266,7 +267,7 @@ export default function HomePage() {
       </div>
 
       <main id="main-content">
-        <section className="lp-trust" aria-label="Why GORGONA">
+        <section className="lp-trust" aria-label="Why AMARKAL Platform">
           <ul className="lp-container lp-trust-grid">
             {TRUST.map((item) => (
               <li key={item.title}>
@@ -312,9 +313,9 @@ export default function HomePage() {
               {INDUSTRIES.length} US industries. One platform.
             </h2>
             <p className="lp-section-lead">
-              Choose your industry, or combine several. GORGONA maps every
-              direction to NAICS sectors, so you start with the right modules
-              instead of a blank screen.
+              Choose your industry, or combine several. AMARKAL Platform maps
+              every direction to NAICS sectors, so you start with the right
+              modules instead of a blank screen.
             </p>
             <IndustryExplorer />
           </div>
@@ -331,12 +332,12 @@ export default function HomePage() {
                 0%
               </p>
               <h2 id="manifesto-title">
-                <span className="sr-only">0% </span>commission on every booking.
-                Always.
+                <span className="sr-only">0% </span>commission on every
+                transaction. Always.
               </h2>
               <p className="lp-section-lead">
-                You built the business. You keep what it earns. GORGONA is
-                software for your business, not a toll booth between you and
+                You built the business. You keep what it earns. AMARKAL Platform
+                is software for your business, not a toll booth between you and
                 your customers.
               </p>
               <ul className="lp-principles">
@@ -391,7 +392,7 @@ export default function HomePage() {
               <p className="lp-section-lead">
                 The core stays focused on running your business. Messengers,
                 chat and telephony are not built in: they connect through the
-                GORGONA App Hub with your own accounts, when you want them.
+                AMARKAL App Hub with your own accounts, when you want them.
               </p>
               <ul className="lp-connectors" aria-label="Connectors">
                 {CONNECTORS.map((name) => (
@@ -421,7 +422,7 @@ export default function HomePage() {
                 Create your business
               </Link>
               <Link href="/book/" className="lp-btn lp-btn--outline lp-btn--lg">
-                Book an appointment
+                Open client portal
               </Link>
             </div>
           </div>
@@ -430,14 +431,14 @@ export default function HomePage() {
 
       <footer className="lp-footer">
         <div className="lp-container lp-footer-inner">
-          <p className="lp-footer-brand">GORGONA US Business OS</p>
+          <p className="lp-footer-brand">AMARKAL Platform</p>
           <nav aria-label="Footer">
             <ul>
               <li>
                 <Link href="/onboarding/">Create your business</Link>
               </li>
               <li>
-                <Link href="/book/">Book an appointment</Link>
+                <Link href="/book/">Client portal</Link>
               </li>
               <li>
                 <Link href="/overview/">Sign in</Link>

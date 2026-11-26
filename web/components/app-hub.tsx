@@ -106,9 +106,10 @@ function OneTimeSecret({
     <div className="usr-secret" role="region" aria-label={title}>
       <h4 style={{ margin: "0 0 8px" }}>{title}</h4>
       <p style={{ margin: "0 0 12px" }}>
-        <strong>Copy it now.</strong> GORGONA stores only a hash, so this value
-        is shown once and cannot be displayed again. Store it in a password
-        manager or secret vault; never paste it into chat, email, or code.
+        <strong>Copy it now.</strong> AMARKAL Platform stores only a hash, so
+        this value is shown once and cannot be displayed again. Store it in a
+        password manager or secret vault; never paste it into chat, email, or
+        code.
       </p>
       <label htmlFor={inputId} style={{ marginBottom: 8 }}>
         Secret value
@@ -191,7 +192,7 @@ export function AppHub({ businessId }: { businessId: string }) {
     <div className="usr-stack">
       <div className="mgmt-section-header">
         <div>
-          <h2>GORGONA App Hub</h2>
+          <h2>AMARKAL App Hub</h2>
           <p className="usr-muted" style={{ margin: "4px 0 0" }}>
             The only place external services connect to your business:
             connectors, scoped API keys, signed webhooks, and the native MCP
@@ -1029,14 +1030,14 @@ function McpSection({ mcpPath }: { mcpPath: string }) {
   // Rendered only in the browser after sign-in, so the page origin is known.
   const [origin] = useState(() =>
     typeof window === "undefined"
-      ? "https://your-gorgona-host"
+      ? "https://www.amarkal-platform.com"
       : window.location.origin,
   );
   const endpoint = `${origin}${mcpPath}`;
   const config = JSON.stringify(
     {
       mcpServers: {
-        gorgona: {
+        amarkal: {
           type: "http",
           url: endpoint,
           headers: { Authorization: "Bearer gorg_live_YOUR_SCOPED_API_KEY" },
@@ -1055,7 +1056,7 @@ function McpSection({ mcpPath }: { mcpPath: string }) {
 
   return (
     <section className="usr-card" aria-labelledby="hub-mcp-heading">
-      <h3 id="hub-mcp-heading">GORGONA Native MCP Server</h3>
+      <h3 id="hub-mcp-heading">AMARKAL Native MCP Server</h3>
       <p className="usr-muted">
         Connect MCP-compatible AI agents to your live services and business
         summary over JSON-RPC 2.0. Create a Scoped API Key with the{" "}

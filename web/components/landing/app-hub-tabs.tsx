@@ -68,7 +68,7 @@ const TABS: readonly TabSpec[] = [
         <p>
           Send booking, waitlist, invoice and payment events to your own tools.
           Each payload carries an HMAC-SHA256 signature, so your receiver can
-          check that it came from GORGONA.
+          check that it came from AMARKAL Platform.
         </p>
         <Chips items={EVENTS} />
         <pre className="lp-code">

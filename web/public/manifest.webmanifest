@@ -1,7 +1,7 @@
 {
-  "name": "GORGONA Business Platform",
-  "short_name": "GORGONA",
-  "description": "Universal multi-industry booking, operations, finance, and AI assistant platform.",
+  "name": "AMARKAL Platform",
+  "short_name": "AMARKAL",
+  "description": "US Business OS across 39 industries: operations, scheduling, clients, staff, finance, and AI automation.",
   "start_url": "/overview/",
   "scope": "/",
   "display": "standalone",
