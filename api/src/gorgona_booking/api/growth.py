@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -18,11 +18,14 @@ from gorgona_booking.db.pool import tenant_transaction
 from gorgona_booking.growth.service import (
     AssistantTone,
     GrowthSettingsRecord,
+    LaunchReadinessRecord,
     PreferredWindow,
     UnitEconomicsRecord,
     WaitlistEntryRecord,
     WaitlistStatus,
+    export_business_snapshot,
     get_growth_settings,
+    get_launch_readiness,
     get_unit_economics,
     join_waitlist,
     list_waitlist,
@@ -30,6 +33,7 @@ from gorgona_booking.growth.service import (
     update_waitlist_status,
     upsert_growth_settings,
 )
+from gorgona_booking.payments.stripe_service import StripeRuntimeConfig
 from gorgona_booking.tenancy.authorization import authorized_tenant
 
 router = APIRouter(tags=["growth"])
@@ -100,7 +104,7 @@ class OfferWaitlistSlotRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     recipient: str = Field(min_length=3, max_length=160)
     starts_at: str = Field(min_length=4, max_length=80)
-    business_name: str = Field(default="GORGONA Business", min_length=1, max_length=160)
+    business_name: str = Field(default="AMARKAL Business", min_length=1, max_length=160)
     action_url: str = Field(default="", max_length=500)
 
 
@@ -345,6 +349,105 @@ async def post_offer_waitlist_slot(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
     return _to_waitlist_response(rec)
+
+
+class ReadinessStepResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    key: str
+    title: str
+    detail: str
+    completed: bool
+    action_path: str
+    action_label: str
+
+
+class LaunchReadinessResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    business_name: str
+    slug: str
+    booking_state: str
+    score_percent: int
+    completed_steps: int
+    total_steps: int
+    stripe_live_ready: bool
+    trailing_30d_volume_cents: int
+    commission_saved_vs_5pct_cents: int
+    steps: list[ReadinessStepResponse]
+
+
+def _to_readiness_response(rec: LaunchReadinessRecord) -> LaunchReadinessResponse:
+    return LaunchReadinessResponse(
+        business_name=rec.business_name,
+        slug=rec.slug,
+        booking_state=rec.booking_state,
+        score_percent=rec.score_percent,
+        completed_steps=rec.completed_steps,
+        total_steps=rec.total_steps,
+        stripe_live_ready=rec.stripe_live_ready,
+        trailing_30d_volume_cents=rec.trailing_30d_volume_cents,
+        commission_saved_vs_5pct_cents=rec.commission_saved_vs_5pct_cents,
+        steps=[
+            ReadinessStepResponse(
+                key=s.key,
+                title=s.title,
+                detail=s.detail,
+                completed=s.completed,
+                action_path=s.action_path,
+                action_label=s.action_label,
+            )
+            for s in rec.steps
+        ],
+    )
+
+
+@router.get("/v1/salons/{salon_id}/readiness", response_model=LaunchReadinessResponse)
+@router.get("/v1/businesses/{salon_id}/readiness", response_model=LaunchReadinessResponse)
+async def get_business_launch_readiness(
+    salon_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> LaunchReadinessResponse:
+    stripe_cfg = StripeRuntimeConfig.from_env()
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BUSINESS_READ,
+        request_id=get_request_id(request),
+    ) as session:
+        rec = await get_launch_readiness(
+            session.conn,
+            tenant_id=salon_id,
+            stripe_configured=stripe_cfg.configured,
+            stripe_livemode=stripe_cfg.livemode,
+        )
+    return _to_readiness_response(rec)
+
+
+@router.get("/v1/salons/{salon_id}/export/snapshot")
+@router.get("/v1/businesses/{salon_id}/export/snapshot")
+async def get_business_portable_snapshot(
+    salon_id: UUID,
+    request: Request,
+    response: Response,
+    principal: CurrentPrincipal,
+) -> dict[str, Any]:
+    """Zero-lock-in portable JSON export of the tenant's business data."""
+    response.headers["Cache-Control"] = "private, no-store"
+    stripe_cfg = StripeRuntimeConfig.from_env()
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        salon_id,
+        Permission.BUSINESS_MANAGE,
+        request_id=get_request_id(request),
+    ) as session:
+        return await export_business_snapshot(
+            session.conn,
+            tenant_id=salon_id,
+            stripe_configured=stripe_cfg.configured,
+            stripe_livemode=stripe_cfg.livemode,
+        )
 
 
 @router.post(

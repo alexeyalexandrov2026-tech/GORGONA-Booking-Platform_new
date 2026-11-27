@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import React, { useEffect, useState, useCallback } from "react";
+import { BusinessLaunchpadCard } from "../../components/business-launchpad-card";
 import { ManagementLayout } from "../../components/management-layout";
 import { OwnerCopilotPanel } from "../../components/owner-copilot-panel";
 import { UnitEconomicsCard } from "../../components/unit-economics-card";
@@ -273,6 +274,8 @@ function OverviewContent({
           <div className="mgmt-kpi-number">{stats.total_services_count}</div>
         </div>
       </div>
+
+      <BusinessLaunchpadCard businessId={salonId} />
 
       <UnitEconomicsCard businessId={salonId} />
 

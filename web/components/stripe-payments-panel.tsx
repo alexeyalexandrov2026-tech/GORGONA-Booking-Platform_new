@@ -34,6 +34,7 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [confirmRefundId, setConfirmRefundId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -393,16 +394,40 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
                       >
                         Sync
                       </button>
-                      {s.status === "paid" && s.provider_payment_intent_id && (
-                        <button
-                          type="button"
-                          className="secondary usr-small-btn usr-danger"
-                          disabled={busy}
-                          onClick={() => void handleRefund(s.id)}
-                        >
-                          Refund
-                        </button>
-                      )}
+                      {s.status === "paid" &&
+                        s.provider_payment_intent_id &&
+                        (confirmRefundId === s.id ? (
+                          <>
+                            <button
+                              type="button"
+                              className="secondary usr-small-btn usr-danger"
+                              disabled={busy}
+                              onClick={() => {
+                                setConfirmRefundId(null);
+                                void handleRefund(s.id);
+                              }}
+                            >
+                              Confirm refund
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary usr-small-btn"
+                              disabled={busy}
+                              onClick={() => setConfirmRefundId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            className="secondary usr-small-btn usr-danger"
+                            disabled={busy}
+                            onClick={() => setConfirmRefundId(s.id)}
+                          >
+                            Refund
+                          </button>
+                        ))}
                     </div>
                   </td>
                 </tr>

@@ -1050,9 +1050,14 @@ footer {
   .mgmt-brand-area,
   .mgmt-header-actions,
   .mgmt-section-header,
-  .mgmt-nav-list,
   .mgmt-form-actions {
     flex-wrap: wrap;
+  }
+  .mgmt-nav {
+    -webkit-overflow-scrolling: touch;
+  }
+  .mgmt-nav-list {
+    flex-wrap: nowrap;
   }
   .mgmt-header-actions {
     min-width: 0;

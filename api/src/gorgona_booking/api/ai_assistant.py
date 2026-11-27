@@ -9,7 +9,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
-from gorgona_booking.ai_assistant.service import ask_customer_assistant, ask_owner_copilot
+from gorgona_booking.ai_assistant.service import (
+    ask_customer_assistant,
+    gather_owner_copilot_context,
+    synthesize_owner_copilot,
+)
 from gorgona_booking.api.businesses import CurrentPrincipal
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.holds import get_tenant_id
@@ -144,11 +148,11 @@ async def post_owner_copilot(
         Permission.BUSINESS_READ,
         request_id=get_request_id(request),
     ) as session:
-        res = await ask_owner_copilot(
+        ctx = await gather_owner_copilot_context(
             session.conn,
             tenant_id=salon_id,
-            question=body.question,
         )
+    res = await synthesize_owner_copilot(ctx, question=body.question)
     return OwnerCopilotResponse(
         engine=res.engine,
         business_name=res.business_name,

@@ -427,15 +427,16 @@ def search(
     conn: psycopg.Connection, tenant_id: UUID, query: str, k: int = 3
 ) -> list[tuple[str, str, float]]:
     """Retrieve the tenant's closest knowledge documents (ref, body, cosine similarity)."""
+    qvec = vector_literal(EMBEDDER.embed(query))
     with tenant_transaction(conn, tenant_id):
         rows = conn.execute(
             "select d.ref, d.body, 1 - (e.embedding <=> %s::vector) as score from ai.embeddings e"
             " join ai.documents d on d.id = e.document_id where e.embedder = %s"
             " order by e.embedding <=> %s::vector limit %s",
             (
-                vector_literal(EMBEDDER.embed(query)),
+                qvec,
                 EMBEDDER.version,
-                vector_literal(EMBEDDER.embed(query)),
+                qvec,
                 k,
             ),
         ).fetchall()

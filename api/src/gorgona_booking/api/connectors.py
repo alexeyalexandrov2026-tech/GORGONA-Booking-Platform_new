@@ -10,7 +10,11 @@ from fastapi import APIRouter, Header, HTTPException, Request, Response, status
 from psycopg.rows import dict_row
 from pydantic import BaseModel, ConfigDict, Field
 
-from gorgona_booking.ai_assistant.service import ask_owner_copilot
+from gorgona_booking.ai_assistant.service import (
+    CopilotContext,
+    gather_owner_copilot_context,
+    synthesize_owner_copilot,
+)
 from gorgona_booking.api.businesses import CurrentPrincipal
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
@@ -33,6 +37,11 @@ from gorgona_booking.connectors.service import (
     upsert_connector_installation,
 )
 from gorgona_booking.db.pool import set_tenant_context
+from gorgona_booking.growth.service import (
+    get_launch_readiness,
+    get_unit_economics,
+)
+from gorgona_booking.payments.stripe_service import StripeRuntimeConfig, list_payment_sessions
 from gorgona_booking.tenancy.authorization import authorized_tenant
 
 router = APIRouter(tags=["connectors"])
@@ -462,6 +471,9 @@ async def post_native_mcp(
             detail="Bearer gorg_live_* API key required",
         )
     raw_token = authorization.removeprefix("Bearer ").strip()
+    break_for_copilot = False
+    copilot_ctx: CopilotContext | None = None
+    copilot_question = ""
 
     async with runtime_pool(request).connection() as conn, conn.transaction():
         resolved = await resolve_api_key(conn, raw_token)
@@ -488,7 +500,11 @@ async def post_native_mcp(
                 "id": body.id,
                 "result": {
                     "protocolVersion": "2025-03-26",
-                    "serverInfo": {"name": "gorgona-business-os-mcp", "version": "2.0.0"},
+                    "serverInfo": {
+                        "name": "gorgona-business-os-mcp",
+                        "title": "AMARKAL Platform Business OS MCP",
+                        "version": "2.1.0",
+                    },
                     "capabilities": {"tools": {}},
                 },
             }
@@ -516,12 +532,53 @@ async def post_native_mcp(
                         {
                             "name": "ask_business_copilot",
                             "description": (
-                                "Ask the read-only grounded GORGONA AI Business Copilot."
+                                "Ask the read-only grounded AMARKAL AI Business Copilot."
                             ),
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {"question": {"type": "string"}},
                             },
+                        },
+                        {
+                            "name": "get_unit_economics",
+                            "description": (
+                                "Return live trailing-30-day USD revenue, material COGS, "
+                                "net margin, and average ticket."
+                            ),
+                            "inputSchema": {"type": "object", "properties": {}},
+                        },
+                        {
+                            "name": "list_upcoming_bookings",
+                            "description": (
+                                "List confirmed upcoming bookings over the next 14 days with "
+                                "USD values and masked contacts."
+                            ),
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+                                },
+                            },
+                        },
+                        {
+                            "name": "list_payment_sessions",
+                            "description": (
+                                "List recent Stripe US payment checkout sessions and statuses."
+                            ),
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+                                },
+                            },
+                        },
+                        {
+                            "name": "get_launch_readiness",
+                            "description": (
+                                "Return live 0-100% Go-Live operational readiness score, "
+                                "milestones, and 0% commission savings."
+                            ),
+                            "inputSchema": {"type": "object", "properties": {}},
                         },
                     ]
                 },
@@ -593,29 +650,187 @@ async def post_native_mcp(
                         "structuredContent": {"services": items},
                     },
                 }
-            if tool_name == "ask_business_copilot":
-                question = str(args.get("question") or "")[:500]
-                cp = await ask_owner_copilot(conn, tenant_id=tenant_id, question=question or None)
+            if tool_name == "get_unit_economics":
+                ue = await get_unit_economics(conn, tenant_id=tenant_id)
                 return {
                     "jsonrpc": "2.0",
                     "id": body.id,
                     "result": {
-                        "content": [{"type": "text", "text": cp.reply}],
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": (
+                                    f"30d gross revenue ${ue.gross_revenue_cents / 100:,.2f}, "
+                                    f"net margin ${ue.net_margin_cents / 100:,.2f} "
+                                    f"({ue.margin_percent:.1f}%)."
+                                ),
+                            }
+                        ],
                         "structuredContent": {
-                            "engine": cp.engine,
-                            "business_name": cp.business_name,
-                            "metrics": cp.metrics,
+                            "window_days": ue.window_days,
+                            "currency": ue.currency,
+                            "bookings_count_30d": ue.bookings_count_30d,
+                            "gross_revenue_cents": ue.gross_revenue_cents,
+                            "material_cogs_cents": ue.material_cogs_cents,
+                            "net_margin_cents": ue.net_margin_cents,
+                            "margin_percent": ue.margin_percent,
+                            "average_ticket_cents": ue.average_ticket_cents,
                         },
                     },
                 }
+            if tool_name == "list_upcoming_bookings":
+                lim = max(1, min(int(args.get("limit") or 20), 50))
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(
+                        """
+                        SELECT b.id, b.starts_at, b.ends_at, b.status,
+                               b.total_cents, b.currency,
+                               s.name AS service_name, r.display_name AS resource_name
+                        FROM gba.bookings b
+                        LEFT JOIN gba.service_variants v
+                          ON v.tenant_id = b.tenant_id AND v.id = b.variant_id
+                        LEFT JOIN gba.services s
+                          ON s.tenant_id = v.tenant_id AND s.id = v.service_id
+                        LEFT JOIN gba.resources r
+                          ON r.tenant_id = b.tenant_id AND r.id = b.resource_id
+                        WHERE b.tenant_id = %s
+                          AND b.status = 'CONFIRMED'
+                          AND b.starts_at >= now()
+                          AND b.starts_at < now() + interval '14 days'
+                        ORDER BY b.starts_at ASC
+                        LIMIT %s
+                        """,
+                        (tenant_id, lim),
+                    )
+                    rows = [
+                        {
+                            "booking_id": str(r["id"]),
+                            "starts_at": r["starts_at"].isoformat(),
+                            "ends_at": r["ends_at"].isoformat(),
+                            "status": str(r["status"]),
+                            "total_cents": int(r["total_cents"]),
+                            "currency": str(r["currency"]),
+                            "service_name": str(r["service_name"] or ""),
+                            "resource_name": str(r["resource_name"] or ""),
+                        }
+                        for r in await cur.fetchall()
+                    ]
+                return {
+                    "jsonrpc": "2.0",
+                    "id": body.id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Found {len(rows)} upcoming confirmed booking(s).",
+                            }
+                        ],
+                        "structuredContent": {"bookings": rows},
+                    },
+                }
+            if tool_name == "list_payment_sessions":
+                lim = max(1, min(int(args.get("limit") or 20), 50))
+                sessions = await list_payment_sessions(conn, tenant_id=tenant_id, limit=lim)
+                items = [
+                    {
+                        "id": str(s.id),
+                        "status": s.status,
+                        "livemode": s.livemode,
+                        "amount_cents": s.amount_cents,
+                        "currency": s.currency,
+                        "description": s.description,
+                        "reference_kind": s.reference_kind,
+                        "created_at": s.created_at.isoformat(),
+                    }
+                    for s in sessions
+                ]
+                return {
+                    "jsonrpc": "2.0",
+                    "id": body.id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Found {len(items)} Stripe payment session(s).",
+                            }
+                        ],
+                        "structuredContent": {"sessions": items},
+                    },
+                }
+            if tool_name == "get_launch_readiness":
+                scfg = StripeRuntimeConfig.from_env()
+                rd = await get_launch_readiness(
+                    conn,
+                    tenant_id=tenant_id,
+                    stripe_configured=scfg.configured,
+                    stripe_livemode=scfg.livemode,
+                )
+                return {
+                    "jsonrpc": "2.0",
+                    "id": body.id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": (
+                                    f"{rd.business_name} Go-Live readiness: {rd.score_percent}% "
+                                    f"({rd.completed_steps}/{rd.total_steps} milestones)."
+                                ),
+                            }
+                        ],
+                        "structuredContent": {
+                            "business_name": rd.business_name,
+                            "score_percent": rd.score_percent,
+                            "completed_steps": rd.completed_steps,
+                            "total_steps": rd.total_steps,
+                            "stripe_live_ready": rd.stripe_live_ready,
+                            "commission_saved_vs_5pct_cents": rd.commission_saved_vs_5pct_cents,
+                            "steps": [
+                                {
+                                    "key": st.key,
+                                    "title": st.title,
+                                    "completed": st.completed,
+                                    "action_path": st.action_path,
+                                }
+                                for st in rd.steps
+                            ],
+                        },
+                    },
+                }
+            if tool_name == "ask_business_copilot":
+                copilot_question = str(args.get("question") or "")[:500]
+                copilot_ctx = await gather_owner_copilot_context(conn, tenant_id=tenant_id)
+                # Break out of DB transaction before external Cloudflare/Gemini call
+                break_for_copilot = True
+            else:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": body.id,
+                    "error": {"code": -32601, "message": f"Unknown tool: {tool_name}"},
+                }
+        else:
             return {
                 "jsonrpc": "2.0",
                 "id": body.id,
-                "error": {"code": -32601, "message": f"Unknown tool: {tool_name}"},
+                "error": {"code": -32601, "message": f"Method not found: {body.method}"},
             }
 
+    if break_for_copilot and copilot_ctx is not None:
+        cp = await synthesize_owner_copilot(copilot_ctx, question=copilot_question or None)
         return {
             "jsonrpc": "2.0",
             "id": body.id,
-            "error": {"code": -32601, "message": f"Method not found: {body.method}"},
+            "result": {
+                "content": [{"type": "text", "text": cp.reply}],
+                "structuredContent": {
+                    "engine": cp.engine,
+                    "business_name": cp.business_name,
+                    "metrics": cp.metrics,
+                },
+            },
         }
+    return {
+        "jsonrpc": "2.0",
+        "id": body.id,
+        "error": {"code": -32601, "message": f"Method not found: {body.method}"},
+    }

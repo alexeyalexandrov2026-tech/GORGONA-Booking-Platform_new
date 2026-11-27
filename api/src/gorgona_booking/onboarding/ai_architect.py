@@ -244,7 +244,7 @@ def _deterministic_blueprint(description: str) -> AiBusinessBlueprint:
         first_clause,
         flags=re.IGNORECASE,
     ).strip()[:80]
-    business_name = name_guess.title() if len(name_guess) >= 3 else "GORGONA US Workspace"
+    business_name = name_guess.title() if len(name_guess) >= 3 else "AMARKAL US Workspace"
     tz = _detect_timezone(description)
     industry_ids = _detect_industries(description)
     preset = resolve_onboarding_modules(industry_ids)
@@ -373,7 +373,7 @@ def _call_cf_blueprint_sync(
 
     industry_catalog_text = "\n".join(f"{i.id}: {i.name} ({i.code})" for i in INDUSTRIES)
     system_prompt = (
-        "You are GORGONA AI Business Architect for United States businesses (USD only). "
+        "You are AMARKAL AI Business Architect for United States businesses (USD only). "
         "Given the owner's business description (and optional price list image), design a complete "
         "ready-to-launch workspace blueprint. Pick 1 to 3 exact industry_ids from this catalog:\n"
         f"{industry_catalog_text}\n\n"
