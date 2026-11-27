@@ -430,6 +430,11 @@
   .usr-card {
     padding: 16px;
   }
+  .usr-small-btn {
+    white-space: normal;
+    text-align: left;
+    max-width: 100%;
+  }
   .usr-row,
   .usr-row-2 {
     grid-template-columns: minmax(0, 1fr);

@@ -54,6 +54,7 @@ from gorgona_booking.api import (
     restaurant_floor,
     restaurant_menu,
     salons,
+    search,
     self_service,
     setup,
     shift_changes,
@@ -216,6 +217,7 @@ def create_app(
     app.include_router(special_assets.router)
     app.include_router(special_civic.router)
     app.include_router(members.router)
+    app.include_router(search.router)
     app.include_router(self_service.router)
     app.include_router(notifications.router)
     app.include_router(growth.router)

@@ -667,6 +667,14 @@ footer {
   padding: 8px 16px;
   font-size: 0.85rem;
 }
+.mgmt-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
 .mgmt-nav {
   background: #f4f5f8;
   border-bottom: 1px solid var(--line);
@@ -734,10 +742,61 @@ footer {
 }
 .mgmt-main {
   flex: 1;
+  min-width: 0;
   max-width: 1240px;
   width: 100%;
   margin: 0 auto;
   padding: 32px;
+}
+@media (min-width: 1025px) {
+  .mgmt-body {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    align-items: start;
+  }
+  .mgmt-body .mgmt-nav {
+    position: sticky;
+    top: 64px;
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #f8f9fc;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+    padding: 16px 12px 24px;
+  }
+  .mgmt-body .mgmt-nav-list {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .mgmt-body .mgmt-nav-group-start {
+    border-left: 0;
+    margin-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  .mgmt-body .mgmt-nav-link {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border-bottom: 0;
+    border-radius: 10px;
+    font-size: 0.86rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mgmt-body .mgmt-nav-link:hover {
+    background: #eef1f7;
+    color: var(--ink);
+  }
+  .mgmt-body .mgmt-nav-link.active {
+    background: #e7ebf3;
+    color: var(--ink);
+    font-weight: 600;
+  }
 }
 .mgmt-loading,
 .mgmt-empty-state,
@@ -1219,10 +1278,25 @@ footer {
   background: var(--ivory);
   border-color: var(--line);
 }
+.mgmt-cmd-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.mgmt-cmd-sub {
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .mgmt-cmd-meta {
   font-size: 0.78rem;
   color: var(--muted);
   font-weight: 600;
+  flex-shrink: 0;
 }
 .mgmt-cmd-empty {
   padding: 16px;

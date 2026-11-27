@@ -41,6 +41,10 @@ from gorgona_booking.business.file_errors import (
     UnsupportedMediaTypeError,
 )
 from gorgona_booking.business.file_validation import MAX_FILE_BYTES, validate_file
+from gorgona_booking.business.malware_scanner import (
+    is_file_uploads_enabled,
+    scan_upload_if_required,
+)
 from gorgona_booking.db.schema_guard import assert_location_scope_ready
 from gorgona_booking.errors import NotFoundError
 from gorgona_booking.tenancy.authorization import (
@@ -53,12 +57,10 @@ router = APIRouter(prefix="/v1/businesses", tags=["documents"])
 Limit = Annotated[int, Query(ge=1, le=100)]
 Revision = Annotated[int | None, Query(ge=1, le=2_147_483_647)]
 VersionNumber = Annotated[int, Path(ge=1, le=2_147_483_647)]
-# Environments where uploads wait for a malware scanner (owner decision, ADR-0020).
-_SCANNER_REQUIRED = frozenset({"staging", "production"})
 
 
 def _uploads_enabled(request: Request) -> bool:
-    return request.app.state.settings.environment not in _SCANNER_REQUIRED
+    return is_file_uploads_enabled(request.app.state.settings.environment)
 
 
 @asynccontextmanager
@@ -251,6 +253,11 @@ async def put_document_file(
         await service.precheck_upload(access.conn, business_id, principal.actor, idempotency_key)
     content = await _read_capped(request)
     validated = await asyncio.to_thread(validate_file, content, declared, original_name or "file")
+    await scan_upload_if_required(
+        content,
+        environment=request.app.state.settings.environment,
+        media_type=validated.media_type,
+    )
     async with _access(
         request, principal, business_id, Permission.DOCUMENTS_MANAGE, exclusive=True
     ) as access:

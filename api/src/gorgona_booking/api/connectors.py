@@ -18,7 +18,9 @@ from gorgona_booking.ai_assistant.service import (
 from gorgona_booking.api.businesses import CurrentPrincipal
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
+from gorgona_booking.api.search import search_business_records
 from gorgona_booking.auth.permissions import Permission
+from gorgona_booking.connectors.dispatcher import dispatch_business_event
 from gorgona_booking.connectors.service import (
     ALLOWED_SCOPES,
     ALLOWED_WEBHOOK_EVENTS,
@@ -463,6 +465,90 @@ async def get_business_webhook_deliveries(
     return [WebhookDeliveryResponse(**r) for r in rows]
 
 
+class WebhookDispatchEventRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    event_type: str = Field(min_length=3, max_length=64)
+    data: dict[str, Any] = Field(default_factory=dict)
+
+
+@router.get("/.well-known/agent.json", include_in_schema=False)
+async def get_a2a_agent_card(response: Response) -> dict[str, Any]:
+    """Open A2A / Agentic Discovery Card for AMARKAL Business OS (zero unapproved writes)."""
+    response.headers["Cache-Control"] = "public, max-age=300"
+    return {
+        "schema_version": "1.0",
+        "name": "AMARKAL Platform Business OS",
+        "operator": "Alexey AAA Logistics LLC",
+        "url": "https://www.amarkal-platform.com",
+        "description": (
+            "Multi-tenant US Business Operating System across 39 NAICS industries with "
+            "PostgreSQL 18 FORCE RLS isolation, double-entry USD finance (FIN-03), "
+            "and governed Human-in-the-Loop AI operations."
+        ),
+        "protocols": {
+            "mcp": {
+                "endpoint": "https://www.amarkal-platform.com/v1/mcp",
+                "transport": "jsonrpc-2.0-http",
+                "protocol_version": "2025-03-26",
+                "authentication": "Bearer scoped API key (mcp:read)",
+            }
+        },
+        "governance": {
+            "tenant_isolation": "postgresql_force_rls",
+            "human_in_the_loop": True,
+            "zero_unapproved_writes": True,
+            "platform_transaction_commission_bps": 0,
+        },
+        "capabilities": [
+            "get_business_summary",
+            "list_services",
+            "ask_business_copilot",
+            "get_unit_economics",
+            "list_upcoming_bookings",
+            "list_payment_sessions",
+            "get_launch_readiness",
+            "search_business_records",
+            "draft_payment_proposal",
+        ],
+    }
+
+
+@router.post(
+    "/v1/businesses/{business_id}/connectors/webhooks/dispatch",
+    response_model=list[WebhookDeliveryResponse],
+)
+async def post_dispatch_webhook_event(
+    business_id: UUID,
+    body: WebhookDispatchEventRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> list[WebhookDeliveryResponse]:
+    """Trigger real outbound HMAC-signed webhook delivery to all subscribed active endpoints."""
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.BUSINESS_MANAGE,
+        request_id=get_request_id(request),
+    ):
+        pass
+    settings = getattr(request.app.state, "settings", None)
+    env_name = settings.environment if settings is not None else "local"
+    try:
+        rows = await dispatch_business_event(
+            runtime_pool(request),
+            tenant_id=business_id,
+            event_type=body.event_type,
+            data=body.data,
+            environment=env_name,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    return [WebhookDeliveryResponse(**r) for r in rows]
+
+
 @router.get("/v1/businesses/{business_id}/connectors/meta")
 async def get_connector_meta(
     business_id: UUID,
@@ -607,6 +693,45 @@ async def post_native_mcp(
                                 "milestones, and 0% commission savings."
                             ),
                             "inputSchema": {"type": "object", "properties": {}},
+                        },
+                        {
+                            "name": "search_business_records",
+                            "description": (
+                                "Search tenant counterparties, documents, FIN-03 invoices, "
+                                "catalog items, and Stripe payment sessions under FORCE RLS."
+                            ),
+                            "inputSchema": {
+                                "type": "object",
+                                "required": ["query"],
+                                "properties": {
+                                    "query": {"type": "string", "minLength": 2, "maxLength": 120},
+                                    "limit_per_kind": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 10,
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            "name": "draft_payment_proposal",
+                            "description": (
+                                "Prepare a Human-in-the-Loop USD Stripe payment link proposal for "
+                                "owner approval (performs zero unapproved writes)."
+                            ),
+                            "inputSchema": {
+                                "type": "object",
+                                "required": ["amount_cents", "description"],
+                                "properties": {
+                                    "amount_cents": {
+                                        "type": "integer",
+                                        "minimum": 50,
+                                        "maximum": 99999999,
+                                    },
+                                    "description": {"type": "string", "minLength": 2},
+                                    "reference_id": {"type": "string"},
+                                },
+                            },
                         },
                     ]
                 },
@@ -822,6 +947,80 @@ async def post_native_mcp(
                                 }
                                 for st in rd.steps
                             ],
+                        },
+                    },
+                }
+            if tool_name == "search_business_records":
+                q_str = str(args.get("query") or "").strip()
+                if len(q_str) < 2:
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": body.id,
+                        "error": {
+                            "code": -32602,
+                            "message": "query must be at least 2 characters",
+                        },
+                    }
+                lim_kind = max(1, min(int(args.get("limit_per_kind") or 5), 10))
+                hits = await search_business_records(
+                    conn, tenant_id=tenant_id, query=q_str, limit_per_kind=lim_kind
+                )
+                return {
+                    "jsonrpc": "2.0",
+                    "id": body.id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Found {len(hits)} matching record(s) for '{q_str}'.",
+                            }
+                        ],
+                        "structuredContent": {
+                            "query": q_str,
+                            "hits": [h.model_dump() for h in hits],
+                        },
+                    },
+                }
+            if tool_name == "draft_payment_proposal":
+                amt_cents = int(args.get("amount_cents") or 0)
+                desc = str(args.get("description") or "").strip()[:300]
+                ref_id = str(args.get("reference_id") or "").strip()[:120] or None
+                if not (50 <= amt_cents <= 99_999_999) or len(desc) < 2:
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": body.id,
+                        "error": {
+                            "code": -32602,
+                            "message": "Provide amount_cents (50..99999999) and description",
+                        },
+                    }
+                return {
+                    "jsonrpc": "2.0",
+                    "id": body.id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": (
+                                    f"Prepared Human-in-the-Loop payment proposal for "
+                                    f"USD ${amt_cents / 100:,.2f} ({desc}). "
+                                    "Requires explicit owner approval in AMARKAL App Hub "
+                                    "(/integrations/) before any payment link is created."
+                                ),
+                            }
+                        ],
+                        "structuredContent": {
+                            "status": "awaiting_human_approval",
+                            "executed": False,
+                            "approval_path": "/integrations/",
+                            "proposal": {
+                                "kind": "create_stripe_payment_link",
+                                "amount_cents": amt_cents,
+                                "currency": "USD",
+                                "description": desc,
+                                "reference_id": ref_id,
+                                "platform_commission_bps": 0,
+                            },
                         },
                     },
                 }

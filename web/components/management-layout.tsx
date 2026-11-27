@@ -12,6 +12,7 @@ import {
   signOut,
 } from "../lib/auth";
 import {
+  authorizedResponse,
   fetchConfiguration,
   fetchMe,
   getActiveSalonId,
@@ -19,6 +20,23 @@ import {
   MembershipView,
   MeView,
 } from "../lib/management-api";
+
+interface GlobalSearchHit {
+  kind: "counterparty" | "document" | "invoice" | "service" | "payment";
+  id: string;
+  title: string;
+  subtitle: string;
+  path: string;
+  status: string | null;
+}
+
+const SEARCH_KIND_LABEL: Record<GlobalSearchHit["kind"], string> = {
+  counterparty: "Counterparty",
+  document: "Document",
+  invoice: "FIN-03 Invoice",
+  service: "Catalog",
+  payment: "Stripe Payment",
+};
 
 interface ManagementLayoutProps {
   children: (props: {
@@ -199,6 +217,8 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
   const [paletteIndex, setPaletteIndex] = useState(0);
+  const [searchHits, setSearchHits] = useState<GlobalSearchHit[]>([]);
+  const [searchBusy, setSearchBusy] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [focusModules, setFocusModules] = useState<string[] | null>(null);
   const [focusBusy, setFocusBusy] = useState(false);
@@ -334,31 +354,49 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
 
   const paletteEntries = (() => {
     const base = navItems.map((item) => ({
+      key: `nav-${item.href}`,
       href: item.href,
       label: item.label,
+      subtitle: undefined as string | undefined,
       group: item.group as string,
     }));
     const actions = [
       {
+        key: "act-onboarding",
         href: "/onboarding/",
         label: "Create new business (AI Business Architect)",
+        subtitle: undefined as string | undefined,
         group: "Action",
       },
       {
+        key: "act-book",
         href: "/book/",
         label: "Client portal",
+        subtitle: undefined as string | undefined,
         group: "Action",
       },
     ];
     const all = [...base, ...actions];
     const q = paletteQuery.trim().toLowerCase();
-    if (!q) return all;
-    return all.filter(
-      (entry) =>
-        entry.label.toLowerCase().includes(q) ||
-        entry.group.toLowerCase().includes(q) ||
-        entry.href.toLowerCase().includes(q),
-    );
+    const matchedScreens = q
+      ? all.filter(
+          (entry) =>
+            entry.label.toLowerCase().includes(q) ||
+            entry.group.toLowerCase().includes(q) ||
+            entry.href.toLowerCase().includes(q),
+        )
+      : all;
+    const recordHits =
+      q.length >= 2
+        ? searchHits.map((hit) => ({
+            key: `hit-${hit.kind}-${hit.id}`,
+            href: hit.path,
+            label: hit.title,
+            subtitle: hit.subtitle,
+            group: SEARCH_KIND_LABEL[hit.kind],
+          }))
+        : [];
+    return [...matchedScreens, ...recordHits];
   })();
 
   const refresh = useCallback(() => {
@@ -460,15 +498,55 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
     }
   }, [paletteOpen]);
 
+  useEffect(() => {
+    const q = paletteQuery.trim();
+    if (!paletteOpen || !salonId || q.length < 2) {
+      return;
+    }
+    let active = true;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      if (!active) return;
+      setSearchBusy(true);
+      void authorizedResponse(
+        `/v1/businesses/${encodeURIComponent(salonId)}/search?q=${encodeURIComponent(q)}&limit=5`,
+        { signal: controller.signal },
+      )
+        .then((res) => res.json() as Promise<{ hits?: GlobalSearchHit[] }>)
+        .then((data) => {
+          if (active) setSearchHits(data.hits ?? []);
+        })
+        .catch(() => {
+          if (active) setSearchHits([]);
+        })
+        .finally(() => {
+          if (active) setSearchBusy(false);
+        });
+    }, 220);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [paletteOpen, salonId, paletteQuery]);
+
+  const closePalette = () => {
+    setPaletteOpen(false);
+    setPaletteQuery("");
+    setSearchHits([]);
+    setSearchBusy(false);
+  };
+
   const openPalette = () => {
     setPaletteQuery("");
     setPaletteIndex(0);
+    setSearchHits([]);
+    setSearchBusy(false);
     setPaletteOpen(true);
   };
 
   const navigateFromPalette = (href: string) => {
-    setPaletteOpen(false);
-    setPaletteQuery("");
+    closePalette();
     router.push(href);
   };
 
@@ -592,145 +670,149 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
           )}
         </div>
       </header>
-      <nav className="mgmt-nav" aria-label="Management Navigation">
-        <ul className="mgmt-nav-list">
-          {visibleNavItems.map((item, idx) => {
-            const prev = idx > 0 ? visibleNavItems[idx - 1] : null;
-            const groupChanged = Boolean(prev && prev.group !== item.group);
-            return (
-              <li
-                key={item.href}
-                className={groupChanged ? "mgmt-nav-group-start" : undefined}
-              >
-                <Link
-                  href={item.href}
-                  className={
-                    "mgmt-nav-link" + (pathname === item.href ? " active" : "")
-                  }
-                  aria-current={pathname === item.href ? "page" : undefined}
+      <div className="mgmt-body">
+        <nav className="mgmt-nav" aria-label="Management Navigation">
+          <ul className="mgmt-nav-list">
+            {visibleNavItems.map((item, idx) => {
+              const prev = idx > 0 ? visibleNavItems[idx - 1] : null;
+              const groupChanged = Boolean(prev && prev.group !== item.group);
+              return (
+                <li
+                  key={item.href}
+                  className={groupChanged ? "mgmt-nav-group-start" : undefined}
                 >
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-      <main className="mgmt-main" id="main-content">
-        {delegation && (
-          <p className="hold-note" role="note">
-            You are serving {delegation.business_name} through access granted to{" "}
-            {delegation.servicer_name ?? "your business"} until{" "}
-            {new Date(delegation.expires_at).toLocaleDateString()}. Only
-            bookings are available, and access ends at once if it is revoked.
-          </p>
-        )}
-        {locationLimited && !delegation && (
-          <p className="hold-note">
-            You have access to your assigned location. Company settings are
-            managed by the business owner.
-          </p>
-        )}
-        {loading ? (
-          <div className="mgmt-loading" aria-live="polite">
-            <p>Verifying your account…</p>
-          </div>
-        ) : (
-          <>
-            {error && (
-              <div className="mgmt-error-banner" role="alert">
-                <p>{error}</p>
-                <button className="secondary" onClick={refresh}>
-                  Retry
-                </button>
-              </div>
-            )}
-            {!me && unlinkedAccount ? (
-              <section className="mgmt-empty-state">
-                <h1>Welcome to AMARKAL Platform</h1>
-                <p>
-                  You are signed in. Launch your US business workspace in 60
-                  seconds with AI Business Architect across 39 industries — 0%
-                  platform commission, direct Stripe payouts, and zero lock-in.
-                </p>
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    justifyContent: "center",
-                    gap: "12px",
-                    marginTop: "20px",
-                  }}
-                >
-                  <Link href="/onboarding/" className="button">
-                    Launch with AI Business Architect →
-                  </Link>
-                  <button
-                    type="button"
-                    className="secondary"
-                    disabled={authBusy}
-                    onClick={() => void startSignOut()}
+                  <Link
+                    href={item.href}
+                    className={
+                      "mgmt-nav-link" +
+                      (pathname === item.href ? " active" : "")
+                    }
+                    aria-current={pathname === item.href ? "page" : undefined}
                   >
-                    Sign out
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+        <main className="mgmt-main" id="main-content">
+          {delegation && (
+            <p className="hold-note" role="note">
+              You are serving {delegation.business_name} through access granted
+              to {delegation.servicer_name ?? "your business"} until{" "}
+              {new Date(delegation.expires_at).toLocaleDateString()}. Only
+              bookings are available, and access ends at once if it is revoked.
+            </p>
+          )}
+          {locationLimited && !delegation && (
+            <p className="hold-note">
+              You have access to your assigned location. Company settings are
+              managed by the business owner.
+            </p>
+          )}
+          {loading ? (
+            <div className="mgmt-loading" aria-live="polite">
+              <p>Verifying your account…</p>
+            </div>
+          ) : (
+            <>
+              {error && (
+                <div className="mgmt-error-banner" role="alert">
+                  <p>{error}</p>
+                  <button className="secondary" onClick={refresh}>
+                    Retry
                   </button>
                 </div>
-              </section>
-            ) : !me ? (
-              <section className="mgmt-auth-gate">
-                <h1>Manage your business</h1>
-                <p>
-                  {configured
-                    ? "Sign in with your business account to manage bookings, services and clients."
-                    : "Staff sign-in is not available in this environment yet. The account provider must be configured before the dashboard can be used."}
-                </p>
-                {configured && (
-                  <button
-                    disabled={authBusy}
-                    onClick={() => void startSignIn()}
+              )}
+              {!me && unlinkedAccount ? (
+                <section className="mgmt-empty-state">
+                  <h1>Welcome to AMARKAL Platform</h1>
+                  <p>
+                    You are signed in. Launch your US business workspace in 60
+                    seconds with AI Business Architect across 39 industries — 0%
+                    platform commission, direct Stripe payouts, and zero
+                    lock-in.
+                  </p>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      justifyContent: "center",
+                      gap: "12px",
+                      marginTop: "20px",
+                    }}
                   >
-                    Sign in with your account
-                  </button>
-                )}
-              </section>
-            ) : !salonId ? (
-              <section className="mgmt-empty-state">
-                <h2>No active businesses yet</h2>
-                <p>
-                  Your account has no active business membership yet. Register a
-                  new business workspace yourself, or ask an owner for an
-                  invitation.
-                </p>
-                <Link href="/onboarding/" className="mgmt-nav-link active">
-                  Create your business workspace
-                </Link>
-              </section>
-            ) : (
-              children({ salonId, me, refresh })
-            )}
-          </>
-        )}
-      </main>
+                    <Link href="/onboarding/" className="button">
+                      Launch with AI Business Architect →
+                    </Link>
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={authBusy}
+                      onClick={() => void startSignOut()}
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                </section>
+              ) : !me ? (
+                <section className="mgmt-auth-gate">
+                  <h1>Manage your business</h1>
+                  <p>
+                    {configured
+                      ? "Sign in with your business account to manage bookings, services and clients."
+                      : "Staff sign-in is not available in this environment yet. The account provider must be configured before the dashboard can be used."}
+                  </p>
+                  {configured && (
+                    <button
+                      disabled={authBusy}
+                      onClick={() => void startSignIn()}
+                    >
+                      Sign in with your account
+                    </button>
+                  )}
+                </section>
+              ) : !salonId ? (
+                <section className="mgmt-empty-state">
+                  <h2>No active businesses yet</h2>
+                  <p>
+                    Your account has no active business membership yet. Register
+                    a new business workspace yourself, or ask an owner for an
+                    invitation.
+                  </p>
+                  <Link href="/onboarding/" className="mgmt-nav-link active">
+                    Create your business workspace
+                  </Link>
+                </section>
+              ) : (
+                children({ salonId, me, refresh })
+              )}
+            </>
+          )}
+        </main>
+      </div>
       {paletteOpen && (
         <div
           className="mgmt-modal-backdrop"
           onClick={(event) => {
-            if (event.target === event.currentTarget) setPaletteOpen(false);
+            if (event.target === event.currentTarget) closePalette();
           }}
         >
           <div
             className="mgmt-modal-card mgmt-cmd-dialog"
             role="dialog"
             aria-modal="true"
-            aria-label="Quick navigation"
+            aria-label="Quick navigation and global business search"
           >
             <div className="mgmt-cmd-head">
               <label htmlFor="mgmt-cmd-input" className="mgmt-cmd-label">
-                Jump to screen or action
+                Search screens, counterparties, invoices, documents
               </label>
               <button
                 type="button"
                 className="secondary mgmt-btn-small"
-                onClick={() => setPaletteOpen(false)}
+                onClick={closePalette}
               >
                 Close
               </button>
@@ -740,11 +822,16 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
               id="mgmt-cmd-input"
               type="search"
               className="mgmt-cmd-input"
-              placeholder="Type a module, screen, or action (e.g. App Hub, Finance, Transport)…"
+              placeholder="Search screens or business records (e.g. Apex, INV-1042, App Hub)…"
               value={paletteQuery}
               onChange={(event) => {
-                setPaletteQuery(event.target.value);
+                const next = event.target.value;
+                setPaletteQuery(next);
                 setPaletteIndex(0);
+                if (next.trim().length < 2) {
+                  setSearchHits([]);
+                  setSearchBusy(false);
+                }
               }}
               onKeyDown={(event) => {
                 if (event.key === "ArrowDown") {
@@ -773,10 +860,14 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
             />
             <ul className="mgmt-cmd-list" role="listbox" aria-label="Results">
               {paletteEntries.length === 0 ? (
-                <li className="mgmt-cmd-empty">No matching screens found.</li>
+                <li className="mgmt-cmd-empty">
+                  {searchBusy
+                    ? "Searching business records…"
+                    : "No matching screens or records found."}
+                </li>
               ) : (
                 paletteEntries.map((entry, idx) => (
-                  <li key={`${entry.group}-${entry.href}`}>
+                  <li key={entry.key}>
                     <button
                       type="button"
                       className={
@@ -786,13 +877,26 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
                       onMouseEnter={() => setPaletteIndex(idx)}
                       onClick={() => navigateFromPalette(entry.href)}
                     >
-                      <span>{entry.label}</span>
+                      <span className="mgmt-cmd-item-main">
+                        <span>{entry.label}</span>
+                        {entry.subtitle ? (
+                          <span className="mgmt-cmd-sub">{entry.subtitle}</span>
+                        ) : null}
+                      </span>
                       <span className="mgmt-cmd-meta">{entry.group}</span>
                     </button>
                   </li>
                 ))
               )}
             </ul>
+            {searchBusy && paletteEntries.length > 0 && (
+              <p
+                className="usr-muted"
+                style={{ margin: "8px 0 0", fontSize: "0.78rem" }}
+              >
+                Searching live business records…
+              </p>
+            )}
           </div>
         </div>
       )}

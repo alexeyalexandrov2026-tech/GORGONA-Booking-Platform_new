@@ -6,11 +6,14 @@ import {
   createCheckoutSession,
   fetchPaymentSessions,
   fetchPaymentsConfig,
+  fetchStripeConnectStatus,
   fetchStripeReconciliation,
   refundPaymentSession,
+  startStripeConnectOnboarding,
   syncPaymentSession,
   type PaymentSession,
   type PaymentsConfig,
+  type StripeConnectStatus,
   type StripeLedgerReconciliation,
 } from "../lib/payments-api";
 import { formatDate, formatTime } from "../lib/management-api";
@@ -31,11 +34,17 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
   const nameId = useId();
   const emailId = useId();
   const achId = useId();
+  const taxId = useId();
+  const connectEmailId = useId();
 
   const [config, setConfig] = useState<PaymentsConfig | null>(null);
   const [sessions, setSessions] = useState<PaymentSession[]>([]);
   const [reconciliation, setReconciliation] =
     useState<StripeLedgerReconciliation | null>(null);
+  const [connectStatus, setConnectStatus] =
+    useState<StripeConnectStatus | null>(null);
+  const [connectEmail, setConnectEmail] = useState("");
+  const [connectBusy, setConnectBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -52,6 +61,7 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [allowAch, setAllowAch] = useState(true);
+  const [automaticTax, setAutomaticTax] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -59,12 +69,14 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
       fetchPaymentsConfig(),
       fetchPaymentSessions(businessId),
       fetchStripeReconciliation(businessId).catch(() => null),
+      fetchStripeConnectStatus(businessId).catch(() => null),
     ])
-      .then(([cfg, list, recon]) => {
+      .then(([cfg, list, recon, connect]) => {
         if (!active) return;
         setConfig(cfg);
         setSessions(list);
         setReconciliation(recon);
+        setConnectStatus(connect);
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -86,6 +98,33 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
     setLoading(true);
     setError(null);
     setTick((t) => t + 1);
+  };
+
+  const handleConnectOnboarding = async () => {
+    setConnectBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await startStripeConnectOnboarding(
+        businessId,
+        connectEmail.trim() || null,
+      );
+      setNotice(
+        `Stripe Express onboarding link created for account ${res.account_id}.`,
+      );
+      window.open(res.onboarding_url, "_blank", "noopener,noreferrer");
+      void fetchStripeConnectStatus(businessId)
+        .then(setConnectStatus)
+        .catch(() => undefined);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not start Stripe Connect Express onboarding.",
+      );
+    } finally {
+      setConnectBusy(false);
+    }
   };
 
   const handleCreate = async (event: React.FormEvent) => {
@@ -111,6 +150,11 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
         customer_name: customerName.trim(),
         customer_email: customerEmail.trim() || null,
         allow_ach: allowAch,
+        automatic_tax: automaticTax,
+        connected_account_id:
+          connectStatus?.charges_enabled && connectStatus.account_id
+            ? connectStatus.account_id
+            : null,
       });
       setSessions((prev) => [created, ...prev]);
       setDescription("");
@@ -224,6 +268,87 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
         </p>
       )}
 
+      <div
+        style={{
+          margin: "16px 0 20px",
+          padding: "16px 18px",
+          borderRadius: "14px",
+          border: "1px solid var(--line)",
+          background: "#f8f9fc",
+        }}
+      >
+        <div
+          className="usr-inline"
+          style={{ justifyContent: "space-between", alignItems: "center" }}
+        >
+          <div>
+            <h3 style={{ margin: "0 0 4px" }}>
+              Direct Payouts (Stripe Connect Express)
+            </h3>
+            <p className="usr-muted" style={{ margin: 0 }}>
+              Route customer payments directly into your own US business bank
+              account with 0% AMARKAL platform commission.
+            </p>
+          </div>
+          <span
+            className={
+              "usr-badge " +
+              (connectStatus?.charges_enabled
+                ? "usr-badge-ai"
+                : connectStatus?.connected
+                  ? "usr-badge-fallback"
+                  : "usr-badge-off")
+            }
+          >
+            {connectStatus?.charges_enabled
+              ? "Connected & Ready"
+              : connectStatus?.connected
+                ? "Setup incomplete"
+                : "Not connected"}
+          </span>
+        </div>
+        {connectStatus?.account_id && (
+          <p className="usr-muted" style={{ margin: "8px 0 0" }}>
+            Stripe Express Account: <code>{connectStatus.account_id}</code> ·
+            Charges {connectStatus.charges_enabled ? "enabled" : "pending"} ·
+            Payouts {connectStatus.payouts_enabled ? "enabled" : "pending"}
+          </p>
+        )}
+        <div
+          className="usr-inline"
+          style={{ marginTop: "12px", alignItems: "flex-end" }}
+        >
+          <label
+            htmlFor={connectEmailId}
+            style={{ flex: "1 1 240px", margin: 0 }}
+          >
+            Business payout email (optional)
+            <input
+              id={connectEmailId}
+              type="email"
+              placeholder="finance@yourcompany.us"
+              value={connectEmail}
+              disabled={connectBusy || !config?.stripe_configured}
+              onChange={(e) => setConnectEmail(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className={connectStatus?.charges_enabled ? "secondary" : undefined}
+            disabled={connectBusy || loading || !config?.stripe_configured}
+            onClick={() => void handleConnectOnboarding()}
+          >
+            {connectBusy
+              ? "Opening Stripe Express…"
+              : connectStatus?.charges_enabled
+                ? "Update Stripe Express details"
+                : connectStatus?.connected
+                  ? "Continue Stripe setup"
+                  : "Connect US bank via Stripe Express"}
+          </button>
+        </div>
+      </div>
+
       <form onSubmit={(e) => void handleCreate(e)} className="usr-stack">
         <div className="usr-grid">
           <label htmlFor={amountId}>
@@ -313,6 +438,19 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
           <span>
             Allow US Bank Account (ACH) in addition to cards, Apple Pay, and
             Google Pay
+          </span>
+        </label>
+
+        <label htmlFor={taxId} className="usr-check">
+          <input
+            id={taxId}
+            type="checkbox"
+            checked={automaticTax}
+            onChange={(e) => setAutomaticTax(e.target.checked)}
+          />
+          <span>
+            Calculate US sales tax automatically at checkout (optional Stripe
+            Tax)
           </span>
         </label>
 

@@ -6,6 +6,7 @@ import { CounterpartyEditor } from "./counterparty-editor";
 import { CounterpartyRelationships } from "./counterparty-relationships";
 import { CounterpartyDocumentsPanel } from "./counterparty-documents";
 import { CounterpartyAgreements } from "./agreements";
+import { CounterpartyImportPanel } from "./counterparty-import-panel";
 import {
   fetchCounterparties,
   fetchCounterparty,
@@ -563,6 +564,11 @@ export function Counterparties({ businessId }: { businessId: string }) {
           enabled={enabled}
         />
       )}
+      <CounterpartyImportPanel
+        businessId={businessId}
+        enabled={enabled}
+        onImported={() => void search()}
+      />
     </div>
   );
 }

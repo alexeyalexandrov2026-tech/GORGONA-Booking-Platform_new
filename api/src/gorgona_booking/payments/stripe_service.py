@@ -794,3 +794,211 @@ async def apply_stripe_webhook_event(
                 ),
             )
     return True
+
+
+@dataclass(frozen=True)
+class StripeConnectStatus:
+    connected: bool
+    account_id: str | None
+    charges_enabled: bool
+    payouts_enabled: bool
+    details_submitted: bool
+    livemode: bool
+
+
+def _create_express_account_sync(
+    *,
+    api_key: str,
+    tenant_id: UUID,
+    business_name: str,
+    email: str | None,
+) -> str:
+    params: dict[str, Any] = {
+        "type": "express",
+        "country": "US",
+        "capabilities": {
+            "card_payments": {"requested": True},
+            "us_bank_account_ach_payments": {"requested": True},
+            "transfers": {"requested": True},
+        },
+        "business_profile": {"name": business_name[:120]},
+        "metadata": {"amarkal_tenant_id": str(tenant_id)},
+        "api_key": api_key,
+    }
+    if email:
+        params["email"] = email.strip()
+    try:
+        acct = stripe.Account.create(**params)
+    except stripe.StripeError as exc:
+        raise StripePaymentError(
+            "STRIPE_CONNECT_ERROR",
+            exc.user_message or "Stripe rejected Express connected account creation.",
+            status_code=502,
+        ) from exc
+    acct_id = getattr(acct, "id", None)
+    if not isinstance(acct_id, str) or not acct_id.startswith("acct_"):
+        raise StripePaymentError(
+            "STRIPE_CONNECT_ERROR",
+            "Stripe did not return a valid connected account ID.",
+            status_code=502,
+        )
+    return acct_id
+
+
+def _create_account_link_sync(
+    *,
+    api_key: str,
+    account_id: str,
+    refresh_url: str,
+    return_url: str,
+) -> str:
+    try:
+        link = stripe.AccountLink.create(
+            account=account_id,
+            refresh_url=refresh_url,
+            return_url=return_url,
+            type="account_onboarding",
+            api_key=api_key,
+        )
+    except stripe.StripeError as exc:
+        raise StripePaymentError(
+            "STRIPE_CONNECT_ERROR",
+            exc.user_message or "Stripe rejected AccountLink onboarding request.",
+            status_code=502,
+        ) from exc
+    url = getattr(link, "url", None)
+    if not isinstance(url, str) or not url.startswith("https://"):
+        raise StripePaymentError(
+            "STRIPE_CONNECT_ERROR",
+            "Stripe did not return an onboarding URL.",
+            status_code=502,
+        )
+    return url
+
+
+def _retrieve_connect_account_sync(
+    *,
+    api_key: str,
+    account_id: str,
+    livemode: bool,
+) -> StripeConnectStatus:
+    try:
+        acct = stripe.Account.retrieve(account_id, api_key=api_key)
+    except stripe.StripeError as exc:
+        raise StripePaymentError(
+            "STRIPE_CONNECT_ERROR",
+            exc.user_message or "Could not verify Stripe connected account status.",
+            status_code=502,
+        ) from exc
+    return StripeConnectStatus(
+        connected=True,
+        account_id=account_id,
+        charges_enabled=bool(getattr(acct, "charges_enabled", False)),
+        payouts_enabled=bool(getattr(acct, "payouts_enabled", False)),
+        details_submitted=bool(getattr(acct, "details_submitted", False)),
+        livemode=livemode,
+    )
+
+
+async def load_tenant_stripe_account_id(
+    conn: AsyncConnection[Any],
+    *,
+    tenant_id: UUID,
+) -> tuple[str | None, str]:
+    """Return `(stored_stripe_account_id, tenant_display_name)` inside a short DB TX."""
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            "SELECT display_name FROM gba.tenants WHERE id = %s",
+            (tenant_id,),
+        )
+        trow = await cur.fetchone()
+        biz_name = str(trow["display_name"]) if trow else "AMARKAL Business"
+        await cur.execute(
+            """
+            SELECT config_masked
+            FROM gba.connector_installations
+            WHERE tenant_id = %s
+              AND connector_id = 'stripe_ach_pos'
+              AND status = 'installed'
+            """,
+            (tenant_id,),
+        )
+        crow = await cur.fetchone()
+    raw_id = (
+        str((crow["config_masked"] or {}).get("stripe_account_id", "")).strip()
+        if crow and isinstance(crow.get("config_masked"), dict)
+        else ""
+    )
+    if raw_id and raw_id.startswith("acct_"):
+        return raw_id, biz_name
+    return None, biz_name
+
+
+async def fetch_stripe_connect_status(
+    *,
+    config: StripeRuntimeConfig,
+    account_id: str | None,
+) -> StripeConnectStatus:
+    """Query live Stripe Connect account status strictly OUTSIDE any DB transaction."""
+    if not account_id:
+        return StripeConnectStatus(
+            connected=False,
+            account_id=None,
+            charges_enabled=False,
+            payouts_enabled=False,
+            details_submitted=False,
+            livemode=config.livemode,
+        )
+    if not config.configured or not config.secret_key:
+        return StripeConnectStatus(
+            connected=True,
+            account_id=account_id,
+            charges_enabled=False,
+            payouts_enabled=False,
+            details_submitted=False,
+            livemode=config.livemode,
+        )
+    return await asyncio.to_thread(
+        _retrieve_connect_account_sync,
+        api_key=config.secret_key,
+        account_id=account_id,
+        livemode=config.livemode,
+    )
+
+
+async def create_stripe_connect_onboarding_link(
+    *,
+    config: StripeRuntimeConfig,
+    tenant_id: UUID,
+    business_name: str,
+    existing_account_id: str | None,
+    email: str | None,
+    return_url: str,
+    refresh_url: str,
+) -> tuple[str, str]:
+    """Create/resume Express Connect account and AccountLink strictly OUTSIDE DB TX."""
+    if not config.configured or not config.secret_key:
+        raise StripePaymentError(
+            "STRIPE_NOT_CONFIGURED",
+            "Stripe API key is not configured on this server yet.",
+            status_code=503,
+        )
+    safe_return = validate_return_url(return_url)
+    safe_refresh = validate_return_url(refresh_url)
+    acct_id = existing_account_id
+    if not acct_id:
+        acct_id = await asyncio.to_thread(
+            _create_express_account_sync,
+            api_key=config.secret_key,
+            tenant_id=tenant_id,
+            business_name=business_name,
+            email=email,
+        )
+    url = await asyncio.to_thread(
+        _create_account_link_sync,
+        api_key=config.secret_key,
+        account_id=acct_id,
+        refresh_url=safe_refresh,
+        return_url=safe_return,
+    )
+    return acct_id, url

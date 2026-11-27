@@ -552,6 +552,7 @@ async def record_webhook_test_delivery(
     endpoint_id: UUID,
     prepared: PreparedWebhookTest,
     outcome: WebhookProbeOutcome,
+    event_type: str = "connector.test",
 ) -> dict[str, Any]:
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
@@ -560,7 +561,7 @@ async def record_webhook_test_delivery(
                 (tenant_id, endpoint_id, event_type, payload, signature_header,
                  status, http_status, attempts, last_error, delivered_at)
             VALUES (
-                %s, %s, 'connector.test', %s, %s, %s, %s, 1, %s,
+                %s, %s, %s, %s, %s, %s, %s, 1, %s,
                 CASE WHEN %s = 'delivered' THEN now() ELSE NULL END
             )
             RETURNING id, endpoint_id, event_type, signature_header, status, http_status,
@@ -569,6 +570,7 @@ async def record_webhook_test_delivery(
             (
                 tenant_id,
                 endpoint_id,
+                event_type,
                 Jsonb(prepared.payload),
                 prepared.signature_header,
                 outcome.status,
