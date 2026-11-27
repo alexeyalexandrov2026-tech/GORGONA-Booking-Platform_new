@@ -243,8 +243,14 @@ export function MonolithHeroStage() {
                 </div>
                 <div className="lp-win-ai-q">{preset.aiQuestion}</div>
                 <p className="lp-win-ai-a">{preset.aiReply}</p>
-                <div className="lp-win-ai-status">
-                  <span aria-hidden="true">●</span> Awaiting your approval
+                <div
+                  className={
+                    "lp-win-ai-status" + (approved ? " is-approved" : "")
+                  }
+                  role="status"
+                >
+                  <span aria-hidden="true">●</span>{" "}
+                  {approved ? "Approved by owner ✓" : "Awaiting your approval"}
                 </div>
               </div>
             </div>

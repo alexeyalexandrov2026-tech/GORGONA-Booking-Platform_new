@@ -11,6 +11,7 @@ import {
 } from "./industries";
 
 const ALL = "all";
+const INITIAL_VISIBLE = 12;
 
 function normalize(value: string): string {
   return value.toLowerCase().replace(/[–—]/g, "-");
@@ -40,10 +41,15 @@ export function IndustryExplorer() {
   const [query, setQuery] = useState("");
   const [sector, setSector] = useState<string>(ALL);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const visible = INDUSTRIES.filter((industry) =>
     matches(industry, query, sector),
   );
+  const isFiltered = query.trim().length > 0 || sector !== ALL;
+  const displayed =
+    isFiltered || expanded ? visible : visible.slice(0, INITIAL_VISIBLE);
+  const hiddenCount = visible.length - displayed.length;
   const selected = INDUSTRIES.find((industry) => industry.id === selectedId);
 
   return (
@@ -56,7 +62,7 @@ export function IndustryExplorer() {
             type="search"
             value={query}
             autoComplete="off"
-            placeholder="Try restaurant, trucking or NAICS 54"
+            placeholder="Try yacht, restaurant, trucking or NAICS 54"
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
@@ -150,31 +156,48 @@ export function IndustryExplorer() {
           </Link>
         </div>
       ) : (
-        <ul className="lp-industry-grid">
-          {visible.map((industry) => (
-            <li key={industry.id}>
+        <>
+          <ul className="lp-industry-grid">
+            {displayed.map((industry) => (
+              <li key={industry.id}>
+                <button
+                  type="button"
+                  className="lp-industry"
+                  aria-pressed={selectedId === industry.id}
+                  onClick={() =>
+                    setSelectedId((current) =>
+                      current === industry.id ? null : industry.id,
+                    )
+                  }
+                >
+                  <span className="lp-industry-id" aria-hidden="true">
+                    {pad(industry.id)}
+                  </span>
+                  <span className="lp-industry-name">{industry.name}</span>
+                  <span className="lp-industry-naics">
+                    {naicsText(industry)}
+                  </span>
+                  <span className="lp-industry-examples">
+                    {industry.examples}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {!isFiltered && visible.length > INITIAL_VISIBLE && (
+            <div className="lp-explorer-more">
               <button
                 type="button"
-                className="lp-industry"
-                aria-pressed={selectedId === industry.id}
-                onClick={() =>
-                  setSelectedId((current) =>
-                    current === industry.id ? null : industry.id,
-                  )
-                }
+                className="lp-btn lp-btn--outline"
+                onClick={() => setExpanded((prev) => !prev)}
               >
-                <span className="lp-industry-id" aria-hidden="true">
-                  {pad(industry.id)}
-                </span>
-                <span className="lp-industry-name">{industry.name}</span>
-                <span className="lp-industry-naics">{naicsText(industry)}</span>
-                <span className="lp-industry-examples">
-                  {industry.examples}
-                </span>
+                {expanded
+                  ? "Show fewer industries"
+                  : `Show all ${visible.length} industries (${hiddenCount} more)`}
               </button>
-            </li>
-          ))}
-        </ul>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

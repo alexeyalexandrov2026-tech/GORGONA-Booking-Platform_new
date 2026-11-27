@@ -155,6 +155,16 @@ async function authHeaders(): Promise<HeadersInit> {
   };
 }
 
+async function optionalAuthHeaders(): Promise<HeadersInit> {
+  const token = await accessToken();
+  return token
+    ? {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      }
+    : { Accept: "application/json" };
+}
+
 export async function fetchOnboardingPresets(): Promise<IndustryPreset[]> {
   const res = await fetch("/v1/onboarding/presets", {
     headers: { Accept: "application/json" },
@@ -203,7 +213,7 @@ export async function requestAiBlueprint(
     res = await fetch("/v1/onboarding/ai-blueprint", {
       method: "POST",
       headers: {
-        ...(await authHeaders()),
+        ...(await optionalAuthHeaders()),
         "Content-Type": "application/json",
       },
       cache: "no-store",

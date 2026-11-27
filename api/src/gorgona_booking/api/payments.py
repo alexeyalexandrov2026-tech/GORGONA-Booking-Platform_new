@@ -59,6 +59,7 @@ class CreateCheckoutSessionRequest(BaseModel):
     customer_name: str = Field(default="", max_length=160)
     customer_email: str | None = Field(default=None, max_length=160)
     allow_ach: bool = True
+    automatic_tax: bool = False
     connected_account_id: str | None = Field(default=None, max_length=80)
     success_url: str | None = Field(default=None, max_length=1000)
     cancel_url: str | None = Field(default=None, max_length=1000)
@@ -203,6 +204,7 @@ async def post_business_checkout_session(
                 success_url=success_url,
                 cancel_url=cancel_url,
                 allow_ach=body.allow_ach,
+                automatic_tax=body.automatic_tax,
                 connected_account_id=body.connected_account_id,
                 created_by_user_id=principal.user_id,
             )

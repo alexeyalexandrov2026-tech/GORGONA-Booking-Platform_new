@@ -223,14 +223,24 @@ export function SelfServiceOnboarding() {
     <div className="management-shell">
       <header className="mgmt-header">
         <div className="mgmt-brand-area">
-          <Link href="/overview/" className="mgmt-brand">
+          <Link href="/" className="mgmt-brand">
             <AmarkalLogo variant="light" height={20} />
           </Link>
         </div>
         <div className="mgmt-header-actions">
+          <Link href="/" className="mgmt-nav-link">
+            Home
+          </Link>
           {status?.businesses.length ? (
             <Link href="/overview/" className="mgmt-nav-link">
               Back to workspace
+            </Link>
+          ) : !signedIn && configured ? (
+            <Link
+              href="/auth/signin/?next=/onboarding/"
+              className="mgmt-nav-link"
+            >
+              Sign in
             </Link>
           ) : null}
           <Link href="/legal/terms/" className="mgmt-nav-link">
@@ -260,20 +270,6 @@ export function SelfServiceOnboarding() {
           <div className="mgmt-loading" aria-live="polite">
             <p>Loading industry catalog and session…</p>
           </div>
-        ) : !signedIn ? (
-          <section className="mgmt-auth-gate">
-            <h2>Sign in to register your business</h2>
-            <p>
-              {configured
-                ? "Sign in with Google or your business email to create your company workspace and become its initial owner."
-                : "Sign-in is not configured in this environment yet."}
-            </p>
-            {configured && (
-              <button onClick={() => void signIn("/onboarding/")}>
-                Sign in to continue
-              </button>
-            )}
-          </section>
         ) : created ? (
           <section className="mgmt-card" aria-live="polite">
             <h2>Workspace ready: {created.business_name}</h2>
@@ -350,7 +346,15 @@ export function SelfServiceOnboarding() {
             >
               <AiBusinessArchitect
                 presets={presets}
+                signedIn={signedIn}
                 onCreated={handleCreated}
+                onRequireSignIn={() => {
+                  if (configured) {
+                    router.push("/auth/signin/?mode=signup&next=/onboarding/");
+                  } else {
+                    void signIn("/onboarding/");
+                  }
+                }}
               />
             </div>
             <div
@@ -360,166 +364,208 @@ export function SelfServiceOnboarding() {
               hidden={mode !== "manual"}
               tabIndex={0}
             >
-              <form
-                onSubmit={(e) => void handleSubmit(e)}
-                className="mgmt-card"
-              >
-                <h2>1. Company & primary location</h2>
-                <div className="form-grid">
-                  <label>
-                    Business name
-                    <input
-                      type="text"
-                      required
-                      maxLength={200}
-                      value={businessName}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setBusinessName(next);
-                        if (!slugEdited) setSlug(slugify(next));
-                      }}
-                      placeholder="Acme Studio LLC"
-                    />
-                  </label>
-                  <label>
-                    URL slug (lowercase letters, digits, hyphens)
-                    <input
-                      type="text"
-                      required
-                      minLength={2}
-                      maxLength={63}
-                      pattern="^[a-z0-9]+(-[a-z0-9]+)*$"
-                      value={slug}
-                      onChange={(e) => {
-                        setSlugEdited(true);
-                        setSlug(e.target.value.toLowerCase());
-                      }}
-                      placeholder="acme-studio"
-                    />
-                  </label>
-                  <label>
-                    Primary location name
-                    <input
-                      type="text"
-                      required
-                      maxLength={200}
-                      value={locationName}
-                      onChange={(e) => setLocationName(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Location IANA time zone
-                    <select
-                      value={timezone}
-                      onChange={(e) => setTimezone(e.target.value)}
-                    >
-                      {COMMON_TIMEZONES.map((tz) => (
-                        <option key={tz} value={tz}>
-                          {tz}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-
-                <h2 style={{ marginTop: "1.5rem" }}>2. Business formats</h2>
-                <div
-                  style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}
-                >
-                  {FORMAT_OPTIONS.map((f) => (
-                    <label
-                      key={f.id}
-                      style={{ display: "flex", gap: "0.4rem" }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formats.includes(f.id)}
-                        onChange={() => toggleFormat(f.id)}
-                      />
-                      {f.label}
-                    </label>
-                  ))}
-                </div>
-
-                <h2 style={{ marginTop: "1.5rem" }}>
-                  3. Industries ({selectedIndustries.length} of {presets.length}{" "}
-                  selected)
-                </h2>
-                <label>
-                  Search 39 industries by name, activity, or NAICS sector
-                  <input
-                    type="search"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search beauty, construction, rental, healthcare, 54…"
-                  />
-                </label>
-                <div
-                  tabIndex={0}
-                  className="mgmt-table-container"
-                  style={{
-                    maxHeight: "320px",
-                    overflowY: "auto",
-                    marginTop: "0.75rem",
-                    border: "1px solid var(--line, #d0d7de)",
-                    padding: "0.75rem",
-                  }}
-                >
-                  {filteredPresets.map((ind) => (
-                    <label
-                      key={ind.id}
-                      style={{
-                        display: "block",
-                        padding: "0.4rem 0",
-                        borderBottom: "1px solid rgba(0,0,0,0.06)",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedIndustries.includes(ind.id)}
-                        onChange={() => toggleIndustry(ind.id)}
-                        style={{ marginRight: "0.5rem" }}
-                      />
-                      <strong>
-                        #{ind.id} {ind.name}
-                      </strong>{" "}
-                      <span>(NAICS {ind.naics_sectors.join(", ")})</span>
-                      <div style={{ fontSize: "0.85rem", color: "#3f3832" }}>
-                        {ind.examples}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-
-                <section style={{ marginTop: "1.25rem" }}>
-                  <h3>Modules activated on creation</h3>
+              {!signedIn ? (
+                <section className="mgmt-auth-gate">
+                  <h2>Sign in to register manually</h2>
                   <p>
-                    <strong>Core + verified modules:</strong> organization,
-                    users_access, {modulePreview.enableable.join(", ")}
+                    {configured
+                      ? "Sign in with Google or your business email to configure your company workspace manually — or switch to the AI Business Architect tab to draft your entire business first with no sign-up required."
+                      : "Sign-in is not configured in this environment yet."}
                   </p>
-                  {modulePreview.pending.length > 0 && (
-                    <p className="hold-note">
-                      Specialized modules awaiting acceptance (not
-                      auto-enabled): {modulePreview.pending.join(", ")}
-                    </p>
-                  )}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      justifyContent: "center",
+                      gap: "0.75rem",
+                    }}
+                  >
+                    {configured && (
+                      <button onClick={() => void signIn("/onboarding/")}>
+                        Sign in to continue
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => selectMode("ai", false)}
+                    >
+                      Try AI Business Architect first
+                    </button>
+                  </div>
                 </section>
+              ) : (
+                <form
+                  onSubmit={(e) => void handleSubmit(e)}
+                  className="mgmt-card"
+                >
+                  <h2>1. Company & primary location</h2>
+                  <div className="form-grid">
+                    <label>
+                      Business name
+                      <input
+                        type="text"
+                        required
+                        maxLength={200}
+                        value={businessName}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setBusinessName(next);
+                          if (!slugEdited) setSlug(slugify(next));
+                        }}
+                        placeholder="Acme Studio LLC"
+                      />
+                    </label>
+                    <label>
+                      URL slug (lowercase letters, digits, hyphens)
+                      <input
+                        type="text"
+                        required
+                        minLength={2}
+                        maxLength={63}
+                        pattern="^[a-z0-9]+(-[a-z0-9]+)*$"
+                        value={slug}
+                        onChange={(e) => {
+                          setSlugEdited(true);
+                          setSlug(e.target.value.toLowerCase());
+                        }}
+                        placeholder="acme-studio"
+                      />
+                    </label>
+                    <label>
+                      Primary location name
+                      <input
+                        type="text"
+                        required
+                        maxLength={200}
+                        value={locationName}
+                        onChange={(e) => setLocationName(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Location IANA time zone
+                      <select
+                        value={timezone}
+                        onChange={(e) => setTimezone(e.target.value)}
+                      >
+                        {COMMON_TIMEZONES.map((tz) => (
+                          <option key={tz} value={tz}>
+                            {tz}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
 
-                <p style={{ fontSize: "0.85rem", marginTop: "1rem" }}>
-                  By creating a workspace, you agree to the{" "}
-                  <Link href="/legal/terms/">Terms of Service</Link> and{" "}
-                  <Link href="/legal/privacy/">Privacy Policy</Link>.
-                </p>
-                <button type="submit" disabled={submitting}>
-                  {submitting
-                    ? "Creating workspace…"
-                    : "Create business workspace"}
-                </button>
-              </form>
+                  <h2 style={{ marginTop: "1.5rem" }}>2. Business formats</h2>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "0.75rem",
+                    }}
+                  >
+                    {FORMAT_OPTIONS.map((f) => (
+                      <label
+                        key={f.id}
+                        style={{ display: "flex", gap: "0.4rem" }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formats.includes(f.id)}
+                          onChange={() => toggleFormat(f.id)}
+                        />
+                        {f.label}
+                      </label>
+                    ))}
+                  </div>
+
+                  <h2 style={{ marginTop: "1.5rem" }}>
+                    3. Industries ({selectedIndustries.length} of{" "}
+                    {presets.length} selected)
+                  </h2>
+                  <label>
+                    Search 39 industries by name, activity, or NAICS sector
+                    <input
+                      type="search"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search beauty, construction, rental, healthcare, 54…"
+                    />
+                  </label>
+                  <div
+                    tabIndex={0}
+                    className="mgmt-table-container"
+                    style={{
+                      maxHeight: "320px",
+                      overflowY: "auto",
+                      marginTop: "0.75rem",
+                      border: "1px solid var(--line, #d0d7de)",
+                      padding: "0.75rem",
+                    }}
+                  >
+                    {filteredPresets.map((ind) => (
+                      <label
+                        key={ind.id}
+                        style={{
+                          display: "block",
+                          padding: "0.4rem 0",
+                          borderBottom: "1px solid rgba(0,0,0,0.06)",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIndustries.includes(ind.id)}
+                          onChange={() => toggleIndustry(ind.id)}
+                          style={{ marginRight: "0.5rem" }}
+                        />
+                        <strong>
+                          #{ind.id} {ind.name}
+                        </strong>{" "}
+                        <span>(NAICS {ind.naics_sectors.join(", ")})</span>
+                        <div style={{ fontSize: "0.85rem", color: "#3f3832" }}>
+                          {ind.examples}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+
+                  <section style={{ marginTop: "1.25rem" }}>
+                    <h3>Modules activated on creation</h3>
+                    <p>
+                      <strong>Core + verified modules:</strong> organization,
+                      users_access, {modulePreview.enableable.join(", ")}
+                    </p>
+                    {modulePreview.pending.length > 0 && (
+                      <p className="hold-note">
+                        Specialized modules awaiting acceptance (not
+                        auto-enabled): {modulePreview.pending.join(", ")}
+                      </p>
+                    )}
+                  </section>
+
+                  <p style={{ fontSize: "0.85rem", marginTop: "1rem" }}>
+                    By creating a workspace, you agree to the{" "}
+                    <Link href="/legal/terms/">Terms of Service</Link> and{" "}
+                    <Link href="/legal/privacy/">Privacy Policy</Link>.
+                  </p>
+                  <button type="submit" disabled={submitting}>
+                    {submitting
+                      ? "Creating workspace…"
+                      : "Create business workspace"}
+                  </button>
+                </form>
+              )}
             </div>
           </>
         )}
       </main>
+      <footer className="mgmt-footer">
+        <span>© 2026 Alexey AAA Logistics LLC — AMARKAL Platform</span>
+        <Link href="/">Home</Link>
+        <Link href="/legal/terms/">Terms of Service</Link>
+        <Link href="/legal/privacy/">Privacy Policy</Link>
+      </footer>
     </div>
   );
 }

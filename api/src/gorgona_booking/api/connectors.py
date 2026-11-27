@@ -23,17 +23,20 @@ from gorgona_booking.connectors.service import (
     ALLOWED_SCOPES,
     ALLOWED_WEBHOOK_EVENTS,
     CONNECTOR_CATALOG,
+    WebhookProbeOutcome,
     create_api_key,
     create_webhook,
     delete_connector_installation,
     delete_webhook,
-    enqueue_webhook_test_delivery,
     list_api_keys,
     list_connector_installations,
     list_webhook_deliveries,
     list_webhooks,
+    prepare_webhook_test_delivery,
+    record_webhook_test_delivery,
     resolve_api_key,
     revoke_api_key,
+    send_webhook_http_probe,
     upsert_connector_installation,
 )
 from gorgona_booking.db.pool import set_tenant_context
@@ -407,11 +410,36 @@ async def post_business_webhook_test(
             Permission.BUSINESS_MANAGE,
             request_id=get_request_id(request),
         ) as session:
-            row = await enqueue_webhook_test_delivery(
+            prepared = await prepare_webhook_test_delivery(
                 session.conn, tenant_id=business_id, endpoint_id=endpoint_id
             )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    settings = getattr(request.app.state, "settings", None)
+    if settings is not None and settings.environment in ("staging", "production"):
+        outcome = await send_webhook_http_probe(prepared)
+    else:
+        outcome = WebhookProbeOutcome(
+            status="queued",
+            http_status=None,
+            last_error="Outbound webhook HTTP delivery is disabled in local/test environment.",
+        )
+
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.BUSINESS_MANAGE,
+        request_id=get_request_id(request),
+    ) as session:
+        row = await record_webhook_test_delivery(
+            session.conn,
+            tenant_id=business_id,
+            endpoint_id=endpoint_id,
+            prepared=prepared,
+            outcome=outcome,
+        )
     return WebhookDeliveryResponse(**row)
 
 

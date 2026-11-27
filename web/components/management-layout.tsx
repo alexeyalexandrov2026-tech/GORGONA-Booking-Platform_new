@@ -35,6 +35,8 @@ interface NavItem {
   readonly moduleIds?: readonly string[];
 }
 
+const FOCUS_MODE_STORAGE_KEY = "amarkal_focus_mode";
+
 const NAV_ITEMS: readonly NavItem[] = [
   { href: "/business/", label: "Business profile", group: "Core" },
   { href: "/overview/", label: "Overview", group: "Core" },
@@ -271,14 +273,49 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         )
       : navItems;
 
+  const saveFocusPreference = (enabled: boolean) => {
+    try {
+      localStorage.setItem(FOCUS_MODE_STORAGE_KEY, enabled ? "1" : "0");
+    } catch {
+      /* ignore restricted localStorage */
+    }
+  };
+
+  useEffect(() => {
+    if (!salonId || delegation) return;
+    let saved = false;
+    try {
+      saved = localStorage.getItem(FOCUS_MODE_STORAGE_KEY) === "1";
+    } catch {
+      saved = false;
+    }
+    if (!saved) return;
+    let active = true;
+    void fetchConfiguration(salonId)
+      .then((cfg) => {
+        if (active) {
+          setFocusModules(cfg.effective_module_ids);
+          setFocusMode(true);
+        }
+      })
+      .catch(() => {
+        if (active) setFocusMode(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [salonId, delegation]);
+
   const toggleFocusMode = async () => {
     if (focusMode) {
       setFocusMode(false);
+      saveFocusPreference(false);
       return;
     }
     if (!salonId) return;
     if (focusModules !== null) {
       setFocusMode(true);
+      saveFocusPreference(true);
       return;
     }
     setFocusBusy(true);
@@ -286,8 +323,10 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       const cfg = await fetchConfiguration(salonId);
       setFocusModules(cfg.effective_module_ids);
       setFocusMode(true);
+      saveFocusPreference(true);
     } catch {
       setFocusMode(false);
+      saveFocusPreference(false);
     } finally {
       setFocusBusy(false);
     }

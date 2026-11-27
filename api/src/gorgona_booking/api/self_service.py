@@ -1,7 +1,8 @@
 """Self-service business onboarding API routes (authenticated via verified OIDC token)."""
 
+import ipaddress
 import time
-from collections import defaultdict, deque
+from collections import deque
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
@@ -32,7 +33,62 @@ OnboardingKey = Annotated[
 ]
 _BLUEPRINT_WINDOW_SECONDS = 300.0
 _BLUEPRINT_MAX_PER_WINDOW = 12
-_BLUEPRINT_HITS: dict[str, deque[float]] = defaultdict(deque)
+_RATE_LIMIT_MAX_KEYS = 1000
+_BLUEPRINT_HITS: dict[str, deque[float]] = {}
+
+
+def extract_client_ip(request: Request, *, trusted_proxy_hops: int = 1) -> str:
+    """Extract client IP without trusting spoofable leftmost X-Forwarded-For values."""
+    xff = request.headers.get("x-forwarded-for", "")
+    valid_ips: list[str] = []
+    for raw in xff.split(","):
+        token = raw.strip()
+        if not token:
+            continue
+        try:
+            valid_ips.append(str(ipaddress.ip_address(token)))
+        except ValueError:
+            continue
+    if len(valid_ips) > trusted_proxy_hops:
+        return valid_ips[-(trusted_proxy_hops + 1)]
+    if valid_ips:
+        return valid_ips[-1]
+    return request.client.host if request.client else "unknown"
+
+
+def enforce_sliding_window_rate_limit(
+    store: dict[str, deque[float]],
+    *,
+    key: str,
+    window_seconds: float,
+    max_requests: int,
+    detail: str,
+    now: float | None = None,
+) -> None:
+    """Bounded in-memory sliding-window rate limiter with stale-key eviction."""
+    ts = time.monotonic() if now is None else now
+    cutoff = ts - window_seconds
+
+    if len(store) >= _RATE_LIMIT_MAX_KEYS and key not in store:
+        stale_keys = [k for k, q in store.items() if not q or q[-1] < cutoff]
+        for k in stale_keys:
+            store.pop(k, None)
+        while len(store) >= _RATE_LIMIT_MAX_KEYS:
+            oldest_key = next(iter(store))
+            store.pop(oldest_key, None)
+
+    bucket = store.get(key)
+    if bucket is None:
+        bucket = deque()
+        store[key] = bucket
+    while bucket and bucket[0] < cutoff:
+        bucket.popleft()
+    if len(bucket) >= max_requests:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=detail,
+        )
+    bucket.append(ts)
 
 
 def _enforce_blueprint_rate_limit(request: Request) -> None:
@@ -40,21 +96,14 @@ def _enforce_blueprint_rate_limit(request: Request) -> None:
     settings = getattr(request.app.state, "settings", None)
     if settings is None or settings.environment not in ("staging", "production"):
         return
-    xff = request.headers.get("x-forwarded-for", "")
-    client_ip = (
-        xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
+    client_ip = extract_client_ip(request)
+    enforce_sliding_window_rate_limit(
+        _BLUEPRINT_HITS,
+        key=client_ip,
+        window_seconds=_BLUEPRINT_WINDOW_SECONDS,
+        max_requests=_BLUEPRINT_MAX_PER_WINDOW,
+        detail="Too many AI blueprint requests. Please wait a few minutes and try again.",
     )
-    now = time.monotonic()
-    bucket = _BLUEPRINT_HITS[client_ip]
-    cutoff = now - _BLUEPRINT_WINDOW_SECONDS
-    while bucket and bucket[0] < cutoff:
-        bucket.popleft()
-    if len(bucket) >= _BLUEPRINT_MAX_PER_WINDOW:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many AI blueprint requests. Please wait a few minutes and try again.",
-        )
-    bucket.append(now)
 
 
 class OnboardingPresetsResponse(BaseModel):

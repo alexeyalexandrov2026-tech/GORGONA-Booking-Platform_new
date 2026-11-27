@@ -180,6 +180,7 @@ def _create_stripe_session_sync(
     cancel_url: str,
     allow_ach: bool,
     connected_account_id: str | None,
+    automatic_tax: bool = False,
 ) -> dict[str, Any]:
     methods: list[str] = ["card", "us_bank_account"] if allow_ach else ["card"]
     metadata: dict[str, str] = {
@@ -214,6 +215,8 @@ def _create_stripe_session_sync(
         params["customer_email"] = customer_email
     if connected_account_id:
         params["stripe_account"] = connected_account_id
+    if automatic_tax:
+        params["automatic_tax"] = {"enabled": True}
 
     try:
         session = stripe.checkout.Session.create(**params)
@@ -306,6 +309,43 @@ def map_stripe_session_status(
     return "open"
 
 
+async def verify_tenant_connected_account(
+    conn: AsyncConnection[Any],
+    *,
+    tenant_id: UUID,
+    connected_account_id: str | None,
+) -> str | None:
+    """Prevent cross-tenant Stripe Connect spoofing via tenant connector config."""
+    safe_account = validate_connected_account(connected_account_id)
+    if safe_account is None:
+        return None
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            """
+            SELECT config_masked
+            FROM gba.connector_installations
+            WHERE tenant_id = %s
+              AND connector_id = 'stripe_ach_pos'
+              AND status = 'installed'
+            """,
+            (tenant_id,),
+        )
+        row = await cur.fetchone()
+    stored = (
+        str((row["config_masked"] or {}).get("stripe_account_id", "")).strip()
+        if row and isinstance(row.get("config_masked"), dict)
+        else ""
+    )
+    if not stored or stored != safe_account:
+        raise StripePaymentError(
+            "CONNECTED_ACCOUNT_NOT_AUTHORIZED",
+            "Requested Stripe connected account is not verified for this business. "
+            "Configure your Stripe account ID in App Hub -> Stripe US first.",
+            status_code=403,
+        )
+    return safe_account
+
+
 async def create_stripe_checkout_session(
     conn: AsyncConnection[Any],
     *,
@@ -322,6 +362,7 @@ async def create_stripe_checkout_session(
     allow_ach: bool,
     connected_account_id: str | None,
     created_by_user_id: UUID | None,
+    automatic_tax: bool = False,
 ) -> PaymentSessionRecord:
     if not config.configured or not config.secret_key:
         raise StripePaymentError(
@@ -344,7 +385,9 @@ async def create_stripe_checkout_session(
         )
     safe_success = validate_return_url(success_url)
     safe_cancel = validate_return_url(cancel_url)
-    safe_account = validate_connected_account(connected_account_id)
+    safe_account = await verify_tenant_connected_account(
+        conn, tenant_id=tenant_id, connected_account_id=connected_account_id
+    )
     record_id = uuid7()
 
     created = await asyncio.to_thread(
@@ -361,6 +404,7 @@ async def create_stripe_checkout_session(
         cancel_url=safe_cancel,
         allow_ach=allow_ach,
         connected_account_id=safe_account,
+        automatic_tax=automatic_tax,
     )
 
     async with conn.cursor(row_factory=dict_row) as cur:

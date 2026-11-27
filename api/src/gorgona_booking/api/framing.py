@@ -20,6 +20,17 @@ from gorgona_booking.tenancy.embedding import approved_embed_origins
 
 logger = logging.getLogger("gorgona_booking.framing")
 
+_PUBLIC_CACHEABLE_HTML_PATHS = frozenset(
+    {
+        "/",
+        "/index.html",
+        "/legal/privacy",
+        "/legal/privacy/",
+        "/legal/terms",
+        "/legal/terms/",
+    }
+)
+
 
 class FramingPolicyMiddleware:
     def __init__(self, app: ASGIApp, *, allow_loopback: bool) -> None:
@@ -71,7 +82,12 @@ class FramingPolicyMiddleware:
                         # A customer's embedding approval never grants framing of staff UI.
                         headers["content-security-policy"] = "frame-ancestors 'none'"
                         headers["x-frame-options"] = "DENY"
-                        headers["cache-control"] = "private, no-store"
+                        if scope["path"] in _PUBLIC_CACHEABLE_HTML_PATHS:
+                            headers["cache-control"] = (
+                                "public, max-age=300, stale-while-revalidate=600"
+                            )
+                        else:
+                            headers["cache-control"] = "private, no-store"
             await send(message)
 
         await self.app(scope, receive, send_with_policy)

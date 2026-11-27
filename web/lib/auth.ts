@@ -18,6 +18,7 @@ export type AuthConfig = z.infer<typeof configSchema>;
 
 interface GoogleSession {
   idToken: string;
+  refreshToken?: string;
   expiresAt: number;
   email: string;
   displayName: string;
@@ -27,6 +28,7 @@ const GOOGLE_SESSION_KEY = "amarkal_gid_session";
 let configPromise: Promise<AuthConfig | null> | null = null;
 let managerPromise: Promise<UserManager | null> | null = null;
 let callbackPromise: Promise<string> | null = null;
+let refreshPromise: Promise<GoogleSession | null> | null = null;
 let memoryGoogleSession: GoogleSession | null = null;
 
 function localReturnPath(value: unknown): string | undefined {
@@ -99,20 +101,28 @@ function readGoogleSession(): GoogleSession | null {
   if (typeof window === "undefined") return null;
   const now = Date.now() / 1000;
   if (memoryGoogleSession) {
-    if (memoryGoogleSession.expiresAt > now + 15) return memoryGoogleSession;
+    if (
+      memoryGoogleSession.expiresAt > now + 15 ||
+      Boolean(memoryGoogleSession.refreshToken)
+    ) {
+      return memoryGoogleSession;
+    }
     memoryGoogleSession = null;
   }
   try {
     const raw = sessionStorage.getItem(GOOGLE_SESSION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<GoogleSession>;
+    const hasRefresh =
+      typeof parsed.refreshToken === "string" && parsed.refreshToken.length > 0;
     if (
       typeof parsed.idToken === "string" &&
       typeof parsed.expiresAt === "number" &&
-      parsed.expiresAt > now + 15
+      (parsed.expiresAt > now + 15 || hasRefresh)
     ) {
       memoryGoogleSession = {
         idToken: parsed.idToken,
+        refreshToken: hasRefresh ? parsed.refreshToken : undefined,
         expiresAt: parsed.expiresAt,
         email: typeof parsed.email === "string" ? parsed.email : "",
         displayName:
@@ -125,6 +135,61 @@ function readGoogleSession(): GoogleSession | null {
     sessionStorage.removeItem(GOOGLE_SESSION_KEY);
   }
   return null;
+}
+
+async function refreshGoogleSession(
+  session: GoogleSession,
+  apiKey: string,
+): Promise<GoogleSession | null> {
+  if (!session.refreshToken) {
+    clearGoogleSession();
+    return null;
+  }
+  refreshPromise ??= (async () => {
+    try {
+      const response = await fetch(
+        `https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "refresh_token",
+            refresh_token: session.refreshToken ?? "",
+          }).toString(),
+          signal: AbortSignal.timeout(10000),
+        },
+      );
+      if (!response.ok) {
+        clearGoogleSession();
+        return null;
+      }
+      const data = (await response.json()) as {
+        id_token?: string;
+        refresh_token?: string;
+        expires_in?: string | number;
+      };
+      const nextToken = data.id_token ?? "";
+      if (!nextToken) {
+        clearGoogleSession();
+        return null;
+      }
+      const nextSession: GoogleSession = {
+        idToken: nextToken,
+        refreshToken: data.refresh_token || session.refreshToken,
+        expiresAt: Date.now() / 1000 + Number(data.expires_in ?? 3600),
+        email: session.email,
+        displayName: session.displayName,
+      };
+      writeGoogleSession(nextSession);
+      return nextSession;
+    } catch {
+      clearGoogleSession();
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
 }
 
 function writeGoogleSession(session: GoogleSession): void {
@@ -181,7 +246,17 @@ export function authManager(): Promise<UserManager | null> {
 export async function accessToken(): Promise<string | null> {
   const config = await loadAuthConfig();
   if (config?.provider === "google_identity") {
-    return readGoogleSession()?.idToken ?? null;
+    const session = readGoogleSession();
+    if (!session) return null;
+    const now = Date.now() / 1000;
+    if (session.expiresAt > now + 60) {
+      return session.idToken;
+    }
+    if (session.refreshToken && config.api_key) {
+      const refreshed = await refreshGoogleSession(session, config.api_key);
+      if (refreshed) return refreshed.idToken;
+    }
+    return session.expiresAt > now + 15 ? session.idToken : null;
   }
   const manager = await authManager();
   const user = await manager?.getUser();
@@ -325,10 +400,15 @@ export async function googleSignInWithPassword(
     returnSecureToken: true,
   });
   const idToken = String(data.idToken ?? "");
+  const refreshToken =
+    typeof data.refreshToken === "string" && data.refreshToken
+      ? data.refreshToken
+      : undefined;
   const expiresIn = Number(data.expiresIn ?? 3600);
   if (!idToken) throw new Error("No identity token returned.");
   writeGoogleSession({
     idToken,
+    refreshToken,
     expiresAt: Date.now() / 1000 + expiresIn,
     email: String(data.email ?? email.trim()),
     displayName: String(data.displayName ?? ""),
@@ -346,6 +426,10 @@ export async function googleSignUpWithPassword(
     returnSecureToken: true,
   });
   let idToken = String(created.idToken ?? "");
+  let refreshToken =
+    typeof created.refreshToken === "string" && created.refreshToken
+      ? created.refreshToken
+      : undefined;
   let expiresIn = Number(created.expiresIn ?? 3600);
   if (!idToken) throw new Error("No identity token returned.");
   const cleanName = displayName.trim();
@@ -359,9 +443,13 @@ export async function googleSignUpWithPassword(
       idToken = updated.idToken;
       expiresIn = Number(updated.expiresIn ?? expiresIn);
     }
+    if (typeof updated.refreshToken === "string" && updated.refreshToken) {
+      refreshToken = updated.refreshToken;
+    }
   }
   writeGoogleSession({
     idToken,
+    refreshToken,
     expiresAt: Date.now() / 1000 + expiresIn,
     email: String(created.email ?? email.trim()),
     displayName: cleanName,
@@ -389,10 +477,15 @@ export async function googleSignInWithIdToken(
     returnSecureToken: true,
   });
   const idToken = String(data.idToken ?? "");
+  const refreshToken =
+    typeof data.refreshToken === "string" && data.refreshToken
+      ? data.refreshToken
+      : undefined;
   const expiresIn = Number(data.expiresIn ?? 3600);
   if (!idToken) throw new Error("No identity token returned from Google.");
   writeGoogleSession({
     idToken,
+    refreshToken,
     expiresAt: Date.now() / 1000 + expiresIn,
     email: String(data.email ?? ""),
     displayName: String(data.displayName ?? data.fullName ?? ""),

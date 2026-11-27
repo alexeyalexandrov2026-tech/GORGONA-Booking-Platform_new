@@ -48,7 +48,7 @@ export default function TermsOfServicePage() {
         <p>
           <strong>Effective date:</strong> November 26, 2026
           <br />
-          <strong>Operator:</strong> Alexey AAA logistics LLC (doing business as{" "}
+          <strong>Operator:</strong> Alexey AAA Logistics LLC (doing business as{" "}
           <strong>AMARKAL Platform</strong>)
           <br />
           <strong>Support:</strong>{" "}
@@ -127,7 +127,7 @@ export default function TermsOfServicePage() {
         </p>
       </main>
       <footer className="mgmt-footer">
-        <span>© 2026 Alexey AAA logistics LLC — AMARKAL Platform</span>
+        <span>© 2026 Alexey AAA Logistics LLC — AMARKAL Platform</span>
         <Link href="/onboarding/">Register business</Link>
         <Link href="/legal/terms/">Terms of Service</Link>
         <Link href="/legal/privacy/">Privacy Policy</Link>

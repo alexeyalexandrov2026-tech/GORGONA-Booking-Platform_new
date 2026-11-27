@@ -25,10 +25,25 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.amarkal-platform.com"),
   title: "AMARKAL Platform — US Business OS",
   description:
     "Run any US business across 39 NAICS industries: operations, clients, staff, finance, and AI automation.",
   manifest: "/manifest.webmanifest",
+  openGraph: {
+    title: "AMARKAL Platform — US Business OS across 39 industries",
+    description:
+      "Scheduling, clients, staff, double-entry USD finance, Stripe payouts, and governed AI automation — 0% platform commission.",
+    siteName: "AMARKAL Platform",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AMARKAL Platform — US Business OS",
+    description:
+      "Run any US business across 39 NAICS industries with 0% commission, direct Stripe payouts, and human-approved AI.",
+  },
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
