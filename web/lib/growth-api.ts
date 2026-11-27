@@ -238,3 +238,61 @@ export async function askOwnerCopilot(
   if (!res.ok) throw new Error("Unable to load AI Business Copilot.");
   return ownerCopilotSchema.parse(await res.json());
 }
+
+export const readinessStepSchema = z.object({
+  key: z.string(),
+  title: z.string(),
+  detail: z.string(),
+  completed: z.boolean(),
+  action_path: z.string(),
+  action_label: z.string(),
+});
+
+export const launchReadinessSchema = z.object({
+  business_name: z.string(),
+  slug: z.string(),
+  booking_state: z.string(),
+  score_percent: z.number().int(),
+  completed_steps: z.number().int(),
+  total_steps: z.number().int(),
+  stripe_live_ready: z.boolean(),
+  trailing_30d_volume_cents: z.number().int(),
+  commission_saved_vs_5pct_cents: z.number().int(),
+  steps: z.array(readinessStepSchema),
+});
+export type LaunchReadiness = z.infer<typeof launchReadinessSchema>;
+
+export async function fetchLaunchReadiness(
+  salonId: string,
+): Promise<LaunchReadiness> {
+  const res = await fetch(
+    `/v1/businesses/${encodeURIComponent(salonId)}/readiness`,
+    { headers: await authHeaders(), cache: "no-store" },
+  );
+  if (!res.ok) throw new Error("Unable to load launch readiness.");
+  return launchReadinessSchema.parse(await res.json());
+}
+
+export async function downloadBusinessSnapshot(
+  salonId: string,
+  slug: string,
+): Promise<void> {
+  const res = await fetch(
+    `/v1/businesses/${encodeURIComponent(salonId)}/export/snapshot`,
+    { headers: await authHeaders(), cache: "no-store" },
+  );
+  if (!res.ok) throw new Error("Unable to export business snapshot.");
+  const payload = await res.json();
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  const safeSlug = (slug || "amarkal-business").replace(/[^a-z0-9-_]/gi, "-");
+  anchor.download = `${safeSlug}-portable-export.json`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+}

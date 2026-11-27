@@ -158,6 +158,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
   const [salonId, setSalonId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(false);
+  const [unlinkedAccount, setUnlinkedAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const [authBusy, setAuthBusy] = useState(false);
@@ -299,6 +300,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         memberships.find((m) => m.salon_id === getActiveSalonId()) ??
         memberships[0];
       setMe({ ...data, memberships });
+      setUnlinkedAccount(false);
       setSalonId(selected?.salon_id ?? null);
       setActiveSalonId(selected?.salon_id ?? null);
     })()
@@ -310,10 +312,10 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
             msg.includes("not linked") ||
             msg.includes("IDENTITY_NOT_LINKED")
           ) {
-            setError(
-              "Your sign-in is verified but not linked to a business yet. Create your business workspace to get started.",
-            );
+            setUnlinkedAccount(true);
+            setError(null);
           } else {
+            setUnlinkedAccount(false);
             setError(
               "We couldn’t verify your account. Sign in again or retry.",
             );
@@ -513,7 +515,37 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
                 </button>
               </div>
             )}
-            {!me ? (
+            {!me && unlinkedAccount ? (
+              <section className="mgmt-empty-state">
+                <h1>Welcome to AMARKAL Platform</h1>
+                <p>
+                  You are signed in. Launch your US business workspace in 60
+                  seconds with AI Business Architect across 39 industries — 0%
+                  platform commission, direct Stripe payouts, and zero lock-in.
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    gap: "12px",
+                    marginTop: "20px",
+                  }}
+                >
+                  <Link href="/onboarding/" className="button">
+                    Launch with AI Business Architect →
+                  </Link>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={authBusy}
+                    onClick={() => void startSignOut()}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              </section>
+            ) : !me ? (
               <section className="mgmt-auth-gate">
                 <h1>Manage your business</h1>
                 <p>

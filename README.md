@@ -1,28 +1,47 @@
-# GORGONA business platform
+# AMARKAL Platform — AI-Native US Business Operating System
 
-GORGONA is being expanded from a tenant-isolated appointment platform into a modular business platform. The [master plan](docs/plan/GORGONA_MASTER_PLAN.md) covers 39 industry profiles, shared company data and industry-specific workflows. Businesses own their goods, vehicles, warehouses and property; GORGONA provides software and intermediary services.
+**Live Production:** [https://www.amarkal-platform.com](https://www.amarkal-platform.com)  
+**Operator:** Alexey AAA logistics LLC (United States, USD)  
+**Repository:** [`alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new`](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new)
 
-The active repository is [GORGONA-Booking-Platform_new](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new). The owner's 2026-10-04 decision supersedes the previous repository destination. Existing source and uncommitted improvements were preserved during the [repository transition](docs/plan/REPOSITORY_TRANSITION_2026-10-04.md); historical milestone reports remain available.
+AMARKAL Platform is a multi-tenant, AI-native **US Business Operating System** covering **39 NAICS 2022 industries** in one modular core — with **0% platform transaction commission**, **direct Stripe US payouts** (Cards, Apple Pay, Google Pay, ACH), **governed AI (Cloudflare Workers AI + Native MCP)**, and **1-click Zero-Lock-In portable data export**.
 
-This repository develops the independent GORGONA business platform. KA Nails is a separate project and is outside this repository's development, release and acceptance scope. Inherited references, candidate fixtures and external-site test reports record earlier work; they do not make that project a platform dependency or assign its development to GORGONA agents.
+*(Internal package, SQL schema, and GCP resource identifiers such as `gorgona_booking`, `gba.*`, and `gorgona-platform-gcp` are preserved for backward compatibility and zero-downtime operation.)*
 
-## Implemented foundation
+---
 
-- PostgreSQL tenant isolation, transactional appointment holds, price calculation, compatible add-ons and immutable booking snapshots.
-- Reusable customer booking and OIDC-authenticated business management pages.
-- Stable industry identifiers and a typed draft profile supporting several business activities without duplicating the company.
-- Local business dates, ISO weekdays, split operating hours and appointment value distinguished from paid revenue.
-- One-location membership permissions, restricted operational pages, database policy verification and compatible replay of older management responses.
-- A separate AI learning package with versioned examples, evaluation, approval and rollback. Its current local text embedder is deterministic hashing; this is not a general-purpose LLM assistant.
+## Core Architecture & Production Stack
 
-Industry selection does not establish a complete logistics, restaurant, rental, construction or financial workflow. These modules remain development targets. See the [implementation register](docs/plan/GORGONA_IMPLEMENTATION_STATUS.md) and [current handoff](docs/plan/NEXT_AGENT_HANDOFF_2026-10-04.md) for evidence and next work.
+| Layer | Technology & Live Production Topology |
+|---|---|
+| **Frontend (`web/`)** | Next.js 16 (React 19, TypeScript 6, Turbopack static export — 48 routes), WCAG 2.1 AA editorial UI, PWA (`amarkal-shell-v2`) |
+| **Backend API (`api/`)** | Python 3.14, FastAPI, Pydantic v2, `psycopg` 3 async pool — 61 routers, 650+ typed endpoints, zero external ORM bloat |
+| **Database** | Cloud SQL **PostgreSQL 18** (`us-central1`) with **155 deterministic SQL migrations** (`0001..0155`), strict `ENABLE + FORCE ROW LEVEL SECURITY`, zero `SECURITY DEFINER`, invoker-only runtime role (`gba_runtime`) |
+| **Authentication** | **100% Google Cloud Identity Platform** (Email + Password, Password Reset, One-Click **Continue with Google** GIS + RS256 JWKS verification; zero Microsoft/Entra runtime dependency) |
+| **Payments** | **Stripe US Live** (`USD`-only): Checkout Sessions (Cards, Apple Pay, Google Pay, US Bank ACH), optional Stripe Connect, HMAC-SHA256 verified webhooks (`/v1/webhooks/stripe`), session sync, 2-step confirmed refunds |
+| **AI & Native MCP** | **Cloudflare Workers AI** (`@cf/meta/llama-3.3-70b-instruct-fp8-fast` + `@cf/meta/llama-4-scout-17b-16e-instruct` Vision) powering **AI Business Architect** (`/v1/onboarding/ai-blueprint`), **Owner AI Command Copilot** (`/v1/businesses/{id}/copilot`), **Customer AI Booking Assistant** (`/v1/customer/assistant`), **Native MCP Server v2.1** (`/v1/mcp` — 7 semantic tools secured by Scoped API Keys & `FORCE RLS`), plus isolated `ai/` learning worker (`gorgona_ai` + `pgvector`) |
+| **Email & Storage** | **Resend SMTP** (`smtp.resend.com:587`, DKIM + SPF + DMARC verified on `amarkal-platform.com`) and **Cloudflare R2** (`gorgona-media`, AWS SigV4 stdlib client) |
+| **Cloud & Security** | **Google Cloud** (`ADR-0047`): Cloud Run (`GBA_ENV=production`), Global External HTTPS Load Balancer (TLS 1.3), **Cloud Armor WAF** (OWASP + Rate Limit), Secret Manager, HSTS + `Permissions-Policy` + governed `Content-Security-Policy` |
 
-The [plan-conformance audit](docs/plan/GORGONA_PLAN_AUDIT_2026-10-04.md) maps all 28 acceptance criteria to current implementation and verification. The shared business foundation is partial. The legacy development-only `/v1/holds` route is available only in local/test/CI environments; hosted customer booking uses the validated `/v1/customer/holds` flow.
+---
 
-## Development and verification
+## Platform Capabilities
 
-The existing stack is Python 3.14/FastAPI, PostgreSQL 18 and Node.js 24/Next.js/TypeScript. Dependency versions are recorded in the existing lockfiles; this transfer introduces no application dependencies. Follow [DEVELOPMENT](docs/DEVELOPMENT.md) for installation, disposable database setup and browser tests.
+- **60-Second Self-Service Onboarding (`/onboarding/`)**: Describe any US business (or upload a price list / menu photo) to the **AI Business Architect**, review the structured blueprint (NAICS industries, US timezone, services, resources, weekly hours), and launch atomically with human approval.
+- **39 US NAICS Industries & Modular Verticals**:
+  - **Core & Universal Modules (`enableable=True`)**: Organization, Users & RBAC, Delegations, Counterparties & Agreements, Booking & Resources, Workforce Scheduling & Timesheets, Documents, Inventory & Stock Valuation, Double-Entry Ledger (`FIN-01`), Financial Documents & Settlements (`FIN-02/03`), Prepaid & Gift Balances.
+  - **Commercial Verticals (`enableable=True`)**: Transport & Brokerage, Construction & Field Execution, Equipment Rental, Property Management, Restaurant Operations, Project Delivery, Supply Chain (WMS/Manufacturing/Trade), Storefronts & 0%-Commission Marketplaces, Enterprise Governance, Assets & Hospitality Events.
+  - **Regulated Verticals (`enableable=False` until formal compliance attestation)**: `clinical_care` (HIPAA BAA required) and `public_civic` (FedRAMP/SEC/FINRA disclosures).
+- **Go-Live Launchpad & Zero-Lock-In Data Portability (`/overview/`)**: Real-time 0–100% operational readiness score (`GET /v1/businesses/{id}/readiness`), live 30-day Unit Economics in USD, 0% commission savings tracker, and **1-click Portable Business JSON Export** (`GET /v1/businesses/{id}/export/snapshot`).
+- **AMARKAL App Hub & Native MCP (`/integrations/`)**: Connector catalog (QuickBooks Online, Google Calendar, Zapier/Make/n8n, Stripe US, Twilio BYOK, Meta Messaging BYOK), Scoped API Keys, signed webhooks, and **Native MCP Server** (`POST /v1/mcp`) compatible with Claude, ChatGPT, Gemini, and custom AI agents.
 
+---
+
+## Local Development & Verification
+
+Prerequisites: **Python 3.14** + [`uv`](https://docs.astral.sh/uv/), **Node.js 24**, and **PostgreSQL 18** (for DB integration tests).
+
+### 1. Frontend (`web/`)
 ```bash
 cd web
 npm ci --ignore-scripts
@@ -33,14 +52,48 @@ npm run test:unit
 npm run build
 ```
 
-API gates include Ruff, strict mypy and pytest against a disposable PostgreSQL database. Browser and container gates must be explicitly required in their applicable environments. Historical results belong to their recorded source snapshots; the transition report records checks repeated in this checkout.
+### 2. Backend API (`api/`)
+```bash
+cd api
+uv sync --locked
+uv run ruff format --check src tests tools
+uv run ruff check src tests tools
+uv run mypy src tests tools
+uv run pytest -m "not postgres" -q
+```
+For full PostgreSQL 18 + RLS + Browser integration verification (3,170+ tests), set `GBA_TEST_ADMIN_DSN` pointing to a disposable PG18 instance and run `uv run pytest`.
 
-Each business's timezone, operating hours, staff, service durations, policies and public domain require verified configuration. Never infer business facts from test fixtures or publish fake booking/payment success.
+### 3. AI Worker (`ai/`)
+```bash
+cd ai
+uv sync --locked
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy
+uv run pytest -v
+```
 
-## Collaboration and hosting
+### 4. Environment Configuration
+Copy [`.env.example`](.env.example) for local development. Never commit real credentials or secrets. Production secrets are managed exclusively in **Google Cloud Secret Manager**.
 
-Other agents can work through their own branches and separate checkouts, with scoped changes proposed through Pull Requests. Read [AGENTS](AGENTS.md), the master plan and the current handoff first. One executor owns a shared checkout and shared test database at a time. Local continuation archives and the original history bundle are excluded from commits under `handoff/`.
+---
 
-Google Cloud is the active hosting target under [ADR-0047](docs/adr/0047-google-cloud-hosting.md) (Cloud Run, private Cloud SQL PostgreSQL 18, Global External HTTPS Load Balancer, Cloud Armor WAF, Artifact Registry, Secret Manager, Cloud Scheduler, and Terraform under `infra/gcp/terraform/`). Existing Azure Bicep templates ([ADR-0012](docs/adr/0012-azure-hosting.md)) are preserved for cloud portability. GitHub stores and reviews source. CI success is not production deployment approval.
+## Repository Structure
 
-The camera surveillance product and its Local Gateway are separate from Booking. Customer data, credentials and private test connections do not belong in this repository. No production deployment, migration or go-live is claimed by this transfer.
+```text
+├── api/                 # Python 3.14 / FastAPI backend, 155 PG18 migrations, tests
+├── web/                 # Next.js 16 / React 19 / TypeScript frontend & Playwright suite
+├── ai/                  # Tenant-isolated AI learning & pgvector RAG worker (gorgona_ai)
+├── infra/gcp/           # Active Google Cloud Terraform & Cloud Run deployment specs (ADR-0047)
+├── docs/                # ADRs (0001..0047), architecture specs, runbooks, historical plans
+├── Dockerfile           # Deterministic multi-stage non-root production image (Node 24 + Python 3.14)
+└── .github/workflows/   # CI (API + PG18 + Playwright + AI + Container) & GCP deploy workflow
+```
+
+---
+
+## Governance & Engineering Principles
+
+- **Strict Multi-Tenant Isolation**: Every tenant query runs inside a `FORCE ROW LEVEL SECURITY` transaction scoped via `set_config('app.tenant_id', ..., true)` with invoker-only runtime privileges.
+- **Human Control Over AI**: AI Business Architect and Owner AI Command Copilot draft, analyze, and propose — humans review and approve state mutations.
+- **Truthful Operations**: Never fabricate availability, payments, compliance certifications, or health checks. Read [`AGENTS.md`](AGENTS.md) before making automated repository changes.

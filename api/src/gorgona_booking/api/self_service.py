@@ -1,8 +1,10 @@
 """Self-service business onboarding API routes (authenticated via verified OIDC token)."""
 
+import time
+from collections import defaultdict, deque
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
 
 from gorgona_booking.api.deps import get_verified_token, runtime_pool
@@ -28,6 +30,31 @@ OnboardingKey = Annotated[
     str,
     Header(alias="Idempotency-Key", min_length=8, max_length=128),
 ]
+_BLUEPRINT_WINDOW_SECONDS = 300.0
+_BLUEPRINT_MAX_PER_WINDOW = 12
+_BLUEPRINT_HITS: dict[str, deque[float]] = defaultdict(deque)
+
+
+def _enforce_blueprint_rate_limit(request: Request) -> None:
+    """Protect hosted AI blueprint generation from unauthenticated cost/DoS spikes."""
+    settings = getattr(request.app.state, "settings", None)
+    if settings is None or settings.environment not in ("staging", "production"):
+        return
+    xff = request.headers.get("x-forwarded-for", "")
+    client_ip = (
+        xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
+    )
+    now = time.monotonic()
+    bucket = _BLUEPRINT_HITS[client_ip]
+    cutoff = now - _BLUEPRINT_WINDOW_SECONDS
+    while bucket and bucket[0] < cutoff:
+        bucket.popleft()
+    if len(bucket) >= _BLUEPRINT_MAX_PER_WINDOW:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many AI blueprint requests. Please wait a few minutes and try again.",
+        )
+    bucket.append(now)
 
 
 class OnboardingPresetsResponse(BaseModel):
@@ -41,8 +68,12 @@ async def list_onboarding_presets() -> OnboardingPresetsResponse:
 
 
 @router.post("/ai-blueprint", response_model=AiBusinessBlueprint)
-async def build_ai_business_blueprint(body: AiBlueprintRequest) -> AiBusinessBlueprint:
+async def build_ai_business_blueprint(
+    body: AiBlueprintRequest,
+    request: Request,
+) -> AiBusinessBlueprint:
     """Draft a complete US business workspace structure for human review before creation."""
+    _enforce_blueprint_rate_limit(request)
     return await generate_business_blueprint(body)
 
 

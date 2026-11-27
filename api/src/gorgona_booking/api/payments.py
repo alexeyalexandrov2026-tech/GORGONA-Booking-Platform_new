@@ -293,6 +293,8 @@ async def post_stripe_webhook(request: Request) -> StripeWebhookAckResponse:
 
     if event.tenant_id is None:
         return StripeWebhookAckResponse(received=True, event_type=event.event_type, applied=False)
+    if cfg.configured and event.livemode != cfg.livemode:
+        return StripeWebhookAckResponse(received=True, event_type=event.event_type, applied=False)
 
     async with tenant_transaction(runtime_pool(request), event.tenant_id) as conn:
         applied = await apply_stripe_webhook_event(conn, event=event)

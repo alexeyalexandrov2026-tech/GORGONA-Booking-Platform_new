@@ -10,6 +10,7 @@ import hashlib
 import http.client
 import json
 import os
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -109,7 +110,9 @@ class PubSubSource:
     ) -> None:
         self._project = project.strip()
         self._subscription = subscription.strip()
-        self._access_token = access_token or os.environ.get("GAI_PUBSUB_ACCESS_TOKEN")
+        self._static_token = access_token or os.environ.get("GAI_PUBSUB_ACCESS_TOKEN")
+        self._cached_token: str | None = None
+        self._cached_token_expires_at: float = 0.0
         self._api_host = api_host
         self._timeout = timeout
         if not self._project or not self._subscription:
@@ -120,8 +123,11 @@ class PubSubSource:
         return f"/v1/projects/{self._project}/subscriptions/{self._subscription}"
 
     def _bearer_token(self) -> str:
-        if self._access_token:
-            return self._access_token
+        if self._static_token:
+            return self._static_token
+        now = time.monotonic()
+        if self._cached_token and now < self._cached_token_expires_at:
+            return self._cached_token
         conn = http.client.HTTPConnection("metadata.google.internal", 80, timeout=5.0)
         try:
             conn.request(
@@ -135,7 +141,9 @@ class PubSubSource:
                 raise RuntimeError(f"GCP metadata token request failed with HTTP {resp.status}")
             payload = json.loads(raw.decode("utf-8"))
             token = str(payload["access_token"])
-            self._access_token = token
+            expires_in = float(payload.get("expires_in", 300))
+            self._cached_token = token
+            self._cached_token_expires_at = now + max(30.0, expires_in - 60.0)
             return token
         finally:
             conn.close()

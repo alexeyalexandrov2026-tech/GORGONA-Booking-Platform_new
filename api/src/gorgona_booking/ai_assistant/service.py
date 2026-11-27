@@ -619,13 +619,19 @@ async def ask_customer_assistant(
     )
 
 
-async def ask_owner_copilot(
+@dataclass(frozen=True)
+class CopilotContext:
+    business_name: str
+    metrics: dict[str, Any]
+    insights: list[CopilotInsight]
+
+
+async def gather_owner_copilot_context(
     conn: AsyncConnection[Any],
     *,
     tenant_id: UUID,
-    question: str | None = None,
-) -> CopilotResult:
-    """Read-only owner AI copilot grounded strictly in live tenant PostgreSQL 18 facts."""
+) -> CopilotContext:
+    """Gather cross-domain live PostgreSQL 18 facts inside a short read-only transaction."""
     growth = await get_growth_settings(conn, tenant_id=tenant_id)
     now = datetime.now(UTC)
     horizon = now + timedelta(days=7)
@@ -636,7 +642,7 @@ async def ask_owner_copilot(
             (tenant_id,),
         )
         trow = await cur.fetchone()
-        business_name = str(trow["display_name"]) if trow else "GORGONA Business"
+        business_name = str(trow["display_name"]) if trow else "AMARKAL Business"
         booking_state = str(trow["booking_state"]) if trow else "draft"
 
         await cur.execute(
@@ -696,17 +702,65 @@ async def ask_owner_copilot(
         )
         staff_count = int((await cur.fetchone() or {"cnt": 0})["cnt"])
 
+        await cur.execute(
+            """
+            SELECT
+                count(*) FILTER (WHERE status = 'paid') AS paid_count,
+                coalesce(sum(amount_cents) FILTER (WHERE status = 'paid'), 0) AS paid_cents,
+                count(*) FILTER (WHERE status = 'open') AS open_count,
+                coalesce(sum(amount_cents) FILTER (WHERE status = 'open'), 0) AS open_cents
+            FROM gba.payment_sessions
+            WHERE tenant_id = %s
+              AND created_at >= now() - interval '30 days'
+            """,
+            (tenant_id,),
+        )
+        prow = await cur.fetchone() or {
+            "paid_count": 0,
+            "paid_cents": 0,
+            "open_count": 0,
+            "open_cents": 0,
+        }
+
+        await cur.execute(
+            """
+            SELECT
+                (SELECT count(*) FROM gba.connector_installations
+                 WHERE tenant_id = %s AND status = 'installed') AS connectors_cnt,
+                (SELECT count(*) FROM gba.api_keys
+                 WHERE tenant_id = %s AND revoked_at IS NULL) AS mcp_keys_cnt,
+                (SELECT count(*) FROM gba.media_assets
+                 WHERE tenant_id = %s) AS media_cnt
+            """,
+            (tenant_id, tenant_id, tenant_id),
+        )
+        erow = await cur.fetchone() or {"connectors_cnt": 0, "mcp_keys_cnt": 0, "media_cnt": 0}
+
+    stripe_paid_cents = int(prow["paid_cents"])
+    stripe_open_cents = int(prow["open_cents"])
+    upcoming_cents = int(brow["upcoming_cents"])
+    active_volume = max(upcoming_cents, stripe_paid_cents)
+    commission_saved_cents = (active_volume * 5) // 100
+
     metrics: dict[str, Any] = {
         "booking_state": booking_state,
         "locations_count": loc_count,
         "active_staff_count": staff_count,
         "bookable_services_count": bookable_count,
         "upcoming_7d_confirmed_bookings": int(brow["upcoming_count"]),
-        "upcoming_7d_booked_value_cents": int(brow["upcoming_cents"]),
+        "upcoming_7d_booked_value_cents": upcoming_cents,
         "waiting_waitlist_count": int(wrow["waiting_count"]),
         "waitlist_recoverable_value_cents": int(wrow["recoverable_cents"]),
         "notifications_sent_count": int(nrow["sent_count"]),
         "notifications_failed_count": int(nrow["failed_count"]),
+        "stripe_30d_paid_count": int(prow["paid_count"]),
+        "stripe_30d_paid_cents": stripe_paid_cents,
+        "stripe_30d_open_count": int(prow["open_count"]),
+        "stripe_30d_open_cents": stripe_open_cents,
+        "installed_connectors_count": int(erow["connectors_cnt"]),
+        "active_mcp_keys_count": int(erow["mcp_keys_cnt"]),
+        "brand_media_assets_count": int(erow["media_cnt"]),
+        "estimated_commission_saved_vs_5pct_cents": commission_saved_cents,
         "google_review_url_configured": bool(growth.google_review_url),
         "ai_assistant_enabled": growth.ai_assistant_enabled,
         "reminder_hours_before": growth.reminder_hours_before,
@@ -729,17 +783,21 @@ async def ask_owner_copilot(
                 action_path="/settings/",
             )
         )
-    if not growth.google_review_url:
+    if metrics["stripe_30d_open_count"] > 0:
+        open_usd = stripe_open_cents / 100
         insights.append(
             CopilotInsight(
                 priority="high",
-                category="local_seo",
-                title="Connect your Google Business Profile review link",
-                detail=(
-                    "Adding your Google Review URL enables post-visit review booster messages and "
-                    "drives zero-commission organic bookings from Google Search and Maps."
+                category="payments",
+                title=(
+                    f"Follow up on {metrics['stripe_30d_open_count']} open Stripe "
+                    f"checkout link(s) (${open_usd:,.2f})"
                 ),
-                action_path="/settings/",
+                detail=(
+                    "Sync or resend pending USD payment links in App Hub -> Stripe US Payments "
+                    "to convert open checkouts with 0% platform commission."
+                ),
+                action_path="/integrations/",
             )
         )
     if bookable_count == 0 or staff_count == 0:
@@ -753,6 +811,32 @@ async def ask_owner_copilot(
                     "published service and active resource to present live availability."
                 ),
                 action_path="/services/",
+            )
+        )
+    if not growth.google_review_url:
+        insights.append(
+            CopilotInsight(
+                priority="medium",
+                category="local_seo",
+                title="Connect your Google Business Profile review link",
+                detail=(
+                    "Adding your Google Review URL enables post-visit review booster messages and "
+                    "drives zero-commission organic bookings from Google Search and Maps."
+                ),
+                action_path="/settings/",
+            )
+        )
+    if metrics["active_mcp_keys_count"] == 0:
+        insights.append(
+            CopilotInsight(
+                priority="medium",
+                category="ai_automation",
+                title="Connect Claude, ChatGPT, or custom agents via Native MCP",
+                detail=(
+                    "Create a scoped MCP API key in App Hub so your AI agents can inspect live "
+                    "bookings, payments, and unit economics under FORCE RLS isolation."
+                ),
+                action_path="/integrations/",
             )
         )
     if metrics["notifications_failed_count"] > 0:
@@ -783,24 +867,33 @@ async def ask_owner_copilot(
             action_path="/prepaid/",
         )
     )
+    return CopilotContext(business_name=business_name, metrics=metrics, insights=insights)
 
+
+async def synthesize_owner_copilot(
+    ctx: CopilotContext,
+    *,
+    question: str | None = None,
+) -> CopilotResult:
+    """Run optional external LLM synthesis strictly OUTSIDE any PostgreSQL transaction."""
     clean_q = (question or "").strip()[:500]
     synthesized = await asyncio.to_thread(
         _synthesize_reply_sync,
         (
-            f"You are the read-only AI Business Copilot for {business_name} on GORGONA. "
+            f"You are the governed AI Business Copilot for {ctx.business_name} on AMARKAL Platform "
+            "(US Business OS, 0% platform commission, zero vendor lock-in). "
             "Use ONLY the live JSON metrics and insights provided. Never invent revenue or claims. "
             "Reply naturally and concisely in the owner's language (Russian if Russian, else "
-            "English) with concrete next actions."
+            "English) with concrete, actionable next steps."
         ),
         {
             "owner_question": (
                 clean_q or "Give me a concise executive summary and top growth actions."
             ),
-            "business_name": business_name,
-            "live_metrics": metrics,
+            "business_name": ctx.business_name,
+            "live_metrics": ctx.metrics,
             "insights": [
-                {"priority": i.priority, "title": i.title, "detail": i.detail} for i in insights
+                {"priority": i.priority, "title": i.title, "detail": i.detail} for i in ctx.insights
             ],
         },
     )
@@ -809,37 +902,53 @@ async def ask_owner_copilot(
         engine, ai_reply = synthesized
         return CopilotResult(
             engine=engine,
-            business_name=business_name,
+            business_name=ctx.business_name,
             reply=ai_reply,
-            metrics=metrics,
-            insights=insights,
+            metrics=ctx.metrics,
+            insights=ctx.insights,
         )
 
     is_ru = bool(_CYRILLIC_RE.search(clean_q.lower()))
-    booked_usd = metrics["upcoming_7d_booked_value_cents"] / 100
-    wait_usd = metrics["waitlist_recoverable_value_cents"] / 100
+    booked_usd = ctx.metrics["upcoming_7d_booked_value_cents"] / 100
+    paid_usd = ctx.metrics["stripe_30d_paid_cents"] / 100
+    wait_usd = ctx.metrics["waitlist_recoverable_value_cents"] / 100
+    bookable_count = ctx.metrics["bookable_services_count"]
+    staff_count = ctx.metrics["active_staff_count"]
     if is_ru:
         summary = (
-            f"Сводка по {business_name}: на ближайшие 7 дней подтверждено "
-            f"{metrics['upcoming_7d_confirmed_bookings']} записей на сумму ${booked_usd:,.2f}. "
-            f"В листе ожидания: {metrics['waiting_waitlist_count']} заявок "  # noqa: RUF001
+            f"Сводка по {ctx.business_name}: на ближайшие 7 дней подтверждено "
+            f"{ctx.metrics['upcoming_7d_confirmed_bookings']} записей на сумму ${booked_usd:,.2f}, "
+            f"оплачено через Stripe за 30 дней: ${paid_usd:,.2f}. "
+            f"В листе ожидания: {ctx.metrics['waiting_waitlist_count']} заявок "  # noqa: RUF001
             f"(потенциал ${wait_usd:,.2f}). "
             f"Активных услуг: {bookable_count}, сотрудников: {staff_count}. "
-            f"Главный приоритет: {insights[0].title}."
+            f"Главный приоритет: {ctx.insights[0].title}."
         )
     else:
         summary = (
-            f"{business_name} live pulse: {metrics['upcoming_7d_confirmed_bookings']} confirmed "
-            f"booking(s) over the next 7 days (${booked_usd:,.2f} booked value), "
-            f"{metrics['waiting_waitlist_count']} waitlisted client(s) (${wait_usd:,.2f} "
+            f"{ctx.business_name} live pulse: {ctx.metrics['upcoming_7d_confirmed_bookings']} "
+            f"confirmed booking(s) over the next 7 days (${booked_usd:,.2f} booked value), "
+            f"${paid_usd:,.2f} paid via Stripe in the last 30 days, "
+            f"{ctx.metrics['waiting_waitlist_count']} waitlisted client(s) (${wait_usd:,.2f} "
             f"recoverable), {bookable_count} published service(s), {staff_count} active team "
-            f"member(s). Top priority: {insights[0].title}."
+            f"member(s). Top priority: {ctx.insights[0].title}."
         )
 
     return CopilotResult(
         engine="grounded",
-        business_name=business_name,
+        business_name=ctx.business_name,
         reply=summary,
-        metrics=metrics,
-        insights=insights,
+        metrics=ctx.metrics,
+        insights=ctx.insights,
     )
+
+
+async def ask_owner_copilot(
+    conn: AsyncConnection[Any],
+    *,
+    tenant_id: UUID,
+    question: str | None = None,
+) -> CopilotResult:
+    """Read-only owner AI copilot grounded strictly in live tenant PostgreSQL 18 facts."""
+    ctx = await gather_owner_copilot_context(conn, tenant_id=tenant_id)
+    return await synthesize_owner_copilot(ctx, question=question)

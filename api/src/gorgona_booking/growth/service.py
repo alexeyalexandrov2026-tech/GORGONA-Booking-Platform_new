@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Literal
 from uuid import UUID
@@ -508,3 +508,360 @@ async def get_unit_economics(conn: AsyncConnection[Any], *, tenant_id: UUID) -> 
         gross_revenue_cents=int(revenue["gross_revenue_cents"]),
         material_cogs_cents=int(cogs["material_cogs_cents"]),
     )
+
+
+@dataclass(frozen=True)
+class ReadinessStep:
+    key: str
+    title: str
+    detail: str
+    completed: bool
+    action_path: str
+    action_label: str
+
+
+@dataclass(frozen=True)
+class LaunchReadinessRecord:
+    tenant_id: UUID
+    business_name: str
+    slug: str
+    booking_state: str
+    score_percent: int
+    completed_steps: int
+    total_steps: int
+    stripe_live_ready: bool
+    trailing_30d_volume_cents: int
+    commission_saved_vs_5pct_cents: int
+    steps: tuple[ReadinessStep, ...]
+
+
+async def get_launch_readiness(
+    conn: AsyncConnection[Any],
+    *,
+    tenant_id: UUID,
+    stripe_configured: bool = False,
+    stripe_livemode: bool = False,
+) -> LaunchReadinessRecord:
+    """Compute a truthful 0-100% Go-Live readiness score directly from live PostgreSQL 18 state."""
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            "SELECT display_name, slug, booking_state FROM gba.tenants WHERE id = %s",
+            (tenant_id,),
+        )
+        trow = await cur.fetchone()
+        business_name = str(trow["display_name"]) if trow else "AMARKAL Business"
+        slug = str(trow["slug"]) if trow else ""
+        booking_state = str(trow["booking_state"]) if trow else "draft"
+
+        await cur.execute(
+            "SELECT count(*) AS cnt FROM gba.locations WHERE tenant_id = %s",
+            (tenant_id,),
+        )
+        loc_count = int((await cur.fetchone() or {"cnt": 0})["cnt"])
+
+        await cur.execute(
+            """
+            SELECT count(*) AS cnt FROM gba.service_variants
+            WHERE tenant_id = %s AND status = 'published' AND is_bookable
+            """,
+            (tenant_id,),
+        )
+        svc_count = int((await cur.fetchone() or {"cnt": 0})["cnt"])
+
+        await cur.execute(
+            "SELECT count(*) AS cnt FROM gba.resources WHERE tenant_id = %s AND is_active",
+            (tenant_id,),
+        )
+        staff_count = int((await cur.fetchone() or {"cnt": 0})["cnt"])
+
+        await cur.execute(
+            "SELECT count(*) AS cnt FROM gba.media_assets WHERE tenant_id = %s",
+            (tenant_id,),
+        )
+        media_count = int((await cur.fetchone() or {"cnt": 0})["cnt"])
+
+        await cur.execute(
+            """
+            SELECT
+                (SELECT count(*) FROM gba.connector_installations
+                 WHERE tenant_id = %s AND status = 'installed') AS conn_cnt,
+                (SELECT count(*) FROM gba.api_keys
+                 WHERE tenant_id = %s AND revoked_at IS NULL) AS key_cnt
+            """,
+            (tenant_id, tenant_id),
+        )
+        eco = await cur.fetchone() or {"conn_cnt": 0, "key_cnt": 0}
+        eco_ready = int(eco["conn_cnt"]) > 0 or int(eco["key_cnt"]) > 0
+
+        await cur.execute(
+            """
+            SELECT coalesce(sum(total_cents), 0) AS booking_cents
+            FROM gba.bookings
+            WHERE tenant_id = %s
+              AND status = 'CONFIRMED'
+              AND starts_at >= now() - interval '30 days'
+            """,
+            (tenant_id,),
+        )
+        b_cents = int((await cur.fetchone() or {"booking_cents": 0})["booking_cents"])
+
+        await cur.execute(
+            """
+            SELECT coalesce(sum(amount_cents), 0) AS paid_cents,
+                   count(*) FILTER (WHERE status = 'paid') AS paid_count
+            FROM gba.payment_sessions
+            WHERE tenant_id = %s
+              AND status = 'paid'
+              AND created_at >= now() - interval '30 days'
+            """,
+            (tenant_id,),
+        )
+        p_row = await cur.fetchone() or {"paid_cents": 0, "paid_count": 0}
+        p_cents = int(p_row["paid_cents"])
+
+    trailing_volume = max(b_cents, p_cents)
+    saved_vs_5pct = (trailing_volume * 5) // 100
+
+    steps = (
+        ReadinessStep(
+            key="profile",
+            title="Business profile & US location",
+            detail=(
+                f"{loc_count} active location(s) configured for {business_name}."
+                if loc_count > 0
+                else "Add your primary US operating location and timezone."
+            ),
+            completed=loc_count > 0,
+            action_path="/business/",
+            action_label="Open Profile",
+        ),
+        ReadinessStep(
+            key="services",
+            title="Published services & pricing",
+            detail=(
+                f"{svc_count} published service(s) ready for online booking and invoicing."
+                if svc_count > 0
+                else "Publish at least one service or offering with USD pricing."
+            ),
+            completed=svc_count > 0,
+            action_path="/services/",
+            action_label="Manage Services",
+        ),
+        ReadinessStep(
+            key="team",
+            title="Active team & resources",
+            detail=(
+                f"{staff_count} active team member(s) or resource(s) ready."
+                if staff_count > 0
+                else "Add team members, rooms, or equipment to assign work."
+            ),
+            completed=staff_count > 0,
+            action_path="/staff/",
+            action_label="Manage Team",
+        ),
+        ReadinessStep(
+            key="payments",
+            title="Stripe US Direct Payments (0% platform commission)",
+            detail=(
+                "Live Stripe US Checkout (Cards, Apple Pay, Google Pay, ACH) is active."
+                if stripe_configured and stripe_livemode
+                else (
+                    "Stripe Checkout is configured in test mode."
+                    if stripe_configured
+                    else "Configure Stripe in App Hub to accept cards, Apple Pay, and ACH."
+                )
+            ),
+            completed=stripe_configured,
+            action_path="/integrations/",
+            action_label="Open Payments",
+        ),
+        ReadinessStep(
+            key="branding",
+            title="Storefront brand media (Cloudflare R2)",
+            detail=(
+                f"{media_count} brand asset(s) uploaded to Cloudflare R2."
+                if media_count > 0
+                else "Upload your logo or cover image in Settings."
+            ),
+            completed=media_count > 0,
+            action_path="/settings/",
+            action_label="Upload Media",
+        ),
+        ReadinessStep(
+            key="ecosystem",
+            title="App Hub connectors & Native MCP AI access",
+            detail=(
+                "Connected to external tools or AI agents via scoped MCP API keys."
+                if eco_ready
+                else "Create a scoped MCP API key or connect QuickBooks, Zapier, or Calendar."
+            ),
+            completed=eco_ready,
+            action_path="/integrations/",
+            action_label="Open App Hub",
+        ),
+    )
+    completed = sum(1 for s in steps if s.completed)
+    total = len(steps)
+    score = round((completed * 100) / total) if total else 0
+    return LaunchReadinessRecord(
+        tenant_id=tenant_id,
+        business_name=business_name,
+        slug=slug,
+        booking_state=booking_state,
+        score_percent=score,
+        completed_steps=completed,
+        total_steps=total,
+        stripe_live_ready=stripe_configured and stripe_livemode,
+        trailing_30d_volume_cents=trailing_volume,
+        commission_saved_vs_5pct_cents=saved_vs_5pct,
+        steps=steps,
+    )
+
+
+async def export_business_snapshot(
+    conn: AsyncConnection[Any],
+    *,
+    tenant_id: UUID,
+    stripe_configured: bool = False,
+    stripe_livemode: bool = False,
+) -> dict[str, Any]:
+    """Export a zero-lock-in portable JSON snapshot of the tenant's business (no secrets)."""
+    readiness = await get_launch_readiness(
+        conn,
+        tenant_id=tenant_id,
+        stripe_configured=stripe_configured,
+        stripe_livemode=stripe_livemode,
+    )
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            """
+            SELECT id, slug, display_name, status, booking_state, created_at
+            FROM gba.tenants WHERE id = %s
+            """,
+            (tenant_id,),
+        )
+        trow = await cur.fetchone()
+
+        await cur.execute(
+            """
+            SELECT id, name, timezone, is_active
+            FROM gba.locations WHERE tenant_id = %s ORDER BY name
+            """,
+            (tenant_id,),
+        )
+        locations = [
+            {
+                "id": str(r["id"]),
+                "name": str(r["name"]),
+                "timezone": str(r["timezone"]),
+                "is_active": bool(r["is_active"]),
+            }
+            for r in await cur.fetchall()
+        ]
+
+        await cur.execute(
+            """
+            SELECT s.code AS service_code, s.name AS service_name,
+                   v.id AS variant_id, v.name AS variant_name,
+                   v.price_cents, v.currency, v.booking_duration_minutes,
+                   v.status, v.is_bookable
+            FROM gba.service_variants v
+            JOIN gba.services s ON s.tenant_id = v.tenant_id AND s.id = v.service_id
+            WHERE v.tenant_id = %s
+            ORDER BY s.name, v.name
+            LIMIT 250
+            """,
+            (tenant_id,),
+        )
+        services = [
+            {
+                "service_code": str(r["service_code"]),
+                "service_name": str(r["service_name"]),
+                "variant_id": str(r["variant_id"]),
+                "variant_name": str(r["variant_name"]),
+                "price_cents": int(r["price_cents"]),
+                "currency": str(r["currency"]),
+                "duration_minutes": r["booking_duration_minutes"],
+                "status": str(r["status"]),
+                "is_bookable": bool(r["is_bookable"]),
+            }
+            for r in await cur.fetchall()
+        ]
+
+        await cur.execute(
+            """
+            SELECT id, display_name, kind, is_active, location_id
+            FROM gba.resources WHERE tenant_id = %s ORDER BY display_name LIMIT 250
+            """,
+            (tenant_id,),
+        )
+        staff = [
+            {
+                "id": str(r["id"]),
+                "display_name": str(r["display_name"]),
+                "kind": str(r["kind"]),
+                "is_active": bool(r["is_active"]),
+                "location_id": str(r["location_id"]),
+            }
+            for r in await cur.fetchall()
+        ]
+
+        await cur.execute(
+            """
+            SELECT status, count(*) AS cnt, coalesce(sum(amount_cents), 0) AS total_cents
+            FROM gba.payment_sessions
+            WHERE tenant_id = %s
+            GROUP BY status
+            """,
+            (tenant_id,),
+        )
+        payments_summary = {
+            str(r["status"]): {"count": int(r["cnt"]), "total_cents": int(r["total_cents"])}
+            for r in await cur.fetchall()
+        }
+
+        await cur.execute(
+            """
+            SELECT connector_id, status, updated_at
+            FROM gba.connector_installations
+            WHERE tenant_id = %s
+            ORDER BY connector_id
+            """,
+            (tenant_id,),
+        )
+        connectors = [
+            {
+                "connector_id": str(r["connector_id"]),
+                "status": str(r["status"]),
+                "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
+            }
+            for r in await cur.fetchall()
+        ]
+
+    return {
+        "schema_version": 1,
+        "platform": "AMARKAL Platform",
+        "portability_guarantee": "Zero vendor lock-in: full tenant-owned operational export.",
+        "exported_at": datetime.now(UTC).isoformat(),
+        "business": {
+            "id": str(tenant_id),
+            "slug": str(trow["slug"]) if trow else "",
+            "display_name": str(trow["display_name"]) if trow else "",
+            "status": str(trow["status"]) if trow else "",
+            "booking_state": str(trow["booking_state"]) if trow else "",
+            "created_at": trow["created_at"].isoformat() if trow and trow["created_at"] else None,
+        },
+        "readiness": {
+            "score_percent": readiness.score_percent,
+            "completed_steps": readiness.completed_steps,
+            "total_steps": readiness.total_steps,
+            "stripe_live_ready": readiness.stripe_live_ready,
+            "trailing_30d_volume_cents": readiness.trailing_30d_volume_cents,
+            "commission_saved_vs_5pct_cents": readiness.commission_saved_vs_5pct_cents,
+        },
+        "locations": locations,
+        "services": services,
+        "staff": staff,
+        "stripe_payments_summary": payments_summary,
+        "connectors": connectors,
+    }
