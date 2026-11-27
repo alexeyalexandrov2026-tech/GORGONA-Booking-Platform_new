@@ -1,6 +1,6 @@
 """Optional OAuth2 connector flow for AMARKAL App Hub (QuickBooks Online, Google Calendar,
-Xero, Slack). Strict opt-in per organization, HMAC-SHA256 signed anti-CSRF state, and stdlib
-HTTPS token exchange strictly outside database transactions (zero extra runtime dependencies).
+Microsoft 365, Xero, Slack). Strict opt-in per organization, HMAC-SHA256 signed anti-CSRF state,
+and stdlib HTTPS token exchange strictly outside database transactions (zero extra runtime deps).
 """
 
 from __future__ import annotations
@@ -56,6 +56,20 @@ OAUTH_PROVIDERS: dict[str, OAuthProviderSpec] = {
         ),
         client_id_env="GBA_GOOGLE_OAUTH_CLIENT_ID",
         credential_env="GBA_GOOGLE_OAUTH_CLIENT_SECRET",
+    ),
+    "microsoft_365": OAuthProviderSpec(
+        connector_id="microsoft_365",
+        display_name="Microsoft 365 (Outlook, Calendar & Teams)",
+        authorize_url="https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        exchange_url="https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        scopes=(
+            "offline_access",
+            "User.Read",
+            "Calendars.ReadWrite",
+            "Mail.Send",
+        ),
+        client_id_env="GBA_M365_CLIENT_ID",
+        credential_env="GBA_M365_CLIENT_SECRET",
     ),
     "xero_accounting": OAuthProviderSpec(
         connector_id="xero_accounting",

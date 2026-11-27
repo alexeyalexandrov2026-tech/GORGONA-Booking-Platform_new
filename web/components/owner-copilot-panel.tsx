@@ -137,7 +137,13 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
                 ? "Cloudflare Llama 3.3 70B"
                 : data.engine === "gemini"
                   ? "Gemini Live"
-                  : "Grounded Live"}
+                  : data.engine === "byok_anthropic"
+                    ? "Anthropic Claude (BYOK)"
+                    : data.engine === "byok_gemini"
+                      ? "Google Gemini (BYOK)"
+                      : data.engine === "byok_openai"
+                        ? "OpenAI (BYOK)"
+                        : "Grounded Live"}
             </span>
           ) : (
             <button

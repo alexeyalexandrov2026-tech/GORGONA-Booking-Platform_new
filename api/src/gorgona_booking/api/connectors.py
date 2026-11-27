@@ -11,6 +11,14 @@ from fastapi.responses import RedirectResponse
 from psycopg.rows import dict_row
 from pydantic import BaseModel, ConfigDict, Field
 
+from gorgona_booking.ai_assistant.byok import (
+    BYOK_AI_CONNECTOR_ID,
+    BYOK_AI_PROVIDERS,
+    ByokProviderId,
+    TenantByokAiConfig,
+    probe_byok_ai_connection,
+    validate_byok_model,
+)
 from gorgona_booking.ai_assistant.service import (
     CopilotContext,
     gather_owner_copilot_context,
@@ -22,6 +30,18 @@ from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.api.search import search_business_records
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business.commercial import list_purchase_orders, list_quotes
+from gorgona_booking.connectors.custom_plugins import (
+    CustomPluginView,
+    PluginAuthScheme,
+    PluginProtocol,
+    PluginStatus,
+    create_custom_plugin,
+    delete_custom_plugin,
+    execute_custom_plugin_probe,
+    list_custom_plugins,
+    prepare_custom_plugin_probe,
+    update_custom_plugin,
+)
 from gorgona_booking.connectors.dispatcher import dispatch_business_event
 from gorgona_booking.connectors.oauth import (
     OAUTH_PROVIDERS,
@@ -50,6 +70,14 @@ from gorgona_booking.connectors.service import (
     revoke_api_key,
     send_webhook_http_probe,
     upsert_connector_installation,
+)
+from gorgona_booking.connectors.vault import (
+    delete_tenant_secret,
+    get_tenant_secret_decrypted,
+    get_tenant_secret_public,
+    store_oauth_tokens_in_vault,
+    update_tenant_secret_metadata,
+    upsert_tenant_secret,
 )
 from gorgona_booking.db.pool import set_tenant_context, tenant_transaction
 from gorgona_booking.growth.service import (
@@ -197,6 +225,484 @@ async def get_connectors_catalog(
     return result
 
 
+class ByokProviderCatalogEntry(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    id: ByokProviderId
+    display_name: str
+    default_model: str
+    suggested_models: list[str]
+    key_prefix_hint: str
+
+
+class ByokAiConfigResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    configured: bool
+    enabled: bool
+    provider: ByokProviderId | None = None
+    model: str | None = None
+    key_hint: str | None = None
+    updated_at: datetime | None = None
+    supported_providers: list[ByokProviderCatalogEntry]
+
+
+class ByokAiUpsertRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    provider: ByokProviderId
+    model: str | None = Field(default=None, max_length=80)
+    api_key: str | None = Field(default=None, max_length=512)
+    enabled: bool = True
+
+
+class ByokAiProbeResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    ok: bool
+    provider: ByokProviderId
+    model: str
+    http_status: int | None = None
+    latency_ms: int
+    message: str
+
+
+class CustomPluginCreateRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    slug: str = Field(min_length=2, max_length=63)
+    display_name: str = Field(min_length=2, max_length=120)
+    category: str = Field(default="Custom Integration", min_length=2, max_length=64)
+    protocol: PluginProtocol = "https_api"
+    endpoint_url: str = Field(min_length=12, max_length=500)
+    auth_header_name: str = Field(default="Authorization", min_length=2, max_length=64)
+    auth_scheme: PluginAuthScheme = "Bearer"
+    auth_credential: str | None = Field(default=None, max_length=1024)
+    scopes: list[str] = Field(default_factory=list)
+    subscribed_events: list[str] = Field(default_factory=list)
+    description: str = Field(default="", max_length=400)
+
+
+class CustomPluginUpdateRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    status: PluginStatus | None = None
+    endpoint_url: str | None = Field(default=None, min_length=12, max_length=500)
+    description: str | None = Field(default=None, max_length=400)
+    auth_credential: str | None = Field(default=None, max_length=1024)
+    clear_secret: bool = False
+
+
+class CustomPluginResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    id: UUID
+    slug: str
+    display_name: str
+    category: str
+    protocol: PluginProtocol
+    endpoint_url: str
+    auth_header_name: str
+    auth_scheme: PluginAuthScheme
+    scopes: list[str]
+    subscribed_events: list[str]
+    description: str
+    has_secret: bool
+    secret_hint: str | None = None
+    status: PluginStatus
+    created_at: datetime
+    updated_at: datetime
+
+
+class CustomPluginProbeResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    ok: bool
+    status: Literal["reachable", "unreachable", "local_validated"]
+    http_status: int | None = None
+    latency_ms: int
+    message: str
+
+
+def _supported_byok_catalog() -> list[ByokProviderCatalogEntry]:
+    return [
+        ByokProviderCatalogEntry(
+            id=spec.id,
+            display_name=spec.display_name,
+            default_model=spec.default_model,
+            suggested_models=list(spec.suggested_models),
+            key_prefix_hint=spec.key_prefix_hint,
+        )
+        for spec in BYOK_AI_PROVIDERS.values()
+    ]
+
+
+def _plugin_response(item: CustomPluginView) -> CustomPluginResponse:
+    return CustomPluginResponse(
+        id=item.id,
+        slug=item.slug,
+        display_name=item.display_name,
+        category=item.category,
+        protocol=item.protocol,
+        endpoint_url=item.endpoint_url,
+        auth_header_name=item.auth_header_name,
+        auth_scheme=item.auth_scheme,
+        scopes=item.scopes,
+        subscribed_events=item.subscribed_events,
+        description=item.description,
+        has_secret=item.has_secret,
+        secret_hint=item.secret_hint,
+        status=item.status,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
+
+
+@router.get(
+    "/v1/businesses/{business_id}/connectors/ai-provider",
+    response_model=ByokAiConfigResponse,
+)
+async def get_byok_ai_provider(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ByokAiConfigResponse:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.BUSINESS_READ,
+        request_id=get_request_id(request),
+    ) as session:
+        rec = await get_tenant_secret_public(
+            session.conn,
+            tenant_id=business_id,
+            connector_id=BYOK_AI_CONNECTOR_ID,
+            kind="byok_ai_key",
+        )
+    if rec is None:
+        return ByokAiConfigResponse(
+            configured=False,
+            enabled=False,
+            supported_providers=_supported_byok_catalog(),
+        )
+    raw_prov = str(rec.metadata_public.get("provider") or "")
+    provider: ByokProviderId | None = raw_prov if raw_prov in BYOK_AI_PROVIDERS else None
+    return ByokAiConfigResponse(
+        configured=provider is not None,
+        enabled=bool(rec.metadata_public.get("enabled", True)) and provider is not None,
+        provider=provider,
+        model=str(rec.metadata_public.get("model") or "") or None,
+        key_hint=rec.key_hint,
+        updated_at=rec.updated_at,
+        supported_providers=_supported_byok_catalog(),
+    )
+
+
+@router.put(
+    "/v1/businesses/{business_id}/connectors/ai-provider",
+    response_model=ByokAiConfigResponse,
+)
+async def put_byok_ai_provider(
+    business_id: UUID,
+    body: ByokAiUpsertRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ByokAiConfigResponse:
+    try:
+        model = validate_byok_model(body.provider, body.model)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+    meta_public = {
+        "provider": body.provider,
+        "model": model,
+        "enabled": body.enabled,
+    }
+    clean_key = (body.api_key or "").strip()
+    try:
+        async with authorized_tenant(
+            runtime_pool(request),
+            principal,
+            business_id,
+            Permission.BUSINESS_MANAGE,
+            request_id=get_request_id(request),
+        ) as session:
+            if clean_key:
+                if len(clean_key) < 12:
+                    raise ValueError("API key looks too short (minimum 12 characters).")
+                rec = await upsert_tenant_secret(
+                    session.conn,
+                    tenant_id=business_id,
+                    connector_id=BYOK_AI_CONNECTOR_ID,
+                    kind="byok_ai_key",
+                    plaintext=clean_key,
+                    metadata_public=meta_public,
+                    user_id=principal.user_id,
+                    environment=_oauth_env(request),
+                )
+            else:
+                updated = await update_tenant_secret_metadata(
+                    session.conn,
+                    tenant_id=business_id,
+                    connector_id=BYOK_AI_CONNECTOR_ID,
+                    kind="byok_ai_key",
+                    metadata_public=meta_public,
+                    user_id=principal.user_id,
+                )
+                if updated is None:
+                    raise ValueError(
+                        "Enter your provider API key to configure BYOK AI for the first time."
+                    )
+                rec = updated
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+    return ByokAiConfigResponse(
+        configured=True,
+        enabled=body.enabled,
+        provider=body.provider,
+        model=model,
+        key_hint=rec.key_hint,
+        updated_at=rec.updated_at,
+        supported_providers=_supported_byok_catalog(),
+    )
+
+
+@router.post(
+    "/v1/businesses/{business_id}/connectors/ai-provider/test",
+    response_model=ByokAiProbeResponse,
+)
+async def post_test_byok_ai_provider(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ByokAiProbeResponse:
+    env_name = _oauth_env(request)
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.BUSINESS_MANAGE,
+        request_id=get_request_id(request),
+    ) as session:
+        loaded = await get_tenant_secret_decrypted(
+            session.conn,
+            tenant_id=business_id,
+            connector_id=BYOK_AI_CONNECTOR_ID,
+            kind="byok_ai_key",
+            environment=env_name,
+        )
+    if loaded is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No BYOK AI API key is configured for this business.",
+        )
+    api_key, meta = loaded
+    raw_prov = str(meta.get("provider") or "")
+    if raw_prov not in BYOK_AI_PROVIDERS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Stored BYOK AI provider is unsupported.",
+        )
+    provider: ByokProviderId = raw_prov
+    model = validate_byok_model(provider, str(meta.get("model") or ""))
+    probe = await probe_byok_ai_connection(
+        TenantByokAiConfig(provider=provider, model=model, api_key=api_key, enabled=True),
+        environment=env_name,
+    )
+    return ByokAiProbeResponse(
+        ok=probe.ok,
+        provider=probe.provider,
+        model=probe.model,
+        http_status=probe.http_status,
+        latency_ms=probe.latency_ms,
+        message=probe.message,
+    )
+
+
+@router.delete(
+    "/v1/businesses/{business_id}/connectors/ai-provider",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_byok_ai_provider(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> Response:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.BUSINESS_MANAGE,
+        request_id=get_request_id(request),
+    ) as session:
+        await delete_tenant_secret(
+            session.conn,
+            tenant_id=business_id,
+            connector_id=BYOK_AI_CONNECTOR_ID,
+            kind="byok_ai_key",
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/v1/businesses/{business_id}/connectors/custom-plugins",
+    response_model=list[CustomPluginResponse],
+)
+async def get_custom_plugins(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> list[CustomPluginResponse]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.BUSINESS_READ,
+        request_id=get_request_id(request),
+    ) as session:
+        rows = await list_custom_plugins(session.conn, tenant_id=business_id)
+    return [_plugin_response(item) for item in rows]
+
+
+@router.post(
+    "/v1/businesses/{business_id}/connectors/custom-plugins",
+    response_model=CustomPluginResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def post_custom_plugin(
+    business_id: UUID,
+    body: CustomPluginCreateRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> CustomPluginResponse:
+    try:
+        async with authorized_tenant(
+            runtime_pool(request),
+            principal,
+            business_id,
+            Permission.BUSINESS_MANAGE,
+            request_id=get_request_id(request),
+        ) as session:
+            item = await create_custom_plugin(
+                session.conn,
+                tenant_id=business_id,
+                slug=body.slug,
+                display_name=body.display_name,
+                category=body.category,
+                protocol=body.protocol,
+                endpoint_url=body.endpoint_url,
+                auth_header_name=body.auth_header_name,
+                auth_scheme=body.auth_scheme,
+                auth_credential=body.auth_credential,
+                scopes=body.scopes,
+                subscribed_events=body.subscribed_events,
+                description=body.description,
+                user_id=principal.user_id,
+                environment=_oauth_env(request),
+            )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    return _plugin_response(item)
+
+
+@router.patch(
+    "/v1/businesses/{business_id}/connectors/custom-plugins/{plugin_id}",
+    response_model=CustomPluginResponse,
+)
+async def patch_custom_plugin(
+    business_id: UUID,
+    plugin_id: UUID,
+    body: CustomPluginUpdateRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> CustomPluginResponse:
+    try:
+        async with authorized_tenant(
+            runtime_pool(request),
+            principal,
+            business_id,
+            Permission.BUSINESS_MANAGE,
+            request_id=get_request_id(request),
+        ) as session:
+            item = await update_custom_plugin(
+                session.conn,
+                tenant_id=business_id,
+                plugin_id=plugin_id,
+                status=body.status,
+                endpoint_url=body.endpoint_url,
+                description=body.description,
+                auth_credential=body.auth_credential,
+                clear_secret=body.clear_secret,
+                user_id=principal.user_id,
+                environment=_oauth_env(request),
+            )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    return _plugin_response(item)
+
+
+@router.delete(
+    "/v1/businesses/{business_id}/connectors/custom-plugins/{plugin_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def remove_custom_plugin(
+    business_id: UUID,
+    plugin_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> Response:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.BUSINESS_MANAGE,
+        request_id=get_request_id(request),
+    ) as session:
+        await delete_custom_plugin(session.conn, tenant_id=business_id, plugin_id=plugin_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/v1/businesses/{business_id}/connectors/custom-plugins/{plugin_id}/probe",
+    response_model=CustomPluginProbeResponse,
+)
+async def post_probe_custom_plugin(
+    business_id: UUID,
+    plugin_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> CustomPluginProbeResponse:
+    env_name = _oauth_env(request)
+    try:
+        async with authorized_tenant(
+            runtime_pool(request),
+            principal,
+            business_id,
+            Permission.BUSINESS_MANAGE,
+            request_id=get_request_id(request),
+        ) as session:
+            prepared = await prepare_custom_plugin_probe(
+                session.conn,
+                tenant_id=business_id,
+                plugin_id=plugin_id,
+                environment=env_name,
+            )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    outcome = await execute_custom_plugin_probe(prepared, environment=env_name)
+    return CustomPluginProbeResponse(
+        ok=outcome.ok,
+        status=outcome.status,
+        http_status=outcome.http_status,
+        latency_ms=outcome.latency_ms,
+        message=outcome.message,
+    )
+
+
 @router.put("/v1/businesses/{business_id}/connectors/{connector_id}")
 @router.put("/v1/salons/{business_id}/connectors/{connector_id}")
 async def put_connector_installation(
@@ -252,6 +758,7 @@ async def remove_connector_installation(
         await delete_connector_installation(
             session.conn, tenant_id=business_id, connector_id=connector_id
         )
+        await delete_tenant_secret(session.conn, tenant_id=business_id, connector_id=connector_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -729,6 +1236,16 @@ async def get_connector_oauth_callback(
             config_payload["workspace_name"] = str(team_name)[:120]
 
     async with tenant_transaction(runtime_pool(request), tenant_id) as conn:
+        vaulted = await store_oauth_tokens_in_vault(
+            conn,
+            tenant_id=tenant_id,
+            connector_id=connector_id,
+            token_data=token_data,
+            user_id=user_id,
+            environment=_oauth_env(request),
+        )
+        if vaulted is not None:
+            config_payload["tokens_vaulted"] = "true"
         await upsert_connector_installation(
             conn,
             tenant_id=tenant_id,
@@ -1304,8 +1821,10 @@ async def post_native_mcp(
                 }
             if tool_name == "ask_business_copilot":
                 copilot_question = str(args.get("question") or "")[:500]
-                copilot_ctx = await gather_owner_copilot_context(conn, tenant_id=tenant_id)
-                # Break out of DB transaction before external Cloudflare/Gemini call
+                copilot_ctx = await gather_owner_copilot_context(
+                    conn, tenant_id=tenant_id, environment=_oauth_env(request)
+                )
+                # Break out of DB transaction before external Cloudflare/Gemini/BYOK call
                 break_for_copilot = True
             else:
                 return {

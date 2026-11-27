@@ -303,6 +303,8 @@ K_TABLES = {
     "approval_policies",
     "b2b_portal_links",
     "recurring_schedules",
+    "tenant_connector_secrets",
+    "custom_plugins",
     "civic_programs",
     "civic_cases",
     "civic_allocations",

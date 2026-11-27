@@ -110,7 +110,13 @@ export function BookingAssistant({
                   ? "Powered by Cloudflare Workers AI · Live verified availability"
                   : result.engine === "gemini"
                     ? "Powered by Gemini · Live verified availability"
-                    : "Grounded live availability"}
+                    : result.engine === "byok_anthropic"
+                      ? "Powered by Anthropic Claude (BYOK) · Live verified availability"
+                      : result.engine === "byok_gemini"
+                        ? "Powered by Google Gemini (BYOK) · Live verified availability"
+                        : result.engine === "byok_openai"
+                          ? "Powered by OpenAI (BYOK) · Live verified availability"
+                          : "Grounded live availability"}
               </small>
             </div>
             {result.recommended_slots.length > 0 && (

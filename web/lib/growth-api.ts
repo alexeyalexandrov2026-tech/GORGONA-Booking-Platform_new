@@ -19,9 +19,19 @@ export const recommendedSlotSchema = z.object({
 });
 export type RecommendedSlot = z.infer<typeof recommendedSlotSchema>;
 
+export const aiEngineSchema = z.enum([
+  "cloudflare",
+  "gemini",
+  "byok_anthropic",
+  "byok_gemini",
+  "byok_openai",
+  "grounded",
+]);
+export type AiEngine = z.infer<typeof aiEngineSchema>;
+
 export const customerAssistantSchema = z.object({
   version: z.literal(1),
-  engine: z.enum(["cloudflare", "gemini", "grounded"]),
+  engine: aiEngineSchema,
   business_name: z.string(),
   reply: z.string(),
   recommended_slots: z.array(recommendedSlotSchema),
@@ -102,7 +112,7 @@ export type ExecuteCopilotActionResult = z.infer<
 
 export const ownerCopilotSchema = z.object({
   version: z.literal(1),
-  engine: z.enum(["cloudflare", "gemini", "grounded"]),
+  engine: aiEngineSchema,
   business_name: z.string(),
   reply: z.string(),
   metrics: z.record(z.string(), z.unknown()),

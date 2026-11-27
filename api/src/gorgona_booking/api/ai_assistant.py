@@ -17,6 +17,7 @@ from gorgona_booking.ai_assistant.actions import (
 )
 from gorgona_booking.ai_assistant.evidence_bridge import emit_evidence_nonblocking
 from gorgona_booking.ai_assistant.service import (
+    AiEngine,
     gather_customer_assistant_context,
     gather_owner_copilot_context,
     synthesize_customer_assistant,
@@ -84,7 +85,7 @@ class RecommendedSlotResponse(BaseModel):
 class CustomerAssistantResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
     version: Literal[1] = 1
-    engine: Literal["cloudflare", "gemini", "grounded"]
+    engine: AiEngine
     business_name: str
     reply: str
     recommended_slots: list[RecommendedSlotResponse]
@@ -134,12 +135,17 @@ class ExecuteCopilotActionResponse(BaseModel):
 class OwnerCopilotResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
     version: Literal[1] = 1
-    engine: Literal["cloudflare", "gemini", "grounded"]
+    engine: AiEngine
     business_name: str
     reply: str
     metrics: dict[str, Any]
     insights: list[CopilotInsightResponse]
     action_proposals: list[ActionProposalResponse] = Field(default_factory=list)
+
+
+def _ai_env(request: Request) -> str:
+    settings = getattr(request.app.state, "settings", None)
+    return settings.environment if settings is not None else "local"
 
 
 @router.post("/v1/customer/assistant", response_model=CustomerAssistantResponse)
@@ -159,6 +165,7 @@ async def post_customer_assistant(
                 message=body.message,
                 location_id=body.location_id,
                 preferred_day=body.preferred_day,
+                environment=_ai_env(request),
             )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
@@ -210,6 +217,7 @@ async def post_owner_copilot(
         ctx = await gather_owner_copilot_context(
             session.conn,
             tenant_id=salon_id,
+            environment=_ai_env(request),
         )
     res = await synthesize_owner_copilot(ctx, question=body.question)
     proposals = build_action_proposals(ctx)

@@ -27,13 +27,15 @@ import {
   type WebhookEndpoint,
 } from "../lib/app-hub-api";
 import { formatDate, formatTime } from "../lib/management-api";
+import { ByokAiPanel } from "./byok-ai-panel";
+import { CustomPluginsPanel } from "./custom-plugins-panel";
 import "../app/us-release-v2.css";
 
 const AUTH_MODE_LABELS: Record<string, string> = {
   mcp_api_key: "Scoped API key",
   webhook: "Signed webhooks",
   byok: "Bring your own credentials",
-  oauth_ready: "OAuth-ready (account IDs only)",
+  oauth_ready: "OAuth2 (AES-256-GCM encrypted vault)",
 };
 
 const SCOPE_LABELS: Record<string, string> = {
@@ -204,6 +206,12 @@ export function AppHub({ businessId }: { businessId: string }) {
         </div>
       </div>
       <ConnectorsSection businessId={businessId} />
+      <ByokAiPanel businessId={businessId} />
+      <CustomPluginsPanel
+        businessId={businessId}
+        scopes={scopes}
+        events={events}
+      />
       <ApiKeysSection businessId={businessId} scopes={scopes} />
       <WebhooksSection businessId={businessId} events={events} />
       <McpSection mcpPath={mcpPath} />
@@ -1150,8 +1158,13 @@ function McpSection({ mcpPath }: { mcpPath: string }) {
       </p>
       <p className="usr-muted">
         Methods: <code>initialize</code>, <code>tools/list</code>,{" "}
-        <code>tools/call</code>. Tools: <code>get_business_summary</code>,{" "}
-        <code>list_services</code>, <code>ask_business_copilot</code>.
+        <code>tools/call</code>. 11 Tools: <code>get_business_summary</code>,{" "}
+        <code>list_services</code>, <code>ask_business_copilot</code>,{" "}
+        <code>get_unit_economics</code>, <code>list_upcoming_bookings</code>,{" "}
+        <code>list_payment_sessions</code>, <code>get_launch_readiness</code>,{" "}
+        <code>search_business_records</code>,{" "}
+        <code>draft_payment_proposal</code>, <code>list_commercial_quotes</code>
+        , <code>list_purchase_orders</code>.
       </p>
       <h4>MCP client configuration</h4>
       <pre

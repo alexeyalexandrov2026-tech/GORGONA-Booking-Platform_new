@@ -45,7 +45,7 @@ export default function PrivacyPolicyPage() {
         </p>
         <h1>AMARKAL Platform Privacy Policy (United States)</h1>
         <p>
-          <strong>Effective date:</strong> November 26, 2026
+          <strong>Effective date:</strong> November 27, 2026
           <br />
           <strong>Operator:</strong> Alexey AAA Logistics LLC (doing business as{" "}
           <strong>AMARKAL Platform</strong>)
@@ -92,7 +92,21 @@ export default function PrivacyPolicyPage() {
           (email addresses and phone numbers).
         </p>
 
-        <h2>4. US State Privacy Rights (CCPA/CPRA and Similar Laws)</h2>
+        <h2>4. Optional Connectors, BYOK AI &amp; Encrypted Secret Vault</h2>
+        <p>
+          When a tenant optionally configures a Bring-Your-Own-Key (BYOK) AI
+          provider (Anthropic, Google Gemini, or OpenAI), an OAuth2 integration
+          (such as QuickBooks Online, Xero, Google Calendar, Microsoft 365, or
+          Slack), or a custom external plugin in App Hub, credentials and OAuth2
+          tokens are encrypted at rest using per-tenant AES-256-GCM under
+          enforced Row-Level Security and are never exposed in plaintext in
+          logs, exports, or UI responses. Prompts sent to a tenant-configured
+          BYOK AI vendor are transmitted directly to that vendor under the
+          tenant&apos;s own commercial agreement, and deleting a connector or
+          BYOK key permanently removes its stored encrypted credentials.
+        </p>
+
+        <h2>5. US State Privacy Rights (CCPA/CPRA and Similar Laws)</h2>
         <p>
           AMARKAL Platform acts as a service provider / processor for customer
           data controlled by each tenant business. Requests to access, correct,
@@ -107,7 +121,7 @@ export default function PrivacyPolicyPage() {
           . We do not sell personal information.
         </p>
 
-        <h2>5. Security &amp; Retention</h2>
+        <h2>6. Security &amp; Retention</h2>
         <p>
           All production traffic uses TLS 1.2+ behind Google Cloud Global HTTPS
           Load Balancer with Cloud Armor WAF, private Cloud SQL PostgreSQL 18,
