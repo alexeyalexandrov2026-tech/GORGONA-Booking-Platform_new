@@ -325,7 +325,7 @@ export async function fetchLaunchReadiness(
   salonId: string,
 ): Promise<LaunchReadiness> {
   const res = await fetch(
-    `/v1/businesses/${encodeURIComponent(salonId)}/readiness`,
+    `/v1/businesses/${encodeURIComponent(salonId)}/launch-readiness`,
     { headers: await authHeaders(), cache: "no-store" },
   );
   if (!res.ok) throw new Error("Unable to load launch readiness.");
