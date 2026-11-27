@@ -50,12 +50,20 @@ export default function TermsOfServicePage() {
           <strong>Operator:</strong> Alexey AAA logistics LLC (doing business as{" "}
           <strong>AMARKAL Platform</strong>)
           <br />
-          <strong>Support &amp; legal contact:</strong>{" "}
+          <strong>Support:</strong>{" "}
           <a
-            href="mailto:alexey.alexandrov2026@gmail.com"
+            href="mailto:support@amarkal-platform.com"
             className="legal-inline-link"
           >
-            alexey.alexandrov2026@gmail.com
+            support@amarkal-platform.com
+          </a>
+          {" · "}
+          <strong>Legal:</strong>{" "}
+          <a
+            href="mailto:legal@amarkal-platform.com"
+            className="legal-inline-link"
+          >
+            legal@amarkal-platform.com
           </a>
         </p>
 

@@ -49,12 +49,20 @@ export default function PrivacyPolicyPage() {
           <strong>Operator:</strong> Alexey AAA logistics LLC (doing business as{" "}
           <strong>AMARKAL Platform</strong>)
           <br />
-          <strong>Privacy contact:</strong>{" "}
+          <strong>Privacy &amp; legal contact:</strong>{" "}
           <a
-            href="mailto:alexey.alexandrov2026@gmail.com"
+            href="mailto:legal@amarkal-platform.com"
             className="legal-inline-link"
           >
-            alexey.alexandrov2026@gmail.com
+            legal@amarkal-platform.com
+          </a>
+          {" · "}
+          <strong>Support:</strong>{" "}
+          <a
+            href="mailto:support@amarkal-platform.com"
+            className="legal-inline-link"
+          >
+            support@amarkal-platform.com
           </a>
         </p>
 
@@ -90,10 +98,10 @@ export default function PrivacyPolicyPage() {
           or delete personal data should be directed to the relevant business
           tenant or to our privacy contact at{" "}
           <a
-            href="mailto:alexey.alexandrov2026@gmail.com"
+            href="mailto:legal@amarkal-platform.com"
             className="legal-inline-link"
           >
-            alexey.alexandrov2026@gmail.com
+            legal@amarkal-platform.com
           </a>
           . We do not sell personal information.
         </p>
