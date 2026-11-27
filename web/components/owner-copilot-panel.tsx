@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import React, { useId, useState } from "react";
-import { askOwnerCopilot, type OwnerCopilotResponse } from "../lib/growth-api";
+import {
+  askOwnerCopilot,
+  executeCopilotAction,
+  type ActionProposal,
+  type ExecuteCopilotActionResult,
+  type OwnerCopilotResponse,
+} from "../lib/growth-api";
 
 const QUICK_PROMPTS = [
   "Give me an executive brief and top 3 priorities for this week.",
@@ -16,6 +22,10 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const [executingId, setExecutingId] = useState<string | null>(null);
+  const [actionOutcome, setActionOutcome] =
+    useState<ExecuteCopilotActionResult | null>(null);
   const qId = useId();
 
   async function runCopilot(promptText?: string) {
@@ -38,6 +48,51 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
     e.preventDefault();
     await runCopilot();
   }
+
+  async function handleApproveAction(proposal: ActionProposal) {
+    setExecutingId(proposal.id);
+    setPendingActionId(null);
+    setError(null);
+    setActionOutcome(null);
+    try {
+      const outcome = await executeCopilotAction(
+        salonId,
+        proposal.kind,
+        proposal.params,
+      );
+      setActionOutcome(outcome);
+      if (
+        outcome.kind === "export_business_snapshot" &&
+        outcome.result.snapshot
+      ) {
+        const blob = new Blob(
+          [JSON.stringify(outcome.result.snapshot, null, 2)],
+          { type: "application/json;charset=utf-8" },
+        );
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "amarkal-business-snapshot.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setExecutingId(null);
+    }
+  }
+
+  const checkoutUrl =
+    typeof actionOutcome?.result.checkout_url === "string"
+      ? actionOutcome.result.checkout_url
+      : null;
+  const secretToken =
+    typeof actionOutcome?.result.secret_token === "string"
+      ? actionOutcome.result.secret_token
+      : null;
 
   return (
     <section
@@ -65,13 +120,14 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
             id="owner-copilot-heading"
             style={{ margin: 0, fontSize: "1.1rem" }}
           >
-            AMARKAL AI Business Copilot
+            AMARKAL AI Command Copilot
           </h3>
           <p
             style={{ margin: "4px 0 0", color: "#3f3832", fontSize: "0.88rem" }}
           >
-            Governed AI grounded strictly in your live PostgreSQL 18 bookings,
-            Stripe US payments, waitlist demand, and App Hub connectors.
+            Governed AI grounded strictly in live PostgreSQL 18 bookings, Stripe
+            US payments, waitlist demand, and App Hub — with human-approved
+            action execution.
           </p>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -99,6 +155,46 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
       {error && (
         <div role="alert" className="mgmt-error-banner">
           {error}
+        </div>
+      )}
+
+      {actionOutcome && (
+        <div
+          role="status"
+          className="hold-note"
+          style={{ margin: 0, display: "grid", gap: "8px" }}
+        >
+          <strong>Approved action completed:</strong> {actionOutcome.summary}
+          {checkoutUrl && (
+            <div>
+              <a
+                href={checkoutUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="button secondary usr-small-btn"
+              >
+                Open Stripe Checkout Link →
+              </a>
+            </div>
+          )}
+          {secretToken && (
+            <div style={{ display: "grid", gap: "4px" }}>
+              <small>
+                One-time Native MCP API Key (store securely now; shown once):
+              </small>
+              <code
+                style={{
+                  padding: "8px 10px",
+                  background: "#fff",
+                  border: "1px solid var(--line)",
+                  borderRadius: "4px",
+                  wordBreak: "break-all",
+                }}
+              >
+                {secretToken}
+              </code>
+            </div>
+          )}
         </div>
       )}
 
@@ -180,11 +276,91 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
                   className="legal-inline-link"
                   style={{ fontSize: "0.84rem", width: "fit-content" }}
                 >
-                  Review &amp; act →
+                  Open workspace →
                 </Link>
               </div>
             ))}
           </div>
+
+          {data.action_proposals.length > 0 && (
+            <div style={{ display: "grid", gap: "10px", marginTop: "4px" }}>
+              <strong style={{ fontSize: "0.92rem", color: "#1f1a17" }}>
+                Governed Action Proposals (Human Approval Required)
+              </strong>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                  gap: "10px",
+                }}
+              >
+                {data.action_proposals.map((prop) => (
+                  <div
+                    key={prop.id}
+                    style={{
+                      padding: "12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--line)",
+                      background: "#faf7f2",
+                      display: "grid",
+                      gap: "8px",
+                    }}
+                  >
+                    <strong style={{ fontSize: "0.88rem", color: "#1f1a17" }}>
+                      {prop.title}
+                    </strong>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.82rem",
+                        color: "#3f3832",
+                      }}
+                    >
+                      {prop.description}
+                    </p>
+                    <small style={{ color: "#5c5147", fontSize: "0.78rem" }}>
+                      {prop.impact_summary}
+                    </small>
+                    <div
+                      style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}
+                    >
+                      {pendingActionId === prop.id ? (
+                        <>
+                          <button
+                            type="button"
+                            className="usr-small-btn"
+                            disabled={executingId !== null}
+                            onClick={() => void handleApproveAction(prop)}
+                          >
+                            {executingId === prop.id
+                              ? "Executing…"
+                              : "Confirm & Execute"}
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary usr-small-btn"
+                            disabled={executingId !== null}
+                            onClick={() => setPendingActionId(null)}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="secondary usr-small-btn"
+                          disabled={executingId !== null}
+                          onClick={() => setPendingActionId(prop.id)}
+                        >
+                          Review &amp; Approve
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -193,7 +369,7 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
         style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
       >
         <label htmlFor={qId} className="skip">
-          Ask AI Business Copilot
+          Ask AI Command Copilot
         </label>
         <input
           id={qId}
