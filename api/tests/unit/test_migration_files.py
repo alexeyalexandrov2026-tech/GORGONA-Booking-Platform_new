@@ -15,7 +15,9 @@ def test_packaged_migrations_are_contiguous_and_checksummed() -> None:
 
 def test_migrations_never_disable_or_bypass_rls() -> None:
     for migration in load_migrations():
-        text = migration.sql.lower()
+        # Strip SQL line comments so prose notes ("zero ...") never trigger false positives
+        # while every executable SQL statement remains strictly audited.
+        text = "\n".join(line.split("--", 1)[0] for line in migration.sql.splitlines()).lower()
         assert "disable row level security" not in text, migration.name
         assert "no force row level security" not in text, migration.name
         assert "bypassrls" not in text, migration.name
