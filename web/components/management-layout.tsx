@@ -919,6 +919,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         <span>AMARKAL Platform</span>
         <Link href="/onboarding/">Register business</Link>
         <Link href="/integrations/">App Hub</Link>
+        <Link href="/status/">System Status</Link>
         <Link href="/legal/terms/">Terms of Service</Link>
         <Link href="/legal/privacy/">Privacy Policy</Link>
       </footer>

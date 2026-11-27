@@ -84,3 +84,21 @@ variable "auth_client_id" {
 variable "auth_scope" {
   type = string
 }
+
+variable "ops_alert_email" {
+  description = "Operations email address for Cloud Monitoring uptime & error alerts"
+  type        = string
+  default     = ""
+}
+
+variable "billing_account_id" {
+  description = "Optional GCP billing account ID for automated monthly budget alerts"
+  type        = string
+  default     = ""
+}
+
+variable "monthly_budget_usd" {
+  description = "Monthly GCP spend alert threshold in USD"
+  type        = number
+  default     = 500
+}

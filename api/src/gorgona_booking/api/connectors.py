@@ -6,7 +6,8 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, Request, Response, status
+from fastapi import APIRouter, Header, HTTPException, Query, Request, Response, status
+from fastapi.responses import RedirectResponse
 from psycopg.rows import dict_row
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -22,6 +23,14 @@ from gorgona_booking.api.search import search_business_records
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business.commercial import list_purchase_orders, list_quotes
 from gorgona_booking.connectors.dispatcher import dispatch_business_event
+from gorgona_booking.connectors.oauth import (
+    OAUTH_PROVIDERS,
+    build_oauth_authorization_url,
+    create_oauth_state,
+    exchange_oauth_code,
+    is_oauth_provider_configured,
+    verify_oauth_state,
+)
 from gorgona_booking.connectors.service import (
     ALLOWED_SCOPES,
     ALLOWED_WEBHOOK_EVENTS,
@@ -42,7 +51,7 @@ from gorgona_booking.connectors.service import (
     send_webhook_http_probe,
     upsert_connector_installation,
 )
-from gorgona_booking.db.pool import set_tenant_context
+from gorgona_booking.db.pool import set_tenant_context, tenant_transaction
 from gorgona_booking.growth.service import (
     get_launch_readiness,
     get_unit_economics,
@@ -550,6 +559,188 @@ async def post_dispatch_webhook_event(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
     return [WebhookDeliveryResponse(**r) for r in rows]
+
+
+class OAuthProviderStatusResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    connector_id: str
+    display_name: str
+    configured: bool
+    scopes: list[str]
+    callback_url: str
+
+
+class OAuthStartResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    connector_id: str
+    configured: bool
+    authorization_url: str | None = None
+    message: str
+
+
+def _oauth_base_url(request: Request) -> str:
+    host = request.headers.get("host") or request.url.netloc
+    hostname = host.split(":", 1)[0].lower()
+    raw_scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    scheme = raw_scheme if hostname in ("127.0.0.1", "localhost") else "https"
+    return f"{scheme}://{host}"
+
+
+def _oauth_env(request: Request) -> str:
+    settings = getattr(request.app.state, "settings", None)
+    return settings.environment if settings is not None else "local"
+
+
+@router.get(
+    "/v1/businesses/{business_id}/connectors/oauth/providers",
+    response_model=list[OAuthProviderStatusResponse],
+)
+async def get_oauth_providers(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> list[OAuthProviderStatusResponse]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.BUSINESS_READ,
+        request_id=get_request_id(request),
+    ):
+        pass
+    base = _oauth_base_url(request)
+    return [
+        OAuthProviderStatusResponse(
+            connector_id=spec.connector_id,
+            display_name=spec.display_name,
+            configured=is_oauth_provider_configured(spec.connector_id),
+            scopes=list(spec.scopes),
+            callback_url=f"{base}/v1/connectors/oauth/{spec.connector_id}/callback",
+        )
+        for spec in OAUTH_PROVIDERS.values()
+    ]
+
+
+@router.post(
+    "/v1/businesses/{business_id}/connectors/oauth/{connector_id}/start",
+    response_model=OAuthStartResponse,
+)
+async def post_start_connector_oauth(
+    business_id: UUID,
+    connector_id: str,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> OAuthStartResponse:
+    spec = OAUTH_PROVIDERS.get(connector_id)
+    if spec is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Connector '{connector_id}' does not use OAuth2.",
+        )
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.BUSINESS_MANAGE,
+        request_id=get_request_id(request),
+    ):
+        pass
+    if not is_oauth_provider_configured(connector_id):
+        return OAuthStartResponse(
+            connector_id=connector_id,
+            configured=False,
+            authorization_url=None,
+            message=(
+                f"OAuth2 app credentials for {spec.display_name} are not set in this "
+                "environment yet. You can still configure account IDs manually via Install."
+            ),
+        )
+    base = _oauth_base_url(request)
+    redirect_uri = f"{base}/v1/connectors/oauth/{connector_id}/callback"
+    state = create_oauth_state(
+        tenant_id=business_id,
+        connector_id=connector_id,
+        user_id=principal.user_id,
+        environment=_oauth_env(request),
+    )
+    auth_url = build_oauth_authorization_url(
+        connector_id=connector_id,
+        redirect_uri=redirect_uri,
+        state=state,
+    )
+    return OAuthStartResponse(
+        connector_id=connector_id,
+        configured=True,
+        authorization_url=auth_url,
+        message=f"Redirecting to {spec.display_name} OAuth2 consent screen.",
+    )
+
+
+@router.get("/v1/connectors/oauth/{connector_id}/callback", include_in_schema=False)
+async def get_connector_oauth_callback(
+    connector_id: str,
+    request: Request,
+    code: str | None = Query(default=None),
+    state: str | None = Query(default=None),
+    realmId: str | None = Query(default=None),  # noqa: N803
+    error: str | None = Query(default=None),
+) -> RedirectResponse:
+    base = _oauth_base_url(request)
+    if error or not code or not state or connector_id not in OAUTH_PROVIDERS:
+        return RedirectResponse(
+            url=f"{base}/integrations/?oauth=cancelled&connector={connector_id}",
+            status_code=status.HTTP_302_FOUND,
+        )
+    try:
+        tenant_id, user_id = verify_oauth_state(
+            state,
+            expected_connector_id=connector_id,
+            environment=_oauth_env(request),
+        )
+    except ValueError:
+        return RedirectResponse(
+            url=f"{base}/integrations/?oauth=invalid_state&connector={connector_id}",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    redirect_uri = f"{base}/v1/connectors/oauth/{connector_id}/callback"
+    try:
+        token_data = await exchange_oauth_code(
+            connector_id=connector_id,
+            code=code,
+            redirect_uri=redirect_uri,
+        )
+    except Exception:
+        return RedirectResponse(
+            url=f"{base}/integrations/?oauth=exchange_failed&connector={connector_id}",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    config_payload: dict[str, Any] = {
+        "oauth_connected": "true",
+        "token_type": str(token_data.get("token_type") or "bearer")[:40],
+        "scope": str(token_data.get("scope") or "default")[:200],
+    }
+    if realmId:
+        config_payload["realm_id"] = realmId[:80]
+    if token_data.get("team") and isinstance(token_data["team"], dict):
+        team_name = token_data["team"].get("name")
+        if team_name:
+            config_payload["workspace_name"] = str(team_name)[:120]
+
+    async with tenant_transaction(runtime_pool(request), tenant_id) as conn:
+        await upsert_connector_installation(
+            conn,
+            tenant_id=tenant_id,
+            connector_id=connector_id,
+            status="installed",
+            config=config_payload,
+            user_id=user_id,
+        )
+    return RedirectResponse(
+        url=f"{base}/integrations/?oauth=connected&connector={connector_id}",
+        status_code=status.HTTP_302_FOUND,
+    )
 
 
 @router.get("/v1/businesses/{business_id}/connectors/meta")

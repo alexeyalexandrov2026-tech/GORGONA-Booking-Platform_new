@@ -8,6 +8,7 @@ import {
   fetchApiKeys,
   fetchAppHubMeta,
   fetchConnectorCatalog,
+  fetchOAuthProviders,
   fetchWebhookDeliveries,
   fetchWebhooks,
   FALLBACK_SCOPES,
@@ -16,10 +17,12 @@ import {
   removeConnector,
   revokeApiKey,
   saveConnector,
+  startConnectorOAuth,
   testWebhook,
   type ApiKey,
   type AppHubMeta,
   type Connector,
+  type OAuthProviderStatus,
   type WebhookDelivery,
   type WebhookEndpoint,
 } from "../lib/app-hub-api";
@@ -210,14 +213,36 @@ export function AppHub({ businessId }: { businessId: string }) {
 
 function ConnectorsSection({ businessId }: { businessId: string }) {
   const [items, setItems] = useState<Connector[] | null>(null);
+  const [oauthMap, setOauthMap] = useState<Record<string, OAuthProviderStatus>>(
+    {},
+  );
+  const [oauthBanner, setOauthBanner] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   useEffect(() => {
     let active = true;
-    fetchConnectorCatalog(businessId)
-      .then((list) => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthState = params.get("oauth");
+    const connId = params.get("connector");
+    void Promise.all([
+      fetchConnectorCatalog(businessId),
+      fetchOAuthProviders(businessId).catch(() => []),
+    ])
+      .then(([list, providers]) => {
         if (!active) return;
         setItems(list);
+        const byId: Record<string, OAuthProviderStatus> = {};
+        for (const p of providers) byId[p.connector_id] = p;
+        setOauthMap(byId);
+        if (oauthState === "connected" && connId) {
+          setOauthBanner(
+            `OAuth2 connection completed for ${connId.replace(/_/g, " ")}.`,
+          );
+        } else if (oauthState === "cancelled" && connId) {
+          setOauthBanner(
+            `OAuth2 authorization was cancelled for ${connId.replace(/_/g, " ")}.`,
+          );
+        }
         setError(null);
       })
       .catch((err: unknown) => {
@@ -233,10 +258,15 @@ function ConnectorsSection({ businessId }: { businessId: string }) {
     <section className="usr-card" aria-labelledby="hub-connectors-heading">
       <h3 id="hub-connectors-heading">Connectors</h3>
       <p className="usr-muted">
-        Install a US connector, add its account identifiers, and pause or remove
-        it at any time. Raw credentials are never stored; values whose names
-        look like secrets are masked.
+        Optional third-party connectors that your organization chooses to
+        enable. Install manually via account IDs or connect with one-click
+        OAuth2 where configured; pause or remove at any time.
       </p>
+      {oauthBanner && (
+        <p role="status" className="hold-note">
+          {oauthBanner}
+        </p>
+      )}
       {error && (
         <div className="mgmt-error-banner" role="alert">
           <p>{error}</p>
@@ -260,6 +290,7 @@ function ConnectorsSection({ businessId }: { businessId: string }) {
               key={c.id}
               businessId={businessId}
               connector={c}
+              oauthProvider={oauthMap[c.id] ?? null}
               onChanged={reload}
             />
           ))}
@@ -272,10 +303,12 @@ function ConnectorsSection({ businessId }: { businessId: string }) {
 function ConnectorCard({
   businessId,
   connector: c,
+  oauthProvider,
   onChanged,
 }: {
   businessId: string;
   connector: Connector;
+  oauthProvider: OAuthProviderStatus | null;
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -418,8 +451,53 @@ function ConnectorCard({
 
       {!editing && !confirmRemove && (
         <div className="usr-inline" style={{ marginTop: "auto" }}>
+          {oauthProvider && (
+            <button
+              type="button"
+              className={
+                oauthProvider.configured
+                  ? "usr-small-btn"
+                  : "secondary usr-small-btn"
+              }
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                setError(null);
+                setNotice(null);
+                void startConnectorOAuth(businessId, c.id)
+                  .then((res) => {
+                    if (res.configured && res.authorization_url) {
+                      window.open(
+                        res.authorization_url,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                      setNotice(res.message);
+                    } else {
+                      setNotice(res.message);
+                    }
+                  })
+                  .catch((err: unknown) => setError(errText(err)))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              {oauthProvider.configured
+                ? c.installed
+                  ? "Reconnect OAuth2"
+                  : "Connect via OAuth2"
+                : "OAuth2 setup info"}
+            </button>
+          )}
           {!c.installed ? (
-            <button type="button" className="usr-small-btn" onClick={openForm}>
+            <button
+              type="button"
+              className={
+                oauthProvider?.configured
+                  ? "secondary usr-small-btn"
+                  : "usr-small-btn"
+              }
+              onClick={openForm}
+            >
               Install
             </button>
           ) : (

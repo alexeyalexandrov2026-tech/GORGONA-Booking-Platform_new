@@ -641,7 +641,7 @@ export function CommercialHub({ businessId }: { businessId: string }) {
                             </div>
                           )}
                         </td>
-                        <td>
+                        <td style={{ whiteSpace: "nowrap" }}>
                           <strong>{formatUsd(q.total_cents)}</strong>
                         </td>
                         <td>
