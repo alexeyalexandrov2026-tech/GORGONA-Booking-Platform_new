@@ -7,6 +7,7 @@ import { CommissionCalculator } from "../components/landing/commission-calculato
 import { IndustryExplorer } from "../components/landing/industry-explorer";
 import { INDUSTRIES } from "../components/landing/industries";
 import { MonolithHeroStage } from "../components/landing/monolith-hero-stage";
+import { B2bDemoRequestForm } from "../components/b2b-demo-request-form";
 import "./landing.css";
 
 export const metadata: Metadata = {
@@ -343,6 +344,37 @@ export default function HomePage() {
               modules instead of a blank screen.
             </p>
             <IndustryExplorer />
+            <div style={{ marginTop: "28px" }}>
+              <p className="lp-mono" style={{ marginBottom: "10px" }}>
+                Featured US B2B Vertical Guides
+              </p>
+              <div className="usr-inline">
+                <Link
+                  href="/industries/freight-logistics/"
+                  className="lp-btn lp-btn--ghost"
+                >
+                  Freight &amp; Logistics →
+                </Link>
+                <Link
+                  href="/industries/construction/"
+                  className="lp-btn lp-btn--ghost"
+                >
+                  Construction &amp; Field →
+                </Link>
+                <Link
+                  href="/industries/commercial-property/"
+                  className="lp-btn lp-btn--ghost"
+                >
+                  Commercial Property →
+                </Link>
+                <Link
+                  href="/industries/equipment-rental/"
+                  className="lp-btn lp-btn--ghost"
+                >
+                  Equipment &amp; Fleet Rental →
+                </Link>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -390,7 +422,7 @@ export default function HomePage() {
               <p className="lp-section-lead">
                 The core stays focused on running your business. Messengers,
                 telephony, accounting and AI agents connect cleanly through the
-                AMARKAL App Hub and our 7-tool Native MCP server using your own
+                AMARKAL App Hub and our 11-tool Native MCP server using your own
                 accounts.
               </p>
               <ul className="lp-connectors" aria-label="Connectors">
@@ -403,6 +435,20 @@ export default function HomePage() {
               </Link>
             </div>
             <AppHubTabs />
+          </div>
+        </section>
+
+        {/* B2B Demo / Founding Partner Pilot Intake */}
+        <section
+          id="demo-request"
+          className="lp-section"
+          aria-labelledby="demo-request-heading"
+        >
+          <div className="lp-container">
+            <h2 id="demo-request-heading" className="sr-only">
+              Request a B2B Walkthrough
+            </h2>
+            <B2bDemoRequestForm sourcePath="/" />
           </div>
         </section>
 

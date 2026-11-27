@@ -48,6 +48,7 @@ from gorgona_booking.api import (
     property_maintenance,
     property_showings,
     provider_admission,
+    public_demo,
     rental,
     reservations,
     restaurant_billing,
@@ -227,6 +228,7 @@ def create_app(
     app.include_router(media.router)
     app.include_router(payments.router)
     app.include_router(commercial.router)
+    app.include_router(public_demo.router)
     app.include_router(setup.router)
     app.include_router(platform.router)
     app.include_router(customer.router)
