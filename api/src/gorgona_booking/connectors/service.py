@@ -5,17 +5,18 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import hmac
+import http.client
 import ipaddress
 import json
 import secrets
 import socket
+import ssl
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
 from urllib.parse import urlparse
 from uuid import UUID
 
-import httpx
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -480,6 +481,55 @@ async def prepare_webhook_test_delivery(
     )
 
 
+def _post_webhook_https_sync(
+    safe_url: str, body: bytes, signature_header: str
+) -> WebhookProbeOutcome:
+    """Bounded stdlib HTTPS POST (no redirects, zero extra runtime dependencies)."""
+    parsed = urlparse(safe_url)
+    host = parsed.hostname or ""
+    port = parsed.port or 443
+    target = parsed.path or "/"
+    if parsed.query:
+        target = f"{target}?{parsed.query}"
+    conn = http.client.HTTPSConnection(
+        host,
+        port,
+        timeout=6.0,
+        context=ssl.create_default_context(),
+    )
+    try:
+        conn.request(
+            "POST",
+            target,
+            body=body,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "AMARKAL-Webhooks/1.0",
+                "X-AMARKAL-Event": "connector.test",
+                "X-AMARKAL-Signature": signature_header,
+            },
+        )
+        resp = conn.getresponse()
+        resp.read(1024)
+        code = int(resp.status)
+    except (OSError, http.client.HTTPException) as exc:
+        return WebhookProbeOutcome(
+            status="failed",
+            http_status=None,
+            last_error=f"Outbound delivery error: {type(exc).__name__}",
+        )
+    finally:
+        conn.close()
+
+    if 200 <= code < 300:
+        return WebhookProbeOutcome(status="delivered", http_status=code, last_error=None)
+    return WebhookProbeOutcome(
+        status="failed",
+        http_status=code,
+        last_error=f"Endpoint responded with HTTP {code}",
+    )
+
+
 async def send_webhook_http_probe(prepared: PreparedWebhookTest) -> WebhookProbeOutcome:
     """Perform a real bounded HTTPS POST strictly outside the DB transaction with SSRF guard."""
     try:
@@ -490,33 +540,8 @@ async def send_webhook_http_probe(prepared: PreparedWebhookTest) -> WebhookProbe
         return WebhookProbeOutcome(status="failed", http_status=None, last_error=str(exc))
 
     body = json.dumps(prepared.payload, sort_keys=True).encode("utf-8")
-    try:
-        async with httpx.AsyncClient(timeout=6.0, follow_redirects=False) as client:
-            resp = await client.post(
-                safe_url,
-                content=body,
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "AMARKAL-Webhooks/1.0",
-                    "X-AMARKAL-Event": "connector.test",
-                    "X-AMARKAL-Signature": prepared.signature_header,
-                },
-            )
-    except httpx.HTTPError as exc:
-        return WebhookProbeOutcome(
-            status="failed",
-            http_status=None,
-            last_error=f"Outbound delivery error: {type(exc).__name__}",
-        )
-
-    if 200 <= resp.status_code < 300:
-        return WebhookProbeOutcome(
-            status="delivered", http_status=resp.status_code, last_error=None
-        )
-    return WebhookProbeOutcome(
-        status="failed",
-        http_status=resp.status_code,
-        last_error=f"Endpoint responded with HTTP {resp.status_code}",
+    return await asyncio.to_thread(
+        _post_webhook_https_sync, safe_url, body, prepared.signature_header
     )
 
 

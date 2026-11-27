@@ -28,39 +28,6 @@ interface WorkspacePreset {
 
 const PRESETS: readonly WorkspacePreset[] = [
   {
-    id: "yacht",
-    pill: "Yacht Charter",
-    company: "Harbor Yacht Co.",
-    bookingsLabel: "Bookings today",
-    bookingsValue: "24",
-    revenueValue: "$48,210",
-    calendarTitle: "Fleet calendar · Sat",
-    rows: [
-      { label: "Aurora 42′", width: "56%", tone: "blue", tag: "10:00–16:00" },
-      {
-        label: "Sea Glass",
-        width: "36%",
-        offset: "14%",
-        tone: "gold",
-        tag: "11:30–14:30",
-      },
-      { label: "Nomad 38′", width: "70%", tone: "blue", tag: "09:00–17:30" },
-      {
-        label: "Tender 1",
-        width: "28%",
-        offset: "28%",
-        tone: "gold",
-        tag: "13:00–15:30",
-      },
-    ],
-    aiQuestion: "Can I book a sunset charter for 8 on Saturday?",
-    aiReply:
-      "Aurora 42′ is free 6:00–9:00 PM. $1,450 · deposit 30%. Shall I hold it?",
-    floatTitle: "Shift swap",
-    floatBody: "Captain M. Reyes ⇄ J. Park",
-    floatAction: "Approve",
-  },
-  {
     id: "freight",
     pill: "Freight & Logistics",
     company: "Apex Freight LLC",
@@ -100,57 +67,90 @@ const PRESETS: readonly WorkspacePreset[] = [
     aiQuestion: "Which dry vans have open capacity in Dallas tomorrow?",
     aiReply:
       "Unit #402 clears Dallas dock at 14:00 CT. Drafted FIN-03 rate con ($2,850).",
-    floatTitle: "Stripe settlement",
+    floatTitle: "FIN-03 settlement",
     floatBody: "Invoice #INV-4092 · $2,850",
-    floatAction: "Match FIN-03",
+    floatAction: "Approve",
   },
   {
-    id: "hospitality",
-    pill: "Property & Studio",
-    company: "Mercer Suites NY",
-    bookingsLabel: "Confirmed stays",
+    id: "property",
+    pill: "Property & Operations",
+    company: "Mercer Commercial NY",
+    bookingsLabel: "Active units",
     bookingsValue: "31",
     revenueValue: "$32,940",
     calendarTitle: "Operations grid · Thu",
     rows: [
-      { label: "Loft 4A", width: "62%", tone: "blue", tag: "Checked in" },
+      { label: "Suite 4A", width: "62%", tone: "blue", tag: "Lease active" },
       {
         label: "Suite 8B",
         width: "40%",
         offset: "18%",
         tone: "gold",
-        tag: "Housekeeping",
+        tag: "HVAC work order",
       },
-      { label: "Studio 2C", width: "52%", tone: "blue", tag: "VIP arrival" },
+      { label: "Unit 2C", width: "52%", tone: "blue", tag: "Turnover check" },
       {
-        label: "Penthouse",
+        label: "Floor 9",
         width: "36%",
         offset: "26%",
         tone: "gold",
-        tag: "Inspection",
+        tag: "Vendor SLA",
       },
     ],
-    aiQuestion: "Extend Loft 4A by one night and send a Stripe link?",
+    aiQuestion: "Renew Suite 4A contract and prepare the FIN-03 invoice?",
     aiReply:
-      "Loft 4A is open Friday ($480 USD, 0% fee). Checkout link ready for approval.",
+      "Drafted 12-month renewal ($4,800/mo, 0% platform fee). Ready for owner review.",
     floatTitle: "AI proposal",
-    floatBody: "Send checkout link · $480",
-    floatAction: "Confirm",
+    floatBody: "Issue FIN-03 invoice · $4,800",
+    floatAction: "Approve",
+  },
+  {
+    id: "fleet",
+    pill: "Fleet & Equipment Rental",
+    company: "Harbor Fleet Co.",
+    bookingsLabel: "Active charters",
+    bookingsValue: "24",
+    revenueValue: "$48,210",
+    calendarTitle: "Asset schedule · Sat",
+    rows: [
+      { label: "Aurora 42′", width: "56%", tone: "blue", tag: "10:00–16:00" },
+      {
+        label: "Sea Glass",
+        width: "36%",
+        offset: "14%",
+        tone: "gold",
+        tag: "11:30–14:30",
+      },
+      { label: "Nomad 38′", width: "70%", tone: "blue", tag: "09:00–17:30" },
+      {
+        label: "Tender 1",
+        width: "28%",
+        offset: "28%",
+        tone: "gold",
+        tag: "13:00–15:30",
+      },
+    ],
+    aiQuestion: "Prepare Saturday charter agreement and 30% deposit invoice?",
+    aiReply:
+      "Aurora 42′ is available 6:00–9:00 PM ($1,450 · $435 deposit). Draft ready.",
+    floatTitle: "Shift swap",
+    floatBody: "Captain M. Reyes ⇄ J. Park",
+    floatAction: "Approve",
   },
 ];
 
 const SIDEBAR_ITEMS = [
   "Overview",
-  "Calendar",
-  "Orders",
-  "Clients",
+  "Operations",
+  "Counterparties",
+  "Documents",
   "Staff & shifts",
   "Finance",
   "App Hub",
 ] as const;
 
 export function MonolithHeroStage() {
-  const [activeId, setActiveId] = useState<string>("yacht");
+  const [activeId, setActiveId] = useState<string>("freight");
   const [approved, setApproved] = useState(false);
 
   const preset = PRESETS.find((item) => item.id === activeId) ?? PRESETS[0]!;

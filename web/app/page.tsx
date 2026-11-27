@@ -13,13 +13,13 @@ export const metadata: Metadata = {
   title:
     "AMARKAL Platform — US Business OS across 39 industries, 0% commission",
   description:
-    "Run any US business on AMARKAL Platform: operations, scheduling, clients, staff, double-entry USD finance, and human-approved AI automation for 39 NAICS industries. 0% commission.",
+    "Run any US business on AMARKAL Platform: operations, counterparties, contracts, staff, double-entry USD finance, optional client portals, and human-approved AI across 39 NAICS industries. 0% commission.",
   alternates: { canonical: "https://www.amarkal-platform.com/" },
   openGraph: {
     title:
       "AMARKAL Platform — US Business OS across 39 industries, 0% commission",
     description:
-      "Scheduling, clients, staff, FIN-03 USD finance, Stripe Live payouts, and governed AI automation for 39 NAICS industries. Keep 100% of every customer payment.",
+      "Unified US Business Operating System for 39 NAICS industries: operations, counterparties, contracts, staff, FIN-03 USD finance, optional client portals, and governed AI. 0% platform commission.",
     url: "https://www.amarkal-platform.com/",
     siteName: "AMARKAL Platform",
     locale: "en_US",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "AMARKAL Platform — US Business OS (0% Commission)",
     description:
-      "Run any US business on one platform across 39 NAICS industries with 0% commission, 7-tool Native MCP, and AI that asks first.",
+      "Run any US business on one operating system across 39 NAICS industries with 0% commission, 7-tool Native MCP, and AI that asks first.",
   },
   robots: { index: true, follow: true },
 };
@@ -40,58 +40,6 @@ const NAV = [
   { href: "#manifesto", label: "0% commission" },
   { href: "#architect", label: "AI Architect" },
   { href: "#app-hub", label: "App Hub" },
-  { href: "#pricing", label: "Pricing" },
-] as const;
-
-const PLANS = [
-  {
-    id: "starter",
-    name: "Starter",
-    price: "$0",
-    cadence: "/ month",
-    featured: false,
-    tagline: "Launch your US business with 0% platform commission.",
-    features: [
-      "AI Business Architect across 39 NAICS industries",
-      "Branded client portal & smart waitlist",
-      "Direct Stripe US checkout & ACH (0% AMARKAL fee)",
-      "Double-entry USD ledger & FIN-03 invoices",
-      "1-click JSON full workspace export",
-    ],
-    cta: "Start free",
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    price: "$49",
-    cadence: "/ month",
-    featured: true,
-    tagline: "Full autonomous Business OS for growing US teams.",
-    features: [
-      "Everything in Starter, unlimited bookings & staff",
-      "Governed AI Business Copilot with 2-step approval",
-      "7-tool Native MCP server, scoped API keys & webhooks",
-      "Automated Stripe ↔ FIN-03 financial reconciliation",
-      "Multi-branch schedules, shifts & timesheets",
-    ],
-    cta: "Start with Growth",
-  },
-  {
-    id: "scale",
-    name: "Scale",
-    price: "$149",
-    cadence: "/ month",
-    featured: false,
-    tagline: "Multi-entity, franchise & custom-domain US operations.",
-    features: [
-      "Everything in Growth across multiple locations & brands",
-      "Delegated provider admission & multi-entity reporting",
-      "Custom booking domain & embeddable storefront control",
-      "BYOK Twilio SMS/Voice, QuickBooks & Zapier bridges",
-      "Priority US engineering & migration support",
-    ],
-    cta: "Launch Scale",
-  },
 ] as const;
 
 const STRUCTURED_DATA = {
@@ -112,27 +60,7 @@ const STRUCTURED_DATA = {
       operatingSystem: "Web",
       url: "https://www.amarkal-platform.com/",
       description:
-        "US Business OS across 39 NAICS industries with scheduling, CRM, staff, double-entry USD finance, Stripe payouts, 7-tool Native MCP, and human-in-the-loop AI automation. 0% platform commission.",
-      offers: [
-        {
-          "@type": "Offer",
-          name: "Starter",
-          price: "0",
-          priceCurrency: "USD",
-        },
-        {
-          "@type": "Offer",
-          name: "Growth",
-          price: "49",
-          priceCurrency: "USD",
-        },
-        {
-          "@type": "Offer",
-          name: "Scale",
-          price: "149",
-          priceCurrency: "USD",
-        },
-      ],
+        "US Business Operating System across 39 NAICS industries covering operations, counterparties, contracts, staff, double-entry USD finance, optional client portals, 7-tool Native MCP, and human-in-the-loop AI.",
     },
   ],
 };
@@ -235,9 +163,10 @@ export default function HomePage() {
               </span>
             </h1>
             <p className="lp-lead">
-              Scheduling, clients, staff, documents and finance in one workspace
-              that adapts to your industry. With an AI Assistant that asks
-              first.
+              Operations, counterparties, contracts, staff, documents,
+              double-entry USD finance and optional client portals in one
+              operating system that adapts to your industry. With an AI
+              Assistant that asks first.
             </p>
             <div className="lp-cta-row">
               <Link
@@ -250,7 +179,7 @@ export default function HomePage() {
                 href="/book/?demo=1"
                 className="lp-btn lp-btn--link lp-btn--lg"
               >
-                Preview client portal <span aria-hidden="true">›</span>
+                Explore industry demos <span aria-hidden="true">›</span>
               </Link>
             </div>
             <MonolithHeroStage />
@@ -264,7 +193,7 @@ export default function HomePage() {
           aria-labelledby="lp-features-title"
         >
           <div className="lp-container lp-center">
-            <p className="lp-mono">One workspace</p>
+            <p className="lp-mono">One business operating system</p>
             <h2 id="lp-features-title">
               Everything a business runs on.
               <br />
@@ -273,22 +202,23 @@ export default function HomePage() {
             <div className="lp-bento">
               <article className="lp-tile lp-tile--w4">
                 <span className="lp-mono">01</span>
-                <h3>Scheduling &amp; operations</h3>
+                <h3>Operations, dispatch &amp; workflows</h3>
                 <p>
-                  Services, specialists and resources with one shared view of
-                  availability — plus a branded portal for your customers.
+                  Orders, projects, fleet dispatch, assets, resources and
+                  optional client booking portals in one operational workspace —
+                  adapted to your NAICS profile.
                 </p>
                 <div className="lp-tile-visual" aria-hidden="true">
                   <div className="lp-mini-track">
-                    <span>09:00 · Confirmed</span>
-                    <i className="is-blue" style={{ width: "58%" }} />
+                    <span>09:00 · Freight dispatch</span>
+                    <i className="is-blue" style={{ width: "64%" }} />
                   </div>
                   <div className="lp-mini-track">
-                    <span>12:30 · Portal hold</span>
-                    <i className="is-gold" style={{ width: "42%" }} />
+                    <span>12:30 · Site work order</span>
+                    <i className="is-gold" style={{ width: "48%" }} />
                   </div>
                   <div className="lp-mini-track">
-                    <span>15:00 · Crew dispatch</span>
+                    <span>15:00 · Fleet allocation</span>
                     <i className="is-blue" style={{ width: "74%" }} />
                   </div>
                 </div>
@@ -298,9 +228,9 @@ export default function HomePage() {
                 <span className="lp-mono lp-mono--gold">AI</span>
                 <h3>AI Assistant</h3>
                 <p>
-                  Helps customers choose a service and a time through the same
-                  verified workflow — and drafts owner actions with 2-step
-                  approval.
+                  Drafts workspace setups, operational proposals and live
+                  business insights — executing actions only after explicit
+                  owner approval.
                 </p>
                 <div className="lp-tile-ai-pill" aria-hidden="true">
                   <span>●</span> Human-in-the-loop · 0 unapproved writes
@@ -476,77 +406,11 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Transparent Flat Pricing — Zero Transaction Commission */}
-        <section
-          id="pricing"
-          className="lp-section"
-          aria-labelledby="pricing-title"
-        >
-          <div className="lp-container lp-center">
-            <p className="lp-mono">Transparent US pricing</p>
-            <h2 id="pricing-title">
-              Flat monthly software.
-              <br />
-              <span className="lp-h2-muted">0% transaction commission.</span>
-            </h2>
-            <p className="lp-section-lead lp-section-lead--center">
-              Start free with zero credit card and zero setup lock-in. Upgrade
-              only when your business needs multi-branch operations or
-              autonomous AI workflows — AMARKAL never takes a cut of your sales.
-            </p>
-            <div className="lp-pricing-grid">
-              {PLANS.map((plan) => (
-                <article
-                  key={plan.id}
-                  className={
-                    "lp-plan" + (plan.featured ? " lp-plan--featured" : "")
-                  }
-                >
-                  <div className="lp-plan-top">
-                    <span
-                      className={
-                        "lp-mono" + (plan.featured ? " lp-mono--gold" : "")
-                      }
-                    >
-                      {plan.featured ? "Most popular · 0% fee" : "0% fee"}
-                    </span>
-                    <h3>{plan.name}</h3>
-                    <p className="lp-plan-tagline">{plan.tagline}</p>
-                    <p className="lp-plan-price">
-                      <strong>{plan.price}</strong>
-                      <span>USD {plan.cadence}</span>
-                    </p>
-                  </div>
-                  <ul className="lp-plan-list">
-                    {plan.features.map((feat) => (
-                      <li key={feat}>{feat}</li>
-                    ))}
-                  </ul>
-                  <Link
-                    href="/onboarding/"
-                    className={
-                      "lp-btn lp-plan-cta " +
-                      (plan.featured ? "lp-btn--white" : "lp-btn--primary")
-                    }
-                  >
-                    {plan.cta}
-                  </Link>
-                </article>
-              ))}
-            </div>
-            <p className="lp-fineprint">
-              Standard Stripe processing fees are billed directly by Stripe to
-              your merchant account. Cancel or export your entire workspace to
-              JSON anytime.
-            </p>
-          </div>
-        </section>
-
         {/* Monumental Obsidian Closing CTA */}
         <section className="lp-final" aria-labelledby="final-title">
           <div className="lp-container lp-final-inner">
             <p className="lp-mono lp-mono--dark">
-              Yacht rental · Real estate · Hospitality · +36
+              Freight &amp; logistics · Construction · Property · Rentals · +35
             </p>
             <h2 id="final-title">
               Open your business
@@ -554,8 +418,8 @@ export default function HomePage() {
               in minutes.
             </h2>
             <p className="lp-final-lead">
-              Launch a workspace with the AI Business Architect, approve your
-              draft, and keep 100% of your revenue.
+              Launch a Business OS workspace with the AI Business Architect,
+              approve your draft, and keep 100% of your revenue.
             </p>
             <div className="lp-cta-row">
               <Link
@@ -568,7 +432,7 @@ export default function HomePage() {
                 href="/book/?demo=1"
                 className="lp-btn lp-btn--link-dark lp-btn--lg"
               >
-                Preview client portal <span aria-hidden="true">›</span>
+                Explore industry demos <span aria-hidden="true">›</span>
               </Link>
             </div>
           </div>
@@ -589,7 +453,7 @@ export default function HomePage() {
                 <Link href="/onboarding/">Create your business</Link>
               </li>
               <li>
-                <Link href="/book/?demo=1">Client portal demo</Link>
+                <Link href="/book/?demo=1">Industry demos</Link>
               </li>
               <li>
                 <Link href="/auth/signin/">Sign in</Link>
