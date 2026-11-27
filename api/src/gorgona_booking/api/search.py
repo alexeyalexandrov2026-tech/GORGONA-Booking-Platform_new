@@ -18,7 +18,15 @@ from gorgona_booking.tenancy.authorization import authorized_tenant
 
 router = APIRouter(tags=["search"])
 
-SearchHitKind = Literal["counterparty", "document", "invoice", "service", "payment"]
+SearchHitKind = Literal[
+    "counterparty",
+    "document",
+    "invoice",
+    "service",
+    "payment",
+    "quote",
+    "purchase_order",
+]
 
 
 class SearchHit(BaseModel):
@@ -218,6 +226,67 @@ async def search_business_records(
                     title=str(row["description"]),
                     subtitle=f"Stripe {row['currency']} {amt:,.2f}{ref}",
                     path="/integrations/",
+                    status=str(row["status"]),
+                )
+            )
+
+        # 6. Commercial Quotes (CPQ)
+        await cur.execute(
+            """
+            SELECT id, quote_number, title, counterparty_name, total_cents, status
+            FROM gba.commercial_quotes
+            WHERE tenant_id = %s
+              AND (
+                  quote_number ILIKE %s ESCAPE '\\'
+                  OR title ILIKE %s ESCAPE '\\'
+                  OR counterparty_name ILIKE %s ESCAPE '\\'
+              )
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            (tenant_id, pattern, pattern, pattern, lim),
+        )
+        for row in await cur.fetchall():
+            amt = int(row["total_cents"]) / 100
+            hits.append(
+                SearchHit(
+                    kind="quote",
+                    id=str(row["id"]),
+                    title=f"{row['quote_number']} · {row['title']}",
+                    subtitle=f"{row['counterparty_name']} · USD {amt:,.2f}",
+                    path="/commercial/",
+                    status=str(row["status"]),
+                )
+            )
+
+        # 7. Purchase Orders (Procurement & 3-Way Match)
+        await cur.execute(
+            """
+            SELECT id, po_number, title, vendor_name, total_cents, status, three_way_match_status
+            FROM gba.purchase_orders
+            WHERE tenant_id = %s
+              AND (
+                  po_number ILIKE %s ESCAPE '\\'
+                  OR title ILIKE %s ESCAPE '\\'
+                  OR vendor_name ILIKE %s ESCAPE '\\'
+              )
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            (tenant_id, pattern, pattern, pattern, lim),
+        )
+        for row in await cur.fetchall():
+            amt = int(row["total_cents"]) / 100
+            hits.append(
+                SearchHit(
+                    kind="purchase_order",
+                    id=str(row["id"]),
+                    title=f"{row['po_number']} · {row['title']}",
+                    subtitle=(
+                        f"{row['vendor_name']} · USD {amt:,.2f} · 3-way: "
+                        f"{row['three_way_match_status']}"
+                    ),
+                    path="/commercial/",
                     status=str(row["status"]),
                 )
             )

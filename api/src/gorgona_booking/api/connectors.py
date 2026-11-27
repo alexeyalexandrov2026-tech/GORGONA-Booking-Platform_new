@@ -20,6 +20,7 @@ from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.api.search import search_business_records
 from gorgona_booking.auth.permissions import Permission
+from gorgona_booking.business.commercial import list_purchase_orders, list_quotes
 from gorgona_booking.connectors.dispatcher import dispatch_business_event
 from gorgona_booking.connectors.service import (
     ALLOWED_SCOPES,
@@ -509,6 +510,8 @@ async def get_a2a_agent_card(response: Response) -> dict[str, Any]:
             "get_launch_readiness",
             "search_business_records",
             "draft_payment_proposal",
+            "list_commercial_quotes",
+            "list_purchase_orders",
         ],
     }
 
@@ -730,6 +733,32 @@ async def post_native_mcp(
                                     },
                                     "description": {"type": "string", "minLength": 2},
                                     "reference_id": {"type": "string"},
+                                },
+                            },
+                        },
+                        {
+                            "name": "list_commercial_quotes",
+                            "description": (
+                                "List recent B2B commercial quotes (CPQ), totals, approval status, "
+                                "and client acceptance state."
+                            ),
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "limit": {"type": "integer", "minimum": 1, "maximum": 50}
+                                },
+                            },
+                        },
+                        {
+                            "name": "list_purchase_orders",
+                            "description": (
+                                "List recent vendor purchase orders, receipt progress, and "
+                                "3-way match status (PO vs Receipt vs Vendor Bill)."
+                            ),
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "limit": {"type": "integer", "minimum": 1, "maximum": 50}
                                 },
                             },
                         },
@@ -1022,6 +1051,64 @@ async def post_native_mcp(
                                 "platform_commission_bps": 0,
                             },
                         },
+                    },
+                }
+            if tool_name == "list_commercial_quotes":
+                lim = max(1, min(int(args.get("limit") or 20), 50))
+                quotes = await list_quotes(conn, tenant_id=tenant_id, limit=lim)
+                items = [
+                    {
+                        "id": str(q.id),
+                        "quote_number": q.quote_number,
+                        "title": q.title,
+                        "counterparty_name": q.counterparty_name,
+                        "total_cents": q.total_cents,
+                        "status": q.status,
+                        "payment_terms": q.payment_terms,
+                    }
+                    for q in quotes
+                ]
+                return {
+                    "jsonrpc": "2.0",
+                    "id": body.id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Found {len(items)} commercial quote(s).",
+                            }
+                        ],
+                        "structuredContent": {"quotes": items},
+                    },
+                }
+            if tool_name == "list_purchase_orders":
+                lim = max(1, min(int(args.get("limit") or 20), 50))
+                pos = await list_purchase_orders(conn, tenant_id=tenant_id, limit=lim)
+                items = [
+                    {
+                        "id": str(p.id),
+                        "po_number": p.po_number,
+                        "title": p.title,
+                        "vendor_name": p.vendor_name,
+                        "total_cents": p.total_cents,
+                        "received_total_cents": p.received_total_cents,
+                        "status": p.status,
+                        "three_way_match_status": p.three_way_match_status,
+                        "variance_cents": p.variance_cents,
+                    }
+                    for p in pos
+                ]
+                return {
+                    "jsonrpc": "2.0",
+                    "id": body.id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Found {len(items)} purchase order(s).",
+                            }
+                        ],
+                        "structuredContent": {"purchase_orders": items},
                     },
                 }
             if tool_name == "ask_business_copilot":

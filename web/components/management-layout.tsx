@@ -22,7 +22,14 @@ import {
 } from "../lib/management-api";
 
 interface GlobalSearchHit {
-  kind: "counterparty" | "document" | "invoice" | "service" | "payment";
+  kind:
+    | "counterparty"
+    | "document"
+    | "invoice"
+    | "service"
+    | "payment"
+    | "quote"
+    | "purchase_order";
   id: string;
   title: string;
   subtitle: string;
@@ -36,6 +43,8 @@ const SEARCH_KIND_LABEL: Record<GlobalSearchHit["kind"], string> = {
   invoice: "FIN-03 Invoice",
   service: "Catalog",
   payment: "Stripe Payment",
+  quote: "Commercial Quote",
+  purchase_order: "Purchase Order",
 };
 
 interface ManagementLayoutProps {
@@ -122,6 +131,11 @@ const NAV_ITEMS: readonly NavItem[] = [
     label: "Financial documents",
     group: "Finance",
     moduleIds: ["finance_documents"],
+  },
+  {
+    href: "/commercial/",
+    label: "Commercial & PO",
+    group: "Finance",
   },
   {
     href: "/prepaid/",
@@ -243,6 +257,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
         "/documents/",
         "/ledger/",
         "/finance/",
+        "/commercial/",
         "/provider-admission/",
         "/integrations/",
       ].includes(item.href) ||
