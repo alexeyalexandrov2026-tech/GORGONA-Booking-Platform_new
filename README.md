@@ -2,6 +2,7 @@
 
 **Live Production:** [https://www.amarkal-platform.com](https://www.amarkal-platform.com)  
 **Operator:** Alexey AAA logistics LLC (United States, USD)  
+**Support & Legal:** `support@amarkal-platform.com` · `legal@amarkal-platform.com`  
 **Repository:** [`alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new`](https://github.com/alexeyalexandrov2026-tech/GORGONA-Booking-Platform_new)
 
 AMARKAL Platform is a multi-tenant, AI-native **US Business Operating System** covering **39 NAICS 2022 industries** in one modular core — with **0% platform transaction commission**, **direct Stripe US payouts** (Cards, Apple Pay, Google Pay, ACH), **governed AI (Cloudflare Workers AI + Native MCP)**, and **1-click Zero-Lock-In portable data export**.
@@ -20,7 +21,7 @@ AMARKAL Platform is a multi-tenant, AI-native **US Business Operating System** c
 | **Authentication** | **100% Google Cloud Identity Platform** (Email + Password, Password Reset, One-Click **Continue with Google** GIS + RS256 JWKS verification; zero Microsoft/Entra runtime dependency) |
 | **Payments** | **Stripe US Live** (`USD`-only): Checkout Sessions (Cards, Apple Pay, Google Pay, US Bank ACH), optional Stripe Connect, HMAC-SHA256 verified webhooks (`/v1/webhooks/stripe`), session sync, 2-step confirmed refunds |
 | **AI & Native MCP** | **Cloudflare Workers AI** (`@cf/meta/llama-3.3-70b-instruct-fp8-fast` + `@cf/meta/llama-4-scout-17b-16e-instruct` Vision) powering **AI Business Architect** (`/v1/onboarding/ai-blueprint`), **Owner AI Command Copilot** (`/v1/businesses/{id}/copilot`), **Customer AI Booking Assistant** (`/v1/customer/assistant`), **Native MCP Server v2.1** (`/v1/mcp` — 7 semantic tools secured by Scoped API Keys & `FORCE RLS`), plus isolated `ai/` learning worker (`gorgona_ai` + `pgvector`) |
-| **Email & Storage** | **Resend SMTP** (`smtp.resend.com:587`, DKIM + SPF + DMARC verified on `amarkal-platform.com`) and **Cloudflare R2** (`gorgona-media`, AWS SigV4 stdlib client) |
+| **Email & Storage** | **Resend SMTP** (`smtp.resend.com:587`, DKIM + SPF + DMARC verified on `amarkal-platform.com`), **Cloudflare Email Routing** (`support@` & `legal@amarkal-platform.com`), and **Cloudflare R2** (`gorgona-media`, AWS SigV4 stdlib client) |
 | **Cloud & Security** | **Google Cloud** (`ADR-0047`): Cloud Run (`GBA_ENV=production`), Global External HTTPS Load Balancer (TLS 1.3), **Cloud Armor WAF** (OWASP + Rate Limit), Secret Manager, HSTS + `Permissions-Policy` + governed `Content-Security-Policy` |
 
 ---
