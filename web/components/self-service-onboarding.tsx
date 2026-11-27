@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AiBusinessArchitect } from "./ai-business-architect";
+import { AmarkalLogo } from "./amarkal-logo";
 import "../app/us-release-v2.css";
 import { accessToken, isAuthConfigured, signIn } from "../lib/auth";
 import { setActiveSalonId } from "../lib/management-api";
@@ -223,7 +224,7 @@ export function SelfServiceOnboarding() {
       <header className="mgmt-header">
         <div className="mgmt-brand-area">
           <Link href="/overview/" className="mgmt-brand">
-            AMARKAL <span>Platform</span>
+            <AmarkalLogo variant="light" height={20} />
           </Link>
         </div>
         <div className="mgmt-header-actions">

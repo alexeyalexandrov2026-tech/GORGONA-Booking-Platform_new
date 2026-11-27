@@ -1,6 +1,29 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import { PwaRegister } from "../components/pwa-register";
 import "./globals.css";
+
+const interTight = localFont({
+  src: "./fonts/InterTight-Variable.woff2",
+  weight: "400 700",
+  variable: "--font-display",
+  display: "swap",
+});
+
+const inter = localFont({
+  src: "./fonts/Inter-Variable.woff2",
+  weight: "400 700",
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const geistMono = localFont({
+  src: "./fonts/GeistMono-Variable.woff2",
+  weight: "400 600",
+  variable: "--font-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "AMARKAL Platform — US Business OS",
   description:
@@ -20,13 +43,16 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 export const viewport: Viewport = {
-  themeColor: "#1f1a17",
+  themeColor: "#FBFBFD",
 };
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className={`${interTight.variable} ${inter.variable} ${geistMono.variable}`}
+    >
       <body>
         <PwaRegister />
         {children}

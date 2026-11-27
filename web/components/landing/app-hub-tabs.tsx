@@ -22,7 +22,15 @@ const EVENTS = [
   "payment.recorded",
 ] as const;
 
-const MCP_TOOLS = ["get_business_summary", "list_services"] as const;
+const MCP_TOOLS = [
+  "get_business_summary",
+  "list_services",
+  "ask_business_copilot",
+  "get_unit_economics",
+  "list_upcoming_bookings",
+  "list_payment_sessions",
+  "get_launch_readiness",
+] as const;
 
 const MCP_EXAMPLE = `POST /v1/mcp
 Authorization: Bearer gorg_live_YOUR_KEY
@@ -54,7 +62,7 @@ const TABS: readonly TabSpec[] = [
           you create it.
         </p>
         <Chips items={SCOPES} />
-        <pre className="lp-code">
+        <pre className="lp-code" tabIndex={0}>
           <code>Authorization: Bearer gorg_live_YOUR_KEY</code>
         </pre>
       </>
@@ -71,7 +79,7 @@ const TABS: readonly TabSpec[] = [
           check that it came from AMARKAL Platform.
         </p>
         <Chips items={EVENTS} />
-        <pre className="lp-code">
+        <pre className="lp-code" tabIndex={0}>
           <code>signature: v1=&lt;hex HMAC-SHA256 of the payload&gt;</code>
         </pre>
       </>
@@ -89,7 +97,7 @@ const TABS: readonly TabSpec[] = [
           scope, and only ever sees your own business.
         </p>
         <Chips items={MCP_TOOLS} />
-        <pre className="lp-code">
+        <pre className="lp-code" tabIndex={0}>
           <code>{MCP_EXAMPLE}</code>
         </pre>
       </>

@@ -94,7 +94,11 @@ export function BusinessLaunchpadCard({ businessId }: { businessId: string }) {
             Go-Live Launchpad &amp; Data Portability
           </h3>
           <p
-            style={{ margin: "4px 0 0", color: "#3f3832", fontSize: "0.88rem" }}
+            style={{
+              margin: "4px 0 0",
+              color: "var(--muted)",
+              fontSize: "0.88rem",
+            }}
           >
             <strong>{data.score_percent}% ready</strong> ({data.completed_steps}
             /{data.total_steps} operational milestones) &bull; 0% platform
@@ -131,7 +135,7 @@ export function BusinessLaunchpadCard({ businessId }: { businessId: string }) {
           height: "8px",
           width: "100%",
           borderRadius: "999px",
-          background: "#ebe4da",
+          background: "#e6e8ee",
           overflow: "hidden",
         }}
       >
@@ -139,7 +143,7 @@ export function BusinessLaunchpadCard({ businessId }: { businessId: string }) {
           style={{
             height: "100%",
             width: `${data.score_percent}%`,
-            background: "#2e5e3f",
+            background: "#111318",
             borderRadius: "999px",
             transition: "width 0.25s ease",
           }}
@@ -168,10 +172,10 @@ export function BusinessLaunchpadCard({ businessId }: { businessId: string }) {
           <div
             key={step.key}
             style={{
-              padding: "12px",
-              borderRadius: "6px",
+              padding: "14px",
+              borderRadius: "12px",
               border: "1px solid var(--line)",
-              background: step.completed ? "#fafcf9" : "#ffffff",
+              background: step.completed ? "#f6fbf8" : "#ffffff",
               display: "grid",
               gap: "6px",
             }}
@@ -184,7 +188,7 @@ export function BusinessLaunchpadCard({ businessId }: { businessId: string }) {
                 gap: "8px",
               }}
             >
-              <strong style={{ fontSize: "0.88rem", color: "#1f1a17" }}>
+              <strong style={{ fontSize: "0.88rem", color: "var(--ink)" }}>
                 {step.completed ? "✓ " : "○ "}
                 {step.title}
               </strong>
@@ -194,7 +198,9 @@ export function BusinessLaunchpadCard({ businessId }: { businessId: string }) {
                 {step.completed ? "Ready" : "Action"}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: "0.82rem", color: "#3f3832" }}>
+            <p
+              style={{ margin: 0, fontSize: "0.82rem", color: "var(--muted)" }}
+            >
               {step.detail}
             </p>
             <Link

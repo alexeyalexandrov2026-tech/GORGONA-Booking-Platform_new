@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AmarkalLogo } from "../../../components/amarkal-logo";
 
 export const metadata: Metadata = {
   title: "Terms of Service — AMARKAL Platform",
@@ -14,7 +15,7 @@ export default function TermsOfServicePage() {
       <header className="mgmt-header">
         <div className="mgmt-brand-area">
           <Link href="/" className="mgmt-brand">
-            AMARKAL <span>Platform</span>
+            <AmarkalLogo variant="light" height={20} />
           </Link>
         </div>
         <div className="mgmt-header-actions">

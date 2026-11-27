@@ -222,10 +222,11 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
             role="status"
             style={{
               margin: 0,
-              padding: "12px 14px",
-              borderRadius: "6px",
-              background: "var(--ivory)",
-              color: "#1f1a17",
+              padding: "14px 16px",
+              borderRadius: "12px",
+              background: "#f4f5f8",
+              border: "1px solid var(--line)",
+              color: "var(--ink)",
               fontSize: "0.93rem",
               lineHeight: 1.55,
               whiteSpace: "pre-wrap",
@@ -245,8 +246,8 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
               <div
                 key={`${ins.category}:${ins.title}`}
                 style={{
-                  padding: "12px",
-                  borderRadius: "6px",
+                  padding: "14px",
+                  borderRadius: "12px",
                   border: "1px solid var(--line)",
                   background: "#ffffff",
                   display: "grid",
@@ -261,14 +262,20 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
                     alignItems: "center",
                   }}
                 >
-                  <strong style={{ fontSize: "0.9rem", color: "#1f1a17" }}>
+                  <strong style={{ fontSize: "0.9rem", color: "var(--ink)" }}>
                     {ins.title}
                   </strong>
                   <span className="mgmt-status-pill status-draft">
                     {ins.priority}
                   </span>
                 </div>
-                <p style={{ margin: 0, fontSize: "0.84rem", color: "#3f3832" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.84rem",
+                    color: "var(--muted)",
+                  }}
+                >
                   {ins.detail}
                 </p>
                 <Link
@@ -284,7 +291,7 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
 
           {data.action_proposals.length > 0 && (
             <div style={{ display: "grid", gap: "10px", marginTop: "4px" }}>
-              <strong style={{ fontSize: "0.92rem", color: "#1f1a17" }}>
+              <strong style={{ fontSize: "0.92rem", color: "var(--ink)" }}>
                 Governed Action Proposals (Human Approval Required)
               </strong>
               <div
@@ -298,27 +305,31 @@ export function OwnerCopilotPanel({ salonId }: { salonId: string }) {
                   <div
                     key={prop.id}
                     style={{
-                      padding: "12px",
-                      borderRadius: "6px",
+                      padding: "14px",
+                      borderRadius: "12px",
                       border: "1px solid var(--line)",
-                      background: "#faf7f2",
+                      background: "#f4f5f8",
                       display: "grid",
                       gap: "8px",
                     }}
                   >
-                    <strong style={{ fontSize: "0.88rem", color: "#1f1a17" }}>
+                    <strong
+                      style={{ fontSize: "0.88rem", color: "var(--ink)" }}
+                    >
                       {prop.title}
                     </strong>
                     <p
                       style={{
                         margin: 0,
                         fontSize: "0.82rem",
-                        color: "#3f3832",
+                        color: "var(--muted)",
                       }}
                     >
                       {prop.description}
                     </p>
-                    <small style={{ color: "#5c5147", fontSize: "0.78rem" }}>
+                    <small
+                      style={{ color: "var(--muted)", fontSize: "0.78rem" }}
+                    >
                       {prop.impact_summary}
                     </small>
                     <div

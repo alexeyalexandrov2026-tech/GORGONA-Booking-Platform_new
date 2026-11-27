@@ -524,31 +524,63 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
             <div>
               <dt>Stripe paid</dt>
               <dd>{formatUsd(reconciliation.stripe_paid_cents)}</dd>
-              <p className="usr-muted" style={{ margin: "2px 0 0" }}>
+              <dd
+                className="usr-muted"
+                style={{
+                  margin: "2px 0 0",
+                  fontFamily: "inherit",
+                  fontWeight: 400,
+                  fontSize: "0.85rem",
+                }}
+              >
                 {reconciliation.stripe_paid_count} settled
-              </p>
+              </dd>
             </div>
             <div>
               <dt>Stripe open</dt>
               <dd>{formatUsd(reconciliation.stripe_open_cents)}</dd>
-              <p className="usr-muted" style={{ margin: "2px 0 0" }}>
+              <dd
+                className="usr-muted"
+                style={{
+                  margin: "2px 0 0",
+                  fontFamily: "inherit",
+                  fontWeight: 400,
+                  fontSize: "0.85rem",
+                }}
+              >
                 {reconciliation.stripe_open_count} awaiting payment
-              </p>
+              </dd>
             </div>
             <div>
               <dt>Stripe refunded</dt>
               <dd>{formatUsd(reconciliation.stripe_refunded_cents)}</dd>
-              <p className="usr-muted" style={{ margin: "2px 0 0" }}>
+              <dd
+                className="usr-muted"
+                style={{
+                  margin: "2px 0 0",
+                  fontFamily: "inherit",
+                  fontWeight: 400,
+                  fontSize: "0.85rem",
+                }}
+              >
                 {reconciliation.stripe_refunded_count} refunded
-              </p>
+              </dd>
             </div>
             <div>
               <dt>FIN-03 issued</dt>
               <dd>{formatUsd(reconciliation.fin03_issued_total_cents)}</dd>
-              <p className="usr-muted" style={{ margin: "2px 0 0" }}>
+              <dd
+                className="usr-muted"
+                style={{
+                  margin: "2px 0 0",
+                  fontFamily: "inherit",
+                  fontWeight: 400,
+                  fontSize: "0.85rem",
+                }}
+              >
                 {reconciliation.fin03_issued_invoices_count} invoices ·{" "}
                 {reconciliation.matched_invoice_sessions_count} matched
-              </p>
+              </dd>
             </div>
           </dl>
           {reconciliation.unmatched_paid_sessions.length > 0 && (

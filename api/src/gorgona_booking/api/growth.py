@@ -400,8 +400,8 @@ def _to_readiness_response(rec: LaunchReadinessRecord) -> LaunchReadinessRespons
     )
 
 
-@router.get("/v1/salons/{salon_id}/readiness", response_model=LaunchReadinessResponse)
-@router.get("/v1/businesses/{salon_id}/readiness", response_model=LaunchReadinessResponse)
+@router.get("/v1/salons/{salon_id}/launch-readiness", response_model=LaunchReadinessResponse)
+@router.get("/v1/businesses/{salon_id}/launch-readiness", response_model=LaunchReadinessResponse)
 async def get_business_launch_readiness(
     salon_id: UUID,
     request: Request,
