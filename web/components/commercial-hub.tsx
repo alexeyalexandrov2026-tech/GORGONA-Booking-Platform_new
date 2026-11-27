@@ -8,22 +8,30 @@ import {
   convertQuoteToStripePayment,
   createPurchaseOrder,
   createQuote,
+  emailPurchaseOrderPortal,
+  emailQuotePortal,
+  fetchAgingReport,
   fetchApprovalPolicies,
   fetchCommercialSummary,
   fetchPurchaseOrders,
   fetchQuotes,
+  fetchRecurringSchedules,
   matchPurchaseOrderVendorBill,
   recordPurchaseOrderReceipt,
   sharePurchaseOrderPortal,
   shareQuotePortal,
   updateApprovalPolicy,
+  type AgingReportView,
   type ApprovalPolicyView,
   type CommercialSummaryView,
   type PaymentTerms,
   type PolicyEntityKind,
   type PurchaseOrderView,
   type QuoteView,
+  type RecurringScheduleView,
 } from "../lib/commercial-api";
+import { CommercialAgingTab } from "./commercial-aging-tab";
+import { CommercialRecurringTab } from "./commercial-recurring-tab";
 import { formatDate } from "../lib/management-api";
 import "../app/us-release-v2.css";
 
@@ -34,7 +42,7 @@ function formatUsd(cents: number): string {
   }).format(cents / 100);
 }
 
-type TabId = "quotes" | "pos" | "policies";
+type TabId = "quotes" | "pos" | "recurring" | "aging" | "policies";
 
 interface DraftLine {
   description: string;
@@ -57,6 +65,8 @@ export function CommercialHub({ businessId }: { businessId: string }) {
   const [quotes, setQuotes] = useState<QuoteView[]>([]);
   const [pos, setPos] = useState<PurchaseOrderView[]>([]);
   const [policies, setPolicies] = useState<ApprovalPolicyView[]>([]);
+  const [schedules, setSchedules] = useState<RecurringScheduleView[]>([]);
+  const [aging, setAging] = useState<AgingReportView | null>(null);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -111,13 +121,17 @@ export function CommercialHub({ businessId }: { businessId: string }) {
       fetchQuotes(businessId),
       fetchPurchaseOrders(businessId),
       fetchApprovalPolicies(businessId),
+      fetchRecurringSchedules(businessId).catch(() => []),
+      fetchAgingReport(businessId).catch(() => null),
     ])
-      .then(([sum, qList, poList, pols]) => {
+      .then(([sum, qList, poList, pols, scheds, agingRep]) => {
         if (!active) return;
         setSummary(sum);
         setQuotes(qList);
         setPos(poList);
         setPolicies(pols);
+        setSchedules(scheds);
+        setAging(agingRep);
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -416,6 +430,24 @@ export function CommercialHub({ businessId }: { businessId: string }) {
           onClick={() => setTab("pos")}
         >
           Purchase Orders &amp; 3-Way Match ({pos.length})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "recurring"}
+          className="usr-tab"
+          onClick={() => setTab("recurring")}
+        >
+          Recurring &amp; Retainers ({schedules.length})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "aging"}
+          className="usr-tab"
+          onClick={() => setTab("aging")}
+        >
+          AR / AP Aging &amp; CPA
         </button>
         <button
           type="button"
@@ -719,6 +751,41 @@ export function CommercialHub({ businessId }: { businessId: string }) {
                                 }}
                               >
                                 Share Portal Link
+                              </button>
+                            )}
+                            {["approved", "sent", "accepted"].includes(
+                              q.status,
+                            ) && (
+                              <button
+                                type="button"
+                                className="secondary usr-small-btn"
+                                disabled={busy || !q.counterparty_email}
+                                title={
+                                  q.counterparty_email
+                                    ? `Email secure portal link to ${q.counterparty_email}`
+                                    : "Add a client email on the quote to send"
+                                }
+                                onClick={() => {
+                                  setBusy(true);
+                                  setError(null);
+                                  void emailQuotePortal(businessId, q.id)
+                                    .then((res) => {
+                                      setNotice(
+                                        `Emailed ${q.quote_number} to ${res.recipient_email} (${res.delivery_status} via ${res.provider_name}).`,
+                                      );
+                                      reload();
+                                    })
+                                    .catch((e: unknown) =>
+                                      setError(
+                                        e instanceof Error
+                                          ? e.message
+                                          : "Could not send quote email.",
+                                      ),
+                                    )
+                                    .finally(() => setBusy(false));
+                                }}
+                              >
+                                Email Client
                               </button>
                             )}
                             {["approved", "sent", "accepted"].includes(
@@ -1045,6 +1112,44 @@ export function CommercialHub({ businessId }: { businessId: string }) {
                                 Vendor Link
                               </button>
                             )}
+                            {["approved", "issued", "acknowledged"].includes(
+                              po.status,
+                            ) && (
+                              <button
+                                type="button"
+                                className="secondary usr-small-btn"
+                                disabled={busy || !po.vendor_email}
+                                title={
+                                  po.vendor_email
+                                    ? `Email vendor portal link to ${po.vendor_email}`
+                                    : "Add a vendor email on the PO to send"
+                                }
+                                onClick={() => {
+                                  setBusy(true);
+                                  setError(null);
+                                  void emailPurchaseOrderPortal(
+                                    businessId,
+                                    po.id,
+                                  )
+                                    .then((res) => {
+                                      setNotice(
+                                        `Emailed ${po.po_number} to ${res.recipient_email} (${res.delivery_status} via ${res.provider_name}).`,
+                                      );
+                                      reload();
+                                    })
+                                    .catch((e: unknown) =>
+                                      setError(
+                                        e instanceof Error
+                                          ? e.message
+                                          : "Could not send vendor email.",
+                                      ),
+                                    )
+                                    .finally(() => setBusy(false));
+                                }}
+                              >
+                                Email Vendor
+                              </button>
+                            )}
                             {po.status !== "draft" &&
                               po.status !== "pending_approval" &&
                               po.status !== "cancelled" && (
@@ -1185,6 +1290,25 @@ export function CommercialHub({ businessId }: { businessId: string }) {
             )}
           </section>
         </>
+      ) : tab === "recurring" ? (
+        <CommercialRecurringTab
+          businessId={businessId}
+          schedules={schedules}
+          busy={busy}
+          setBusy={setBusy}
+          setError={setError}
+          setNotice={setNotice}
+          onReload={reload}
+        />
+      ) : tab === "aging" ? (
+        <CommercialAgingTab
+          businessId={businessId}
+          report={aging}
+          busy={busy}
+          setBusy={setBusy}
+          setError={setError}
+          setNotice={setNotice}
+        />
       ) : (
         <section className="usr-card" aria-labelledby="policies-heading">
           <h2 id="policies-heading">Approval Threshold Policies</h2>

@@ -145,6 +145,75 @@ export interface PortalPublicDocument {
   checkout_url: string | null;
 }
 
+export interface EmailDispatchResponse {
+  portal_url: string;
+  recipient_email: string;
+  delivery_status: string;
+  provider_name: string;
+}
+
+export type BillingCadence =
+  "weekly" | "biweekly" | "monthly" | "quarterly" | "annual";
+
+export interface RecurringScheduleView {
+  id: string;
+  schedule_code: string;
+  title: string;
+  counterparty_id: string | null;
+  counterparty_name: string;
+  counterparty_email: string | null;
+  currency: "USD";
+  amount_cents: number;
+  cadence: BillingCadence;
+  payment_terms: PaymentTerms;
+  next_run_date: string;
+  last_run_at: string | null;
+  runs_count: number;
+  auto_email_client: boolean;
+  status: "active" | "paused" | "completed" | "cancelled";
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecurringRunResult {
+  schedule: RecurringScheduleView;
+  generated_quote: QuoteView;
+  email_status: string | null;
+  portal_url: string | null;
+}
+
+export interface AgingBucketsSummary {
+  current_cents: number;
+  days_1_30_cents: number;
+  days_31_60_cents: number;
+  days_61_90_cents: number;
+  days_90_plus_cents: number;
+  total_cents: number;
+  open_count: number;
+}
+
+export interface AgingItemView {
+  side: "AR" | "AP";
+  doc_type: string;
+  reference_number: string;
+  counterparty_name: string;
+  status: string;
+  issued_date: string;
+  due_date: string;
+  days_past_due: number;
+  bucket: "current" | "1_30" | "31_60" | "61_90" | "90_plus";
+  amount_cents: number;
+}
+
+export interface AgingReportView {
+  currency: "USD";
+  as_of: string;
+  ar: AgingBucketsSummary;
+  ap: AgingBucketsSummary;
+  items: AgingItemView[];
+}
+
 async function commercialRequest<T>(
   path: string,
   init: RequestInit = {},
@@ -337,6 +406,98 @@ export function matchPurchaseOrderVendorBill(
       }),
     },
   );
+}
+
+export function emailQuotePortal(
+  businessId: string,
+  quoteId: string,
+  recipientEmail?: string | null,
+): Promise<EmailDispatchResponse> {
+  return commercialRequest<EmailDispatchResponse>(
+    `${base(businessId)}/quotes/${encodeURIComponent(quoteId)}/email`,
+    {
+      method: "POST",
+      body: JSON.stringify({ recipient_email: recipientEmail || null }),
+    },
+  );
+}
+
+export function emailPurchaseOrderPortal(
+  businessId: string,
+  poId: string,
+  recipientEmail?: string | null,
+): Promise<EmailDispatchResponse> {
+  return commercialRequest<EmailDispatchResponse>(
+    `${base(businessId)}/purchase-orders/${encodeURIComponent(poId)}/email`,
+    {
+      method: "POST",
+      body: JSON.stringify({ recipient_email: recipientEmail || null }),
+    },
+  );
+}
+
+export function fetchRecurringSchedules(
+  businessId: string,
+): Promise<RecurringScheduleView[]> {
+  return commercialRequest<RecurringScheduleView[]>(
+    `${base(businessId)}/recurring`,
+  );
+}
+
+export function createRecurringSchedule(
+  businessId: string,
+  input: {
+    title: string;
+    counterparty_name: string;
+    counterparty_email?: string | null;
+    amount_cents: number;
+    cadence: BillingCadence;
+    payment_terms: PaymentTerms;
+    next_run_date: string;
+    auto_email_client?: boolean;
+    notes?: string;
+  },
+): Promise<RecurringScheduleView> {
+  return commercialRequest<RecurringScheduleView>(
+    `${base(businessId)}/recurring`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function toggleRecurringSchedule(
+  businessId: string,
+  scheduleId: string,
+): Promise<RecurringScheduleView> {
+  return commercialRequest<RecurringScheduleView>(
+    `${base(businessId)}/recurring/${encodeURIComponent(scheduleId)}/toggle`,
+    { method: "POST" },
+  );
+}
+
+export function runRecurringScheduleNow(
+  businessId: string,
+  scheduleId: string,
+): Promise<RecurringRunResult> {
+  return commercialRequest<RecurringRunResult>(
+    `${base(businessId)}/recurring/${encodeURIComponent(scheduleId)}/run-now`,
+    { method: "POST" },
+  );
+}
+
+export function fetchAgingReport(businessId: string): Promise<AgingReportView> {
+  return commercialRequest<AgingReportView>(`${base(businessId)}/aging`);
+}
+
+export async function downloadCpaExportCsv(
+  businessId: string,
+): Promise<string> {
+  const res = await authorizedResponse(`${base(businessId)}/cpa-export.csv`, {
+    headers: { Accept: "text/csv" },
+  });
+  return res.text();
 }
 
 export async function fetchPublicPortalDocument(

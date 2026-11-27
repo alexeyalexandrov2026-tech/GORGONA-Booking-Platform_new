@@ -1303,3 +1303,21 @@ footer {
   color: var(--muted);
   text-align: center;
 }
+
+@media print {
+  .no-print,
+  .mgmt-header,
+  .mgmt-nav,
+  .mgmt-footer {
+    display: none !important;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .usr-card {
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}

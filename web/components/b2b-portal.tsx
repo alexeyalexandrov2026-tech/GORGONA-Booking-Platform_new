@@ -192,9 +192,20 @@ export function B2bPortal() {
           <Link href="/" style={{ textDecoration: "none" }}>
             <AmarkalLogo variant="light" height={22} />
           </Link>
-          <span className="usr-badge">
-            {demoMode ? "B2B Portal Preview" : "Verified B2B Portal"}
-          </span>
+          <div className="usr-inline no-print">
+            {doc && (
+              <button
+                type="button"
+                className="secondary usr-small-btn"
+                onClick={() => window.print()}
+              >
+                Print / Save PDF
+              </button>
+            )}
+            <span className="usr-badge">
+              {demoMode ? "B2B Portal Preview" : "Verified B2B Portal"}
+            </span>
+          </div>
         </header>
 
         <main id="main-content">
