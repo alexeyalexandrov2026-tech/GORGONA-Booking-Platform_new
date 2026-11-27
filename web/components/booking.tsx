@@ -7,57 +7,241 @@ import { bootstrapSchema, type Bootstrap } from "../lib/contracts";
 import { Journey } from "./journey";
 import "../app/us-release-v2.css";
 
-interface DemoService {
+interface DemoWorkflowItem {
   readonly id: string;
   readonly name: string;
-  readonly vessel: string;
+  readonly detail: string;
   readonly duration: string;
-  readonly price: string;
-  readonly deposit: string;
+  readonly amount: string;
+  readonly terms: string;
 }
 
-const DEMO_SERVICES: readonly DemoService[] = [
+interface DemoIndustryScenario {
+  readonly id: string;
+  readonly label: string;
+  readonly company: string;
+  readonly meta: string;
+  readonly headline: string;
+  readonly summary: string;
+  readonly modules: readonly string[];
+  readonly items: readonly DemoWorkflowItem[];
+  readonly windows: readonly string[];
+  readonly counterpartPlaceholder: string;
+  readonly actionLabel: string;
+  readonly resultPrefix: string;
+}
+
+const DEMO_SCENARIOS: readonly DemoIndustryScenario[] = [
   {
-    id: "sunset",
-    name: "Sunset Yacht Charter",
-    vessel: "Aurora 42′ · Capt. M. Reyes",
-    duration: "3 hours",
-    price: "$1,450",
-    deposit: "$435 (30% deposit)",
+    id: "freight",
+    label: "Freight & Logistics",
+    company: "Apex Freight LLC",
+    meta: "NAICS 48–49 · Dallas Hub · America/Chicago",
+    headline: "Dispatch, load orders & FIN-03 billing.",
+    summary:
+      "Manage carrier fleets, shipper counterparties, rate confirmations, proof of delivery (POD), double-entry USD invoices, and dock scheduling from one Business OS.",
+    modules: [
+      "Transport & Dispatch",
+      "Counterparties",
+      "Documents & POD",
+      "FIN-03 Ledger",
+      "Workforce",
+    ],
+    items: [
+      {
+        id: "dal-atl",
+        name: "53′ Dry Van · DAL → ATL",
+        detail: "Unit #402 · Driver D. Morales",
+        duration: "Next-day linehaul",
+        amount: "$2,850",
+        terms: "Net-15 FIN-03 invoice",
+      },
+      {
+        id: "mia-clt",
+        name: "Temp-Controlled Reefer · MIA → CLT",
+        detail: "Reefer #09 · Continuous temp log",
+        duration: "24h corridor",
+        amount: "$3,420",
+        terms: "ACH / Wire · 0% fee",
+      },
+      {
+        id: "hou-aus",
+        name: "Dedicated Flatbed · HOU → AUS",
+        detail: "Flatbed #4 · Permit & tie-down",
+        duration: "Same-day",
+        amount: "$1,180",
+        terms: "Direct Stripe / ACH",
+      },
+    ],
+    windows: [
+      "08:00 AM CT Dock",
+      "11:30 AM CT Dock",
+      "02:00 PM CT Dock",
+      "05:00 PM CT Dock",
+    ],
+    counterpartPlaceholder: "Northstar Manufacturing Inc.",
+    actionLabel: "Create sample dispatch request",
+    resultPrefix: "Demo dispatch & FIN-03 draft prepared",
   },
   {
-    id: "halfday",
-    name: "Half-Day Bay Cruise",
-    vessel: "Sea Glass · Capt. J. Park",
-    duration: "4 hours",
-    price: "$1,890",
-    deposit: "$567 (30% deposit)",
+    id: "construction",
+    label: "Construction & Field",
+    company: "Meridian Build & Field LLC",
+    meta: "NAICS 23 · Austin, TX · America/Chicago",
+    headline: "Estimates, crew work orders & milestone acceptance.",
+    summary:
+      "Track general and subcontractor work, material cost control, customer change orders, versioned contracts, and milestone pay applications under strict tenant isolation.",
+    modules: [
+      "Construction & Acceptance",
+      "Contracts & Change Orders",
+      "Inventory & Materials",
+      "FIN-03 Billing",
+      "Crew Shifts",
+    ],
+    items: [
+      {
+        id: "hvac-comm",
+        name: "Commercial HVAC Commissioning",
+        detail: "Crew Alpha · 3 certified techs",
+        duration: "Full day",
+        amount: "$4,600",
+        terms: "Milestone 1 acceptance",
+      },
+      {
+        id: "panel-up",
+        name: "400A Electrical Panel Upgrade",
+        detail: "Master Electrician + Permit pkg",
+        duration: "6 hours",
+        amount: "$3,250",
+        terms: "50% deposit · 0% fee",
+      },
+      {
+        id: "site-audit",
+        name: "Structural Site Inspection & Scope",
+        detail: "Project Lead · Signed PDF report",
+        duration: "2 hours",
+        amount: "$450",
+        terms: "Direct USD invoice",
+      },
+    ],
+    windows: ["07:30 AM CT", "10:00 AM CT", "01:00 PM CT", "03:30 PM CT"],
+    counterpartPlaceholder: "Brazos Retail Holdings LLC",
+    actionLabel: "Create sample work order",
+    resultPrefix: "Demo work order & estimate logged",
   },
   {
-    id: "fullday",
-    name: "Full-Day Coastal Charter",
-    vessel: "Nomad 38′ · Capt. E. Rivera",
-    duration: "8 hours",
-    price: "$3,400",
-    deposit: "$1,020 (30% deposit)",
+    id: "property",
+    label: "Property & Commercial",
+    company: "Mercer Commercial Spaces",
+    meta: "NAICS 53 · New York, NY · America/New_York",
+    headline: "Asset management, leases & maintenance SLA.",
+    summary:
+      "Operate commercial or residential portfolios with tenant records, attested lease agreements, vendor maintenance tickets, recurring USD billing, and accounting exports.",
+    modules: [
+      "Property & Leases",
+      "Maintenance Tickets",
+      "Counterparties",
+      "Double-Entry Ledger",
+      "Client Portal",
+    ],
+    items: [
+      {
+        id: "suite-4a",
+        name: "Suite 4A · Commercial Lease Onboarding",
+        detail: "2,400 sq ft · Attested agreement v3",
+        duration: "12-month term",
+        amount: "$4,800",
+        terms: "Monthly ACH · 0% fee",
+      },
+      {
+        id: "hvac-sla",
+        name: "Preventive Building Maintenance",
+        detail: "Verified vendor dispatch · SLA 4h",
+        duration: "Half day",
+        amount: "$890",
+        terms: "Vendor bill + FIN-03",
+      },
+      {
+        id: "boardroom",
+        name: "Executive Floor Tenant Walkthrough",
+        detail: "Property Manager · Checklist",
+        duration: "90 min",
+        amount: "$0",
+        terms: "Included in portfolio",
+      },
+    ],
+    windows: ["09:00 AM ET", "11:00 AM ET", "02:30 PM ET", "04:30 PM ET"],
+    counterpartPlaceholder: "Hudson Advisory Partners",
+    actionLabel: "Create sample property ticket",
+    resultPrefix: "Demo property operation recorded",
+  },
+  {
+    id: "rental",
+    label: "Equipment & Fleet Rental",
+    company: "Harbor Fleet & Equipment Co.",
+    meta: "NAICS 53 · Miami, FL · America/New_York",
+    headline: "Asset availability, contracts & optional booking portal.",
+    summary:
+      "Coordinate high-value assets, crew shifts, refundable deposits, inspection logs, and an optional customer-facing booking portal on your own brand domain.",
+    modules: [
+      "Rental & Fleet",
+      "Optional Client Portal",
+      "Agreements & Deposits",
+      "Crew Schedules",
+      "Stripe US (0% fee)",
+    ],
+    items: [
+      {
+        id: "sunset",
+        name: "Aurora 42′ Vessel Charter",
+        detail: "Capt. M. Reyes · Crew + safety log",
+        duration: "3 hours",
+        amount: "$1,450",
+        terms: "$435 (30% deposit)",
+      },
+      {
+        id: "halfday",
+        name: "Sea Glass Half-Day Rental",
+        detail: "Capt. J. Park · Fuel & dockage",
+        duration: "4 hours",
+        amount: "$1,890",
+        terms: "$567 (30% deposit)",
+      },
+      {
+        id: "fullday",
+        name: "Nomad 38′ Full-Day Fleet Allocation",
+        detail: "Capt. E. Rivera · Full manifest",
+        duration: "8 hours",
+        amount: "$3,400",
+        terms: "$1,020 (30% deposit)",
+      },
+    ],
+    windows: ["10:00 AM ET", "01:30 PM ET", "05:30 PM ET", "06:00 PM ET"],
+    counterpartPlaceholder: "Jordan Taylor",
+    actionLabel: "Create sample asset reservation",
+    resultPrefix: "Demo asset hold & contract draft created",
   },
 ];
 
-const DEMO_SLOTS = [
-  "10:00 AM EDT",
-  "1:30 PM EDT",
-  "5:30 PM EDT",
-  "6:00 PM EDT",
-] as const;
-
-function DemoClientPortal() {
-  const [serviceId, setServiceId] = useState<string>(DEMO_SERVICES[0]!.id);
-  const [slot, setSlot] = useState<string>(DEMO_SLOTS[3]!);
-  const [guestName, setGuestName] = useState("");
+function MultiIndustryDemo() {
+  const [scenarioId, setScenarioId] = useState<string>(DEMO_SCENARIOS[0]!.id);
+  const scenario =
+    DEMO_SCENARIOS.find((s) => s.id === scenarioId) ?? DEMO_SCENARIOS[0]!;
+  const [itemId, setItemId] = useState<string>(scenario.items[0]!.id);
+  const [windowSlot, setWindowSlot] = useState<string>(scenario.windows[0]!);
+  const [counterpart, setCounterpart] = useState("");
   const [confirmed, setConfirmed] = useState(false);
 
   const selected =
-    DEMO_SERVICES.find((item) => item.id === serviceId) ?? DEMO_SERVICES[0]!;
+    scenario.items.find((item) => item.id === itemId) ?? scenario.items[0]!;
+
+  const switchScenario = (next: DemoIndustryScenario) => {
+    setScenarioId(next.id);
+    setItemId(next.items[0]!.id);
+    setWindowSlot(next.windows[0]!);
+    setCounterpart("");
+    setConfirmed(false);
+  };
 
   return (
     <div className="management-shell">
@@ -82,31 +266,63 @@ function DemoClientPortal() {
       <main
         id="main-content"
         className="mgmt-main"
-        style={{ maxWidth: "860px", margin: "2rem auto" }}
+        style={{ maxWidth: "920px", margin: "2rem auto" }}
       >
         <p className="hold-note" role="note" style={{ marginTop: 0 }}>
-          <strong>Interactive Client Portal Demo · Harbor Yacht Co.</strong> —
-          Illustrative US booking storefront powered by AMARKAL Platform (0%
-          commission, direct Stripe US checkout).
+          <strong>Interactive Business OS Demo (4 Sample Industries)</strong> —
+          AMARKAL Platform is a complete US Business Operating System across 39
+          NAICS industries. Online client booking is just one optional module
+          alongside operations, counterparties, contracts, workforce, and
+          double-entry USD finance.
         </p>
+
+        <div
+          role="tablist"
+          aria-label="Choose a demonstration industry"
+          className="usr-tablist"
+          style={{ marginBottom: "18px" }}
+        >
+          {DEMO_SCENARIOS.map((sc) => (
+            <button
+              key={sc.id}
+              type="button"
+              role="tab"
+              className="usr-tab"
+              aria-selected={sc.id === scenario.id}
+              onClick={() => switchScenario(sc)}
+            >
+              {sc.label}
+            </button>
+          ))}
+        </div>
 
         <section className="usr-card" aria-labelledby="demo-portal-title">
           <p className="eyebrow" style={{ marginTop: 0 }}>
-            Harbor Yacht Co. · Miami Marina · America/New_York
+            {scenario.company} · {scenario.meta}
           </p>
           <h1
             id="demo-portal-title"
             style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.35rem)", marginTop: 8 }}
           >
-            Reserve your charter online.
+            {scenario.headline}
           </h1>
-          <p className="usr-muted">
-            Every AMARKAL workspace gets a branded, embeddable client portal on
-            your own domain with live availability, smart waitlist, AI booking
-            assistant, and direct Stripe payouts.
-          </p>
+          <p className="usr-muted">{scenario.summary}</p>
 
-          <h2 style={{ marginTop: 24 }}>1. Choose a service</h2>
+          <div
+            className="usr-inline"
+            style={{ marginBottom: "20px", gap: "8px" }}
+            aria-label="Active Business OS modules in this demo"
+          >
+            {scenario.modules.map((mod) => (
+              <span key={mod} className="usr-badge">
+                {mod}
+              </span>
+            ))}
+          </div>
+
+          <h2 style={{ marginTop: 20 }}>
+            1. Select a sample operation or order
+          </h2>
           <div
             style={{
               display: "grid",
@@ -114,15 +330,15 @@ function DemoClientPortal() {
               gap: "12px",
             }}
           >
-            {DEMO_SERVICES.map((svc) => {
-              const active = svc.id === selected.id;
+            {scenario.items.map((item) => {
+              const active = item.id === selected.id;
               return (
                 <button
-                  key={svc.id}
+                  key={item.id}
                   type="button"
                   aria-pressed={active}
                   onClick={() => {
-                    setServiceId(svc.id);
+                    setItemId(item.id);
                     setConfirmed(false);
                   }}
                   style={{
@@ -139,9 +355,9 @@ function DemoClientPortal() {
                     cursor: "pointer",
                   }}
                 >
-                  <strong style={{ fontSize: "1rem" }}>{svc.name}</strong>
+                  <strong style={{ fontSize: "1rem" }}>{item.name}</strong>
                   <span style={{ fontSize: "0.85rem", color: "#5A606E" }}>
-                    {svc.vessel} · {svc.duration}
+                    {item.detail} · {item.duration}
                   </span>
                   <span
                     style={{
@@ -150,7 +366,7 @@ function DemoClientPortal() {
                       color: "#0A0A0C",
                     }}
                   >
-                    {svc.price} USD{" "}
+                    {item.amount} USD{" "}
                     <span
                       style={{
                         fontWeight: 400,
@@ -158,7 +374,7 @@ function DemoClientPortal() {
                         color: "#5A606E",
                       }}
                     >
-                      · {svc.deposit}
+                      · {item.terms}
                     </span>
                   </span>
                 </button>
@@ -166,16 +382,20 @@ function DemoClientPortal() {
             })}
           </div>
 
-          <h2 style={{ marginTop: 24 }}>2. Pick a live time slot (Saturday)</h2>
-          <div className="usr-inline" role="group" aria-label="Available slots">
-            {DEMO_SLOTS.map((time) => (
+          <h2 style={{ marginTop: 24 }}>2. Choose an operational window</h2>
+          <div
+            className="usr-inline"
+            role="group"
+            aria-label="Operational windows"
+          >
+            {scenario.windows.map((time) => (
               <button
                 key={time}
                 type="button"
-                className={slot === time ? "" : "secondary"}
-                aria-pressed={slot === time}
+                className={windowSlot === time ? "" : "secondary"}
+                aria-pressed={windowSlot === time}
                 onClick={() => {
-                  setSlot(time);
+                  setWindowSlot(time);
                   setConfirmed(false);
                 }}
               >
@@ -184,22 +404,24 @@ function DemoClientPortal() {
             ))}
           </div>
 
-          <h2 style={{ marginTop: 24 }}>3. Preview instant reservation</h2>
+          <h2 style={{ marginTop: 24 }}>
+            3. Preview end-to-end Business OS record
+          </h2>
           <div className="usr-grid" style={{ alignItems: "end" }}>
             <label style={{ marginBottom: 0 }}>
-              Guest name (sample)
+              Counterparty / client name (sample)
               <input
                 type="text"
-                value={guestName}
-                placeholder="Jordan Taylor"
+                value={counterpart}
+                placeholder={scenario.counterpartPlaceholder}
                 onChange={(e) => {
-                  setGuestName(e.target.value);
+                  setCounterpart(e.target.value);
                   setConfirmed(false);
                 }}
               />
             </label>
             <button type="button" onClick={() => setConfirmed(true)}>
-              Reserve demo slot · {slot}
+              {scenario.actionLabel}
             </button>
           </div>
 
@@ -214,10 +436,12 @@ function DemoClientPortal() {
                 color: "#144B2B",
               }}
             >
-              <strong>Demo hold created:</strong> {selected.name} (
-              {selected.vessel}) on Saturday at {slot} for{" "}
-              {guestName.trim() || "your guest"} — {selected.price} USD with{" "}
-              <strong>0% AMARKAL commission</strong>. No real charge was made.
+              <strong>{scenario.resultPrefix}:</strong> {selected.name} (
+              {selected.detail}) for {windowSlot} —{" "}
+              {counterpart.trim() || scenario.counterpartPlaceholder} ·{" "}
+              {selected.amount} USD ({selected.terms}, 0% AMARKAL platform
+              commission). Illustrative demo only; no live transaction was
+              created.
             </div>
           )}
 
@@ -231,14 +455,15 @@ function DemoClientPortal() {
             }}
           >
             <div>
-              <strong>Want this portal for your US business?</strong>
+              <strong>Configure AMARKAL for your US organization</strong>
               <p className="usr-muted" style={{ margin: "4px 0 0" }}>
-                Draft services, pricing, resources, and hours in 60 seconds with
-                AI Business Architect — no sign-up required to preview.
+                Draft modules, catalog, resources, and policies across all 39
+                NAICS industries with AI Business Architect — no sign-up
+                required to preview.
               </p>
             </div>
             <Link href="/onboarding/" className="button">
-              Launch your own portal →
+              Draft your workspace →
             </Link>
           </div>
         </section>
@@ -289,7 +514,7 @@ export function BookingEntry() {
     return () => controller.abort();
   }, [attempt, demoMode]);
 
-  if (demoMode) return <DemoClientPortal />;
+  if (demoMode) return <MultiIndustryDemo />;
 
   if (error)
     return (
