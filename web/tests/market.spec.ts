@@ -152,7 +152,7 @@ test("end-to-end strict storefront projection, zero-commission marketplace revoc
     .getByRole("button", { name: "Save marketplace", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText(
-    `Saved marketplace ${mpSlug} (GORGONA commission 0 bps)`,
+    `Saved marketplace ${mpSlug} (AMARKAL commission 0 bps)`,
   );
 
   // Connect seller, revoke, then prove reactivation is rejected (MARKET_STATE_INVALID)
