@@ -27,6 +27,10 @@ class FileScanningNotConfiguredError(DomainError):
     code = "FILE_SCANNING_NOT_CONFIGURED"
 
 
+class FileMalwareDetectedError(DomainError):
+    code = "FILE_MALWARE_DETECTED"
+
+
 class FileIntegrityError(DomainError):
     code = "FILE_INTEGRITY_FAILED"
 

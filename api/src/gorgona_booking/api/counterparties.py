@@ -29,6 +29,11 @@ from gorgona_booking.business.counterparty_contracts import (
     MatchDecisionView,
     MatchList,
 )
+from gorgona_booking.business.counterparty_import import (
+    CounterpartyImportRequest,
+    CounterpartyImportResponse,
+    run_counterparty_import,
+)
 from gorgona_booking.business.counterparty_matching import (
     booking_candidates,
     check_matches,
@@ -105,6 +110,26 @@ async def post_match_check(
         if body.exclude_id is not None:
             await _exists(access, business_id, body.exclude_id)
         return await check_matches(access.conn, business_id, body)
+
+
+@router.post("/{business_id}/counterparties/import", response_model=CounterpartyImportResponse)
+async def post_import_counterparties(
+    business_id: UUID,
+    body: CounterpartyImportRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+    idempotency_key: MutationKey,
+) -> CounterpartyImportResponse:
+    """Validate (dry_run=true) or import B2B counterparties from CSV under FORCE RLS."""
+    async with _access(request, principal, business_id, write=not body.dry_run) as access:
+        return await run_counterparty_import(
+            access.conn,
+            business_id=business_id,
+            user_id=principal.user_id,
+            actor=principal.actor,
+            idempotency_key=idempotency_key,
+            body=body,
+        )
 
 
 @router.get("/{business_id}/counterparties/{counterparty_id}")

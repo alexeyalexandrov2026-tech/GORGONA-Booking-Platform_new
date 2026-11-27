@@ -50,7 +50,46 @@ export interface CreateCheckoutSessionInput {
   customer_name?: string;
   customer_email?: string | null;
   allow_ach?: boolean;
+  automatic_tax?: boolean;
   connected_account_id?: string | null;
+}
+
+export interface StripeConnectStatus {
+  connected: boolean;
+  account_id: string | null;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  details_submitted: boolean;
+  livemode: boolean;
+}
+
+export interface StripeConnectOnboardingResult {
+  account_id: string;
+  onboarding_url: string;
+  livemode: boolean;
+}
+
+export async function fetchStripeConnectStatus(
+  businessId: string,
+): Promise<StripeConnectStatus> {
+  return paymentsRequest<StripeConnectStatus>(
+    `/v1/businesses/${encodeURIComponent(businessId)}/payments/connect/status`,
+  );
+}
+
+export async function startStripeConnectOnboarding(
+  businessId: string,
+  contactEmail?: string | null,
+): Promise<StripeConnectOnboardingResult> {
+  return paymentsRequest<StripeConnectOnboardingResult>(
+    `/v1/businesses/${encodeURIComponent(businessId)}/payments/connect/onboarding`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        contact_email: contactEmail?.trim() || null,
+      }),
+    },
+  );
 }
 
 export async function fetchPaymentsConfig(): Promise<PaymentsConfig> {

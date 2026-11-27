@@ -13,6 +13,8 @@ from gorgona_booking.api.businesses import CurrentPrincipal
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
+from gorgona_booking.connectors.dispatcher import dispatch_business_event_nonblocking
+from gorgona_booking.connectors.service import upsert_connector_installation
 from gorgona_booking.db.pool import tenant_transaction
 from gorgona_booking.payments.reconciliation import (
     AMARKAL_SAAS_PLANS,
@@ -29,7 +31,10 @@ from gorgona_booking.payments.stripe_service import (
     StripeRuntimeConfig,
     apply_stripe_webhook_event,
     create_stripe_checkout_session,
+    create_stripe_connect_onboarding_link,
+    fetch_stripe_connect_status,
     list_payment_sessions,
+    load_tenant_stripe_account_id,
     refund_stripe_payment_session,
     sync_stripe_payment_session,
     verify_and_parse_stripe_webhook,
@@ -306,7 +311,138 @@ async def post_stripe_webhook(request: Request) -> StripeWebhookAckResponse:
 
     async with tenant_transaction(runtime_pool(request), event.tenant_id) as conn:
         applied = await apply_stripe_webhook_event(conn, event=event)
+    if applied and event.target_status == "paid":
+        settings = getattr(request.app.state, "settings", None)
+        env_name = settings.environment if settings is not None else "local"
+        await dispatch_business_event_nonblocking(
+            runtime_pool(request),
+            tenant_id=event.tenant_id,
+            event_type="payment.recorded",
+            data={
+                "provider": "stripe",
+                "event_type": event.event_type,
+                "provider_session_id": event.provider_session_id,
+                "provider_payment_intent_id": event.provider_payment_intent_id,
+                "status": event.target_status,
+            },
+            environment=env_name,
+        )
     return StripeWebhookAckResponse(received=True, event_type=event.event_type, applied=applied)
+
+
+class StripeConnectStatusResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    connected: bool
+    account_id: str | None
+    charges_enabled: bool
+    payouts_enabled: bool
+    details_submitted: bool
+    livemode: bool
+
+
+class StripeConnectOnboardingRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    contact_email: str | None = Field(default=None, max_length=160)
+
+
+class StripeConnectOnboardingResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    account_id: str
+    onboarding_url: str
+    livemode: bool
+
+
+@router.get(
+    "/v1/businesses/{business_id}/payments/connect/status",
+    response_model=StripeConnectStatusResponse,
+)
+async def get_stripe_connect_status(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> StripeConnectStatusResponse:
+    cfg = StripeRuntimeConfig.from_env()
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.FINANCE_READ,
+        request_id=get_request_id(request),
+    ) as session:
+        account_id, _ = await load_tenant_stripe_account_id(session.conn, tenant_id=business_id)
+    try:
+        st = await fetch_stripe_connect_status(config=cfg, account_id=account_id)
+    except StripePaymentError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    return StripeConnectStatusResponse(
+        connected=st.connected,
+        account_id=st.account_id,
+        charges_enabled=st.charges_enabled,
+        payouts_enabled=st.payouts_enabled,
+        details_submitted=st.details_submitted,
+        livemode=st.livemode,
+    )
+
+
+@router.post(
+    "/v1/businesses/{business_id}/payments/connect/onboarding",
+    response_model=StripeConnectOnboardingResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def post_stripe_connect_onboarding(
+    business_id: UUID,
+    body: StripeConnectOnboardingRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> StripeConnectOnboardingResponse:
+    cfg = StripeRuntimeConfig.from_env()
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.FINANCE_MANAGE,
+        request_id=get_request_id(request),
+    ) as session:
+        existing_id, biz_name = await load_tenant_stripe_account_id(
+            session.conn, tenant_id=business_id
+        )
+
+    base = _default_return_base(request)
+    try:
+        acct_id, onboarding_url = await create_stripe_connect_onboarding_link(
+            config=cfg,
+            tenant_id=business_id,
+            business_name=biz_name,
+            existing_account_id=existing_id,
+            email=body.contact_email,
+            return_url=f"{base}/integrations/?connect=return",
+            refresh_url=f"{base}/integrations/?connect=refresh",
+        )
+    except StripePaymentError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+    if acct_id != existing_id:
+        async with authorized_tenant(
+            runtime_pool(request),
+            principal,
+            business_id,
+            Permission.BUSINESS_MANAGE,
+            request_id=get_request_id(request),
+        ) as session:
+            await upsert_connector_installation(
+                session.conn,
+                tenant_id=business_id,
+                connector_id="stripe_ach_pos",
+                status="installed",
+                config={"stripe_account_id": acct_id, "ach_enabled": "true"},
+                user_id=principal.user_id,
+            )
+
+    return StripeConnectOnboardingResponse(
+        account_id=acct_id,
+        onboarding_url=onboarding_url,
+        livemode=cfg.livemode,
+    )
 
 
 class UnmatchedStripeSessionResponse(BaseModel):
