@@ -216,7 +216,7 @@ export async function signIn(returnPath?: string): Promise<void> {
   const manager = await authManager();
   if (!manager)
     throw new Error("Account sign-in is not configured for this environment.");
-  await manager.signinRedirect({ state: next });
+  await manager.signinRedirect({ state: localReturnPath(returnPath) });
 }
 
 export async function signOut(): Promise<void> {
