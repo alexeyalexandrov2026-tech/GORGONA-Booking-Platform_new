@@ -156,7 +156,8 @@ export const INDUSTRIES: readonly Industry[] = [
     id: 17,
     name: "Hospitality and tourism",
     naics: ["72", "56"],
-    examples: "Hotels, resorts, travel agencies and tour operators",
+    examples:
+      "Hotels, resorts, yacht charters, marinas, travel agencies and tour operators",
   },
   {
     id: 18,
@@ -196,7 +197,7 @@ export const INDUSTRIES: readonly Industry[] = [
     name: "Rental and leasing",
     naics: ["53"],
     examples:
-      "Cars, trucks, equipment, tools, boats, clothing, inventory and self-storage",
+      "Cars, trucks, equipment, tools, yachts, yacht charters, boats, marinas, clothing, inventory and self-storage",
   },
   {
     id: 24,

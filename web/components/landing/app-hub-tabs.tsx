@@ -33,7 +33,7 @@ const MCP_TOOLS = [
 ] as const;
 
 const MCP_EXAMPLE = `POST /v1/mcp
-Authorization: Bearer gorg_live_YOUR_KEY
+Authorization: Bearer <YOUR_SCOPED_API_KEY>
 Content-Type: application/json
 
 {"jsonrpc":"2.0","id":1,"method":"tools/list"}`;
@@ -63,7 +63,7 @@ const TABS: readonly TabSpec[] = [
         </p>
         <Chips items={SCOPES} />
         <pre className="lp-code" tabIndex={0}>
-          <code>Authorization: Bearer gorg_live_YOUR_KEY</code>
+          <code>Authorization: Bearer &lt;YOUR_SCOPED_API_KEY&gt;</code>
         </pre>
       </>
     ),

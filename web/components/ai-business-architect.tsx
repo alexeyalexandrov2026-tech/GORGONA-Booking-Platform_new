@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { WEEKDAYS } from "../lib/business-time";
 import { readAsDataUrl, validateImageFile } from "../lib/media-api";
@@ -55,6 +56,14 @@ const CONNECTOR_NAMES: Record<string, string> = {
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const PRICE_RE = /^\d{1,6}(\.\d{1,2})?$/;
+const PENDING_BLUEPRINT_KEY = "amarkal_pending_blueprint_v1";
+
+interface PendingBlueprintState {
+  description: string;
+  blueprint: AiBlueprint;
+  draft: Draft;
+  approved: boolean;
+}
 
 interface ServiceRow {
   key: string;
@@ -323,11 +332,16 @@ function toInput(draft: Draft): RegisterBusinessInput {
 
 export function AiBusinessArchitect({
   presets,
+  signedIn = true,
   onCreated,
+  onRequireSignIn,
 }: {
   presets: IndustryPreset[];
+  signedIn?: boolean;
   onCreated: (result: RegisterBusinessResult) => void;
+  onRequireSignIn?: () => void;
 }) {
+  const router = useRouter();
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -348,6 +362,30 @@ export function AiBusinessArchitect({
   const keys = useRef(new Map<string, string>());
   const descriptionId = useId();
   const photoHintId = useId();
+
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      try {
+        const raw = sessionStorage.getItem(PENDING_BLUEPRINT_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw) as Partial<PendingBlueprintState>;
+        if (saved.blueprint && saved.draft) {
+          if (typeof saved.description === "string")
+            setDescription(saved.description);
+          setBlueprint(saved.blueprint);
+          setDraft(saved.draft);
+          setApproved(Boolean(saved.approved));
+        }
+      } catch {
+        sessionStorage.removeItem(PENDING_BLUEPRINT_KEY);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(
     () => () => {
@@ -499,6 +537,30 @@ export function AiBusinessArchitect({
       requestAnimationFrame(() => errorSummaryRef.current?.focus());
       return;
     }
+    if (!signedIn) {
+      try {
+        if (blueprint) {
+          const payload: PendingBlueprintState = {
+            description,
+            blueprint,
+            draft,
+            approved: true,
+          };
+          sessionStorage.setItem(
+            PENDING_BLUEPRINT_KEY,
+            JSON.stringify(payload),
+          );
+        }
+      } catch {
+        /* ignore restricted sessionStorage */
+      }
+      if (onRequireSignIn) {
+        onRequireSignIn();
+      } else {
+        router.push("/auth/signin/?mode=signup&next=/onboarding/");
+      }
+      return;
+    }
     const input = toInput(draft);
     const signature = JSON.stringify(input);
     let key = keys.current.get(signature);
@@ -509,6 +571,11 @@ export function AiBusinessArchitect({
     setSubmitting(true);
     try {
       const result = await registerSelfServiceBusiness(input, key);
+      try {
+        sessionStorage.removeItem(PENDING_BLUEPRINT_KEY);
+      } catch {
+        /* ignore */
+      }
       onCreated(result);
     } catch (err) {
       setSubmitError(
@@ -1139,6 +1206,13 @@ export function AiBusinessArchitect({
               <p style={{ margin: 0 }}>{submitError}</p>
             </div>
           )}
+          {!signedIn && (
+            <p className="hold-note">
+              You are previewing as a guest. Your edited blueprint is saved
+              automatically — create a free account on the final step to launch
+              your live workspace in one click.
+            </p>
+          )}
           <button
             type="button"
             disabled={submitting}
@@ -1146,7 +1220,9 @@ export function AiBusinessArchitect({
           >
             {submitting
               ? "Launching your business…"
-              : "Approve & Launch Business"}
+              : signedIn
+                ? "Approve & Launch Business"
+                : "Create free account & Launch Business"}
           </button>
         </section>
       )}

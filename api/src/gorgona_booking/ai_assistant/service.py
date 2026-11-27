@@ -460,26 +460,50 @@ def _deterministic_customer_reply(
     )
 
 
-async def ask_customer_assistant(
+@dataclass(frozen=True)
+class CustomerAssistantContext:
+    boot: BootstrapView
+    ai_assistant_tone: str
+    message: str
+    language: str
+    ranked_variants: list[VariantView]
+    recommended_slots: list[RecommendedSlot]
+    waitlist_suggested: bool
+    early_result: AssistantResult | None = None
+
+
+async def gather_customer_assistant_context(
     conn: RuntimeConnection,
     *,
     tenant_id: UUID,
     message: str,
     location_id: UUID | None = None,
     preferred_day: date | None = None,
-) -> AssistantResult:
+) -> CustomerAssistantContext:
+    """Gather verified live catalog and slot availability inside a short DB transaction."""
     settings = await get_growth_settings(conn, tenant_id=tenant_id)
     boot = await customer_queries.bootstrap(conn)
     if not settings.ai_assistant_enabled:
         raise ValueError("AI Assistant is currently disabled by this business")
     if not boot.locations or not boot.variants:
-        return AssistantResult(
-            engine="grounded",
-            business_name=boot.name,
-            reply=f"{boot.name} is preparing its bookable services. Please check back shortly.",
+        return CustomerAssistantContext(
+            boot=boot,
+            ai_assistant_tone=settings.ai_assistant_tone,
+            message=message,
+            language="en",
+            ranked_variants=[],
             recommended_slots=[],
             waitlist_suggested=False,
-            cancellation_summary=boot.cancellation.summary,
+            early_result=AssistantResult(
+                engine="grounded",
+                business_name=boot.name,
+                reply=(
+                    f"{boot.name} is preparing its bookable services. Please check back shortly."
+                ),
+                recommended_slots=[],
+                waitlist_suggested=False,
+                cancellation_summary=boot.cancellation.summary,
+            ),
         )
 
     loc = next((item for item in boot.locations if item.id == location_id), boot.locations[0])
@@ -553,19 +577,35 @@ async def ask_customer_assistant(
                     break
 
     waitlist_suggested = len(recommended) == 0 and settings.waitlist_auto_offer
+    return CustomerAssistantContext(
+        boot=boot,
+        ai_assistant_tone=settings.ai_assistant_tone,
+        message=message,
+        language=str(intent["language"]),
+        ranked_variants=ranked_variants,
+        recommended_slots=recommended,
+        waitlist_suggested=waitlist_suggested,
+    )
 
+
+async def synthesize_customer_assistant(ctx: CustomerAssistantContext) -> AssistantResult:
+    """Synthesize customer assistant narration strictly OUTSIDE any DB transaction."""
+    if ctx.early_result is not None:
+        return ctx.early_result
+
+    boot = ctx.boot
     synthesized = await asyncio.to_thread(
         _synthesize_reply_sync,
         (
             f"You are the AI Booking Assistant for {boot.name}. "
-            f"Tone: {settings.ai_assistant_tone}. "
+            f"Tone: {ctx.ai_assistant_tone}. "
             "Answer strictly using the verified catalog, live slots, and cancellation policy "
             "provided in JSON. Keep exact service, variant, and specialist names from JSON. "
             "Never invent prices, times, or promises. Reply naturally in the same language "
             "as customer_message in 2-3 concise sentences."
         ),
         {
-            "customer_message": message[:500],
+            "customer_message": ctx.message[:500],
             "business_name": boot.name,
             "cancellation_policy": boot.cancellation.summary,
             "verified_catalog_top": [
@@ -575,7 +615,7 @@ async def ask_customer_assistant(
                     "price": _format_money(v.price_cents, v.currency),
                     "duration_minutes": v.duration_minutes,
                 }
-                for v in ranked_variants[:6]
+                for v in ctx.ranked_variants[:6]
             ],
             "verified_open_slots": [
                 {
@@ -587,9 +627,9 @@ async def ask_customer_assistant(
                     ),
                     "price": _format_money(s.price_cents, s.currency),
                 }
-                for s in recommended
+                for s in ctx.recommended_slots
             ],
-            "waitlist_suggested": waitlist_suggested,
+            "waitlist_suggested": ctx.waitlist_suggested,
         },
     )
 
@@ -599,8 +639,8 @@ async def ask_customer_assistant(
             engine=engine,
             business_name=boot.name,
             reply=ai_reply,
-            recommended_slots=recommended,
-            waitlist_suggested=waitlist_suggested,
+            recommended_slots=ctx.recommended_slots,
+            waitlist_suggested=ctx.waitlist_suggested,
             cancellation_summary=boot.cancellation.summary,
         )
 
@@ -609,14 +649,32 @@ async def ask_customer_assistant(
         business_name=boot.name,
         reply=_deterministic_customer_reply(
             boot=boot,
-            slots=recommended,
-            language=intent["language"],
-            waitlist_suggested=waitlist_suggested,
+            slots=ctx.recommended_slots,
+            language=ctx.language,
+            waitlist_suggested=ctx.waitlist_suggested,
         ),
-        recommended_slots=recommended,
-        waitlist_suggested=waitlist_suggested,
+        recommended_slots=ctx.recommended_slots,
+        waitlist_suggested=ctx.waitlist_suggested,
         cancellation_summary=boot.cancellation.summary,
     )
+
+
+async def ask_customer_assistant(
+    conn: RuntimeConnection,
+    *,
+    tenant_id: UUID,
+    message: str,
+    location_id: UUID | None = None,
+    preferred_day: date | None = None,
+) -> AssistantResult:
+    ctx = await gather_customer_assistant_context(
+        conn,
+        tenant_id=tenant_id,
+        message=message,
+        location_id=location_id,
+        preferred_day=preferred_day,
+    )
+    return await synthesize_customer_assistant(ctx)
 
 
 @dataclass(frozen=True)

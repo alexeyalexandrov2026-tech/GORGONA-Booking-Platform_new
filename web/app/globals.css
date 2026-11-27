@@ -199,10 +199,6 @@ button,
   color: #fff;
   font-weight: 500;
   text-decoration: none;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
 }
 button:hover,
 .button:hover {
@@ -706,9 +702,6 @@ footer {
   text-decoration: none;
   font-weight: 500;
   border-bottom: 1px solid rgba(10, 102, 255, 0.22);
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease;
 }
 .mgmt-footer a:hover,
 .legal-inline-link:hover {
@@ -730,7 +723,6 @@ footer {
   text-decoration: none;
   font-weight: 500;
   border-bottom: 2px solid transparent;
-  transition: color 0.15s ease;
 }
 .mgmt-nav-link:hover {
   color: var(--ink);

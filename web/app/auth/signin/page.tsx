@@ -48,6 +48,13 @@ function safeNextPath(): string {
   return raw;
 }
 
+function initialModeFromQuery(): Mode {
+  if (typeof window === "undefined") return "signin";
+  const raw = new URLSearchParams(window.location.search).get("mode");
+  if (raw === "signup" || raw === "reset") return raw;
+  return "signin";
+}
+
 export default function SignInPage() {
   const router = useRouter();
   const nameId = useId();
@@ -84,6 +91,7 @@ export default function SignInPage() {
         await signIn(safeNextPath());
         return;
       }
+      setMode(initialModeFromQuery());
       setReady(true);
     })();
     return () => {
@@ -226,7 +234,7 @@ export default function SignInPage() {
       >
         <section className="usr-card" aria-labelledby="signin-heading">
           <p className="eyebrow" style={{ marginTop: 0 }}>
-            Google Cloud Identity
+            AMARKAL Workspace Access
           </p>
           <h1
             id="signin-heading"
@@ -395,6 +403,13 @@ export default function SignInPage() {
           )}
         </section>
       </main>
+      <footer className="mgmt-footer">
+        <span>© 2026 Alexey AAA Logistics LLC — AMARKAL Platform</span>
+        <Link href="/onboarding/">Create business</Link>
+        <a href="mailto:support@amarkal-platform.com">Support</a>
+        <Link href="/legal/terms/">Terms of Service</Link>
+        <Link href="/legal/privacy/">Privacy Policy</Link>
+      </footer>
     </div>
   );
 }

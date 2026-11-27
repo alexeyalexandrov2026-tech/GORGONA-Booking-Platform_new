@@ -1,16 +1,21 @@
-"""GORGONA App Hub & Connector Engine (Scoped API Keys, Signed Webhooks, Native MCP)."""
+"""AMARKAL App Hub & Connector Engine (Scoped API Keys, Signed Webhooks, Native MCP)."""
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
+import ipaddress
 import json
 import secrets
+import socket
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
+from urllib.parse import urlparse
 from uuid import UUID
 
+import httpx
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -53,7 +58,7 @@ class ConnectorCatalogItem:
 CONNECTOR_CATALOG: tuple[ConnectorCatalogItem, ...] = (
     ConnectorCatalogItem(
         id="native_mcp",
-        name="GORGONA Native MCP Server",
+        name="AMARKAL Native MCP Server",
         category="AI & Agents",
         summary=(
             "Connect ChatGPT, Claude, Gemini, Vapi, Retell, or custom AI agents directly to your "
@@ -69,7 +74,7 @@ CONNECTOR_CATALOG: tuple[ConnectorCatalogItem, ...] = (
         category="Automation",
         summary=(
             "Connect 7,000+ US apps using HMAC-SHA256 signed webhooks and scoped API keys "
-            "without cluttering your GORGONA core."
+            "without cluttering your AMARKAL core."
         ),
         auth_mode="webhook",
         fields=("workflow_label",),
@@ -80,7 +85,7 @@ CONNECTOR_CATALOG: tuple[ConnectorCatalogItem, ...] = (
         name="QuickBooks Online (US)",
         category="Accounting & Tax",
         summary=(
-            "Sync GORGONA FIN-03 double-entry invoices, payments, and 1099-ready summaries "
+            "Sync AMARKAL FIN-03 double-entry invoices, payments, and 1099-ready summaries "
             "with your US CPA's QuickBooks Online company file."
         ),
         auth_mode="byok",
@@ -93,11 +98,11 @@ CONNECTOR_CATALOG: tuple[ConnectorCatalogItem, ...] = (
         category="Scheduling",
         summary=(
             "Connect staff calendars so personal blocks and external events stay aligned with "
-            "live GORGONA availability."
+            "live AMARKAL availability."
         ),
         auth_mode="oauth_ready",
         fields=("calendar_email",),
-        us_highlight="Eliminates double-bookings across field & studio teams",
+        us_highlight="Eliminates double-bookings across field & service teams",
     ),
     ConnectorCatalogItem(
         id="reserve_with_google",
@@ -386,12 +391,65 @@ async def delete_webhook(conn: RuntimeConnection, *, tenant_id: UUID, endpoint_i
     return cur.rowcount > 0
 
 
-async def enqueue_webhook_test_delivery(
+def validate_public_webhook_url(url: str, *, resolve_dns: bool = True) -> str:
+    """Ensure webhook target is HTTPS and does not resolve to private/loopback/metadata IPs."""
+    clean = url.strip()
+    parsed = urlparse(clean)
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise ValueError("Webhook URL must use https:// with a valid hostname")
+    host = parsed.hostname.lower().rstrip(".")
+    if host in ("localhost", "ip6-localhost") or host.endswith(
+        (".local", ".internal", ".localhost")
+    ):
+        raise ValueError("Webhook URL cannot target localhost or internal hostnames")
+
+    try:
+        literal_ip = ipaddress.ip_address(host)
+    except ValueError:
+        literal_ip = None
+
+    if literal_ip is not None:
+        if not literal_ip.is_global:
+            raise ValueError("Webhook URL cannot target private, loopback, or link-local IPs")
+        return clean
+
+    if not resolve_dns:
+        return clean
+
+    try:
+        infos = socket.getaddrinfo(host, parsed.port or 443, type=socket.SOCK_STREAM)
+    except socket.gaierror as exc:
+        raise ValueError(f"Webhook hostname could not be resolved: {host}") from exc
+    if not infos:
+        raise ValueError(f"Webhook hostname resolved to no addresses: {host}")
+    for info in infos:
+        addr = ipaddress.ip_address(info[4][0])
+        if not addr.is_global:
+            raise ValueError("Webhook URL resolves to a non-public IP address")
+    return clean
+
+
+@dataclass(frozen=True)
+class PreparedWebhookTest:
+    url: str
+    payload: dict[str, Any]
+    signature_header: str
+
+
+@dataclass(frozen=True)
+class WebhookProbeOutcome:
+    status: Literal["delivered", "failed", "queued"]
+    http_status: int | None
+    last_error: str | None
+
+
+async def prepare_webhook_test_delivery(
     conn: RuntimeConnection,
     *,
     tenant_id: UUID,
     endpoint_id: UUID,
-) -> dict[str, Any]:
+) -> PreparedWebhookTest:
+    """Load active webhook endpoint and compute HMAC-SHA256 signature inside a short TX."""
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             """
@@ -402,34 +460,125 @@ async def enqueue_webhook_test_delivery(
             (tenant_id, endpoint_id),
         )
         ep = await cur.fetchone()
-        if ep is None:
-            raise LookupError("Active webhook endpoint not found")
-        payload = {
-            "event": "connector.test",
-            "tenant_id": str(tenant_id),
-            "endpoint_id": str(endpoint_id),
-            "platform": "GORGONA US Business OS",
-        }
-        sig = hmac.new(
-            str(ep["signing_secret_hash"]).encode("utf-8"),
-            json.dumps(payload, sort_keys=True).encode("utf-8"),
-            hashlib.sha256,
-        ).hexdigest()
-        sig_header = f"v1={sig}"
+    if ep is None:
+        raise LookupError("Active webhook endpoint not found")
+    payload = {
+        "event": "connector.test",
+        "tenant_id": str(tenant_id),
+        "endpoint_id": str(endpoint_id),
+        "platform": "AMARKAL Platform",
+    }
+    sig = hmac.new(
+        str(ep["signing_secret_hash"]).encode("utf-8"),
+        json.dumps(payload, sort_keys=True).encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return PreparedWebhookTest(
+        url=str(ep["url"]),
+        payload=payload,
+        signature_header=f"v1={sig}",
+    )
+
+
+async def send_webhook_http_probe(prepared: PreparedWebhookTest) -> WebhookProbeOutcome:
+    """Perform a real bounded HTTPS POST strictly outside the DB transaction with SSRF guard."""
+    try:
+        safe_url = await asyncio.to_thread(
+            validate_public_webhook_url, prepared.url, resolve_dns=True
+        )
+    except ValueError as exc:
+        return WebhookProbeOutcome(status="failed", http_status=None, last_error=str(exc))
+
+    body = json.dumps(prepared.payload, sort_keys=True).encode("utf-8")
+    try:
+        async with httpx.AsyncClient(timeout=6.0, follow_redirects=False) as client:
+            resp = await client.post(
+                safe_url,
+                content=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": "AMARKAL-Webhooks/1.0",
+                    "X-AMARKAL-Event": "connector.test",
+                    "X-AMARKAL-Signature": prepared.signature_header,
+                },
+            )
+    except httpx.HTTPError as exc:
+        return WebhookProbeOutcome(
+            status="failed",
+            http_status=None,
+            last_error=f"Outbound delivery error: {type(exc).__name__}",
+        )
+
+    if 200 <= resp.status_code < 300:
+        return WebhookProbeOutcome(
+            status="delivered", http_status=resp.status_code, last_error=None
+        )
+    return WebhookProbeOutcome(
+        status="failed",
+        http_status=resp.status_code,
+        last_error=f"Endpoint responded with HTTP {resp.status_code}",
+    )
+
+
+async def record_webhook_test_delivery(
+    conn: RuntimeConnection,
+    *,
+    tenant_id: UUID,
+    endpoint_id: UUID,
+    prepared: PreparedWebhookTest,
+    outcome: WebhookProbeOutcome,
+) -> dict[str, Any]:
+    async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             """
             INSERT INTO gba.webhook_deliveries
                 (tenant_id, endpoint_id, event_type, payload, signature_header,
-                 status, http_status, attempts, delivered_at)
-            VALUES (%s, %s, 'connector.test', %s, %s, 'delivered', 200, 1, now())
+                 status, http_status, attempts, last_error, delivered_at)
+            VALUES (
+                %s, %s, 'connector.test', %s, %s, %s, %s, 1, %s,
+                CASE WHEN %s = 'delivered' THEN now() ELSE NULL END
+            )
             RETURNING id, endpoint_id, event_type, signature_header, status, http_status,
-                      attempts, created_at, delivered_at
+                      attempts, last_error, created_at, delivered_at
             """,
-            (tenant_id, endpoint_id, Jsonb(payload), sig_header),
+            (
+                tenant_id,
+                endpoint_id,
+                Jsonb(prepared.payload),
+                prepared.signature_header,
+                outcome.status,
+                outcome.http_status,
+                outcome.last_error,
+                outcome.status,
+            ),
         )
         row = await cur.fetchone()
     assert row is not None  # noqa: S101
     return dict(row)
+
+
+async def enqueue_webhook_test_delivery(
+    conn: RuntimeConnection,
+    *,
+    tenant_id: UUID,
+    endpoint_id: UUID,
+) -> dict[str, Any]:
+    """Queue a signed webhook test record without fabricating an HTTP 200 delivery."""
+    prepared = await prepare_webhook_test_delivery(
+        conn, tenant_id=tenant_id, endpoint_id=endpoint_id
+    )
+    outcome = WebhookProbeOutcome(
+        status="queued",
+        http_status=None,
+        last_error="Outbound webhook HTTP delivery is disabled in local/test environment.",
+    )
+    return await record_webhook_test_delivery(
+        conn,
+        tenant_id=tenant_id,
+        endpoint_id=endpoint_id,
+        prepared=prepared,
+        outcome=outcome,
+    )
 
 
 async def list_webhook_deliveries(

@@ -13,7 +13,24 @@ export const metadata: Metadata = {
   title:
     "AMARKAL Platform — US Business OS across 39 industries, 0% commission",
   description:
-    "Run any US business on AMARKAL Platform: operations, scheduling, clients, staff, finance, and AI automation for 39 NAICS industries. 0% commission.",
+    "Run any US business on AMARKAL Platform: operations, scheduling, clients, staff, double-entry USD finance, and human-approved AI automation for 39 NAICS industries. 0% commission.",
+  alternates: { canonical: "https://www.amarkal-platform.com/" },
+  openGraph: {
+    title:
+      "AMARKAL Platform — US Business OS across 39 industries, 0% commission",
+    description:
+      "Scheduling, clients, staff, FIN-03 USD finance, Stripe Live payouts, and governed AI automation for 39 NAICS industries. Keep 100% of every customer payment.",
+    url: "https://www.amarkal-platform.com/",
+    siteName: "AMARKAL Platform",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AMARKAL Platform — US Business OS (0% Commission)",
+    description:
+      "Run any US business on one platform across 39 NAICS industries with 0% commission, 7-tool Native MCP, and AI that asks first.",
+  },
   robots: { index: true, follow: true },
 };
 
@@ -21,9 +38,104 @@ const NAV = [
   { href: "#platform", label: "Platform" },
   { href: "#industries", label: "Industries" },
   { href: "#manifesto", label: "0% commission" },
-  { href: "#architect", label: "AI Business Architect" },
+  { href: "#architect", label: "AI Architect" },
   { href: "#app-hub", label: "App Hub" },
+  { href: "#pricing", label: "Pricing" },
 ] as const;
+
+const PLANS = [
+  {
+    id: "starter",
+    name: "Starter",
+    price: "$0",
+    cadence: "/ month",
+    featured: false,
+    tagline: "Launch your US business with 0% platform commission.",
+    features: [
+      "AI Business Architect across 39 NAICS industries",
+      "Branded client portal & smart waitlist",
+      "Direct Stripe US checkout & ACH (0% AMARKAL fee)",
+      "Double-entry USD ledger & FIN-03 invoices",
+      "1-click JSON full workspace export",
+    ],
+    cta: "Start free",
+  },
+  {
+    id: "growth",
+    name: "Growth",
+    price: "$49",
+    cadence: "/ month",
+    featured: true,
+    tagline: "Full autonomous Business OS for growing US teams.",
+    features: [
+      "Everything in Starter, unlimited bookings & staff",
+      "Governed AI Business Copilot with 2-step approval",
+      "7-tool Native MCP server, scoped API keys & webhooks",
+      "Automated Stripe ↔ FIN-03 financial reconciliation",
+      "Multi-branch schedules, shifts & timesheets",
+    ],
+    cta: "Start with Growth",
+  },
+  {
+    id: "scale",
+    name: "Scale",
+    price: "$149",
+    cadence: "/ month",
+    featured: false,
+    tagline: "Multi-entity, franchise & custom-domain US operations.",
+    features: [
+      "Everything in Growth across multiple locations & brands",
+      "Delegated provider admission & multi-entity reporting",
+      "Custom booking domain & embeddable storefront control",
+      "BYOK Twilio SMS/Voice, QuickBooks & Zapier bridges",
+      "Priority US engineering & migration support",
+    ],
+    cta: "Launch Scale",
+  },
+] as const;
+
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      name: "AMARKAL Platform",
+      legalName: "Alexey AAA Logistics LLC",
+      url: "https://www.amarkal-platform.com/",
+      email: "support@amarkal-platform.com",
+      areaServed: "US",
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: "AMARKAL Platform",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      url: "https://www.amarkal-platform.com/",
+      description:
+        "US Business OS across 39 NAICS industries with scheduling, CRM, staff, double-entry USD finance, Stripe payouts, 7-tool Native MCP, and human-in-the-loop AI automation. 0% platform commission.",
+      offers: [
+        {
+          "@type": "Offer",
+          name: "Starter",
+          price: "0",
+          priceCurrency: "USD",
+        },
+        {
+          "@type": "Offer",
+          name: "Growth",
+          price: "49",
+          priceCurrency: "USD",
+        },
+        {
+          "@type": "Offer",
+          name: "Scale",
+          price: "149",
+          priceCurrency: "USD",
+        },
+      ],
+    },
+  ],
+};
 
 const TRUST = [
   {
@@ -72,6 +184,10 @@ const CONNECTORS = [
 export default function HomePage() {
   return (
     <div className="lp">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
+      />
       <a className="skip" href="#main-content">
         Skip to content
       </a>
@@ -91,7 +207,7 @@ export default function HomePage() {
             </ul>
           </nav>
           <div className="lp-header-actions">
-            <Link href="/overview/" className="lp-link-quiet">
+            <Link href="/auth/signin/" className="lp-link-quiet">
               Sign in
             </Link>
             <Link
@@ -130,8 +246,11 @@ export default function HomePage() {
               >
                 Create your business
               </Link>
-              <Link href="/book/" className="lp-btn lp-btn--link lp-btn--lg">
-                Open client portal <span aria-hidden="true">›</span>
+              <Link
+                href="/book/?demo=1"
+                className="lp-btn lp-btn--link lp-btn--lg"
+              >
+                Preview client portal <span aria-hidden="true">›</span>
               </Link>
             </div>
             <MonolithHeroStage />
@@ -357,6 +476,72 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Transparent Flat Pricing — Zero Transaction Commission */}
+        <section
+          id="pricing"
+          className="lp-section"
+          aria-labelledby="pricing-title"
+        >
+          <div className="lp-container lp-center">
+            <p className="lp-mono">Transparent US pricing</p>
+            <h2 id="pricing-title">
+              Flat monthly software.
+              <br />
+              <span className="lp-h2-muted">0% transaction commission.</span>
+            </h2>
+            <p className="lp-section-lead lp-section-lead--center">
+              Start free with zero credit card and zero setup lock-in. Upgrade
+              only when your business needs multi-branch operations or
+              autonomous AI workflows — AMARKAL never takes a cut of your sales.
+            </p>
+            <div className="lp-pricing-grid">
+              {PLANS.map((plan) => (
+                <article
+                  key={plan.id}
+                  className={
+                    "lp-plan" + (plan.featured ? " lp-plan--featured" : "")
+                  }
+                >
+                  <div className="lp-plan-top">
+                    <span
+                      className={
+                        "lp-mono" + (plan.featured ? " lp-mono--gold" : "")
+                      }
+                    >
+                      {plan.featured ? "Most popular · 0% fee" : "0% fee"}
+                    </span>
+                    <h3>{plan.name}</h3>
+                    <p className="lp-plan-tagline">{plan.tagline}</p>
+                    <p className="lp-plan-price">
+                      <strong>{plan.price}</strong>
+                      <span>USD {plan.cadence}</span>
+                    </p>
+                  </div>
+                  <ul className="lp-plan-list">
+                    {plan.features.map((feat) => (
+                      <li key={feat}>{feat}</li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/onboarding/"
+                    className={
+                      "lp-btn lp-plan-cta " +
+                      (plan.featured ? "lp-btn--white" : "lp-btn--primary")
+                    }
+                  >
+                    {plan.cta}
+                  </Link>
+                </article>
+              ))}
+            </div>
+            <p className="lp-fineprint">
+              Standard Stripe processing fees are billed directly by Stripe to
+              your merchant account. Cancel or export your entire workspace to
+              JSON anytime.
+            </p>
+          </div>
+        </section>
+
         {/* Monumental Obsidian Closing CTA */}
         <section className="lp-final" aria-labelledby="final-title">
           <div className="lp-container lp-final-inner">
@@ -380,10 +565,10 @@ export default function HomePage() {
                 Create your business
               </Link>
               <Link
-                href="/book/"
+                href="/book/?demo=1"
                 className="lp-btn lp-btn--link-dark lp-btn--lg"
               >
-                Open client portal <span aria-hidden="true">›</span>
+                Preview client portal <span aria-hidden="true">›</span>
               </Link>
             </div>
           </div>
@@ -395,7 +580,7 @@ export default function HomePage() {
           <div className="lp-footer-left">
             <AmarkalLogo variant="dark" height={18} />
             <span className="lp-footer-copy">
-              © 2026 Alexey AAA logistics LLC
+              © 2026 Alexey AAA Logistics LLC
             </span>
           </div>
           <nav aria-label="Footer">
@@ -404,10 +589,10 @@ export default function HomePage() {
                 <Link href="/onboarding/">Create your business</Link>
               </li>
               <li>
-                <Link href="/book/">Client portal</Link>
+                <Link href="/book/?demo=1">Client portal demo</Link>
               </li>
               <li>
-                <Link href="/overview/">Sign in</Link>
+                <Link href="/auth/signin/">Sign in</Link>
               </li>
               <li>
                 <Link href="/integrations/">App Hub</Link>

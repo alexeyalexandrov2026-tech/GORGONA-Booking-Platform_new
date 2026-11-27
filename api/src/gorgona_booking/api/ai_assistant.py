@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import deque
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
@@ -16,14 +17,19 @@ from gorgona_booking.ai_assistant.actions import (
 )
 from gorgona_booking.ai_assistant.evidence_bridge import emit_evidence_nonblocking
 from gorgona_booking.ai_assistant.service import (
-    ask_customer_assistant,
+    gather_customer_assistant_context,
     gather_owner_copilot_context,
+    synthesize_customer_assistant,
     synthesize_owner_copilot,
 )
 from gorgona_booking.api.businesses import CurrentPrincipal
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.holds import get_tenant_id
 from gorgona_booking.api.request_id import get_request_id
+from gorgona_booking.api.self_service import (
+    enforce_sliding_window_rate_limit,
+    extract_client_ip,
+)
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.db.pool import tenant_transaction
 from gorgona_booking.payments.stripe_service import StripePaymentError
@@ -31,6 +37,23 @@ from gorgona_booking.tenancy.authorization import authorized_tenant
 
 router = APIRouter(tags=["ai-assistant"])
 type HostTenant = Annotated[UUID, Depends(get_tenant_id)]
+_ASSISTANT_WINDOW_SECONDS = 300.0
+_ASSISTANT_MAX_PER_WINDOW = 20
+_ASSISTANT_HITS: dict[str, deque[float]] = {}
+
+
+def _enforce_customer_assistant_rate_limit(request: Request) -> None:
+    """Protect hosted public customer AI assistant from abuse/cost spikes."""
+    settings = getattr(request.app.state, "settings", None)
+    if settings is None or settings.environment not in ("staging", "production"):
+        return
+    enforce_sliding_window_rate_limit(
+        _ASSISTANT_HITS,
+        key=extract_client_ip(request),
+        window_seconds=_ASSISTANT_WINDOW_SECONDS,
+        max_requests=_ASSISTANT_MAX_PER_WINDOW,
+        detail="Too many assistant requests. Please wait a few minutes and try again.",
+    )
 
 
 class CustomerAssistantRequest(BaseModel):
@@ -127,9 +150,10 @@ async def post_customer_assistant(
     tenant_id: HostTenant,
 ) -> CustomerAssistantResponse:
     response.headers["Cache-Control"] = "no-store"
+    _enforce_customer_assistant_rate_limit(request)
     try:
         async with tenant_transaction(runtime_pool(request), tenant_id) as conn:
-            res = await ask_customer_assistant(
+            ctx = await gather_customer_assistant_context(
                 conn,
                 tenant_id=tenant_id,
                 message=body.message,
@@ -138,6 +162,8 @@ async def post_customer_assistant(
             )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    # External LLM synthesis runs strictly outside the PostgreSQL transaction.
+    res = await synthesize_customer_assistant(ctx)
     return CustomerAssistantResponse(
         engine=res.engine,
         business_name=res.business_name,
