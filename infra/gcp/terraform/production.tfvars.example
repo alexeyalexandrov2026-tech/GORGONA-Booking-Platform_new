@@ -1,0 +1,13 @@
+# Production HA & SRE baseline variables for AMARKAL Platform (gorgona-platform-gcp)
+# Copy to production.tfvars and fill sensitive / image values before `terraform plan`.
+
+project_id           = "gorgona-platform-gcp"
+region               = "us-central1"
+environment          = "production"
+domains              = ["www.amarkal-platform.com", "amarkal-platform.com"]
+pg_tier              = "db-custom-4-16384"
+pg_availability_type = "REGIONAL"
+api_min_instances    = 2
+api_max_instances    = 25
+ops_alert_email      = "ops@amarkal-platform.com"
+monthly_budget_usd   = 500

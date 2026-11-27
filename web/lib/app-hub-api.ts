@@ -110,8 +110,29 @@ export const FALLBACK_WEBHOOK_EVENTS = [
   "connector.test",
   "invoice.issued",
   "payment.recorded",
+  "purchase_order.issued",
+  "purchase_order.matched",
+  "quote.accepted",
+  "quote.created",
   "waitlist.joined",
 ];
+
+export const oauthProviderStatusSchema = z.object({
+  connector_id: z.string(),
+  display_name: z.string(),
+  configured: z.boolean(),
+  scopes: z.array(z.string()),
+  callback_url: z.string(),
+});
+export type OAuthProviderStatus = z.infer<typeof oauthProviderStatusSchema>;
+
+export const oauthStartSchema = z.object({
+  connector_id: z.string(),
+  configured: z.boolean(),
+  authorization_url: z.string().nullable().optional(),
+  message: z.string(),
+});
+export type OAuthStartResult = z.infer<typeof oauthStartSchema>;
 
 function base(businessId: string): string {
   return `/v1/businesses/${encodeURIComponent(businessId)}/connectors`;
@@ -262,6 +283,27 @@ export function fetchWebhookDeliveries(
   return getJson(
     `${base(businessId)}/webhooks/deliveries`,
     z.array(webhookDeliverySchema),
+  );
+}
+
+export function fetchOAuthProviders(
+  businessId: string,
+): Promise<OAuthProviderStatus[]> {
+  return getJson(
+    `${base(businessId)}/oauth/providers`,
+    z.array(oauthProviderStatusSchema),
+  );
+}
+
+export function startConnectorOAuth(
+  businessId: string,
+  connectorId: string,
+): Promise<OAuthStartResult> {
+  return sendJson(
+    `${base(businessId)}/oauth/${encodeURIComponent(connectorId)}/start`,
+    "POST",
+    undefined,
+    oauthStartSchema,
   );
 }
 

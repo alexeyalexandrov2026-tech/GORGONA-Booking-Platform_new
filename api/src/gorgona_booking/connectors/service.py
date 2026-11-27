@@ -90,12 +90,48 @@ CONNECTOR_CATALOG: tuple[ConnectorCatalogItem, ...] = (
         name="QuickBooks Online (US)",
         category="Accounting & Tax",
         summary=(
-            "Sync AMARKAL FIN-03 double-entry invoices, payments, and 1099-ready summaries "
-            "with your US CPA's QuickBooks Online company file."
+            "Optional accounting connector: sync AMARKAL FIN-03 double-entry invoices, payments, "
+            "and 1099-ready summaries with your US CPA's QuickBooks Online company file."
+        ),
+        auth_mode="oauth_ready",
+        fields=("realm_id", "sync_mode"),
+        us_highlight="Optional OAuth2 / BYOK connector — built on real double-entry ledger",
+    ),
+    ConnectorCatalogItem(
+        id="xero_accounting",
+        name="Xero Accounting (Optional)",
+        category="Accounting & Tax",
+        summary=(
+            "Optional OAuth2 connector for organizations using Xero for US GAAP general ledger "
+            "and vendor bill synchronization."
+        ),
+        auth_mode="oauth_ready",
+        fields=("tenant_org_id", "sync_mode"),
+        us_highlight="Self-service OAuth2 connection — zero accounting vendor lock-in",
+    ),
+    ConnectorCatalogItem(
+        id="slack_workspace",
+        name="Slack Workspace Alerts (Optional)",
+        category="Communications",
+        summary=(
+            "Optional team notifications for quote approvals, 3-way match variances, "
+            "and Stripe settlement events."
+        ),
+        auth_mode="oauth_ready",
+        fields=("channel_name",),
+        us_highlight="Instant operational alerts without cluttering your AMARKAL core",
+    ),
+    ConnectorCatalogItem(
+        id="email_marketing_byok",
+        name="Email Marketing Bridge (Mailchimp / Klaviyo / Resend)",
+        category="Marketing (Optional)",
+        summary=(
+            "Optional email campaign plugin: connect your own Mailchimp, Klaviyo, or Resend "
+            "audience via webhooks without forcing marketing bloat into the Business OS core."
         ),
         auth_mode="byok",
-        fields=("realm_id", "sync_mode"),
-        us_highlight="Built on real double-entry ledger — zero spreadsheet reconciliation",
+        fields=("provider_name", "audience_id"),
+        us_highlight="Strictly optional plugin — businesses keep full ownership of client lists",
     ),
     ConnectorCatalogItem(
         id="google_calendar",

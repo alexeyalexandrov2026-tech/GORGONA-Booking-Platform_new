@@ -13,3 +13,7 @@ output "cloud_run_service_url" {
 output "artifact_registry_repo" {
   value = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.gorgona.repository_id}"
 }
+
+output "uptime_check_health_ready_id" {
+  value = google_monitoring_uptime_check_config.health_ready.uptime_check_id
+}

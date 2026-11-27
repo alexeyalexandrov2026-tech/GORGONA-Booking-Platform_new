@@ -24,6 +24,8 @@ _PUBLIC_CACHEABLE_HTML_PATHS = frozenset(
     {
         "/",
         "/index.html",
+        "/status",
+        "/status/",
         "/legal/privacy",
         "/legal/privacy/",
         "/legal/terms",
