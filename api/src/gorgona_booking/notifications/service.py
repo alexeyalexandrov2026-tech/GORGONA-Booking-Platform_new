@@ -57,6 +57,21 @@ TEMPLATES: dict[str, tuple[str, str]] = {
         "You received a {amount} gift certificate for {business_name}",
         "Gift certificate {reference} for {amount} at {business_name} is ready to redeem.",
     ),
+    "commercial_quote_shared": (
+        "Commercial Quote {reference} from {business_name} ({amount})",
+        "You have received B2B commercial quote {reference} for {amount} from {business_name}. "
+        "Review terms, download PDF, and sign electronically on the secure portal: {action_url}",
+    ),
+    "purchase_order_issued": (
+        "Purchase Order {reference} from {business_name} ({amount})",
+        "{business_name} has issued Purchase Order {reference} for {amount}. "
+        "Review line items and acknowledge delivery terms on the vendor portal: {action_url}",
+    ),
+    "recurring_billing_notice": (
+        "Recurring Billing Statement {reference} from {business_name} ({amount})",
+        "Your scheduled billing statement {reference} for {amount} from {business_name} is ready. "
+        "View details and complete settlement here: {action_url}",
+    ),
 }
 
 

@@ -6,17 +6,18 @@ CPQ Commercial Quotes, Purchase Orders & 3-Way Match, Approval Policies,
 from __future__ import annotations
 
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid7
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from psycopg.rows import dict_row
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from gorgona_booking.api.businesses import CurrentPrincipal
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import commercial as service
+from gorgona_booking.business import recurring_aging as ra_service
 from gorgona_booking.business.commercial import (
     ApprovalPolicyView,
     CommercialError,
@@ -33,8 +34,16 @@ from gorgona_booking.business.commercial import (
     RecordReceiptRequest,
     UpdateApprovalPolicyRequest,
 )
+from gorgona_booking.business.recurring_aging import (
+    AgingReportView,
+    CreateRecurringScheduleRequest,
+    RecurringRunResult,
+    RecurringScheduleView,
+    render_cpa_aging_csv,
+)
 from gorgona_booking.connectors.dispatcher import dispatch_business_event_nonblocking
 from gorgona_booking.db.pool import tenant_transaction
+from gorgona_booking.notifications.service import dispatch_notification, enqueue_notification
 from gorgona_booking.payments.stripe_service import (
     StripePaymentError,
     StripeRuntimeConfig,
@@ -520,6 +529,375 @@ async def post_match_po_vendor_bill(
             environment=_env_name(request),
         )
     return po
+
+
+# ---------------------------------------------------------------------------
+# v2.12.0: 1-Click Email Dispatch (SMTP/Resend), Recurring Billing & AR/AP Aging
+# ---------------------------------------------------------------------------
+
+
+class EmailPortalRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    recipient_email: str | None = Field(default=None, max_length=160)
+
+
+class EmailDispatchResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    portal_url: str
+    recipient_email: str
+    delivery_status: str
+    provider_name: str
+
+
+@router.post(
+    "/v1/businesses/{business_id}/commercial/quotes/{quote_id}/email",
+    response_model=EmailDispatchResponse,
+)
+async def post_email_quote_portal(
+    business_id: UUID,
+    quote_id: UUID,
+    body: EmailPortalRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> EmailDispatchResponse:
+    try:
+        async with authorized_tenant(
+            runtime_pool(request),
+            principal,
+            business_id,
+            Permission.FINANCE_MANAGE,
+            request_id=get_request_id(request),
+        ) as session:
+            async with session.conn.cursor(row_factory=dict_row) as cur:
+                await cur.execute(
+                    "SELECT * FROM gba.commercial_quotes WHERE tenant_id = %s AND id = %s",
+                    (business_id, quote_id),
+                )
+                q_row = await cur.fetchone()
+                if q_row is None:
+                    raise HTTPException(status_code=404, detail="Quote not found.")
+                await cur.execute(
+                    "SELECT display_name FROM gba.tenants WHERE id = %s", (business_id,)
+                )
+                t_row = await cur.fetchone()
+            biz_name = str(t_row["display_name"]) if t_row else "AMARKAL Business"
+            quote = service._parse_quote_row(q_row)
+            target_email = (body.recipient_email or quote.counterparty_email or "").strip()
+            if not target_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Provide a client email address on the quote or request.",
+                )
+            share = await service.create_portal_share_link(
+                session.conn,
+                tenant_id=business_id,
+                entity_kind="quote",
+                entity_id=quote_id,
+                base_url=_return_base(request),
+                user_id=principal.user_id,
+            )
+            note = await enqueue_notification(
+                session.conn,
+                tenant_id=business_id,
+                channel="email",
+                template_code="commercial_quote_shared",
+                recipient=target_email,
+                variables={
+                    "business_name": biz_name,
+                    "reference": quote.quote_number,
+                    "amount": f"${quote.total_cents / 100:,.2f} USD",
+                    "action_url": share.portal_url,
+                },
+                idempotency_key=f"quote-email-{quote_id}-{uuid7().hex[:12]}",
+                created_by_user_id=principal.user_id,
+            )
+            sent = await dispatch_notification(
+                session.conn,
+                tenant_id=business_id,
+                notification_id=note.id,
+                recipient=target_email,
+            )
+    except CommercialError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    return EmailDispatchResponse(
+        portal_url=share.portal_url,
+        recipient_email=target_email,
+        delivery_status=sent.status,
+        provider_name=sent.provider_name,
+    )
+
+
+@router.post(
+    "/v1/businesses/{business_id}/commercial/purchase-orders/{po_id}/email",
+    response_model=EmailDispatchResponse,
+)
+async def post_email_po_portal(
+    business_id: UUID,
+    po_id: UUID,
+    body: EmailPortalRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> EmailDispatchResponse:
+    try:
+        async with authorized_tenant(
+            runtime_pool(request),
+            principal,
+            business_id,
+            Permission.FINANCE_MANAGE,
+            request_id=get_request_id(request),
+        ) as session:
+            async with session.conn.cursor(row_factory=dict_row) as cur:
+                await cur.execute(
+                    "SELECT * FROM gba.purchase_orders WHERE tenant_id = %s AND id = %s",
+                    (business_id, po_id),
+                )
+                p_row = await cur.fetchone()
+                if p_row is None:
+                    raise HTTPException(status_code=404, detail="Purchase order not found.")
+                await cur.execute(
+                    "SELECT display_name FROM gba.tenants WHERE id = %s", (business_id,)
+                )
+                t_row = await cur.fetchone()
+            biz_name = str(t_row["display_name"]) if t_row else "AMARKAL Business"
+            po = service._parse_po_row(p_row)
+            target_email = (body.recipient_email or po.vendor_email or "").strip()
+            if not target_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Provide a vendor email address on the purchase order or request.",
+                )
+            share = await service.create_portal_share_link(
+                session.conn,
+                tenant_id=business_id,
+                entity_kind="purchase_order",
+                entity_id=po_id,
+                base_url=_return_base(request),
+                user_id=principal.user_id,
+            )
+            note = await enqueue_notification(
+                session.conn,
+                tenant_id=business_id,
+                channel="email",
+                template_code="purchase_order_issued",
+                recipient=target_email,
+                variables={
+                    "business_name": biz_name,
+                    "reference": po.po_number,
+                    "amount": f"${po.total_cents / 100:,.2f} USD",
+                    "action_url": share.portal_url,
+                },
+                idempotency_key=f"po-email-{po_id}-{uuid7().hex[:12]}",
+                created_by_user_id=principal.user_id,
+            )
+            sent = await dispatch_notification(
+                session.conn,
+                tenant_id=business_id,
+                notification_id=note.id,
+                recipient=target_email,
+            )
+    except CommercialError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    return EmailDispatchResponse(
+        portal_url=share.portal_url,
+        recipient_email=target_email,
+        delivery_status=sent.status,
+        provider_name=sent.provider_name,
+    )
+
+
+@router.get(
+    "/v1/businesses/{business_id}/commercial/recurring",
+    response_model=list[RecurringScheduleView],
+)
+async def get_recurring_schedules(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+    limit: int = 50,
+) -> list[RecurringScheduleView]:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.FINANCE_READ,
+        request_id=get_request_id(request),
+    ) as session:
+        return await ra_service.list_recurring_schedules(
+            session.conn, tenant_id=business_id, limit=limit
+        )
+
+
+@router.post(
+    "/v1/businesses/{business_id}/commercial/recurring",
+    response_model=RecurringScheduleView,
+    status_code=status.HTTP_201_CREATED,
+)
+async def post_recurring_schedule(
+    business_id: UUID,
+    body: CreateRecurringScheduleRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> RecurringScheduleView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.FINANCE_MANAGE,
+        request_id=get_request_id(request),
+    ) as session:
+        return await ra_service.create_recurring_schedule(
+            session.conn, tenant_id=business_id, body=body, user_id=principal.user_id
+        )
+
+
+@router.post(
+    "/v1/businesses/{business_id}/commercial/recurring/{schedule_id}/toggle",
+    response_model=RecurringScheduleView,
+)
+async def post_toggle_recurring_schedule(
+    business_id: UUID,
+    schedule_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> RecurringScheduleView:
+    try:
+        async with authorized_tenant(
+            runtime_pool(request),
+            principal,
+            business_id,
+            Permission.FINANCE_MANAGE,
+            request_id=get_request_id(request),
+        ) as session:
+            return await ra_service.toggle_recurring_schedule(
+                session.conn, tenant_id=business_id, schedule_id=schedule_id
+            )
+    except CommercialError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+@router.post(
+    "/v1/businesses/{business_id}/commercial/recurring/{schedule_id}/run-now",
+    response_model=RecurringRunResult,
+)
+async def post_run_recurring_schedule(
+    business_id: UUID,
+    schedule_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> RecurringRunResult:
+    email_status: str | None = None
+    portal_url: str | None = None
+    try:
+        async with authorized_tenant(
+            runtime_pool(request),
+            principal,
+            business_id,
+            Permission.FINANCE_MANAGE,
+            request_id=get_request_id(request),
+        ) as session:
+            sched, quote = await ra_service.execute_recurring_cycle(
+                session.conn,
+                tenant_id=business_id,
+                schedule_id=schedule_id,
+                user_id=principal.user_id,
+            )
+            if sched.auto_email_client and sched.counterparty_email and quote.status == "approved":
+                async with session.conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(
+                        "SELECT display_name FROM gba.tenants WHERE id = %s", (business_id,)
+                    )
+                    t_row = await cur.fetchone()
+                biz_name = str(t_row["display_name"]) if t_row else "AMARKAL Business"
+                share = await service.create_portal_share_link(
+                    session.conn,
+                    tenant_id=business_id,
+                    entity_kind="quote",
+                    entity_id=quote.id,
+                    base_url=_return_base(request),
+                    user_id=principal.user_id,
+                )
+                portal_url = share.portal_url
+                note = await enqueue_notification(
+                    session.conn,
+                    tenant_id=business_id,
+                    channel="email",
+                    template_code="recurring_billing_notice",
+                    recipient=sched.counterparty_email,
+                    variables={
+                        "business_name": biz_name,
+                        "reference": quote.quote_number,
+                        "amount": f"${quote.total_cents / 100:,.2f} USD",
+                        "action_url": share.portal_url,
+                    },
+                    idempotency_key=f"rec-run-{schedule_id}-{sched.runs_count}",
+                    created_by_user_id=principal.user_id,
+                )
+                sent = await dispatch_notification(
+                    session.conn,
+                    tenant_id=business_id,
+                    notification_id=note.id,
+                    recipient=sched.counterparty_email,
+                )
+                email_status = f"{sent.status} ({sent.provider_name})"
+    except CommercialError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+    return RecurringRunResult(
+        schedule=sched,
+        generated_quote=quote,
+        email_status=email_status,
+        portal_url=portal_url,
+    )
+
+
+@router.get(
+    "/v1/businesses/{business_id}/commercial/aging",
+    response_model=AgingReportView,
+)
+async def get_commercial_aging(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> AgingReportView:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.FINANCE_READ,
+        request_id=get_request_id(request),
+    ) as session:
+        return await ra_service.build_tenant_aging_report(session.conn, tenant_id=business_id)
+
+
+@router.get("/v1/businesses/{business_id}/commercial/cpa-export.csv")
+async def get_commercial_cpa_csv_export(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> Response:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.FINANCE_READ,
+        request_id=get_request_id(request),
+    ) as session:
+        report = await ra_service.build_tenant_aging_report(session.conn, tenant_id=business_id)
+    csv_body = render_cpa_aging_csv(report.items)
+    return Response(
+        content=csv_body,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="amarkal-cpa-ar-ap-export.csv"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
