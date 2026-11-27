@@ -40,6 +40,10 @@ ALLOWED_WEBHOOK_EVENTS = frozenset(
         "waitlist.joined",
         "invoice.issued",
         "payment.recorded",
+        "quote.created",
+        "quote.accepted",
+        "purchase_order.issued",
+        "purchase_order.matched",
         "connector.test",
     }
 )

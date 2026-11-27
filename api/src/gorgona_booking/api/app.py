@@ -12,6 +12,7 @@ from gorgona_booking.api import (
     agreements,
     ai_assistant,
     businesses,
+    commercial,
     configurations,
     connectors,
     construction,
@@ -225,6 +226,7 @@ def create_app(
     app.include_router(connectors.router)
     app.include_router(media.router)
     app.include_router(payments.router)
+    app.include_router(commercial.router)
     app.include_router(setup.router)
     app.include_router(platform.router)
     app.include_router(customer.router)
