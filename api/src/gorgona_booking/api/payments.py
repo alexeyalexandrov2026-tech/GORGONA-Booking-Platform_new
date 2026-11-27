@@ -14,6 +14,12 @@ from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.db.pool import tenant_transaction
+from gorgona_booking.payments.reconciliation import (
+    AMARKAL_SAAS_PLANS,
+    SaasPlanId,
+    create_saas_subscription_checkout,
+    reconcile_stripe_with_fin03,
+)
 from gorgona_booking.payments.stripe_service import (
     PaymentProvider,
     PaymentReferenceKind,
@@ -299,3 +305,153 @@ async def post_stripe_webhook(request: Request) -> StripeWebhookAckResponse:
     async with tenant_transaction(runtime_pool(request), event.tenant_id) as conn:
         applied = await apply_stripe_webhook_event(conn, event=event)
     return StripeWebhookAckResponse(received=True, event_type=event.event_type, applied=applied)
+
+
+class UnmatchedStripeSessionResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    id: UUID
+    provider_session_id: str
+    amount_cents: int
+    reference_kind: str
+    reference_id: str | None
+    description: str
+
+
+class StripeLedgerReconciliationResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    currency: Literal["USD"]
+    stripe_paid_count: int
+    stripe_paid_cents: int
+    stripe_open_count: int
+    stripe_open_cents: int
+    stripe_refunded_count: int
+    stripe_refunded_cents: int
+    fin03_issued_invoices_count: int
+    fin03_issued_total_cents: int
+    matched_invoice_sessions_count: int
+    unmatched_paid_sessions: list[UnmatchedStripeSessionResponse]
+
+
+class SaasPlanResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    id: SaasPlanId
+    name: str
+    monthly_price_cents: int
+    currency: Literal["USD"]
+    transaction_commission_bps: Literal[0]
+    tagline: str
+    features: list[str]
+
+
+class SaasCheckoutRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    plan_id: SaasPlanId
+    customer_email: str | None = Field(default=None, max_length=160)
+
+
+class SaasCheckoutResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    plan_id: SaasPlanId
+    session_id: str
+    checkout_url: str
+    livemode: bool
+
+
+@router.get(
+    "/v1/businesses/{business_id}/payments/reconciliation",
+    response_model=StripeLedgerReconciliationResponse,
+)
+async def get_stripe_fin03_reconciliation(
+    business_id: UUID,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> StripeLedgerReconciliationResponse:
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.FINANCE_READ,
+        request_id=get_request_id(request),
+    ) as session:
+        rec = await reconcile_stripe_with_fin03(session.conn, tenant_id=business_id)
+    return StripeLedgerReconciliationResponse(
+        currency=rec.currency,
+        stripe_paid_count=rec.stripe_paid_count,
+        stripe_paid_cents=rec.stripe_paid_cents,
+        stripe_open_count=rec.stripe_open_count,
+        stripe_open_cents=rec.stripe_open_cents,
+        stripe_refunded_count=rec.stripe_refunded_count,
+        stripe_refunded_cents=rec.stripe_refunded_cents,
+        fin03_issued_invoices_count=rec.fin03_issued_invoices_count,
+        fin03_issued_total_cents=rec.fin03_issued_total_cents,
+        matched_invoice_sessions_count=rec.matched_invoice_sessions_count,
+        unmatched_paid_sessions=[
+            UnmatchedStripeSessionResponse(
+                id=u.id,
+                provider_session_id=u.provider_session_id,
+                amount_cents=u.amount_cents,
+                reference_kind=u.reference_kind,
+                reference_id=u.reference_id,
+                description=u.description,
+            )
+            for u in rec.unmatched_paid_sessions
+        ],
+    )
+
+
+@router.get("/v1/billing/plans", response_model=list[SaasPlanResponse])
+async def list_amarkal_saas_plans(response: Response) -> list[SaasPlanResponse]:
+    response.headers["Cache-Control"] = "public, max-age=300"
+    return [
+        SaasPlanResponse(
+            id=p.id,
+            name=p.name,
+            monthly_price_cents=p.monthly_price_cents,
+            currency=p.currency,
+            transaction_commission_bps=p.transaction_commission_bps,
+            tagline=p.tagline,
+            features=list(p.features),
+        )
+        for p in AMARKAL_SAAS_PLANS
+    ]
+
+
+@router.post(
+    "/v1/businesses/{business_id}/billing/checkout",
+    response_model=SaasCheckoutResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def post_amarkal_saas_checkout(
+    business_id: UUID,
+    body: SaasCheckoutRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> SaasCheckoutResponse:
+    cfg = StripeRuntimeConfig.from_env()
+    # Authorize business manager first, then release DB before calling Stripe Subscriptions API.
+    async with authorized_tenant(
+        runtime_pool(request),
+        principal,
+        business_id,
+        Permission.BUSINESS_MANAGE,
+        request_id=get_request_id(request),
+    ):
+        pass
+    base = _default_return_base(request)
+    try:
+        res = await create_saas_subscription_checkout(
+            config=cfg,
+            tenant_id=business_id,
+            plan_id=body.plan_id,
+            customer_email=body.customer_email,
+            success_url=f"{base}/integrations/?subscription=active&plan={body.plan_id}",
+            cancel_url=f"{base}/integrations/?subscription=cancelled",
+        )
+    except StripePaymentError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    return SaasCheckoutResponse(
+        plan_id=body.plan_id,
+        session_id=res["session_id"],
+        checkout_url=res["checkout_url"],
+        livemode=res["livemode"],
+    )

@@ -11,6 +11,7 @@ import {
   signOut,
 } from "../lib/auth";
 import {
+  fetchConfiguration,
   fetchMe,
   getActiveSalonId,
   setActiveSalonId,
@@ -30,7 +31,7 @@ interface NavItem {
   readonly href: string;
   readonly label: string;
   readonly group: "Core" | "Team" | "Finance" | "Industry" | "Platform";
-  readonly moduleId?: string;
+  readonly moduleIds?: readonly string[];
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
@@ -45,102 +46,132 @@ const NAV_ITEMS: readonly NavItem[] = [
     href: "/reservations/",
     label: "Reservations",
     group: "Team",
-    moduleId: "resource_reservations",
+    moduleIds: ["booking_resources"],
   },
   {
     href: "/schedule/",
     label: "Schedule",
     group: "Team",
-    moduleId: "workforce_scheduling",
+    moduleIds: ["workforce"],
   },
   {
     href: "/my-shifts/",
     label: "My shifts",
     group: "Team",
-    moduleId: "workforce_scheduling",
+    moduleIds: ["workforce"],
   },
   {
     href: "/timesheets/",
     label: "Timesheets",
     group: "Team",
-    moduleId: "workforce_scheduling",
+    moduleIds: ["workforce"],
   },
   {
     href: "/materials/",
     label: "Materials",
     group: "Finance",
-    moduleId: "inventory",
+    moduleIds: ["inventory"],
   },
   {
     href: "/stock-documents/",
     label: "Stock documents",
     group: "Finance",
-    moduleId: "inventory",
+    moduleIds: ["inventory"],
   },
-  { href: "/counterparties/", label: "Counterparties", group: "Finance" },
-  { href: "/documents/", label: "Documents", group: "Finance" },
-  { href: "/ledger/", label: "Ledger", group: "Finance" },
-  { href: "/finance/", label: "Financial documents", group: "Finance" },
-  { href: "/prepaid/", label: "Prepaid", group: "Finance" },
+  {
+    href: "/counterparties/",
+    label: "Counterparties",
+    group: "Finance",
+    moduleIds: ["counterparties"],
+  },
+  {
+    href: "/documents/",
+    label: "Documents",
+    group: "Finance",
+    moduleIds: ["documents"],
+  },
+  {
+    href: "/ledger/",
+    label: "Ledger",
+    group: "Finance",
+    moduleIds: ["finance"],
+  },
+  {
+    href: "/finance/",
+    label: "Financial documents",
+    group: "Finance",
+    moduleIds: ["finance_documents"],
+  },
+  {
+    href: "/prepaid/",
+    label: "Prepaid",
+    group: "Finance",
+    moduleIds: ["finance_documents"],
+  },
   {
     href: "/transport/",
     label: "Transport",
     group: "Industry",
-    moduleId: "transport",
+    moduleIds: ["transport"],
   },
   {
     href: "/construction/",
     label: "Construction",
     group: "Industry",
-    moduleId: "construction",
+    moduleIds: ["construction"],
   },
   {
     href: "/rental/",
     label: "Rental",
     group: "Industry",
-    moduleId: "rental",
+    moduleIds: ["rental"],
   },
   {
     href: "/property/",
     label: "Property",
     group: "Industry",
-    moduleId: "property_management",
+    moduleIds: ["property"],
   },
   {
     href: "/restaurant/",
     label: "Restaurant",
     group: "Industry",
-    moduleId: "restaurant_operations",
+    moduleIds: ["restaurant"],
   },
   {
     href: "/projects/",
     label: "Projects",
     group: "Industry",
-    moduleId: "project_delivery",
+    moduleIds: ["projects"],
   },
   {
     href: "/supply/",
     label: "Supply Chain",
     group: "Industry",
-    moduleId: "supply_chain",
+    moduleIds: ["supply"],
   },
   {
     href: "/marketplace/",
     label: "Marketplace",
     group: "Industry",
-    moduleId: "marketplace_operations",
+    moduleIds: ["storefronts"],
   },
   {
     href: "/enterprise/",
     label: "Enterprise",
     group: "Industry",
-    moduleId: "enterprise_governance",
+    moduleIds: ["analytics"],
   },
   {
     href: "/specialized/",
     label: "Specialized",
     group: "Industry",
-    moduleId: "specialized_operations",
+    moduleIds: [
+      "assets",
+      "hospitality_events",
+      "clinical_care",
+      "public_civic",
+    ],
   },
   {
     href: "/provider-admission/",
@@ -165,6 +196,9 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
   const [paletteIndex, setPaletteIndex] = useState(0);
+  const [focusMode, setFocusMode] = useState(false);
+  const [focusModules, setFocusModules] = useState<string[] | null>(null);
+  const [focusBusy, setFocusBusy] = useState(false);
   const paletteInputRef = useRef<HTMLInputElement | null>(null);
 
   const membership = me?.memberships.find((item) => item.salon_id === salonId);
@@ -225,6 +259,38 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
             ].includes(item.href),
         )
       : permittedNav;
+
+  const visibleNavItems =
+    focusMode && focusModules !== null
+      ? navItems.filter(
+          (item) =>
+            !item.moduleIds ||
+            item.href === pathname ||
+            item.moduleIds.some((id) => focusModules.includes(id)),
+        )
+      : navItems;
+
+  const toggleFocusMode = async () => {
+    if (focusMode) {
+      setFocusMode(false);
+      return;
+    }
+    if (!salonId) return;
+    if (focusModules !== null) {
+      setFocusMode(true);
+      return;
+    }
+    setFocusBusy(true);
+    try {
+      const cfg = await fetchConfiguration(salonId);
+      setFocusModules(cfg.effective_module_ids);
+      setFocusMode(true);
+    } catch {
+      setFocusMode(false);
+    } finally {
+      setFocusBusy(false);
+    }
+  };
 
   const paletteEntries = (() => {
     const base = navItems.map((item) => ({
@@ -381,6 +447,8 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
     setMe(null);
     setSalonId(null);
     setPaletteOpen(false);
+    setFocusMode(false);
+    setFocusModules(null);
     try {
       await signOut();
     } catch {
@@ -410,6 +478,8 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
               onChange={(e) => {
                 setActiveSalonId(e.target.value);
                 setSalonId(e.target.value);
+                setFocusMode(false);
+                setFocusModules(null);
               }}
             >
               {me.memberships.map((m) => (
@@ -440,6 +510,26 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
                 <span>Quick jump</span>
                 <kbd aria-hidden="true">⌘K</kbd>
               </button>
+              {salonId && !delegation && (
+                <button
+                  type="button"
+                  className={
+                    "secondary mgmt-cmd-trigger" + (focusMode ? " active" : "")
+                  }
+                  aria-pressed={focusMode}
+                  disabled={focusBusy}
+                  onClick={() => void toggleFocusMode()}
+                  title="Show only Core and active industry modules for this workspace"
+                >
+                  <span>
+                    {focusBusy
+                      ? "Loading…"
+                      : focusMode
+                        ? `Focused (${visibleNavItems.length}/${navItems.length})`
+                        : "Focus mode"}
+                  </span>
+                </button>
+              )}
               <Link href="/onboarding/" className="mgmt-nav-link">
                 + New business
               </Link>
@@ -464,8 +554,8 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       </header>
       <nav className="mgmt-nav" aria-label="Management Navigation">
         <ul className="mgmt-nav-list">
-          {navItems.map((item, idx) => {
-            const prev = idx > 0 ? navItems[idx - 1] : null;
+          {visibleNavItems.map((item, idx) => {
+            const prev = idx > 0 ? visibleNavItems[idx - 1] : null;
             const groupChanged = Boolean(prev && prev.group !== item.group);
             return (
               <li

@@ -1,14 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 import {
   createCheckoutSession,
   fetchPaymentSessions,
   fetchPaymentsConfig,
+  fetchSaasPlans,
+  fetchStripeReconciliation,
   refundPaymentSession,
+  startSaasSubscriptionCheckout,
   syncPaymentSession,
   type PaymentSession,
   type PaymentsConfig,
+  type SaasPlan,
+  type StripeLedgerReconciliation,
 } from "../lib/payments-api";
 import { formatDate, formatTime } from "../lib/management-api";
 import "../app/us-release-v2.css";
@@ -31,6 +37,10 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
 
   const [config, setConfig] = useState<PaymentsConfig | null>(null);
   const [sessions, setSessions] = useState<PaymentSession[]>([]);
+  const [reconciliation, setReconciliation] =
+    useState<StripeLedgerReconciliation | null>(null);
+  const [plans, setPlans] = useState<SaasPlan[]>([]);
+  const [planBusyId, setPlanBusyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -50,11 +60,18 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
 
   useEffect(() => {
     let active = true;
-    void Promise.all([fetchPaymentsConfig(), fetchPaymentSessions(businessId)])
-      .then(([cfg, list]) => {
+    void Promise.all([
+      fetchPaymentsConfig(),
+      fetchPaymentSessions(businessId),
+      fetchStripeReconciliation(businessId).catch(() => null),
+      fetchSaasPlans().catch(() => [] as SaasPlan[]),
+    ])
+      .then(([cfg, list, recon, saasPlans]) => {
         if (!active) return;
         setConfig(cfg);
         setSessions(list);
+        setReconciliation(recon);
+        setPlans(saasPlans);
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -127,6 +144,9 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
         prev.map((s) => (s.id === updated.id ? updated : s)),
       );
       setNotice(`Synced status with Stripe: ${updated.status}.`);
+      void fetchStripeReconciliation(businessId)
+        .then(setReconciliation)
+        .catch(() => undefined);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not sync with Stripe.",
@@ -146,10 +166,46 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
         prev.map((s) => (s.id === updated.id ? updated : s)),
       );
       setNotice("Refund issued through Stripe.");
+      void fetchStripeReconciliation(businessId)
+        .then(setReconciliation)
+        .catch(() => undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not issue refund.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleSubscribePlan = async (
+    planId: "starter" | "growth" | "scale",
+  ) => {
+    setError(null);
+    setNotice(null);
+    if (planId === "starter") {
+      setNotice(
+        "Starter ($0/mo, 0% transaction commission) is already included with your workspace.",
+      );
+      return;
+    }
+    setPlanBusyId(planId);
+    try {
+      const result = await startSaasSubscriptionCheckout(
+        businessId,
+        planId,
+        customerEmail.trim() || null,
+      );
+      setNotice(
+        `Redirecting to Stripe Checkout for AMARKAL ${planId.toUpperCase()}…`,
+      );
+      window.location.assign(result.checkout_url);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not start AMARKAL subscription checkout.",
+      );
+    } finally {
+      setPlanBusyId(null);
     }
   };
 
@@ -434,6 +490,152 @@ export function StripePaymentsPanel({ businessId }: { businessId: string }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {reconciliation && (
+        <div
+          style={{
+            marginTop: "24px",
+            paddingTop: "20px",
+            borderTop: "1px solid var(--line)",
+          }}
+        >
+          <div
+            className="usr-inline"
+            style={{ justifyContent: "space-between", alignItems: "baseline" }}
+          >
+            <div>
+              <h3>Stripe ↔ FIN-03 Ledger Reconciliation</h3>
+              <p className="usr-muted" style={{ margin: 0 }}>
+                Live cross-check between Stripe USD Checkout settlements and
+                issued FIN-03 financial invoices (0% AMARKAL commission).
+              </p>
+            </div>
+            <Link
+              href="/finance/"
+              className="button secondary usr-small-btn"
+              style={{ textDecoration: "none" }}
+            >
+              Open Financial documents
+            </Link>
+          </div>
+          <dl className="usr-ue-grid" style={{ marginTop: "14px" }}>
+            <div>
+              <dt>Stripe paid</dt>
+              <dd>{formatUsd(reconciliation.stripe_paid_cents)}</dd>
+              <p className="usr-muted" style={{ margin: "2px 0 0" }}>
+                {reconciliation.stripe_paid_count} settled
+              </p>
+            </div>
+            <div>
+              <dt>Stripe open</dt>
+              <dd>{formatUsd(reconciliation.stripe_open_cents)}</dd>
+              <p className="usr-muted" style={{ margin: "2px 0 0" }}>
+                {reconciliation.stripe_open_count} awaiting payment
+              </p>
+            </div>
+            <div>
+              <dt>Stripe refunded</dt>
+              <dd>{formatUsd(reconciliation.stripe_refunded_cents)}</dd>
+              <p className="usr-muted" style={{ margin: "2px 0 0" }}>
+                {reconciliation.stripe_refunded_count} refunded
+              </p>
+            </div>
+            <div>
+              <dt>FIN-03 issued</dt>
+              <dd>{formatUsd(reconciliation.fin03_issued_total_cents)}</dd>
+              <p className="usr-muted" style={{ margin: "2px 0 0" }}>
+                {reconciliation.fin03_issued_invoices_count} invoices ·{" "}
+                {reconciliation.matched_invoice_sessions_count} matched
+              </p>
+            </div>
+          </dl>
+          {reconciliation.unmatched_paid_sessions.length > 0 && (
+            <p className="hold-note" style={{ marginTop: "12px" }}>
+              {reconciliation.unmatched_paid_sessions.length} paid Stripe
+              session(s) are not yet linked to a FIN-03 invoice reference.
+              Record or match them in{" "}
+              <Link href="/finance/">Financial documents</Link>.
+            </p>
+          )}
+        </div>
+      )}
+
+      {plans.length > 0 && (
+        <div
+          style={{
+            marginTop: "24px",
+            paddingTop: "20px",
+            borderTop: "1px solid var(--line)",
+          }}
+        >
+          <div
+            className="usr-inline"
+            style={{ justifyContent: "space-between", marginBottom: "12px" }}
+          >
+            <div>
+              <h3>AMARKAL Platform Plans (0% Commission Forever)</h3>
+              <p className="usr-muted" style={{ margin: 0 }}>
+                Flat predictable monthly SaaS pricing. Stripe deposits go
+                directly to your US business account with zero AMARKAL take-rate
+                on every tier.
+              </p>
+            </div>
+            <span className="usr-badge usr-badge-ai">0% commission</span>
+          </div>
+          <div className="usr-connector-grid">
+            {plans.map((plan) => (
+              <article key={plan.id} className="usr-connector">
+                <div
+                  className="usr-inline"
+                  style={{ justifyContent: "space-between" }}
+                >
+                  <h4>{plan.name}</h4>
+                  <span className="usr-badge usr-badge-ai">
+                    {plan.monthly_price_cents === 0
+                      ? "$0 / mo"
+                      : `${formatUsd(plan.monthly_price_cents)} / mo`}
+                  </span>
+                </div>
+                <p className="usr-muted">{plan.tagline}</p>
+                <ul
+                  style={{
+                    margin: "4px 0 8px",
+                    paddingLeft: "18px",
+                    fontSize: "0.86rem",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {plan.features.map((feat) => (
+                    <li key={feat}>{feat}</li>
+                  ))}
+                </ul>
+                <div style={{ marginTop: "auto" }}>
+                  {plan.monthly_price_cents === 0 ? (
+                    <span className="usr-badge usr-badge-off">
+                      Included with workspace
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="usr-small-btn"
+                      disabled={
+                        busy ||
+                        planBusyId !== null ||
+                        !config?.stripe_configured
+                      }
+                      onClick={() => void handleSubscribePlan(plan.id)}
+                    >
+                      {planBusyId === plan.id
+                        ? "Opening Stripe…"
+                        : `Subscribe with Stripe (${formatUsd(plan.monthly_price_cents)}/mo)`}
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       )}
     </section>

@@ -94,3 +94,74 @@ export async function refundPaymentSession(
     },
   )) as PaymentSession;
 }
+
+export interface UnmatchedStripeSession {
+  id: string;
+  provider_session_id: string;
+  amount_cents: number;
+  reference_kind: string;
+  reference_id: string | null;
+  description: string;
+}
+
+export interface StripeLedgerReconciliation {
+  currency: "USD";
+  stripe_paid_count: number;
+  stripe_paid_cents: number;
+  stripe_open_count: number;
+  stripe_open_cents: number;
+  stripe_refunded_count: number;
+  stripe_refunded_cents: number;
+  fin03_issued_invoices_count: number;
+  fin03_issued_total_cents: number;
+  matched_invoice_sessions_count: number;
+  unmatched_paid_sessions: UnmatchedStripeSession[];
+}
+
+export interface SaasPlan {
+  id: "starter" | "growth" | "scale";
+  name: string;
+  monthly_price_cents: number;
+  currency: "USD";
+  transaction_commission_bps: 0;
+  tagline: string;
+  features: string[];
+}
+
+export interface SaasCheckoutResult {
+  plan_id: "starter" | "growth" | "scale";
+  session_id: string;
+  checkout_url: string;
+  livemode: boolean;
+}
+
+export async function fetchStripeReconciliation(
+  businessId: string,
+): Promise<StripeLedgerReconciliation> {
+  return (await managementFetch(
+    `/v1/businesses/${businessId}/payments/reconciliation`,
+  )) as StripeLedgerReconciliation;
+}
+
+export async function fetchSaasPlans(): Promise<SaasPlan[]> {
+  const res = await fetch("/v1/billing/plans", { cache: "no-store" });
+  if (!res.ok) throw new Error("Unable to load AMARKAL plans.");
+  return (await res.json()) as SaasPlan[];
+}
+
+export async function startSaasSubscriptionCheckout(
+  businessId: string,
+  planId: "starter" | "growth" | "scale",
+  customerEmail?: string | null,
+): Promise<SaasCheckoutResult> {
+  return (await managementFetch(
+    `/v1/businesses/${businessId}/billing/checkout`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        plan_id: planId,
+        customer_email: customerEmail || null,
+      }),
+    },
+  )) as SaasCheckoutResult;
+}

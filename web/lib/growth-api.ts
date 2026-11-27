@@ -74,6 +74,32 @@ export const copilotInsightSchema = z.object({
   action_path: z.string(),
 });
 
+export const actionProposalSchema = z.object({
+  id: z.string(),
+  kind: z.enum([
+    "enable_growth_automation",
+    "create_mcp_api_key",
+    "create_stripe_payment_link",
+    "export_business_snapshot",
+  ]),
+  title: z.string(),
+  description: z.string(),
+  impact_summary: z.string(),
+  requires_permission: z.string(),
+  params: z.record(z.string(), z.unknown()),
+});
+export type ActionProposal = z.infer<typeof actionProposalSchema>;
+
+export const executeCopilotActionSchema = z.object({
+  kind: actionProposalSchema.shape.kind,
+  executed: z.boolean(),
+  summary: z.string(),
+  result: z.record(z.string(), z.unknown()),
+});
+export type ExecuteCopilotActionResult = z.infer<
+  typeof executeCopilotActionSchema
+>;
+
 export const ownerCopilotSchema = z.object({
   version: z.literal(1),
   engine: z.enum(["cloudflare", "gemini", "grounded"]),
@@ -81,6 +107,7 @@ export const ownerCopilotSchema = z.object({
   reply: z.string(),
   metrics: z.record(z.string(), z.unknown()),
   insights: z.array(copilotInsightSchema),
+  action_proposals: z.array(actionProposalSchema).optional().default([]),
 });
 export type OwnerCopilotResponse = z.infer<typeof ownerCopilotSchema>;
 
@@ -237,6 +264,38 @@ export async function askOwnerCopilot(
   );
   if (!res.ok) throw new Error("Unable to load AI Business Copilot.");
   return ownerCopilotSchema.parse(await res.json());
+}
+
+export async function executeCopilotAction(
+  salonId: string,
+  kind: ActionProposal["kind"],
+  params: Record<string, unknown> = {},
+): Promise<ExecuteCopilotActionResult> {
+  const headers = await authHeaders();
+  const res = await fetch(
+    `/v1/businesses/${encodeURIComponent(salonId)}/copilot/execute-action`,
+    {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, params }),
+    },
+  );
+  if (!res.ok) {
+    let msg = "Could not execute the approved Copilot action.";
+    try {
+      const data = (await res.json()) as {
+        detail?: string;
+        error?: { message?: string };
+      };
+      if (typeof data.detail === "string") msg = data.detail;
+      else if (typeof data.error?.message === "string")
+        msg = data.error.message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+  return executeCopilotActionSchema.parse(await res.json());
 }
 
 export const readinessStepSchema = z.object({

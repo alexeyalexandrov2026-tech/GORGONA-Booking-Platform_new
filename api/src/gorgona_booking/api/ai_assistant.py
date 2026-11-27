@@ -9,6 +9,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
+from gorgona_booking.ai_assistant.actions import (
+    ActionKind,
+    build_action_proposals,
+    execute_governed_action,
+)
+from gorgona_booking.ai_assistant.evidence_bridge import emit_evidence_nonblocking
 from gorgona_booking.ai_assistant.service import (
     ask_customer_assistant,
     gather_owner_copilot_context,
@@ -20,6 +26,7 @@ from gorgona_booking.api.holds import get_tenant_id
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.db.pool import tenant_transaction
+from gorgona_booking.payments.stripe_service import StripePaymentError
 from gorgona_booking.tenancy.authorization import authorized_tenant
 
 router = APIRouter(tags=["ai-assistant"])
@@ -76,6 +83,31 @@ class CopilotInsightResponse(BaseModel):
     action_path: str
 
 
+class ActionProposalResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    id: str
+    kind: ActionKind
+    title: str
+    description: str
+    impact_summary: str
+    requires_permission: str
+    params: dict[str, Any]
+
+
+class ExecuteCopilotActionRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    kind: ActionKind
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class ExecuteCopilotActionResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    kind: ActionKind
+    executed: bool
+    summary: str
+    result: dict[str, Any]
+
+
 class OwnerCopilotResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
     version: Literal[1] = 1
@@ -84,6 +116,7 @@ class OwnerCopilotResponse(BaseModel):
     reply: str
     metrics: dict[str, Any]
     insights: list[CopilotInsightResponse]
+    action_proposals: list[ActionProposalResponse] = Field(default_factory=list)
 
 
 @router.post("/v1/customer/assistant", response_model=CustomerAssistantResponse)
@@ -153,6 +186,13 @@ async def post_owner_copilot(
             tenant_id=salon_id,
         )
     res = await synthesize_owner_copilot(ctx, question=body.question)
+    proposals = build_action_proposals(ctx)
+    await emit_evidence_nonblocking(
+        tenant_id=salon_id,
+        kind="owner_copilot_query",
+        summary=body.question or "executive_brief",
+        metadata={"engine": res.engine, "insights_count": len(res.insights)},
+    )
     return OwnerCopilotResponse(
         engine=res.engine,
         business_name=res.business_name,
@@ -168,4 +208,81 @@ async def post_owner_copilot(
             )
             for i in res.insights
         ],
+        action_proposals=[
+            ActionProposalResponse(
+                id=p.id,
+                kind=p.kind,
+                title=p.title,
+                description=p.description,
+                impact_summary=p.impact_summary,
+                requires_permission=p.requires_permission,
+                params=p.params,
+            )
+            for p in proposals
+        ],
+    )
+
+
+def _return_base_url(request: Request) -> str:
+    host = request.headers.get("host") or request.url.netloc
+    hostname = host.split(":", 1)[0].lower()
+    raw_scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    scheme = raw_scheme if hostname in ("127.0.0.1", "localhost") else "https"
+    return f"{scheme}://{host}"
+
+
+@router.post(
+    "/v1/salons/{salon_id}/copilot/execute-action",
+    response_model=ExecuteCopilotActionResponse,
+)
+@router.post(
+    "/v1/businesses/{salon_id}/copilot/execute-action",
+    response_model=ExecuteCopilotActionResponse,
+)
+async def post_execute_copilot_action(
+    salon_id: UUID,
+    body: ExecuteCopilotActionRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> ExecuteCopilotActionResponse:
+    """Execute a human-approved AI Copilot action proposal under FORCE RLS."""
+    required_perm = (
+        Permission.FINANCE_MANAGE
+        if body.kind == "create_stripe_payment_link"
+        else Permission.BUSINESS_MANAGE
+    )
+    try:
+        async with authorized_tenant(
+            runtime_pool(request),
+            principal,
+            salon_id,
+            required_perm,
+            request_id=get_request_id(request),
+        ) as session:
+            outcome = await execute_governed_action(
+                session.conn,
+                tenant_id=salon_id,
+                user_id=principal.user_id,
+                kind=body.kind,
+                params=body.params,
+                return_base_url=_return_base_url(request),
+            )
+    except StripePaymentError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+    await emit_evidence_nonblocking(
+        tenant_id=salon_id,
+        kind="copilot_action_executed",
+        summary=outcome.summary,
+        metadata={"action_kind": outcome.kind, "executed": outcome.executed},
+    )
+    return ExecuteCopilotActionResponse(
+        kind=outcome.kind,
+        executed=outcome.executed,
+        summary=outcome.summary,
+        result=outcome.result,
     )
