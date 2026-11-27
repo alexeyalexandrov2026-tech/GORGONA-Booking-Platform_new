@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
+import { AmarkalLogo } from "../../../components/amarkal-logo";
 import {
   accessToken,
   googleSendPasswordReset,
@@ -206,7 +207,7 @@ export default function SignInPage() {
       <header className="mgmt-header">
         <div className="mgmt-brand-area">
           <Link href="/" className="mgmt-brand">
-            AMARKAL <span>Platform</span>
+            <AmarkalLogo variant="light" height={20} />
           </Link>
         </div>
         <div className="mgmt-header-actions">

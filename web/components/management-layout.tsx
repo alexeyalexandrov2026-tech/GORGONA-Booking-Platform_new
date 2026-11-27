@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { AmarkalLogo } from "./amarkal-logo";
 import {
   accessToken,
   authManager,
@@ -468,7 +469,7 @@ export function ManagementLayout({ children }: ManagementLayoutProps) {
       <header className="mgmt-header">
         <div className="mgmt-brand-area">
           <Link href="/overview/" className="mgmt-brand">
-            AMARKAL <span>Platform</span>
+            <AmarkalLogo variant="light" height={20} />
           </Link>
           {me && me.memberships.length > 1 ? (
             <select

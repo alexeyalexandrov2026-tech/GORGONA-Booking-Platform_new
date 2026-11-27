@@ -1,4 +1,14 @@
-import { managementFetch } from "./management-api";
+import { authorizedResponse } from "./management-api";
+
+async function paymentsRequest<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (init.body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await authorizedResponse(path, { ...init, headers });
+  return (await res.json()) as T;
+}
 
 export interface PaymentsConfig {
   stripe_configured: boolean;
@@ -54,45 +64,45 @@ export async function fetchPaymentsConfig(): Promise<PaymentsConfig> {
 export async function fetchPaymentSessions(
   businessId: string,
 ): Promise<PaymentSession[]> {
-  return (await managementFetch(
-    `/v1/businesses/${businessId}/payments/sessions`,
-  )) as PaymentSession[];
+  return paymentsRequest<PaymentSession[]>(
+    `/v1/businesses/${encodeURIComponent(businessId)}/payments/sessions`,
+  );
 }
 
 export async function createCheckoutSession(
   businessId: string,
   input: CreateCheckoutSessionInput,
 ): Promise<PaymentSession> {
-  return (await managementFetch(
-    `/v1/businesses/${businessId}/payments/checkout-sessions`,
+  return paymentsRequest<PaymentSession>(
+    `/v1/businesses/${encodeURIComponent(businessId)}/payments/checkout-sessions`,
     {
       method: "POST",
       body: JSON.stringify(input),
     },
-  )) as PaymentSession;
+  );
 }
 
 export async function syncPaymentSession(
   businessId: string,
   sessionId: string,
 ): Promise<PaymentSession> {
-  return (await managementFetch(
-    `/v1/businesses/${businessId}/payments/sessions/${sessionId}/sync`,
+  return paymentsRequest<PaymentSession>(
+    `/v1/businesses/${encodeURIComponent(businessId)}/payments/sessions/${encodeURIComponent(sessionId)}/sync`,
     { method: "POST" },
-  )) as PaymentSession;
+  );
 }
 
 export async function refundPaymentSession(
   businessId: string,
   sessionId: string,
 ): Promise<PaymentSession> {
-  return (await managementFetch(
-    `/v1/businesses/${businessId}/payments/sessions/${sessionId}/refund`,
+  return paymentsRequest<PaymentSession>(
+    `/v1/businesses/${encodeURIComponent(businessId)}/payments/sessions/${encodeURIComponent(sessionId)}/refund`,
     {
       method: "POST",
       body: JSON.stringify({ reason: "requested_by_customer" }),
     },
-  )) as PaymentSession;
+  );
 }
 
 export interface UnmatchedStripeSession {
@@ -138,9 +148,9 @@ export interface SaasCheckoutResult {
 export async function fetchStripeReconciliation(
   businessId: string,
 ): Promise<StripeLedgerReconciliation> {
-  return (await managementFetch(
-    `/v1/businesses/${businessId}/payments/reconciliation`,
-  )) as StripeLedgerReconciliation;
+  return paymentsRequest<StripeLedgerReconciliation>(
+    `/v1/businesses/${encodeURIComponent(businessId)}/payments/reconciliation`,
+  );
 }
 
 export async function fetchSaasPlans(): Promise<SaasPlan[]> {
@@ -154,8 +164,8 @@ export async function startSaasSubscriptionCheckout(
   planId: "starter" | "growth" | "scale",
   customerEmail?: string | null,
 ): Promise<SaasCheckoutResult> {
-  return (await managementFetch(
-    `/v1/businesses/${businessId}/billing/checkout`,
+  return paymentsRequest<SaasCheckoutResult>(
+    `/v1/businesses/${encodeURIComponent(businessId)}/billing/checkout`,
     {
       method: "POST",
       body: JSON.stringify({
@@ -163,5 +173,5 @@ export async function startSaasSubscriptionCheckout(
         customer_email: customerEmail || null,
       }),
     },
-  )) as SaasCheckoutResult;
+  );
 }

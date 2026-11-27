@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { AmarkalLogo } from "../components/amarkal-logo";
 import { AppHubTabs } from "../components/landing/app-hub-tabs";
 import { ArchitectFlow } from "../components/landing/architect-flow";
 import { CommissionCalculator } from "../components/landing/commission-calculator";
 import { IndustryExplorer } from "../components/landing/industry-explorer";
 import { INDUSTRIES } from "../components/landing/industries";
+import { MonolithHeroStage } from "../components/landing/monolith-hero-stage";
 import "./landing.css";
 
 export const metadata: Metadata = {
@@ -17,148 +18,56 @@ export const metadata: Metadata = {
 };
 
 const NAV = [
+  { href: "#platform", label: "Platform" },
   { href: "#industries", label: "Industries" },
   { href: "#manifesto", label: "0% commission" },
   { href: "#architect", label: "AI Business Architect" },
   { href: "#app-hub", label: "App Hub" },
 ] as const;
 
-const WINDOW_NAV = [
-  "Overview",
-  "Calendar",
-  "Orders",
-  "Clients",
-  "Finance",
-  "App Hub",
-] as const;
-
 const TRUST = [
   {
     title: "Built for the United States",
-    text: "USD, US time zones and the NAICS industry system. Nothing to translate or convert.",
+    text: "USD, US time zones and NAICS 2022. Nothing to translate or convert.",
   },
   {
     title: "Your data stays yours",
-    text: "Every business is isolated from every other one at the database level.",
+    text: "Every business is isolated at the PostgreSQL row level with 1-click JSON export.",
   },
   {
     title: "AI that asks first",
-    text: "The AI drafts and suggests. Nothing changes until a person approves it.",
+    text: "AI drafts proposals and operational setups. Nothing changes until a person approves.",
   },
   {
     title: "Open by design",
-    text: "Scoped API keys, signed webhooks and a native MCP server come with every workspace.",
+    text: "Scoped API keys, signed webhooks and a 7-tool native MCP server in every workspace.",
   },
 ] as const;
 
 const PRINCIPLES = [
   "Your customers stay yours. They interact on your portal, under your brand.",
   "We never take a percentage of your orders, services, or sales.",
-  "No bidding for visibility. Your client portal and customer list belong to you.",
-  "Export or automate whenever you like. API keys, webhooks and MCP are in the box.",
+  "Direct Stripe US payouts (Cards, Apple Pay, Google Pay, ACH) straight to your bank.",
+  "Export or automate whenever you like. API keys, webhooks and MCP are included.",
 ] as const;
 
 const ARCHITECT_POINTS = [
   "Works from plain English or a photo of your price list",
-  "Picks your industry profile and your US time zone",
+  "Picks your NAICS industry profile and US time zone",
   "Drafts services, prices, resources and opening hours",
   "Publishes nothing until you approve every part",
 ] as const;
 
 const CONNECTORS = [
-  "Native MCP server",
+  "Native MCP server (7 tools)",
+  "Stripe US Live & ACH",
   "Zapier, Make and n8n",
   "QuickBooks Online",
   "Google Calendar and Outlook",
   "Reserve with Google",
   "Twilio SMS and voice",
   "WhatsApp and Instagram DM",
-  "Stripe",
 ] as const;
-
-function Icon({ children }: { children: ReactNode }) {
-  return (
-    <svg
-      className="lp-icon"
-      viewBox="0 0 24 24"
-      width="26"
-      height="26"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {children}
-    </svg>
-  );
-}
-
-const FEATURES: readonly { title: string; text: string; icon: ReactNode }[] = [
-  {
-    title: "Scheduling & operations",
-    text: "Services, specialists and resources with one shared view of availability, plus a branded portal for your customers.",
-    icon: (
-      <Icon>
-        <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
-        <path d="M3 9.5h18M8 3v3M16 3v3" />
-      </Icon>
-    ),
-  },
-  {
-    title: "Clients and documents",
-    text: "Customer and vendor cards, contracts and files together, with every change kept in a history.",
-    icon: (
-      <Icon>
-        <circle cx="9" cy="8" r="3.2" />
-        <path d="M3.5 19.5c.4-3.4 2.7-5.2 5.5-5.2s5.1 1.8 5.5 5.2" />
-        <path d="M16.5 5.3a3.2 3.2 0 0 1 0 5.4M18.2 14.6c1.6.7 2.6 2.3 2.8 4.9" />
-      </Icon>
-    ),
-  },
-  {
-    title: "Staff and shifts",
-    text: "Weekly schedules, shift swaps with approval and timesheets for the people who run your day.",
-    icon: (
-      <Icon>
-        <circle cx="12" cy="12" r="8.5" />
-        <path d="M12 7.5V12l3 2" />
-      </Icon>
-    ),
-  },
-  {
-    title: "Finance in USD",
-    text: "A double-entry ledger, invoices and payment records that your accountant can follow.",
-    icon: (
-      <Icon>
-        <path d="M12 3v18M16 7.5c-.9-1-2.2-1.5-4-1.5-2.3 0-4 1.1-4 3s1.7 2.6 4 3 4 1.1 4 3-1.7 3-4 3c-1.8 0-3.2-.5-4.2-1.6" />
-      </Icon>
-    ),
-  },
-  {
-    title: "Industry modules",
-    text: "Transport, construction, rental, property, restaurant, supply chain, projects and more switch on for your profile.",
-    icon: (
-      <Icon>
-        <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
-        <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
-        <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
-        <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
-      </Icon>
-    ),
-  },
-  {
-    title: "AMARKAL AI Assistant",
-    text: "Helps customers choose a service and a time on your client portal through the same verified workflow.",
-    icon: (
-      <Icon>
-        <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3zM18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z" />
-      </Icon>
-    ),
-  },
-];
 
 export default function HomePage() {
   return (
@@ -167,13 +76,10 @@ export default function HomePage() {
         Skip to content
       </a>
 
-      <div className="lp-top lp-dark">
-        <header className="lp-header lp-container">
+      <header className="lp-header-shell">
+        <div className="lp-header lp-container">
           <Link href="/" className="lp-brand">
-            <span className="lp-brand-mark" aria-hidden="true" />
-            <span>
-              AMARKAL <span className="lp-brand-sub">Platform</span>
-            </span>
+            <AmarkalLogo variant="light" height={22} />
           </Link>
           <nav className="lp-nav" aria-label="Page sections">
             <ul>
@@ -195,20 +101,27 @@ export default function HomePage() {
               Create your business
             </Link>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <section
-          className="lp-container lp-hero"
-          aria-labelledby="lp-hero-title"
-        >
-          <div className="lp-hero-copy">
-            <p className="lp-eyebrow">AMARKAL Platform · US Business OS</p>
-            <h1 id="lp-hero-title">Run any US business on one platform.</h1>
+      <main id="main-content">
+        {/* Hero — Light MONOLITH Apple precision */}
+        <section className="lp-hero-section" aria-labelledby="lp-hero-title">
+          <div className="lp-container lp-hero">
+            <p className="lp-mono lp-hero-eyebrow">
+              US Business OS · {INDUSTRIES.length} industries · 0% commission
+            </p>
+            <h1 id="lp-hero-title">
+              <span>
+                Run any US business
+                <br />
+                on one platform.
+              </span>
+            </h1>
             <p className="lp-lead">
-              Operations, scheduling, clients, staff, documents and finance in
-              one workspace that adapts to {INDUSTRIES.length} US industries,
-              with an AI Assistant for your customers. Describe your business,
-              approve the AI’s draft and launch. 0% commission, always.
+              Scheduling, clients, staff, documents and finance in one workspace
+              that adapts to your industry. With an AI Assistant that asks
+              first.
             </p>
             <div className="lp-cta-row">
               <Link
@@ -217,85 +130,103 @@ export default function HomePage() {
               >
                 Create your business
               </Link>
-              <Link href="/book/" className="lp-btn lp-btn--ghost lp-btn--lg">
-                Open client portal
+              <Link href="/book/" className="lp-btn lp-btn--link lp-btn--lg">
+                Open client portal <span aria-hidden="true">›</span>
               </Link>
             </div>
-            <ul className="lp-facts">
-              <li>
-                <strong>{INDUSTRIES.length}</strong> NAICS industries
-              </li>
-              <li>
-                <strong>0%</strong> commission
-              </li>
-              <li>
-                <strong>USD</strong> and US time zones
-              </li>
-            </ul>
+            <MonolithHeroStage />
           </div>
+        </section>
 
-          <div className="lp-window" aria-hidden="true">
-            <div className="lp-window-bar">
-              <span />
-              <span />
-              <span />
-            </div>
-            <div className="lp-window-body">
-              <ul className="lp-window-nav">
-                {WINDOW_NAV.map((label, index) => (
-                  <li
-                    key={label}
-                    data-active={index === 0 ? "true" : undefined}
-                  >
-                    {label}
-                  </li>
-                ))}
-              </ul>
-              <div className="lp-window-main">
-                <div className="lp-skeleton lp-skeleton--title" />
-                <div className="lp-window-cards">
-                  <div className="lp-skeleton lp-skeleton--card" />
-                  <div className="lp-skeleton lp-skeleton--card" />
-                  <div className="lp-skeleton lp-skeleton--card" />
+        {/* Bento Grid — One workspace */}
+        <section
+          id="platform"
+          className="lp-section"
+          aria-labelledby="lp-features-title"
+        >
+          <div className="lp-container lp-center">
+            <p className="lp-mono">One workspace</p>
+            <h2 id="lp-features-title">
+              Everything a business runs on.
+              <br />
+              <span className="lp-h2-muted">Nothing it doesn’t.</span>
+            </h2>
+            <div className="lp-bento">
+              <article className="lp-tile lp-tile--w4">
+                <span className="lp-mono">01</span>
+                <h3>Scheduling &amp; operations</h3>
+                <p>
+                  Services, specialists and resources with one shared view of
+                  availability — plus a branded portal for your customers.
+                </p>
+                <div className="lp-tile-visual" aria-hidden="true">
+                  <div className="lp-mini-track">
+                    <span>09:00 · Confirmed</span>
+                    <i className="is-blue" style={{ width: "58%" }} />
+                  </div>
+                  <div className="lp-mini-track">
+                    <span>12:30 · Portal hold</span>
+                    <i className="is-gold" style={{ width: "42%" }} />
+                  </div>
+                  <div className="lp-mini-track">
+                    <span>15:00 · Crew dispatch</span>
+                    <i className="is-blue" style={{ width: "74%" }} />
+                  </div>
                 </div>
-                <div className="lp-skeleton lp-skeleton--row" />
-                <div className="lp-skeleton lp-skeleton--row" />
-                <div className="lp-skeleton lp-skeleton--row lp-skeleton--short" />
-              </div>
+              </article>
+
+              <article className="lp-tile lp-tile--w2 lp-tile--dark">
+                <span className="lp-mono lp-mono--gold">AI</span>
+                <h3>AI Assistant</h3>
+                <p>
+                  Helps customers choose a service and a time through the same
+                  verified workflow — and drafts owner actions with 2-step
+                  approval.
+                </p>
+                <div className="lp-tile-ai-pill" aria-hidden="true">
+                  <span>●</span> Human-in-the-loop · 0 unapproved writes
+                </div>
+              </article>
+
+              <article className="lp-tile lp-tile--w2">
+                <span className="lp-mono">02</span>
+                <h3>Clients &amp; documents</h3>
+                <p>
+                  Customer and vendor cards, versioned contracts and files with
+                  full immutable history.
+                </p>
+                <div className="lp-tile-meta" aria-hidden="true">
+                  <span>Agreement v3</span>
+                  <span>Attested</span>
+                </div>
+              </article>
+
+              <article className="lp-tile lp-tile--w2">
+                <span className="lp-mono">03</span>
+                <h3>Staff &amp; shifts</h3>
+                <p>
+                  Weekly schedules, shift swaps with manager approval, and
+                  verified timesheets.
+                </p>
+                <div className="lp-tile-meta" aria-hidden="true">
+                  <span>Zero conflicts</span>
+                  <span>Branch RBAC</span>
+                </div>
+              </article>
+
+              <article className="lp-tile lp-tile--w2">
+                <span className="lp-mono">04</span>
+                <h3>Finance in USD</h3>
+                <p>
+                  Double-entry ledger, FIN-03 invoices, and live Stripe US
+                  reconciliation your accountant can follow.
+                </p>
+                <div className="lp-tile-meta" aria-hidden="true">
+                  <span>DR = CR</span>
+                  <span>0% take-rate</span>
+                </div>
+              </article>
             </div>
-          </div>
-        </section>
-      </div>
-
-      <main id="main-content">
-        <section className="lp-trust" aria-label="Why AMARKAL Platform">
-          <ul className="lp-container lp-trust-grid">
-            {TRUST.map((item) => (
-              <li key={item.title}>
-                <strong>{item.title}</strong>
-                <span>{item.text}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="lp-section" aria-labelledby="lp-features-title">
-          <div className="lp-container">
-            <p className="lp-eyebrow">One workspace</p>
-            <h2 id="lp-features-title">Everything a business runs on</h2>
-            <p className="lp-section-lead">
-              Start with the core and add only what your industry needs. Your
-              menu adapts to the modules you use.
-            </p>
-            <ul className="lp-feature-grid">
-              {FEATURES.map((feature) => (
-                <li key={feature.title} className="lp-card lp-feature">
-                  {feature.icon}
-                  <h3>{feature.title}</h3>
-                  <p>{feature.text}</p>
-                </li>
-              ))}
-            </ul>
             <p className="lp-fineprint">
               Industry workflows are switched on only after they are verified.
               The product shows the status of every module before you enable it.
@@ -303,54 +234,70 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Monumental 0% Commission + 4 Trust Pillars + Interactive Calculator */}
+        <section
+          id="manifesto"
+          className="lp-section lp-manifesto-section"
+          aria-labelledby="manifesto-title"
+        >
+          <div className="lp-container lp-center">
+            <p className="lp-big-zero" aria-hidden="true">
+              0%
+            </p>
+            <h2 id="manifesto-title" className="lp-zero-heading">
+              <span className="sr-only">0% </span>commission. Always.
+            </h2>
+            <p className="lp-section-lead lp-section-lead--center">
+              You built the business. You keep what it earns. AMARKAL Platform
+              is operating software for your company — never a toll booth
+              between you and your customers.
+            </p>
+
+            <ul className="lp-trust-grid" aria-label="Why AMARKAL Platform">
+              {TRUST.map((item) => (
+                <li key={item.title}>
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </li>
+              ))}
+            </ul>
+
+            <div className="lp-manifesto-calc-wrap">
+              <div className="lp-manifesto-principles">
+                <p className="lp-mono">No take-rate. No vendor lock-in.</p>
+                <h3>Keep 100% of every customer payment.</h3>
+                <ul className="lp-principles">
+                  {PRINCIPLES.map((principle) => (
+                    <li key={principle}>{principle}</li>
+                  ))}
+                </ul>
+              </div>
+              <CommissionCalculator />
+            </div>
+          </div>
+        </section>
+
+        {/* Interactive 39-Industry NAICS Explorer */}
         <section
           id="industries"
           className="lp-section lp-section--tint"
           aria-labelledby="industries-title"
         >
           <div className="lp-container">
-            <p className="lp-eyebrow">{INDUSTRIES.length} industries</p>
+            <p className="lp-mono">{INDUSTRIES.length} NAICS industries</p>
             <h2 id="industries-title">
               {INDUSTRIES.length} US industries. One platform.
             </h2>
             <p className="lp-section-lead">
               Choose your industry, or combine several. AMARKAL Platform maps
-              every direction to NAICS sectors, so you start with the right
+              every direction to NAICS 2022 sectors, so you start with the right
               modules instead of a blank screen.
             </p>
             <IndustryExplorer />
           </div>
         </section>
 
-        <section
-          id="manifesto"
-          className="lp-section lp-dark"
-          aria-labelledby="manifesto-title"
-        >
-          <div className="lp-container lp-manifesto">
-            <div className="lp-manifesto-copy">
-              <p className="lp-zero" aria-hidden="true">
-                0%
-              </p>
-              <h2 id="manifesto-title">
-                <span className="sr-only">0% </span>commission on every
-                transaction. Always.
-              </h2>
-              <p className="lp-section-lead">
-                You built the business. You keep what it earns. AMARKAL Platform
-                is software for your business, not a toll booth between you and
-                your customers.
-              </p>
-              <ul className="lp-principles">
-                {PRINCIPLES.map((principle) => (
-                  <li key={principle}>{principle}</li>
-                ))}
-              </ul>
-            </div>
-            <CommissionCalculator />
-          </div>
-        </section>
-
+        {/* Interactive AI Business Architect */}
         <section
           id="architect"
           className="lp-section"
@@ -358,15 +305,15 @@ export default function HomePage() {
         >
           <div className="lp-container lp-split">
             <div>
-              <p className="lp-eyebrow">AI Business Architect</p>
+              <p className="lp-mono">AI Business Architect</p>
               <h2 id="architect-title">
                 Describe your business. Approve the setup.
               </h2>
               <p className="lp-section-lead">
                 The AI Business Architect turns a few plain sentences, or a
-                photo of your price list, into a setup you can review: services,
-                prices, resources and opening hours. You approve every line
-                before anything goes live.
+                photo of your price list, into a structured workspace draft:
+                services, prices, resources and opening hours. You approve every
+                line before anything goes live.
               </p>
               <ul className="lp-checks">
                 {ARCHITECT_POINTS.map((point) => (
@@ -381,19 +328,21 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* App Hub & Native MCP */}
         <section
           id="app-hub"
-          className="lp-section lp-dark"
+          className="lp-section lp-section--tint"
           aria-labelledby="app-hub-title"
         >
           <div className="lp-container lp-split lp-split--reverse">
             <div>
-              <p className="lp-eyebrow">App Hub and MCP</p>
+              <p className="lp-mono">App Hub &amp; Native MCP</p>
               <h2 id="app-hub-title">Connect what you need. Nothing else.</h2>
               <p className="lp-section-lead">
                 The core stays focused on running your business. Messengers,
-                chat and telephony are not built in: they connect through the
-                AMARKAL App Hub with your own accounts, when you want them.
+                telephony, accounting and AI agents connect cleanly through the
+                AMARKAL App Hub and our 7-tool Native MCP server using your own
+                accounts.
               </p>
               <ul className="lp-connectors" aria-label="Connectors">
                 {CONNECTORS.map((name) => (
@@ -408,22 +357,33 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Monumental Obsidian Closing CTA */}
         <section className="lp-final" aria-labelledby="final-title">
           <div className="lp-container lp-final-inner">
-            <h2 id="final-title">Open your business in minutes.</h2>
-            <p className="lp-section-lead">
-              Create a workspace, let the AI Business Architect draft your
-              setup, and approve it when it looks right.
+            <p className="lp-mono lp-mono--dark">
+              Yacht rental · Real estate · Hospitality · +36
+            </p>
+            <h2 id="final-title">
+              Open your business
+              <br />
+              in minutes.
+            </h2>
+            <p className="lp-final-lead">
+              Launch a workspace with the AI Business Architect, approve your
+              draft, and keep 100% of your revenue.
             </p>
             <div className="lp-cta-row">
               <Link
                 href="/onboarding/"
-                className="lp-btn lp-btn--primary lp-btn--lg"
+                className="lp-btn lp-btn--white lp-btn--lg"
               >
                 Create your business
               </Link>
-              <Link href="/book/" className="lp-btn lp-btn--outline lp-btn--lg">
-                Open client portal
+              <Link
+                href="/book/"
+                className="lp-btn lp-btn--link-dark lp-btn--lg"
+              >
+                Open client portal <span aria-hidden="true">›</span>
               </Link>
             </div>
           </div>
@@ -432,7 +392,12 @@ export default function HomePage() {
 
       <footer className="lp-footer">
         <div className="lp-container lp-footer-inner">
-          <p className="lp-footer-brand">AMARKAL Platform</p>
+          <div className="lp-footer-left">
+            <AmarkalLogo variant="dark" height={18} />
+            <span className="lp-footer-copy">
+              © 2026 Alexey AAA logistics LLC
+            </span>
+          </div>
           <nav aria-label="Footer">
             <ul>
               <li>
@@ -446,6 +411,9 @@ export default function HomePage() {
               </li>
               <li>
                 <Link href="/integrations/">App Hub</Link>
+              </li>
+              <li>
+                <a href="mailto:support@amarkal-platform.com">Support</a>
               </li>
               <li>
                 <Link href="/legal/terms/">Terms of Service</Link>
