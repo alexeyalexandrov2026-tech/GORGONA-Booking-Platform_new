@@ -71,6 +71,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: "/bookings/", label: "Bookings", group: "Core" },
   { href: "/services/", label: "Services", group: "Core" },
   { href: "/clients/", label: "Clients", group: "Core" },
+  { href: "/inbox/", label: "Client Inbox", group: "Core" },
   { href: "/staff/", label: "Staff", group: "Team" },
   {
     href: "/reservations/",

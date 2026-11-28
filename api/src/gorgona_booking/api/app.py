@@ -39,6 +39,7 @@ from gorgona_booking.api import (
     media,
     members,
     notifications,
+    omnichannel_inbox,
     payments,
     platform,
     projects_billing,
@@ -232,6 +233,7 @@ def create_app(
     app.include_router(workspace_studio.router)
     app.include_router(b2c_storefront.router)
     app.include_router(industrial_mrp_eam.router)
+    app.include_router(omnichannel_inbox.router)
     app.include_router(connectors.router)
     app.include_router(media.router)
     app.include_router(payments.router)
