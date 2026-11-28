@@ -186,6 +186,11 @@ const NAV_ITEMS: readonly NavItem[] = [
     moduleIds: ["supply"],
   },
   {
+    href: "/industrial/",
+    label: "MRP II & EAM IoT",
+    group: "Industry",
+  },
+  {
     href: "/marketplace/",
     label: "Marketplace",
     group: "Industry",
