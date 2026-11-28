@@ -542,6 +542,10 @@ def compute_predictive_health_and_signals(
     draft_payroll_runs_count: int = 0,
     fx_open_entries_count: int = 0,
     fx_unrealized_gain_loss_cents: int = 0,
+    bank_unreconciled_count: int = 0,
+    bank_suggested_count: int = 0,
+    intercompany_uneliminated_count: int = 0,
+    intercompany_uneliminated_cents: int = 0,
 ) -> tuple[int, str, list[PredictiveSignal]]:
     """Pure deterministic CFO predictive scoring & anomaly extraction (zero hallucinations)."""
     score = 92
@@ -775,6 +779,44 @@ def compute_predictive_health_and_signals(
             )
         )
 
+    if bank_unreconciled_count > 0:
+        score -= 8 if bank_unreconciled_count >= 10 else 4
+        signals.append(
+            PredictiveSignal(
+                severity="high" if bank_unreconciled_count >= 10 else "medium",
+                category="bank_reconciliation",
+                title=(
+                    f"{bank_unreconciled_count} Unreconciled US Bank Feed Line(s) "
+                    f"({bank_suggested_count} Auto-Match Ready)"
+                ),
+                metric_label=f"{bank_unreconciled_count} open line(s)",
+                recommendation=(
+                    "Confirm suggested matches or categorize pending bank feed items in "
+                    "US Bank Feeds (/banking/) to keep cash balances audit-ready."
+                ),
+                action_path="/banking/",
+            )
+        )
+
+    if intercompany_uneliminated_count > 0:
+        score -= 6
+        signals.append(
+            PredictiveSignal(
+                severity="medium",
+                category="holding_consolidation",
+                title=(
+                    f"{intercompany_uneliminated_count} Uneliminated Intercompany Entry(ies) "
+                    f"(${intercompany_uneliminated_cents / 100:,.2f})"
+                ),
+                metric_label=f"${intercompany_uneliminated_cents / 100:,.2f} open IC",
+                recommendation=(
+                    "Review mirrored Due To / Due From entries in Holding & Multi-Entity "
+                    "(/holding/) and mark eliminated before closing consolidated statements."
+                ),
+                action_path="/holding/",
+            )
+        )
+
     if not signals:
         signals.append(
             PredictiveSignal(
@@ -924,9 +966,31 @@ async def gather_predictive_context(
                 (SELECT count(*) FROM gba.fx_ledger_entries
                  WHERE tenant_id = %s AND status = 'open') AS fx_open_entries,
                 (SELECT coalesce(sum(fx_gain_loss_cents), 0) FROM gba.fx_ledger_entries
-                 WHERE tenant_id = %s AND status = 'open') AS fx_unrealized_cents
+                 WHERE tenant_id = %s AND status = 'open') AS fx_unrealized_cents,
+                (SELECT count(*) FROM gba.bank_feed_transactions
+                 WHERE tenant_id = %s
+                   AND reconciliation_status IN ('unmatched', 'suggested')) AS bank_unreconciled,
+                (SELECT count(*) FROM gba.bank_feed_transactions
+                 WHERE tenant_id = %s
+                   AND reconciliation_status = 'suggested') AS bank_suggested,
+                (SELECT count(*) FROM gba.intercompany_transactions
+                 WHERE tenant_id = %s AND status = 'posted') AS ic_uneliminated,
+                (SELECT coalesce(sum(usd_equivalent_cents), 0)
+                 FROM gba.intercompany_transactions
+                 WHERE tenant_id = %s AND status = 'posted') AS ic_uneliminated_cents
             """,
-            (tenant_id, tenant_id, tenant_id, tenant_id, tenant_id, tenant_id),
+            (
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+            ),
         )
         entrow = await cur.fetchone() or {
             "mrp_shortage_runs": 0,
@@ -935,6 +999,10 @@ async def gather_predictive_context(
             "draft_payroll_runs": 0,
             "fx_open_entries": 0,
             "fx_unrealized_cents": 0,
+            "bank_unreconciled": 0,
+            "bank_suggested": 0,
+            "ic_uneliminated": 0,
+            "ic_uneliminated_cents": 0,
         }
 
     health_score, headline, signals = compute_predictive_health_and_signals(
@@ -963,6 +1031,10 @@ async def gather_predictive_context(
         draft_payroll_runs_count=int(entrow["draft_payroll_runs"]),
         fx_open_entries_count=int(entrow["fx_open_entries"]),
         fx_unrealized_gain_loss_cents=int(entrow["fx_unrealized_cents"]),
+        bank_unreconciled_count=int(entrow["bank_unreconciled"]),
+        bank_suggested_count=int(entrow["bank_suggested"]),
+        intercompany_uneliminated_count=int(entrow["ic_uneliminated"]),
+        intercompany_uneliminated_cents=int(entrow["ic_uneliminated_cents"]),
     )
 
     snapshot: dict[str, Any] = {
@@ -987,6 +1059,10 @@ async def gather_predictive_context(
         "draft_payroll_runs_count": int(entrow["draft_payroll_runs"]),
         "fx_open_entries_count": int(entrow["fx_open_entries"]),
         "fx_unrealized_gain_loss_cents": int(entrow["fx_unrealized_cents"]),
+        "bank_unreconciled_count": int(entrow["bank_unreconciled"]),
+        "bank_suggested_count": int(entrow["bank_suggested"]),
+        "intercompany_uneliminated_count": int(entrow["ic_uneliminated"]),
+        "intercompany_uneliminated_cents": int(entrow["ic_uneliminated_cents"]),
     }
 
     byok_cfg = await load_active_tenant_byok_ai(conn, tenant_id=tenant_id, environment=environment)

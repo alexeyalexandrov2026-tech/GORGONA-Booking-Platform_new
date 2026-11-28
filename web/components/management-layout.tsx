@@ -34,7 +34,11 @@ interface GlobalSearchHit {
     | "eam_asset"
     | "inbox_thread"
     | "payroll_profile"
-    | "fx_entry";
+    | "fx_entry"
+    | "bank_transaction"
+    | "holding_subsidiary"
+    | "intercompany_tx"
+    | "marketplace_plugin";
   id: string;
   title: string;
   subtitle: string;
@@ -55,6 +59,10 @@ const SEARCH_KIND_LABEL: Record<GlobalSearchHit["kind"], string> = {
   inbox_thread: "Client Inbox",
   payroll_profile: "US Payroll",
   fx_entry: "FX Ledger",
+  bank_transaction: "US Bank Feed",
+  holding_subsidiary: "Holding Entity",
+  intercompany_tx: "Intercompany",
+  marketplace_plugin: "Plugin",
 };
 
 interface ManagementLayoutProps {

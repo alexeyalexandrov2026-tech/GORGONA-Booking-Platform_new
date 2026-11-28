@@ -31,6 +31,10 @@ SearchHitKind = Literal[
     "inbox_thread",
     "payroll_profile",
     "fx_entry",
+    "bank_transaction",
+    "holding_subsidiary",
+    "intercompany_tx",
+    "marketplace_plugin",
 ]
 
 
@@ -452,6 +456,136 @@ async def search_business_records(
                     title=f"{row['entry_number']} · {row['description']}",
                     subtitle=(f"{row['currency']} {amt:,.2f} · FX P&L ${pnl_cents / 100:+,.2f}"),
                     path="/global-finance/",
+                    status=str(row["status"]),
+                )
+            )
+
+        # 13. US Bank Feed Transactions
+        await cur.execute(
+            """
+            SELECT t.id, t.description, t.merchant_name, t.direction, t.amount_cents,
+                   t.reconciliation_status, a.institution_name, a.account_mask
+            FROM gba.bank_feed_transactions t
+            JOIN gba.bank_feed_accounts a
+              ON a.tenant_id = t.tenant_id AND a.id = t.bank_account_id
+            WHERE t.tenant_id = %s
+              AND (
+                  t.description ILIKE %s ESCAPE '\\'
+                  OR t.merchant_name ILIKE %s ESCAPE '\\'
+                  OR t.external_tx_id ILIKE %s ESCAPE '\\'
+                  OR t.category_hint ILIKE %s ESCAPE '\\'
+              )
+            ORDER BY t.posted_date DESC, t.created_at DESC
+            LIMIT %s
+            """,
+            (tenant_id, pattern, pattern, pattern, pattern, lim),
+        )
+        for row in await cur.fetchall():
+            sign = "+" if row["direction"] == "credit" else "-"
+            amt = int(row["amount_cents"]) / 100
+            hits.append(
+                SearchHit(
+                    kind="bank_transaction",
+                    id=str(row["id"]),
+                    title=str(row["description"])[:120],
+                    subtitle=(
+                        f"{row['institution_name']} ••{row['account_mask']} · {sign}${amt:,.2f}"
+                    ),
+                    path="/banking/",
+                    status=str(row["reconciliation_status"]),
+                )
+            )
+
+        # 14. Holding Multi-Entity Subsidiaries
+        await cur.execute(
+            """
+            SELECT id, entity_code, legal_name, entity_role,
+                   jurisdiction_country, functional_currency, ownership_bps
+            FROM gba.holding_subsidiaries
+            WHERE tenant_id = %s
+              AND (
+                  entity_code ILIKE %s ESCAPE '\\'
+                  OR legal_name ILIKE %s ESCAPE '\\'
+                  OR jurisdiction_country ILIKE %s ESCAPE '\\'
+                  OR functional_currency ILIKE %s ESCAPE '\\'
+              )
+            ORDER BY entity_code ASC
+            LIMIT %s
+            """,
+            (tenant_id, pattern, pattern, pattern, pattern, lim),
+        )
+        for row in await cur.fetchall():
+            own_pct = int(row["ownership_bps"]) / 100
+            hits.append(
+                SearchHit(
+                    kind="holding_subsidiary",
+                    id=str(row["id"]),
+                    title=f"{row['entity_code']} · {row['legal_name']}",
+                    subtitle=(
+                        f"Holding ({row['jurisdiction_country']} · "
+                        f"{row['functional_currency']} · {own_pct:.0f}%)"
+                    ),
+                    path="/holding/",
+                    status=str(row["entity_role"]),
+                )
+            )
+
+        # 15. Intercompany Transactions (Due To / Due From)
+        await cur.execute(
+            """
+            SELECT id, tx_number, description, tx_kind, currency,
+                   usd_equivalent_cents, status
+            FROM gba.intercompany_transactions
+            WHERE tenant_id = %s
+              AND (
+                  tx_number ILIKE %s ESCAPE '\\'
+                  OR description ILIKE %s ESCAPE '\\'
+                  OR tx_kind ILIKE %s ESCAPE '\\'
+              )
+            ORDER BY tx_date DESC, created_at DESC
+            LIMIT %s
+            """,
+            (tenant_id, pattern, pattern, pattern, lim),
+        )
+        for row in await cur.fetchall():
+            usd = int(row["usd_equivalent_cents"]) / 100
+            hits.append(
+                SearchHit(
+                    kind="intercompany_tx",
+                    id=str(row["id"]),
+                    title=f"{row['tx_number']} · {row['description']}",
+                    subtitle=f"Intercompany ({row['tx_kind']}) · ${usd:,.2f} USD",
+                    path="/holding/",
+                    status=str(row["status"]),
+                )
+            )
+
+        # 16. Installed Marketplace Plugins
+        await cur.execute(
+            """
+            SELECT id, plugin_slug, display_name, publisher_name,
+                   category, protocol, status
+            FROM gba.marketplace_plugin_installations
+            WHERE tenant_id = %s
+              AND (
+                  plugin_slug ILIKE %s ESCAPE '\\'
+                  OR display_name ILIKE %s ESCAPE '\\'
+                  OR publisher_name ILIKE %s ESCAPE '\\'
+                  OR category ILIKE %s ESCAPE '\\'
+              )
+            ORDER BY updated_at DESC
+            LIMIT %s
+            """,
+            (tenant_id, pattern, pattern, pattern, pattern, lim),
+        )
+        for row in await cur.fetchall():
+            hits.append(
+                SearchHit(
+                    kind="marketplace_plugin",
+                    id=str(row["id"]),
+                    title=str(row["display_name"]),
+                    subtitle=f"{row['publisher_name']} · {row['protocol']}",
+                    path="/app-marketplace/",
                     status=str(row["status"]),
                 )
             )

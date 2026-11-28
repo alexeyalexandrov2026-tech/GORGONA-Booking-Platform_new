@@ -16,6 +16,7 @@ from __future__ import annotations
 import csv
 import io
 import re
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
@@ -755,12 +756,214 @@ async def post_seed_sample_sandbox(
                 )
         summary["workspace_kanban_boards"] = 1
 
+        # 7. US Bank Feeds Account & Sample Transactions
+        now_utc = datetime.now(UTC)
+        today_d = now_utc.date()
+        period_key = now_utc.strftime("%Y-%m")
+        await cur.execute(
+            """
+            SELECT id FROM gba.bank_feed_accounts
+            WHERE tenant_id = %s AND institution_name = '[DEMO] Chase Business'
+            LIMIT 1
+            """,
+            (business_id,),
+        )
+        bank_row = await cur.fetchone()
+        if bank_row is None:
+            await cur.execute(
+                """
+                INSERT INTO gba.bank_feed_accounts (
+                    tenant_id, institution_name, account_name, account_mask,
+                    account_type, currency, connection_mode, current_balance_cents,
+                    last_synced_at, created_by_user_id
+                )
+                VALUES (
+                    %s, '[DEMO] Chase Business', 'Operating Checking', '4821',
+                    'checking', 'USD', 'plaid_sandbox', 14825000, now(), %s
+                )
+                RETURNING id
+                """,
+                (business_id, principal.user_id),
+            )
+            bank_row = await cur.fetchone()
+        if bank_row is not None:
+            bank_id = UUID(str(bank_row["id"]))
+            demo_bank_txs = [
+                (
+                    "DEMO-BNK-001",
+                    today_d - timedelta(days=1),
+                    "[DEMO] STRIPE US PAYOUT ACH (0% AMARKAL FEE)",
+                    "Stripe US",
+                    "credit",
+                    1845000,
+                    "client_payment",
+                    "suggested",
+                    "payment_session",
+                    "Stripe · Midwest Cold Chain Logistics",
+                    98,
+                ),
+                (
+                    "DEMO-BNK-002",
+                    today_d - timedelta(days=2),
+                    "[DEMO] PILOT FLYING J FLEET DIESEL CARD #04",
+                    "Pilot Flying J",
+                    "debit",
+                    218500,
+                    "fleet_fuel",
+                    "unmatched",
+                    None,
+                    "",
+                    0,
+                ),
+            ]
+            for (
+                ext_id,
+                p_date,
+                desc,
+                merch,
+                direction,
+                amt,
+                cat,
+                r_stat,
+                m_kind,
+                m_lbl,
+                m_conf,
+            ) in demo_bank_txs:
+                await cur.execute(
+                    """
+                    INSERT INTO gba.bank_feed_transactions (
+                        tenant_id, bank_account_id, external_tx_id, posted_date,
+                        description, merchant_name, direction, amount_cents, currency,
+                        category_hint, source_format, reconciliation_status,
+                        matched_entity_kind, matched_entity_label, match_confidence
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'USD', %s, 'plaid', %s, %s, %s, %s)
+                    ON CONFLICT (tenant_id, bank_account_id, external_tx_id) DO NOTHING
+                    """,
+                    (
+                        business_id,
+                        bank_id,
+                        ext_id,
+                        p_date,
+                        desc,
+                        merch,
+                        direction,
+                        amt,
+                        cat,
+                        r_stat,
+                        m_kind,
+                        m_lbl,
+                        m_conf,
+                    ),
+                )
+        summary["us_bank_feed_accounts"] = 1
+
+        # 8. Holding Multi-Entity Subsidiaries & Intercompany Elimination Demo
+        demo_subs = [
+            (
+                "DEMO-US-HQ",
+                "[DEMO] US Parent Holdings LLC",
+                "parent_holding",
+                "US",
+                "IL",
+                "USD",
+                10000,
+            ),
+            (
+                "DEMO-EU-DE",
+                "[DEMO] Europe Logistics GmbH",
+                "operating_subsidiary",
+                "DE",
+                "HH",
+                "EUR",
+                8000,
+            ),
+        ]
+        demo_sub_ids: dict[str, UUID] = {}
+        for code, name, role, country, state, ccy, own_bps in demo_subs:
+            await cur.execute(
+                """
+                INSERT INTO gba.holding_subsidiaries (
+                    tenant_id, entity_code, legal_name, entity_role,
+                    jurisdiction_country, jurisdiction_state, functional_currency,
+                    ownership_bps, tax_id_masked, created_by_user_id
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'DEMO-TAX', %s)
+                ON CONFLICT (tenant_id, entity_code) DO UPDATE SET updated_at = now()
+                RETURNING id
+                """,
+                (business_id, code, name, role, country, state, ccy, own_bps, principal.user_id),
+            )
+            srow = await cur.fetchone()
+            if srow:
+                demo_sub_ids[code] = UUID(str(srow["id"]))
+
+        if "DEMO-US-HQ" in demo_sub_ids and "DEMO-EU-DE" in demo_sub_ids:
+            for code, rev, cogs, opex, cash, ar, ap in (
+                ("DEMO-US-HQ", 62000000, 24000000, 14500000, 88000000, 19500000, 6200000),
+                ("DEMO-EU-DE", 34000000, 15000000, 8200000, 21000000, 11400000, 5800000),
+            ):
+                await cur.execute(
+                    """
+                    INSERT INTO gba.holding_entity_trial_snapshots (
+                        tenant_id, subsidiary_id, period_key, revenue_minor, cogs_minor,
+                        opex_minor, cash_minor, ar_minor, ap_minor, inventory_minor,
+                        fixed_assets_minor, debt_minor, equity_minor, notes, updated_by_user_id
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 4500000, 22000000, 9000000,
+                            95000000, '[DEMO] Sample holding snapshot', %s)
+                    ON CONFLICT (tenant_id, subsidiary_id, period_key) DO NOTHING
+                    """,
+                    (
+                        business_id,
+                        demo_sub_ids[code],
+                        period_key,
+                        rev,
+                        cogs,
+                        opex,
+                        cash,
+                        ar,
+                        ap,
+                        principal.user_id,
+                    ),
+                )
+            await cur.execute(
+                """
+                INSERT INTO gba.intercompany_transactions (
+                    tenant_id, tx_number, period_key, tx_date,
+                    source_subsidiary_id, target_subsidiary_id, tx_kind,
+                    currency, amount_minor, fx_rate_micros, usd_equivalent_cents,
+                    description, source_entry_label, target_entry_label,
+                    status, eliminated_at, created_by_user_id
+                )
+                VALUES (
+                    %s, 'IC-DEMO-SBOX-01', %s, %s, %s, %s, 'management_fee',
+                    'EUR', 3500000, 1090000, 3815000,
+                    '[DEMO] Parent Cloud ERP & Shared Management Fee',
+                    'DR Intercompany AR (Due From) / CR Management Fee Revenue',
+                    'DR Management Fee Expense / CR Intercompany AP (Due To)',
+                    'eliminated', now(), %s
+                )
+                ON CONFLICT (tenant_id, tx_number) DO NOTHING
+                """,
+                (
+                    business_id,
+                    period_key,
+                    today_d,
+                    demo_sub_ids["DEMO-US-HQ"],
+                    demo_sub_ids["DEMO-EU-DE"],
+                    principal.user_id,
+                ),
+            )
+        summary["holding_subsidiaries"] = 2
+
     return SampleSandboxResponse(
         action="seeded",
         summary=summary,
         message=(
             "Loaded sample [DEMO] records across MRP II, Predictive EAM, Omnichannel Inbox, "
-            "US Payroll, Multi-Currency FX, and Workspace Studio. Remove anytime in 1 click."
+            "US Payroll, Multi-Currency FX, Workspace Studio, US Bank Feeds, and Multi-Entity "
+            "Holding Consolidation. Remove anytime in 1 click."
         ),
     )
 
@@ -839,6 +1042,30 @@ async def delete_sample_sandbox(
             (business_id,),
         )
         removed["workspace_boards"] = cur.rowcount or 0
+        await cur.execute(
+            """
+                DELETE FROM gba.bank_feed_accounts
+                WHERE tenant_id = %s AND institution_name = '[DEMO] Chase Business'
+                """,
+            (business_id,),
+        )
+        removed["bank_feed_accounts"] = cur.rowcount or 0
+        await cur.execute(
+            """
+                DELETE FROM gba.intercompany_transactions
+                WHERE tenant_id = %s AND tx_number = 'IC-DEMO-SBOX-01'
+                """,
+            (business_id,),
+        )
+        removed["intercompany_transactions"] = cur.rowcount or 0
+        await cur.execute(
+            """
+                DELETE FROM gba.holding_subsidiaries
+                WHERE tenant_id = %s AND entity_code IN ('DEMO-US-HQ', 'DEMO-EU-DE')
+                """,
+            (business_id,),
+        )
+        removed["holding_subsidiaries"] = cur.rowcount or 0
 
     return SampleSandboxResponse(
         action="cleared",

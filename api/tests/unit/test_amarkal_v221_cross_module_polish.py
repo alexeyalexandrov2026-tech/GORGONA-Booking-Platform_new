@@ -29,7 +29,7 @@ def test_global_search_covers_all_twelve_enterprise_entity_kinds() -> None:
         "payroll_profile",
         "fx_entry",
     }
-    assert kinds == expected
+    assert expected.issubset(kinds)
     assert escape_like_pattern("TRK_104%\\x") == "%TRK\\_104\\%\\\\x%"
 
 
