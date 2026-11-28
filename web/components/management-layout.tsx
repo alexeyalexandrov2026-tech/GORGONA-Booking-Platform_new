@@ -139,6 +139,11 @@ const NAV_ITEMS: readonly NavItem[] = [
     group: "Finance",
   },
   {
+    href: "/global-finance/",
+    label: "Payroll & FX Tax",
+    group: "Finance",
+  },
+  {
     href: "/prepaid/",
     label: "Prepaid",
     group: "Finance",

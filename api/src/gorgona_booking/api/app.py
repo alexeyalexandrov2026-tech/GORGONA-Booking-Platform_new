@@ -26,6 +26,7 @@ from gorgona_booking.api import (
     enterprise_reporting,
     enterprise_sso,
     financial_documents,
+    global_payroll_fx,
     groups,
     growth,
     health,
@@ -234,6 +235,7 @@ def create_app(
     app.include_router(b2c_storefront.router)
     app.include_router(industrial_mrp_eam.router)
     app.include_router(omnichannel_inbox.router)
+    app.include_router(global_payroll_fx.router)
     app.include_router(connectors.router)
     app.include_router(media.router)
     app.include_router(payments.router)
