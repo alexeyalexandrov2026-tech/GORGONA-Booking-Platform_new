@@ -24,6 +24,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, Request, status
 from psycopg import errors as pg_errors
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 from pydantic import BaseModel, ConfigDict, Field
 
 from gorgona_booking.api.businesses import CurrentPrincipal
@@ -45,6 +46,15 @@ IntercompanyTxKind = Literal[
     "dividend",
 ]
 IntercompanyStatus = Literal["posted", "eliminated", "void"]
+TradeOrderKind = Literal[
+    "raw_materials",
+    "finished_goods",
+    "intercompany_service",
+    "equipment_transfer",
+]
+TransferPricingMethod = Literal["cup_market", "cost_plus", "resale_minus", "agreed_contract"]
+TradeOrderStatus = Literal["mirrored_open", "shipped_received", "invoiced_eliminated", "void"]
+TradeOrderAction = Literal["ship_receive", "invoice_eliminate", "update_unsold", "void"]
 
 _CTRL_RE = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -171,6 +181,41 @@ class DueToDueFromPair(BaseModel):
     tx_count: int
 
 
+class IntercompanyTradeOrderView(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    id: UUID
+    sales_order_number: str
+    mirror_po_number: str
+    period_key: str
+    order_date: date
+    seller_subsidiary_id: UUID
+    seller_code: str
+    seller_name: str
+    buyer_subsidiary_id: UUID
+    buyer_code: str
+    buyer_name: str
+    trade_kind: TradeOrderKind
+    transfer_pricing_method: TransferPricingMethod
+    item_sku: str
+    item_description: str
+    quantity_milli: int
+    currency: CurrencyCode
+    unit_transfer_price_minor: int
+    seller_unit_cost_minor: int
+    total_transfer_minor: int
+    total_seller_cost_minor: int
+    intercompany_profit_minor: int
+    buyer_unsold_inventory_bps: int
+    fx_rate_micros: int
+    transfer_usd_cents: int
+    upii_usd_cents: int
+    status: TradeOrderStatus
+    linked_intercompany_tx_id: UUID | None
+    notes: str
+    created_at: datetime
+    updated_at: datetime
+
+
 class HoldingOverviewResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
     period_key: str
@@ -178,6 +223,8 @@ class HoldingOverviewResponse(BaseModel):
     subsidiaries: list[SubsidiaryView]
     snapshots: list[EntitySnapshotView]
     intercompany_transactions: list[IntercompanyTxView]
+    intercompany_trade_orders: list[IntercompanyTradeOrderView] = Field(default_factory=list)
+    total_upii_eliminated_usd_cents: int = 0
     per_entity_usd: list[EntityConsolidatedRow]
     pre_elimination: ConsolidatedStatementColumn
     eliminations: ConsolidatedStatementColumn
@@ -231,6 +278,58 @@ class CreateIntercompanyTxRequest(BaseModel):
 class UpdateIntercompanyStatusRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     status: IntercompanyStatus
+
+
+class CreateIntercompanyTradeOrderRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    period_key: str = Field(pattern=r"^[0-9]{4}-[0-9]{2}$")
+    order_date: date | None = None
+    seller_subsidiary_id: UUID
+    buyer_subsidiary_id: UUID
+    trade_kind: TradeOrderKind = "raw_materials"
+    transfer_pricing_method: TransferPricingMethod = "cost_plus"
+    item_sku: str = Field(default="", max_length=64)
+    item_description: str = Field(min_length=2, max_length=240)
+    quantity_milli: int = Field(default=1000, ge=1, le=1_000_000_000)
+    currency: CurrencyCode = "USD"
+    unit_transfer_price_minor: int = Field(ge=1, le=999_999_999_999)
+    seller_unit_cost_minor: int = Field(default=0, ge=0, le=999_999_999_999)
+    buyer_unsold_inventory_bps: int = Field(default=0, ge=0, le=10_000)
+    auto_invoice_and_eliminate: bool = True
+    notes: str = Field(default="", max_length=500)
+
+
+class TransitionIntercompanyTradeOrderRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    action: TradeOrderAction
+    buyer_unsold_inventory_bps: int | None = Field(default=None, ge=0, le=10_000)
+
+
+def compute_intercompany_trade_metrics(
+    *,
+    trade_kind: TradeOrderKind,
+    quantity_milli: int,
+    unit_transfer_price_minor: int,
+    seller_unit_cost_minor: int,
+    buyer_unsold_inventory_bps: int,
+    currency: str,
+    fx_rate_micros: int,
+) -> tuple[int, int, int, int, int]:
+    """Compute transfer total, seller cost, IC profit, USD transfer, and deferred UPII USD.
+
+    Per US GAAP ASC 810 / IFRS 10, Unrealized Profit in Ending Inventory (UPII) applies
+    to physical goods/raw materials/equipment still held by the buying subsidiary at close.
+    Pure intercompany services are consumed immediately and carry 0 UPII.
+    """
+    total_transfer = max(1, round((quantity_milli * unit_transfer_price_minor) / 1000))
+    total_cost = max(0, round((quantity_milli * seller_unit_cost_minor) / 1000))
+    ic_profit = total_transfer - total_cost
+    transfer_usd = max(1, convert_minor_to_usd_cents(total_transfer, currency, fx_rate_micros))
+    if trade_kind == "intercompany_service" or ic_profit <= 0 or buyer_unsold_inventory_bps <= 0:
+        return total_transfer, total_cost, ic_profit, transfer_usd, 0
+    profit_usd = max(0, convert_minor_to_usd_cents(ic_profit, currency, fx_rate_micros))
+    upii_usd = max(0, round((profit_usd * buyer_unsold_inventory_bps) / 10_000))
+    return total_transfer, total_cost, ic_profit, transfer_usd, upii_usd
 
 
 class SeedSampleHoldingResponse(BaseModel):
@@ -300,6 +399,7 @@ def compute_consolidated_holding(
     snapshots: list[dict[str, Any]],
     intercompany_txs: list[dict[str, Any]],
     fx_rates_micros: dict[str, int],
+    intercompany_trade_orders: list[dict[str, Any]] | None = None,
 ) -> tuple[
     list[EntityConsolidatedRow],
     ConsolidatedStatementColumn,
@@ -384,6 +484,7 @@ def compute_consolidated_holding(
 
     # Eliminations and bilateral Due To / Due From matrix
     elim_rev = elim_cogs = elim_opex = elim_ar = elim_ap = elim_debt = elim_eq = 0
+    elim_upii_inv = 0
     pair_net: dict[tuple[str, str], dict[str, int]] = defaultdict(lambda: {"net": 0, "count": 0})
 
     for tx in intercompany_txs:
@@ -424,6 +525,16 @@ def compute_consolidated_holding(
             elim_ar += usd
             elim_ap += usd
 
+    # ASC 810 / IFRS 10: Defer Unrealized Profit in Ending Inventory (UPII) from mirror trades
+    # DR COGS (+upii) / CR Ending Inventory (-upii) / CR Consolidated Retained Earnings (-upii)
+    for trade in intercompany_trade_orders or []:
+        if str(trade.get("status") or "") != "invoiced_eliminated":
+            continue
+        upii = max(0, int(trade.get("upii_usd_cents") or 0))
+        if upii > 0:
+            elim_upii_inv += upii
+            elim_eq += upii
+
     pre_gp = pre_rev - pre_cogs
     pre_ni = pre_gp - pre_opex
     pre_assets = pre_cash + pre_ar + pre_inv + pre_fa
@@ -448,14 +559,15 @@ def compute_consolidated_holding(
         equity_cents=pre_eq,
     )
 
-    elim_gp = -(elim_rev - elim_cogs)
+    net_cogs_elim = -elim_cogs + elim_upii_inv
+    elim_gp = -elim_rev - net_cogs_elim
     elim_ni = elim_gp + elim_opex
-    elim_assets = -elim_ar
+    elim_assets = -(elim_ar + elim_upii_inv)
     elim_liab = -(elim_ap + elim_debt)
 
     elim_col = ConsolidatedStatementColumn(
         revenue_cents=-elim_rev,
-        cogs_cents=-elim_cogs,
+        cogs_cents=net_cogs_elim,
         gross_profit_cents=elim_gp,
         opex_cents=-elim_opex,
         net_income_cents=elim_ni,
@@ -463,7 +575,7 @@ def compute_consolidated_holding(
         nci_net_income_cents=0,
         cash_cents=0,
         ar_cents=-elim_ar,
-        inventory_cents=0,
+        inventory_cents=-elim_upii_inv,
         fixed_assets_cents=0,
         total_assets_cents=elim_assets,
         ap_cents=-elim_ap,
@@ -473,15 +585,16 @@ def compute_consolidated_holding(
     )
 
     cons_rev = pre_rev - elim_rev
-    cons_cogs = pre_cogs - elim_cogs
+    cons_cogs = pre_cogs + net_cogs_elim
     cons_gp = cons_rev - cons_cogs
     cons_opex = pre_opex - elim_opex
     cons_ni = cons_gp - cons_opex
     cons_ctrl_ni = pre_ctrl_ni + elim_ni
     cons_ar = max(0, pre_ar - elim_ar)
+    cons_inv = max(0, pre_inv - elim_upii_inv)
     cons_ap = max(0, pre_ap - elim_ap)
     cons_debt = max(0, pre_debt - elim_debt)
-    cons_assets = pre_cash + cons_ar + pre_inv + pre_fa
+    cons_assets = pre_cash + cons_ar + cons_inv + pre_fa
     cons_liab = cons_ap + cons_debt
     cons_eq = pre_eq - elim_eq
 
@@ -495,7 +608,7 @@ def compute_consolidated_holding(
         nci_net_income_cents=pre_nci_ni,
         cash_cents=pre_cash,
         ar_cents=cons_ar,
-        inventory_cents=pre_inv,
+        inventory_cents=cons_inv,
         fixed_assets_cents=pre_fa,
         total_assets_cents=cons_assets,
         ap_cents=cons_ap,
@@ -618,11 +731,56 @@ async def get_holding_overview(
         )
         ic_rows = [dict(r) for r in await cur.fetchall()]
 
+        trade_rows: list[dict[str, Any]] = []
+        try:
+            async with (
+                session.conn.transaction(),
+                session.conn.cursor(row_factory=dict_row) as tcur,
+            ):
+                await tcur.execute(
+                    """
+                    SELECT o.id, o.sales_order_number, o.mirror_po_number, o.period_key,
+                           o.order_date,
+                           o.seller_subsidiary_id,
+                           s.entity_code AS seller_code,
+                           s.legal_name AS seller_name,
+                           o.buyer_subsidiary_id,
+                           b.entity_code AS buyer_code,
+                           b.legal_name AS buyer_name,
+                           o.trade_kind, o.transfer_pricing_method,
+                           o.item_sku, o.item_description, o.quantity_milli,
+                           o.currency, o.unit_transfer_price_minor, o.seller_unit_cost_minor,
+                           o.total_transfer_minor, o.total_seller_cost_minor,
+                           o.intercompany_profit_minor, o.buyer_unsold_inventory_bps,
+                           o.fx_rate_micros, o.transfer_usd_cents, o.upii_usd_cents,
+                           o.status, o.linked_intercompany_tx_id, o.notes,
+                           o.created_at, o.updated_at
+                    FROM gba.intercompany_trade_orders o
+                    JOIN gba.holding_subsidiaries s
+                      ON s.tenant_id = o.tenant_id AND s.id = o.seller_subsidiary_id
+                    JOIN gba.holding_subsidiaries b
+                      ON b.tenant_id = o.tenant_id AND b.id = o.buyer_subsidiary_id
+                    WHERE o.tenant_id = %s AND o.period_key = %s
+                    ORDER BY o.order_date DESC, o.created_at DESC
+                    """,
+                    (business_id, eff_period),
+                )
+                trade_rows = [dict(r) for r in await tcur.fetchall()]
+        except pg_errors.UndefinedTable:
+            trade_rows = []
+
     per_entity, pre_col, elim_col, cons_col, matrix = compute_consolidated_holding(
         subsidiaries=sub_rows,
         snapshots=snap_rows,
         intercompany_txs=ic_rows,
         fx_rates_micros=fx_rates,
+        intercompany_trade_orders=trade_rows,
+    )
+
+    total_upii = sum(
+        max(0, int(r["upii_usd_cents"]))
+        for r in trade_rows
+        if str(r["status"]) == "invoiced_eliminated"
     )
 
     return HoldingOverviewResponse(
@@ -631,6 +789,8 @@ async def get_holding_overview(
         subsidiaries=[SubsidiaryView(**r) for r in sub_rows],
         snapshots=[EntitySnapshotView(**r) for r in snap_rows],
         intercompany_transactions=[IntercompanyTxView(**r) for r in ic_rows],
+        intercompany_trade_orders=[IntercompanyTradeOrderView(**r) for r in trade_rows],
+        total_upii_eliminated_usd_cents=total_upii,
         per_entity_usd=per_entity,
         pre_elimination=pre_col,
         eliminations=elim_col,
@@ -953,6 +1113,396 @@ async def update_intercompany_status(
     return IntercompanyTxView(**row)
 
 
+async def _fetch_trade_order_view(
+    cur: Any, business_id: UUID, order_id: UUID
+) -> IntercompanyTradeOrderView:
+    await cur.execute(
+        """
+        SELECT o.id, o.sales_order_number, o.mirror_po_number, o.period_key,
+               o.order_date,
+               o.seller_subsidiary_id,
+               s.entity_code AS seller_code,
+               s.legal_name AS seller_name,
+               o.buyer_subsidiary_id,
+               b.entity_code AS buyer_code,
+               b.legal_name AS buyer_name,
+               o.trade_kind, o.transfer_pricing_method,
+               o.item_sku, o.item_description, o.quantity_milli,
+               o.currency, o.unit_transfer_price_minor, o.seller_unit_cost_minor,
+               o.total_transfer_minor, o.total_seller_cost_minor,
+               o.intercompany_profit_minor, o.buyer_unsold_inventory_bps,
+               o.fx_rate_micros, o.transfer_usd_cents, o.upii_usd_cents,
+               o.status, o.linked_intercompany_tx_id, o.notes,
+               o.created_at, o.updated_at
+        FROM gba.intercompany_trade_orders o
+        JOIN gba.holding_subsidiaries s
+          ON s.tenant_id = o.tenant_id AND s.id = o.seller_subsidiary_id
+        JOIN gba.holding_subsidiaries b
+          ON b.tenant_id = o.tenant_id AND b.id = o.buyer_subsidiary_id
+        WHERE o.tenant_id = %s AND o.id = %s
+        """,
+        (business_id, order_id),
+    )
+    row = await cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Intercompany trade order not found.")
+    return IntercompanyTradeOrderView(**dict(row))
+
+
+async def _insert_linked_trade_elimination(
+    cur: Any,
+    *,
+    business_id: UUID,
+    user_id: UUID,
+    period_key: str,
+    order_date: date,
+    seller_id: UUID,
+    buyer_id: UUID,
+    trade_kind: TradeOrderKind,
+    currency: CurrencyCode,
+    total_transfer_minor: int,
+    fx_rate_micros: int,
+    transfer_usd_cents: int,
+    so_number: str,
+    po_number: str,
+    item_description: str,
+) -> UUID:
+    tx_kind: IntercompanyTxKind = (
+        "intercompany_service" if trade_kind == "intercompany_service" else "inventory_transfer"
+    )
+    tx_number = f"IC-TRD-{order_date.strftime('%Y%m%d')}-{secrets.token_hex(3).upper()}"
+    src_label = f"Mirror {so_number}: DR Intercompany AR (Due From) / CR Intercompany Sales"
+    tgt_label = (
+        f"Mirror {po_number}: DR Intercompany Expense / CR Intercompany AP (Due To)"
+        if tx_kind == "intercompany_service"
+        else f"Mirror {po_number}: DR Inventory / COGS / CR Intercompany AP (Due To)"
+    )
+    desc = _clean(f"{so_number} <-> {po_number}: {item_description}", max_len=240)
+    await cur.execute(
+        """
+        INSERT INTO gba.intercompany_transactions (
+            tenant_id, tx_number, period_key, tx_date,
+            source_subsidiary_id, target_subsidiary_id, tx_kind,
+            currency, amount_minor, fx_rate_micros, usd_equivalent_cents,
+            description, source_entry_label, target_entry_label,
+            status, eliminated_at, created_by_user_id
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'eliminated', now(), %s)
+        RETURNING id
+        """,
+        (
+            business_id,
+            tx_number,
+            period_key,
+            order_date,
+            seller_id,
+            buyer_id,
+            tx_kind,
+            currency,
+            total_transfer_minor,
+            fx_rate_micros,
+            transfer_usd_cents,
+            desc,
+            src_label,
+            tgt_label,
+            user_id,
+        ),
+    )
+    tx_row = await cur.fetchone()
+    assert tx_row is not None  # noqa: S101
+    return UUID(str(tx_row["id"]))
+
+
+@router.post(
+    "/v1/businesses/{business_id}/holding/trade-orders",
+    response_model=IntercompanyTradeOrderView,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_intercompany_trade_order(
+    business_id: UUID,
+    body: CreateIntercompanyTradeOrderRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> IntercompanyTradeOrderView:
+    """Create a Seller Sales Order and atomically generate the Buyer Mirror Purchase Order."""
+    if body.seller_subsidiary_id == body.buyer_subsidiary_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Seller and buyer subsidiaries must be different legal entities.",
+        )
+
+    eff_date = body.order_date or datetime.now(UTC).date()
+    pair_suffix = f"{eff_date.strftime('%Y%m%d')}-{secrets.token_hex(3).upper()}"
+    so_number = f"IC-SO-{pair_suffix}"
+    po_number = f"IC-PO-{pair_suffix}"
+
+    async with (
+        authorized_tenant(
+            runtime_pool(request),
+            principal,
+            business_id,
+            Permission.BUSINESS_MANAGE,
+            request_id=get_request_id(request),
+        ) as session,
+        session.conn.cursor(row_factory=dict_row) as cur,
+    ):
+        await cur.execute(
+            """
+            SELECT id, entity_code, legal_name
+            FROM gba.holding_subsidiaries
+            WHERE tenant_id = %s AND id IN (%s, %s)
+            """,
+            (business_id, body.seller_subsidiary_id, body.buyer_subsidiary_id),
+        )
+        found = {r["id"]: r for r in await cur.fetchall()}
+        if body.seller_subsidiary_id not in found or body.buyer_subsidiary_id not in found:
+            raise HTTPException(
+                status_code=404, detail="Both seller and buyer subsidiaries must exist."
+            )
+
+        fx_rates = await _load_fx_rates(cur, business_id)
+        rate_micros = int(
+            fx_rates.get(body.currency, DEFAULT_FX_RATE_MICROS.get(body.currency, 1_000_000))
+        )
+        total_transfer, total_cost, ic_profit, transfer_usd, upii_usd = (
+            compute_intercompany_trade_metrics(
+                trade_kind=body.trade_kind,
+                quantity_milli=body.quantity_milli,
+                unit_transfer_price_minor=body.unit_transfer_price_minor,
+                seller_unit_cost_minor=body.seller_unit_cost_minor,
+                buyer_unsold_inventory_bps=body.buyer_unsold_inventory_bps,
+                currency=body.currency,
+                fx_rate_micros=rate_micros,
+            )
+        )
+
+        linked_tx_id: UUID | None = None
+        order_status: TradeOrderStatus = "mirrored_open"
+        if body.auto_invoice_and_eliminate:
+            linked_tx_id = await _insert_linked_trade_elimination(
+                cur,
+                business_id=business_id,
+                user_id=session.principal.user_id,
+                period_key=body.period_key,
+                order_date=eff_date,
+                seller_id=body.seller_subsidiary_id,
+                buyer_id=body.buyer_subsidiary_id,
+                trade_kind=body.trade_kind,
+                currency=body.currency,
+                total_transfer_minor=total_transfer,
+                fx_rate_micros=rate_micros,
+                transfer_usd_cents=transfer_usd,
+                so_number=so_number,
+                po_number=po_number,
+                item_description=body.item_description,
+            )
+            order_status = "invoiced_eliminated"
+
+        await cur.execute(
+            """
+            INSERT INTO gba.intercompany_trade_orders (
+                tenant_id, sales_order_number, mirror_po_number, period_key, order_date,
+                seller_subsidiary_id, buyer_subsidiary_id, trade_kind, transfer_pricing_method,
+                item_sku, item_description, quantity_milli, currency,
+                unit_transfer_price_minor, seller_unit_cost_minor,
+                total_transfer_minor, total_seller_cost_minor, intercompany_profit_minor,
+                buyer_unsold_inventory_bps, fx_rate_micros, transfer_usd_cents, upii_usd_cents,
+                status, linked_intercompany_tx_id, notes, created_by_user_id
+            )
+            VALUES (
+                %s, %s, %s, %s, %s,
+                %s, %s, %s, %s,
+                %s, %s, %s, %s,
+                %s, %s,
+                %s, %s, %s,
+                %s, %s, %s, %s,
+                %s, %s, %s, %s
+            )
+            RETURNING id
+            """,
+            (
+                business_id,
+                so_number,
+                po_number,
+                body.period_key,
+                eff_date,
+                body.seller_subsidiary_id,
+                body.buyer_subsidiary_id,
+                body.trade_kind,
+                body.transfer_pricing_method,
+                _clean(body.item_sku, max_len=64).upper(),
+                _clean(body.item_description, max_len=240),
+                body.quantity_milli,
+                body.currency,
+                body.unit_transfer_price_minor,
+                body.seller_unit_cost_minor,
+                total_transfer,
+                total_cost,
+                ic_profit,
+                body.buyer_unsold_inventory_bps,
+                rate_micros,
+                transfer_usd,
+                upii_usd,
+                order_status,
+                linked_tx_id,
+                _clean(body.notes, max_len=500),
+                session.principal.user_id,
+            ),
+        )
+        inserted = await cur.fetchone()
+        assert inserted is not None  # noqa: S101
+        order_id = UUID(str(inserted["id"]))
+
+        await cur.execute(
+            """
+            INSERT INTO gba.audit_events (
+                tenant_id, actor, action, target_type, target_id, details, request_id
+            )
+            VALUES (
+                %s, %s, 'holding.mirror_trade_created', 'intercompany_trade_order', %s, %s,
+                nullif(pg_catalog.current_setting('gba.request_id', true), '')
+            )
+            """,
+            (
+                business_id,
+                session.principal.actor,
+                str(order_id),
+                Jsonb(
+                    {
+                        "sales_order_number": so_number,
+                        "mirror_po_number": po_number,
+                        "transfer_usd_cents": transfer_usd,
+                        "upii_usd_cents": upii_usd,
+                        "status": order_status,
+                    }
+                ),
+            ),
+        )
+        return await _fetch_trade_order_view(cur, business_id, order_id)
+
+
+@router.post(
+    "/v1/businesses/{business_id}/holding/trade-orders/{order_id}/transition",
+    response_model=IntercompanyTradeOrderView,
+)
+async def transition_intercompany_trade_order(
+    business_id: UUID,
+    order_id: UUID,
+    body: TransitionIntercompanyTradeOrderRequest,
+    request: Request,
+    principal: CurrentPrincipal,
+) -> IntercompanyTradeOrderView:
+    """Advance Mirror SO <-> PO lifecycle, recalculate month-end UPII, or void both sides."""
+    async with (
+        authorized_tenant(
+            runtime_pool(request),
+            principal,
+            business_id,
+            Permission.BUSINESS_MANAGE,
+            request_id=get_request_id(request),
+        ) as session,
+        session.conn.cursor(row_factory=dict_row) as cur,
+    ):
+        await cur.execute(
+            """
+            SELECT *
+            FROM gba.intercompany_trade_orders
+            WHERE tenant_id = %s AND id = %s
+            FOR UPDATE
+            """,
+            (business_id, order_id),
+        )
+        existing = await cur.fetchone()
+        if existing is None:
+            raise HTTPException(status_code=404, detail="Intercompany trade order not found.")
+
+        cur_status = str(existing["status"])
+        if cur_status == "void" and body.action != "void":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Cannot modify a voided intercompany trade order.",
+            )
+
+        linked_tx_id: UUID | None = existing["linked_intercompany_tx_id"]
+        next_status: TradeOrderStatus = cur_status  # type: ignore[assignment]
+        unsold_bps = int(existing["buyer_unsold_inventory_bps"])
+        upii_usd = int(existing["upii_usd_cents"])
+
+        if body.action == "ship_receive":
+            if cur_status == "mirrored_open":
+                next_status = "shipped_received"
+        elif body.action == "invoice_eliminate":
+            if linked_tx_id is None:
+                linked_tx_id = await _insert_linked_trade_elimination(
+                    cur,
+                    business_id=business_id,
+                    user_id=session.principal.user_id,
+                    period_key=str(existing["period_key"]),
+                    order_date=existing["order_date"],
+                    seller_id=existing["seller_subsidiary_id"],
+                    buyer_id=existing["buyer_subsidiary_id"],
+                    trade_kind=existing["trade_kind"],
+                    currency=existing["currency"],
+                    total_transfer_minor=int(existing["total_transfer_minor"]),
+                    fx_rate_micros=int(existing["fx_rate_micros"]),
+                    transfer_usd_cents=int(existing["transfer_usd_cents"]),
+                    so_number=str(existing["sales_order_number"]),
+                    po_number=str(existing["mirror_po_number"]),
+                    item_description=str(existing["item_description"]),
+                )
+            else:
+                await cur.execute(
+                    """
+                    UPDATE gba.intercompany_transactions
+                    SET status = 'eliminated', eliminated_at = now(), updated_at = now()
+                    WHERE tenant_id = %s AND id = %s
+                    """,
+                    (business_id, linked_tx_id),
+                )
+            next_status = "invoiced_eliminated"
+        elif body.action == "update_unsold":
+            if body.buyer_unsold_inventory_bps is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="buyer_unsold_inventory_bps is required for update_unsold.",
+                )
+            unsold_bps = body.buyer_unsold_inventory_bps
+            _, _, _, _, upii_usd = compute_intercompany_trade_metrics(
+                trade_kind=existing["trade_kind"],
+                quantity_milli=int(existing["quantity_milli"]),
+                unit_transfer_price_minor=int(existing["unit_transfer_price_minor"]),
+                seller_unit_cost_minor=int(existing["seller_unit_cost_minor"]),
+                buyer_unsold_inventory_bps=unsold_bps,
+                currency=str(existing["currency"]),
+                fx_rate_micros=int(existing["fx_rate_micros"]),
+            )
+        elif body.action == "void":
+            next_status = "void"
+            if linked_tx_id is not None:
+                await cur.execute(
+                    """
+                    UPDATE gba.intercompany_transactions
+                    SET status = 'void', eliminated_at = NULL, updated_at = now()
+                    WHERE tenant_id = %s AND id = %s
+                    """,
+                    (business_id, linked_tx_id),
+                )
+
+        await cur.execute(
+            """
+            UPDATE gba.intercompany_trade_orders
+            SET status = %s,
+                buyer_unsold_inventory_bps = %s,
+                upii_usd_cents = %s,
+                linked_intercompany_tx_id = %s,
+                updated_at = now()
+            WHERE tenant_id = %s AND id = %s
+            """,
+            (next_status, unsold_bps, upii_usd, linked_tx_id, business_id, order_id),
+        )
+        return await _fetch_trade_order_view(cur, business_id, order_id)
+
+
 @router.post(
     "/v1/businesses/{business_id}/holding/seed-sample-group",
     response_model=SeedSampleHoldingResponse,
@@ -1222,6 +1772,126 @@ async def seed_sample_holding_group(
             )
             if await cur.fetchone():
                 ic_seeded += 1
+
+        # Seed 2 mirrored intercompany trade pairs (SO <-> PO) with UPII elimination
+        sample_trades: list[
+            tuple[str, str, str, str, TradeOrderKind, str, str, int, CurrencyCode, int, int, int]
+        ] = [
+            (
+                f"IC-SO-DEMO-{eff_period}-01",
+                f"IC-PO-DEMO-{eff_period}-01",
+                "US-OPS",
+                "EU-DE",
+                "raw_materials",
+                "COLD-INSUL-200",
+                "Thermal Cold-Chain Pallet Liners (US-OPS -> EU-DE)",
+                100_000,  # 100 units
+                "USD",
+                80_000,  # $800/unit transfer price = $80,000
+                55_000,  # $550/unit internal cost = $55,000 ($25,000 IC profit)
+                4_000,  # 40% unsold at period close -> $10,000 UPII deferred
+            ),
+            (
+                f"IC-SO-DEMO-{eff_period}-02",
+                f"IC-PO-DEMO-{eff_period}-02",
+                "US-HQ",
+                "CA-ON",
+                "intercompany_service",
+                "TMS-DISPATCH-SLA",
+                "Cross-Border Fleet Dispatch & Customs Brokerage Allocation",
+                1_000,
+                "CAD",
+                3_500_000,
+                2_100_000,
+                0,
+            ),
+        ]
+        try:
+            async with (
+                session.conn.transaction(),
+                session.conn.cursor(row_factory=dict_row) as tcur,
+            ):
+                for (
+                    so_no,
+                    po_no,
+                    s_code,
+                    b_code,
+                    t_kind,
+                    sku,
+                    desc,
+                    qty_milli,
+                    ccy,
+                    unit_tp,
+                    unit_cost,
+                    unsold_bps,
+                ) in sample_trades:
+                    s_id = sub_ids.get(s_code)
+                    b_id = sub_ids.get(b_code)
+                    if not s_id or not b_id:
+                        continue
+                    rate = int(fx_rates.get(ccy, DEFAULT_FX_RATE_MICROS.get(ccy, 1_000_000)))
+                    tot_tr, tot_cost, ic_prof, tr_usd, upii_usd = (
+                        compute_intercompany_trade_metrics(
+                            trade_kind=t_kind,
+                            quantity_milli=qty_milli,
+                            unit_transfer_price_minor=unit_tp,
+                            seller_unit_cost_minor=unit_cost,
+                            buyer_unsold_inventory_bps=unsold_bps,
+                            currency=ccy,
+                            fx_rate_micros=rate,
+                        )
+                    )
+                    await tcur.execute(
+                        """
+                        INSERT INTO gba.intercompany_trade_orders (
+                            tenant_id, sales_order_number, mirror_po_number, period_key, order_date,
+                            seller_subsidiary_id, buyer_subsidiary_id, trade_kind,
+                            transfer_pricing_method, item_sku, item_description, quantity_milli,
+                            currency, unit_transfer_price_minor, seller_unit_cost_minor,
+                            total_transfer_minor, total_seller_cost_minor,
+                            intercompany_profit_minor, buyer_unsold_inventory_bps,
+                            fx_rate_micros, transfer_usd_cents, upii_usd_cents,
+                            status, notes, created_by_user_id
+                        )
+                        VALUES (
+                            %s, %s, %s, %s, %s,
+                            %s, %s, %s,
+                            'cost_plus', %s, %s, %s,
+                            %s, %s, %s,
+                            %s, %s, %s,
+                            %s, %s, %s,
+                            %s, 'invoiced_eliminated', %s, %s
+                        )
+                        ON CONFLICT (tenant_id, sales_order_number) DO NOTHING
+                        """,
+                        (
+                            business_id,
+                            so_no,
+                            po_no,
+                            eff_period,
+                            today,
+                            s_id,
+                            b_id,
+                            t_kind,
+                            sku,
+                            desc,
+                            qty_milli,
+                            ccy,
+                            unit_tp,
+                            unit_cost,
+                            tot_tr,
+                            tot_cost,
+                            ic_prof,
+                            unsold_bps,
+                            rate,
+                            tr_usd,
+                            upii_usd,
+                            f"Sample Mirror SO/PO ({eff_period})",
+                            session.principal.user_id,
+                        ),
+                    )
+        except pg_errors.UndefinedTable:
+            pass
 
     return SeedSampleHoldingResponse(
         period_key=eff_period,
