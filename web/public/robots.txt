@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Allow: /legal/
+Allow: /shop/
 Disallow: /auth/
 Disallow: /v1/
 Disallow: /overview/
@@ -12,6 +13,12 @@ Disallow: /bookings/
 Disallow: /calendar/
 Disallow: /services/
 Disallow: /clients/
+Disallow: /inbox/
+Disallow: /workspace/
+Disallow: /industrial/
+Disallow: /global-finance/
+Disallow: /commercial/
+Disallow: /prepaid/
 Disallow: /staff/
 Disallow: /finance/
 Disallow: /ledger/

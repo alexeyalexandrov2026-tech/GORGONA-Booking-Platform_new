@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useState } from "react";
+import { buildPayrollRunCsv, triggerCsvDownload } from "../lib/csv-export";
 import {
   createFxEntry,
   createPayrollProfile,
@@ -266,6 +267,15 @@ export function GlobalFinanceHub({ businessId }: { businessId: string }) {
     } catch (err) {
       setError(errText(err));
     }
+  }
+
+  function onDownloadPayrollCsv(run: PayrollRun) {
+    const csv = buildPayrollRunCsv(run);
+    const safeName = `${run.run_number.replace(/[^A-Za-z0-9_-]/g, "_")}_gusto_adp.csv`;
+    triggerCsvDownload(safeName, csv);
+    setNotice(
+      `Downloaded ${safeName} (${run.lines.length} employee line(s)) ready for Gusto, ADP, or Check import.`,
+    );
   }
 
   async function onUpdateFxRate(e: React.FormEvent) {
@@ -776,6 +786,13 @@ export function GlobalFinanceHub({ businessId }: { businessId: string }) {
                     {fmtUsd(run.total_employer_taxes_cents)})
                   </div>
                   <div className="usr-inline" style={{ gap: 6 }}>
+                    <button
+                      type="button"
+                      className="secondary usr-small-btn"
+                      onClick={() => onDownloadPayrollCsv(run)}
+                    >
+                      Download Gusto / ADP CSV
+                    </button>
                     {run.status === "draft" && (
                       <button
                         type="button"

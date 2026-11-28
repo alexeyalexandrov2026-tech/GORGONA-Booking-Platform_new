@@ -26,6 +26,11 @@ SearchHitKind = Literal[
     "payment",
     "quote",
     "purchase_order",
+    "mrp_material",
+    "eam_asset",
+    "inbox_thread",
+    "payroll_profile",
+    "fx_entry",
 ]
 
 
@@ -287,6 +292,166 @@ async def search_business_records(
                         f"{row['three_way_match_status']}"
                     ),
                     path="/commercial/",
+                    status=str(row["status"]),
+                )
+            )
+
+        # 8. MRP II Materials & SKUs
+        await cur.execute(
+            """
+            SELECT id, sku, name, material_kind, unit,
+                   on_hand_milli, reserved_milli, preferred_vendor_name
+            FROM gba.mrp_materials
+            WHERE tenant_id = %s
+              AND (
+                  sku ILIKE %s ESCAPE '\\'
+                  OR name ILIKE %s ESCAPE '\\'
+                  OR preferred_vendor_name ILIKE %s ESCAPE '\\'
+              )
+            ORDER BY sku ASC
+            LIMIT %s
+            """,
+            (tenant_id, pattern, pattern, pattern, lim),
+        )
+        for row in await cur.fetchall():
+            avail = (int(row["on_hand_milli"]) - int(row["reserved_milli"])) / 1000
+            hits.append(
+                SearchHit(
+                    kind="mrp_material",
+                    id=str(row["id"]),
+                    title=f"{row['sku']} · {row['name']}",
+                    subtitle=(f"MRP {row['material_kind']} · {avail:,.2f} {row['unit']} available"),
+                    path="/industrial/",
+                    status=str(row["material_kind"]),
+                )
+            )
+
+        # 9. Predictive EAM & IoT Assets
+        await cur.execute(
+            """
+            SELECT id, asset_tag, name, serial_number, location_label, status, health_score
+            FROM gba.eam_assets
+            WHERE tenant_id = %s
+              AND (
+                  asset_tag ILIKE %s ESCAPE '\\'
+                  OR name ILIKE %s ESCAPE '\\'
+                  OR serial_number ILIKE %s ESCAPE '\\'
+                  OR location_label ILIKE %s ESCAPE '\\'
+              )
+            ORDER BY asset_tag ASC
+            LIMIT %s
+            """,
+            (tenant_id, pattern, pattern, pattern, pattern, lim),
+        )
+        for row in await cur.fetchall():
+            loc = f" · {row['location_label']}" if row["location_label"] else ""
+            hits.append(
+                SearchHit(
+                    kind="eam_asset",
+                    id=str(row["id"]),
+                    title=f"{row['asset_tag']} · {row['name']}",
+                    subtitle=f"IoT Asset · Health {row['health_score']}/100{loc}",
+                    path="/industrial/",
+                    status=str(row["status"]),
+                )
+            )
+
+        # 10. Omnichannel Client Inbox Threads
+        await cur.execute(
+            """
+            SELECT id, contact_name, contact_email, primary_channel,
+                   subject, status, unread_count
+            FROM gba.omnichannel_threads
+            WHERE tenant_id = %s
+              AND (
+                  contact_name ILIKE %s ESCAPE '\\'
+                  OR coalesce(contact_email, '') ILIKE %s ESCAPE '\\'
+                  OR subject ILIKE %s ESCAPE '\\'
+                  OR last_message_preview ILIKE %s ESCAPE '\\'
+              )
+            ORDER BY last_message_at DESC
+            LIMIT %s
+            """,
+            (tenant_id, pattern, pattern, pattern, pattern, lim),
+        )
+        for row in await cur.fetchall():
+            unread = f" · {row['unread_count']} unread" if int(row["unread_count"]) > 0 else ""
+            subject = str(row["subject"]) or "Conversation"
+            hits.append(
+                SearchHit(
+                    kind="inbox_thread",
+                    id=str(row["id"]),
+                    title=f"{row['contact_name']} · {subject}",
+                    subtitle=f"Client Inbox ({row['primary_channel']}){unread}",
+                    path="/inbox/",
+                    status=str(row["status"]),
+                )
+            )
+
+        # 11. US Payroll Employee Profiles
+        await cur.execute(
+            """
+            SELECT id, employee_code, full_name, work_state,
+                   overtime_rule, union_local_code, is_active
+            FROM gba.payroll_profiles
+            WHERE tenant_id = %s
+              AND (
+                  employee_code ILIKE %s ESCAPE '\\'
+                  OR full_name ILIKE %s ESCAPE '\\'
+                  OR union_local_code ILIKE %s ESCAPE '\\'
+              )
+            ORDER BY employee_code ASC
+            LIMIT %s
+            """,
+            (tenant_id, pattern, pattern, pattern, lim),
+        )
+        for row in await cur.fetchall():
+            union_str = f" · {row['union_local_code']}" if row["union_local_code"] else ""
+            hits.append(
+                SearchHit(
+                    kind="payroll_profile",
+                    id=str(row["id"]),
+                    title=f"{row['employee_code']} · {row['full_name']}",
+                    subtitle=(
+                        f"US Payroll ({row['work_state']}) · {row['overtime_rule']}{union_str}"
+                    ),
+                    path="/global-finance/",
+                    status="active" if row["is_active"] else "inactive",
+                )
+            )
+
+        # 12. Multi-Currency FX Ledger Entries
+        await cur.execute(
+            """
+            SELECT id, entry_number, description, counterparty_name, currency,
+                   amount_minor, status, fx_gain_loss_cents, realized_fx_gain_loss_cents
+            FROM gba.fx_ledger_entries
+            WHERE tenant_id = %s
+              AND (
+                  entry_number ILIKE %s ESCAPE '\\'
+                  OR description ILIKE %s ESCAPE '\\'
+                  OR counterparty_name ILIKE %s ESCAPE '\\'
+                  OR currency ILIKE %s ESCAPE '\\'
+              )
+            ORDER BY entry_date DESC, created_at DESC
+            LIMIT %s
+            """,
+            (tenant_id, pattern, pattern, pattern, pattern, lim),
+        )
+        for row in await cur.fetchall():
+            amt = int(row["amount_minor"]) / 100
+            pnl_cents = (
+                int(row["realized_fx_gain_loss_cents"])
+                if row["status"] == "settled"
+                else int(row["fx_gain_loss_cents"])
+            )
+            hits.append(
+                SearchHit(
+                    kind="fx_entry",
+                    id=str(row["id"]),
+                    title=f"{row['entry_number']} · {row['description']}",
+                    subtitle=(f"{row['currency']} {amt:,.2f} · FX P&L ${pnl_cents / 100:+,.2f}"),
+                    path="/global-finance/",
                     status=str(row["status"]),
                 )
             )

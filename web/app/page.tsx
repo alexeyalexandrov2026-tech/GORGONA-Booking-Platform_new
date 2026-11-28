@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "AMARKAL Platform — US Business OS (0% Commission)",
     description:
-      "Run any US business on one operating system across 39 NAICS industries with 0% commission, 7-tool Native MCP, and AI that asks first.",
+      "Run any US business on one operating system across 39 NAICS industries with 0% commission, 11-tool Native MCP, Smart Autonomy AI, MRP II, and US Payroll Prep.",
   },
   robots: { index: true, follow: true },
 };
@@ -61,7 +61,7 @@ const STRUCTURED_DATA = {
       operatingSystem: "Web",
       url: "https://www.amarkal-platform.com/",
       description:
-        "US Business Operating System across 39 NAICS industries covering operations, counterparties, contracts, staff, double-entry USD finance, optional client portals, 7-tool Native MCP, and human-in-the-loop AI.",
+        "US Business Operating System across 39 NAICS industries covering operations, MRP II & Predictive EAM/IoT, Omnichannel Inbox & Virtual PBX, US Payroll Prep, Multi-Currency FX & VAT, No-Code Studio, 1-Click B2C Shop, 11-tool Native MCP, and Hybrid Smart Autonomy AI.",
     },
   ],
 };
@@ -69,27 +69,27 @@ const STRUCTURED_DATA = {
 const TRUST = [
   {
     title: "Built for the United States",
-    text: "USD, US time zones and NAICS 2022. Nothing to translate or convert.",
+    text: "USD, US time zones, FLSA/CA payroll compliance and NAICS 2022 — plus multi-currency FX and EU/UK VAT when you expand.",
   },
   {
     title: "Your data stays yours",
-    text: "Every business is isolated at the PostgreSQL row level with 1-click JSON export.",
+    text: "Every business is isolated at the PostgreSQL row level with AES-256-GCM BYOK vaults and 1-click export.",
   },
   {
-    title: "AI that asks first",
-    text: "AI drafts proposals and operational setups. Nothing changes until a person approves.",
+    title: "Hybrid Smart Autonomy",
+    text: "Routine tasks can run automatically while payments, payroll, and contracts strictly require human approval.",
   },
   {
     title: "Open by design",
-    text: "Scoped API keys, signed webhooks and a 7-tool native MCP server in every workspace.",
+    text: "Scoped API keys, IoT & inbox webhooks, BYOK AI and an 11-tool native MCP server in every workspace.",
   },
 ] as const;
 
 const PRINCIPLES = [
-  "Your customers stay yours. They interact on your portal, under your brand.",
+  "Your customers stay yours. They interact on your portal or B2C shop, under your brand.",
   "We never take a percentage of your orders, services, or sales.",
-  "Direct Stripe US payouts (Cards, Apple Pay, Google Pay, ACH) straight to your bank.",
-  "Export or automate whenever you like. API keys, webhooks and MCP are included.",
+  "Direct Stripe US payouts (Cards, Apple Pay, Google Pay, ACH) plus SEPA & UK Faster Payments rails.",
+  "Export or automate whenever you like. API keys, webhooks and 11-tool MCP are included.",
 ] as const;
 
 const ARCHITECT_POINTS = [
@@ -100,14 +100,14 @@ const ARCHITECT_POINTS = [
 ] as const;
 
 const CONNECTORS = [
-  "Native MCP server (7 tools)",
-  "Stripe US Live & ACH",
+  "Native MCP server (11 tools)",
+  "BYOK AI (Anthropic, Gemini, OpenAI)",
+  "Stripe US Live, ACH & SEPA / UK Rails",
+  "Microsoft 365 & Google Workspace",
+  "Gusto, ADP & QuickBooks Export",
   "Zapier, Make and n8n",
-  "QuickBooks Online",
-  "Google Calendar and Outlook",
-  "Reserve with Google",
-  "Twilio SMS and voice",
-  "WhatsApp and Instagram DM",
+  "Built-In Email, Virtual PBX & SMS",
+  "Industrial IoT & Telematics Webhooks",
 ] as const;
 
 export default function HomePage() {
@@ -227,53 +227,95 @@ export default function HomePage() {
 
               <article className="lp-tile lp-tile--w2 lp-tile--dark">
                 <span className="lp-mono lp-mono--gold">AI</span>
-                <h3>AI Assistant</h3>
+                <h3>Smart Autonomy AI</h3>
                 <p>
-                  Drafts workspace setups, operational proposals and live
-                  business insights — executing actions only after explicit
-                  owner approval.
+                  Proactive weekly predictive insights, BYOK AI models, and
+                  configurable autonomy: safe routines auto-run while money,
+                  payroll, and contracts strictly require owner approval.
                 </p>
                 <div className="lp-tile-ai-pill" aria-hidden="true">
-                  <span>●</span> Human-in-the-loop · 0 unapproved writes
+                  <span>●</span> Hybrid Autonomy · 0 unapproved payouts
                 </div>
               </article>
 
               <article className="lp-tile lp-tile--w2">
                 <span className="lp-mono">02</span>
-                <h3>Clients &amp; documents</h3>
+                <h3>Clients, Inbox &amp; Virtual PBX</h3>
                 <p>
-                  Customer and vendor cards, versioned contracts and files with
-                  full immutable history.
+                  Counterparties, versioned contracts, built-in Email, Virtual
+                  PBX calls, SMS, and WhatsApp in one unified CRM timeline.
                 </p>
                 <div className="lp-tile-meta" aria-hidden="true">
-                  <span>Agreement v3</span>
-                  <span>Attested</span>
+                  <span>Built-In PBX</span>
+                  <span>Email · SMS · WA</span>
                 </div>
               </article>
 
               <article className="lp-tile lp-tile--w2">
                 <span className="lp-mono">03</span>
-                <h3>Staff &amp; shifts</h3>
+                <h3>Staff, Shifts &amp; US Payroll</h3>
                 <p>
-                  Weekly schedules, shift swaps with manager approval, and
-                  verified timesheets.
+                  Branch schedules, FLSA &amp; California §510 overtime, Union
+                  CBA compliance, and 1-click Gusto/ADP CSV export.
                 </p>
                 <div className="lp-tile-meta" aria-hidden="true">
-                  <span>Zero conflicts</span>
-                  <span>Branch RBAC</span>
+                  <span>FLSA · CA §510</span>
+                  <span>Gusto / ADP CSV</span>
                 </div>
               </article>
 
               <article className="lp-tile lp-tile--w2">
                 <span className="lp-mono">04</span>
-                <h3>Finance in USD</h3>
+                <h3>USD &amp; Multi-Currency FX</h3>
                 <p>
-                  Double-entry ledger, FIN-03 invoices, and live Stripe US
-                  reconciliation your accountant can follow.
+                  Double-entry FIN-03 ledger, real-time FX Gain/Loss
+                  revaluation, and live Stripe US reconciliation at 0%
+                  take-rate.
                 </p>
                 <div className="lp-tile-meta" aria-hidden="true">
                   <span>DR = CR</span>
-                  <span>0% take-rate</span>
+                  <span>Auto FX P&amp;L</span>
+                </div>
+              </article>
+
+              <article className="lp-tile lp-tile--w2">
+                <span className="lp-mono">05</span>
+                <h3>MRP II &amp; Predictive EAM</h3>
+                <p>
+                  Multi-level BOM explosion, atomic raw-material reservations,
+                  1-click Draft POs, and IoT sensor webhooks creating predictive
+                  Work Orders.
+                </p>
+                <div className="lp-tile-meta" aria-hidden="true">
+                  <span>Multi-Level BOM</span>
+                  <span>IoT Telemetry</span>
+                </div>
+              </article>
+
+              <article className="lp-tile lp-tile--w2">
+                <span className="lp-mono">06</span>
+                <h3>No-Code Studio &amp; B2C Shop</h3>
+                <p>
+                  Custom Kanban boards, typed fields, brand themes, and a
+                  1-click B2C storefront with promos, cart, and Stripe checkout.
+                </p>
+                <div className="lp-tile-meta">
+                  <Link href="/shop/?demo=1" className="lp-link-quiet">
+                    Try live B2C shop demo ›
+                  </Link>
+                </div>
+              </article>
+
+              <article className="lp-tile lp-tile--w2">
+                <span className="lp-mono">07</span>
+                <h3>Global Tax &amp; Local Rails</h3>
+                <p>
+                  US Sales Tax, EU/UK VAT with 0% B2B Reverse Charge, CA
+                  GST/HST, MX IVA, plus SEPA Instant &amp; UK Faster Payments.
+                </p>
+                <div className="lp-tile-meta" aria-hidden="true">
+                  <span>US / EU / UK VAT</span>
+                  <span>SEPA · FPS</span>
                 </div>
               </article>
             </div>
@@ -500,6 +542,9 @@ export default function HomePage() {
               </li>
               <li>
                 <Link href="/book/?demo=1">Industry demos</Link>
+              </li>
+              <li>
+                <Link href="/shop/?demo=1">B2C Shop demo</Link>
               </li>
               <li>
                 <Link href="/auth/signin/">Sign in</Link>

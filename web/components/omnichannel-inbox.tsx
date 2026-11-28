@@ -103,6 +103,9 @@ export function OmnichannelInbox({ businessId }: { businessId: string }) {
     channel: string;
     token: string;
   } | null>(null);
+  const [copiedInboxKind, setCopiedInboxKind] = useState<
+    "token" | "curl" | null
+  >(null);
 
   // Accessible label IDs
   const filterChId = useId();
@@ -336,6 +339,7 @@ export function OmnichannelInbox({ businessId }: { businessId: string }) {
           channel: CHANNEL_LABELS[res.channel.channel_type],
           token: res.webhook_token,
         });
+        setCopiedInboxKind(null);
       }
       setNotice(`Channel "${res.channel.display_name}" saved.`);
     } catch (err) {
@@ -355,12 +359,36 @@ export function OmnichannelInbox({ businessId }: { businessId: string }) {
           channel: CHANNEL_LABELS[ch.channel_type],
           token: res.webhook_token,
         });
+        setCopiedInboxKind(null);
       }
       setNotice(
         `Rotated inbound webhook token for ${ch.display_name}. Copy it now — shown once.`,
       );
     } catch (err) {
       setError(errText(err));
+    }
+  }
+
+  async function onCopyInboxSnippet(kind: "token" | "curl") {
+    if (!latestWebhookToken) return;
+    const origin =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://www.amarkal-platform.com";
+    const text =
+      kind === "token"
+        ? latestWebhookToken.token
+        : `curl -X POST "${origin}/v1/public/inbox/inbound" -H "Content-Type: application/json" -H "X-AMARKAL-Inbox-Token: ${latestWebhookToken.token}" -d '{"sender_name":"Sarah Miller","sender_phone":"+1-312-555-0199","subject":"Quote inquiry","body":"Can you confirm pickup window?"}'`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedInboxKind(kind);
+      setNotice(
+        kind === "token"
+          ? `Copied inbound webhook token for ${latestWebhookToken.channel}.`
+          : `Copied ready-to-run inbound webhook cURL command for ${latestWebhookToken.channel}.`,
+      );
+    } catch {
+      setError("Clipboard access was blocked by the browser.");
     }
   }
 
@@ -1066,6 +1094,26 @@ export function OmnichannelInbox({ businessId }: { businessId: string }) {
               >
                 {latestWebhookToken.token}
               </code>
+              <div className="usr-inline" style={{ marginTop: 10, gap: 8 }}>
+                <button
+                  type="button"
+                  className="secondary usr-small-btn"
+                  onClick={() => void onCopyInboxSnippet("token")}
+                >
+                  {copiedInboxKind === "token"
+                    ? "Token Copied ✓"
+                    : "Copy Token"}
+                </button>
+                <button
+                  type="button"
+                  className="usr-small-btn"
+                  onClick={() => void onCopyInboxSnippet("curl")}
+                >
+                  {copiedInboxKind === "curl"
+                    ? "cURL Copied ✓"
+                    : "Copy cURL Snippet"}
+                </button>
+              </div>
             </section>
           )}
 
