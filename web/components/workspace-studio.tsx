@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { B2CStorefrontBuilder } from "./b2c-storefront-builder";
 import {
   createBoardCard,
   createCustomField,
@@ -67,9 +68,9 @@ function errText(err: unknown): string {
 }
 
 export function WorkspaceStudio({ businessId }: { businessId: string }) {
-  const [activeTab, setActiveTab] = useState<"kanban" | "fields" | "theme">(
-    "kanban",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "kanban" | "fields" | "theme" | "shop"
+  >("kanban");
   const [boards, setBoards] = useState<WorkspaceBoard[]>([]);
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
   const [cards, setCards] = useState<WorkspaceBoardCard[]>([]);
@@ -383,7 +384,8 @@ export function WorkspaceStudio({ businessId }: { businessId: string }) {
           <p className="usr-muted" style={{ margin: "4px 0 0" }}>
             Customize AMARKAL for your industry without touching code:
             Drag-and-Drop Kanban workflows, typed Custom Fields across NAICS
-            entities, and WCAG-verified Brand Themes.
+            entities, WCAG-verified Brand Themes, and a 1-Click B2C Storefront
+            Builder.
           </p>
         </div>
       </div>
@@ -425,6 +427,17 @@ export function WorkspaceStudio({ businessId }: { businessId: string }) {
           onClick={() => setActiveTab("theme")}
         >
           Brand Theme &amp; Dashboard
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "shop"}
+          className={
+            activeTab === "shop" ? "usr-small-btn" : "secondary usr-small-btn"
+          }
+          onClick={() => setActiveTab("shop")}
+        >
+          1-Click B2C Shop Builder
         </button>
       </div>
 
@@ -1053,6 +1066,10 @@ export function WorkspaceStudio({ businessId }: { businessId: string }) {
             </button>
           </form>
         </section>
+      )}
+
+      {!loading && activeTab === "shop" && (
+        <B2CStorefrontBuilder businessId={businessId} />
       )}
     </div>
   );

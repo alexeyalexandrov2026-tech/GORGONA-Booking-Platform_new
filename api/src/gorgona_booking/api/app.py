@@ -12,6 +12,7 @@ from gorgona_booking.api import (
     agreements,
     ai_assistant,
     ai_autonomy,
+    b2c_storefront,
     businesses,
     commercial,
     configurations,
@@ -228,6 +229,7 @@ def create_app(
     app.include_router(ai_assistant.router)
     app.include_router(ai_autonomy.router)
     app.include_router(workspace_studio.router)
+    app.include_router(b2c_storefront.router)
     app.include_router(connectors.router)
     app.include_router(media.router)
     app.include_router(payments.router)
