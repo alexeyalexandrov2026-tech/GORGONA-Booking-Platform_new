@@ -12,6 +12,7 @@ Disallow: /banking/
 Disallow: /holding/
 Disallow: /onboarding/
 Disallow: /integrations/
+Disallow: /app-marketplace/
 Disallow: /settings/
 Disallow: /business/
 Disallow: /bookings/

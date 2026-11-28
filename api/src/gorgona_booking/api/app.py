@@ -47,6 +47,7 @@ from gorgona_booking.api import (
     omnichannel_inbox,
     payments,
     platform,
+    plugin_marketplace,
     projects_billing,
     projects_matters,
     projects_time,
@@ -244,6 +245,7 @@ def create_app(
     app.include_router(analytics_bi.router)
     app.include_router(bank_feeds.router)
     app.include_router(holding_consolidation.router)
+    app.include_router(plugin_marketplace.router)
     app.include_router(connectors.router)
     app.include_router(media.router)
     app.include_router(payments.router)
