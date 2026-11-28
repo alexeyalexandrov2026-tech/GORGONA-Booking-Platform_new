@@ -1359,7 +1359,8 @@ async def post_native_mcp(
                             "description": (
                                 "Ask the read-only grounded AMARKAL AI Business Copilot across "
                                 "bookings, Stripe payments, MRP II shortages, IoT Work Orders, "
-                                "Client Inbox, US Payroll drafts, and Multi-Currency FX."
+                                "Client Inbox, US Payroll drafts, Multi-Currency FX, US Bank "
+                                "Feeds reconciliation, and Holding intercompany eliminations."
                             ),
                             "inputSchema": {
                                 "type": "object",
@@ -1410,10 +1411,12 @@ async def post_native_mcp(
                         {
                             "name": "search_business_records",
                             "description": (
-                                "Search 12 tenant record types under FORCE RLS: counterparties, "
+                                "Search 16 tenant record types under FORCE RLS: counterparties, "
                                 "documents, FIN-03 invoices, catalog services, Stripe payments, "
                                 "commercial quotes, purchase orders, MRP II materials, IoT EAM "
-                                "assets, Client Inbox threads, US Payroll profiles, and FX entries."
+                                "assets, Client Inbox threads, US Payroll profiles, FX entries, "
+                                "US bank transactions, Holding subsidiaries, intercompany "
+                                "entries, and installed Marketplace plugins."
                             ),
                             "inputSchema": {
                                 "type": "object",

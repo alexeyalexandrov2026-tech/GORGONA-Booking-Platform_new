@@ -71,6 +71,20 @@ export const COMPETITORS: Record<CompetitorSpec["slug"], CompetitorSpec> = {
           "Requires configuring separate Zoho Desk, Zoho Mail, Zoho Commerce, and telephony add-ons",
       },
       {
+        capability: "US Bank Feeds & Auto-Reconciliation",
+        amarkal:
+          "Built-in OFX/QFX/QBO/CSV importer + encrypted Plaid BYOK connector with Human-in-the-Loop matching",
+        competitor:
+          "Direct bank feeds live inside Zoho Books separately from operational CRM & inventory modules",
+      },
+      {
+        capability: "Plugin Marketplace & Partner Ecosystem",
+        amarkal:
+          "Clean Core 1-click Plugin Marketplace (Customs ACE, X12 EDI, ELD, Avalara, FHIR) + amarkal-plugin.json SDK + US Partner Network",
+        competitor:
+          "Large third-party extension store across 45+ disparate apps with inconsistent permissions",
+      },
+      {
         capability: "Data Migration",
         amarkal:
           "1-click CSV Migration Wizard (Zoho, QuickBooks, Excel) + instant [DEMO] sandbox",
@@ -141,6 +155,20 @@ export const COMPETITORS: Record<CompetitorSpec["slug"], CompetitorSpec> = {
           "Visual Workspace Studio (Kanban, Custom Fields, Brand Themes) + 1-click B2C Storefront included",
         competitor:
           "Odoo Studio requires Enterprise licensing and can complicate future upgrades",
+      },
+      {
+        capability: "Plugin Marketplace & Clean Core SDK",
+        amarkal:
+          "1-click verified extensions (EDI, Customs ACE, Samsara ELD, HL7 FHIR, Remote MCP) via isolated amarkal-plugin.json SDK — zero core code breakage",
+        competitor:
+          "Thousands of community Python modules that mutate core tables and frequently break across Odoo upgrades",
+      },
+      {
+        capability: "Partner & Integrator Support",
+        amarkal:
+          "Self-deploy in minutes with AI Architect OR engage Certified US Partners & CPA Practices via native Multi-Client Delegations",
+        competitor:
+          "Complex implementations routinely depend on expensive multi-month Odoo partner retainers",
       },
       {
         capability: "Data Migration",
@@ -214,6 +242,13 @@ export const COMPETITORS: Record<CompetitorSpec["slug"], CompetitorSpec> = {
           "Requires external ecommerce storefront and third-party checkout integrations",
       },
       {
+        capability: "Visual BI, Gantt & Executive Dashboards",
+        amarkal:
+          "Live Executive BI (/analytics/) with Monthly Cashflow SVG charts, CPQ Sales Funnel, unified MRP II / EAM / Kanban Gantt, and Board Pack CSV/PDF",
+        competitor:
+          "Visual dashboards & Gantt charts over task boards, disconnected from double-entry accounting & bank feeds",
+      },
+      {
         capability: "AI Agent Integration",
         amarkal:
           "11-tool Native MCP server, BYOK AI keys, and proactive weekly Slack/Email executive digests",
@@ -284,6 +319,20 @@ export const COMPETITORS: Record<CompetitorSpec["slug"], CompetitorSpec> = {
           "Built-in B2B Quote Portal (/portal/), 1-click B2C Shop (/shop/), and Omnichannel Inbox",
         competitor:
           "Requires separate SuiteCommerce licensing and external CRM/PBX tools",
+      },
+      {
+        capability: "Multi-Entity Holding & Intercompany",
+        amarkal:
+          "Built-in Holding Consolidation (/holding/): unlimited US/EU/CA subsidiaries, FX translation to USD, mirrored Due To / Due From eliminations & NCI",
+        competitor:
+          "Requires high-cost NetSuite OneWorld enterprise add-on and multi-quarter consulting setup",
+      },
+      {
+        capability: "Executive BI & Direct US Bank Feeds",
+        amarkal:
+          "Visual BI & Gantt (/analytics/) + Chase/BofA/Wells Fargo OFX/CSV & Plaid BYOK reconciliation (/banking/) included",
+        competitor:
+          "SuiteAnalytics Workbook & third-party bank feed bundles add recurring licensing fees",
       },
       {
         capability: "Data Ownership & Lock-In",

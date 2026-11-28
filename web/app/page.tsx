@@ -61,7 +61,7 @@ const STRUCTURED_DATA = {
       operatingSystem: "Web",
       url: "https://www.amarkal-platform.com/",
       description:
-        "US Business Operating System across 39 NAICS industries covering operations, MRP II & Predictive EAM/IoT, Omnichannel Inbox & Virtual PBX, US Payroll Prep, Multi-Currency FX & VAT, No-Code Studio, 1-Click B2C Shop, 11-tool Native MCP, and Hybrid Smart Autonomy AI.",
+        "US Business Operating System across 39 NAICS industries covering operations, Executive BI & Gantt, US Direct Bank Feeds (OFX/CSV/Plaid BYOK), Multi-Entity Holding Consolidation, Plugin Marketplace SDK, MRP II & Predictive EAM/IoT, Omnichannel Inbox & Virtual PBX, US Payroll Prep, Multi-Currency FX & VAT, No-Code Studio, 1-Click B2C Shop, 11-tool Native MCP, and Hybrid Smart Autonomy AI.",
     },
   ],
 };
@@ -102,11 +102,11 @@ const ARCHITECT_POINTS = [
 const CONNECTORS = [
   "Native MCP server (11 tools)",
   "BYOK AI (Anthropic, Gemini, OpenAI)",
+  "US Direct Bank Feeds (Plaid BYOK / OFX)",
   "Stripe US Live, ACH & SEPA / UK Rails",
+  "Plugin Marketplace (amarkal-plugin.json)",
   "Microsoft 365 & Google Workspace",
   "Gusto, ADP & QuickBooks Export",
-  "Zapier, Make and n8n",
-  "Built-In Email, Virtual PBX & SMS",
   "Industrial IoT & Telematics Webhooks",
 ] as const;
 
@@ -316,6 +316,50 @@ export default function HomePage() {
                 <div className="lp-tile-meta" aria-hidden="true">
                   <span>US / EU / UK VAT</span>
                   <span>SEPA · FPS</span>
+                </div>
+              </article>
+
+              <article className="lp-tile lp-tile--w2">
+                <span className="lp-mono">08</span>
+                <h3>Executive BI &amp; Gantt</h3>
+                <p>
+                  Live visual Cashflow &amp; P&amp;L charts, CPQ sales funnels,
+                  cross-module MRP II / EAM / Kanban Gantt timelines, and
+                  1-click Board Pack CSV / PDF exports.
+                </p>
+                <div className="lp-tile-meta" aria-hidden="true">
+                  <span>Visual BI Engine</span>
+                  <span>Board Pack Export</span>
+                </div>
+              </article>
+
+              <article className="lp-tile lp-tile--w2">
+                <span className="lp-mono">09</span>
+                <h3>US Bank Feeds &amp; Holdings</h3>
+                <p>
+                  Direct Chase/BofA/Wells Fargo OFX/QBO/CSV &amp; Plaid BYOK
+                  auto-reconciliation, plus Multi-Entity Holding Due To / Due
+                  From eliminations and NCI.
+                </p>
+                <div className="lp-tile-meta" aria-hidden="true">
+                  <span>OFX · Plaid BYOK</span>
+                  <span>Multi-Entity GAAP</span>
+                </div>
+              </article>
+
+              <article className="lp-tile lp-tile--w2">
+                <span className="lp-mono">10</span>
+                <h3>Plugin SDK &amp; Partners</h3>
+                <p>
+                  1-click vertical Plugin Marketplace (Customs ACE, X12 EDI,
+                  Samsara ELD, Avalara, FHIR) with{" "}
+                  <code>amarkal-plugin.json</code> SDK and certified US
+                  integrators.
+                </p>
+                <div className="lp-tile-meta">
+                  <Link href="/partners/" className="lp-link-quiet">
+                    Explore Partner Network ›
+                  </Link>
                 </div>
               </article>
             </div>

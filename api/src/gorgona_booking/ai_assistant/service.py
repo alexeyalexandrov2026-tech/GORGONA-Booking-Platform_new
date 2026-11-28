@@ -796,6 +796,40 @@ def build_enterprise_copilot_insights(metrics: dict[str, Any]) -> list[CopilotIn
                 action_path="/global-finance/",
             )
         )
+    bank_unrec = int(metrics.get("bank_unreconciled_count", 0) or 0)
+    bank_sugg = int(metrics.get("bank_suggested_count", 0) or 0)
+    if bank_unrec > 0:
+        out.append(
+            CopilotInsight(
+                priority="high" if bank_unrec >= 10 else "medium",
+                category="bank_reconciliation",
+                title=(
+                    f"Reconcile {bank_unrec} US bank transaction(s) ({bank_sugg} auto-match ready)"
+                ),
+                detail=(
+                    "Review Human-in-the-Loop suggested matches against FIN-03 invoices, "
+                    "POs, Stripe settlements, and US Payroll in US Bank Feeds."
+                ),
+                action_path="/banking/",
+            )
+        )
+    ic_unelim = int(metrics.get("intercompany_uneliminated_count", 0) or 0)
+    ic_cents = int(metrics.get("intercompany_uneliminated_cents", 0) or 0)
+    if ic_unelim > 0:
+        out.append(
+            CopilotInsight(
+                priority="medium",
+                category="holding_consolidation",
+                title=(
+                    f"{ic_unelim} uneliminated intercompany entry(ies) (${ic_cents / 100:,.2f} USD)"
+                ),
+                detail=(
+                    "Review mirrored Due To / Due From entries in Holding & Multi-Entity "
+                    "and mark eliminated before exporting consolidated Board Pack reports."
+                ),
+                action_path="/holding/",
+            )
+        )
     return out
 
 
@@ -929,9 +963,37 @@ async def gather_owner_copilot_context(
                 (SELECT coalesce(sum(fx_gain_loss_cents), 0) FROM gba.fx_ledger_entries
                  WHERE tenant_id = %s AND status = 'open') AS fx_unrealized_cents,
                 (SELECT count(*) FROM gba.payroll_runs
-                 WHERE tenant_id = %s AND status = 'draft') AS draft_payroll_runs
+                 WHERE tenant_id = %s AND status = 'draft') AS draft_payroll_runs,
+                (SELECT count(*) FROM gba.bank_feed_transactions
+                 WHERE tenant_id = %s
+                   AND reconciliation_status IN ('unmatched', 'suggested')) AS bank_unreconciled,
+                (SELECT count(*) FROM gba.bank_feed_transactions
+                 WHERE tenant_id = %s
+                   AND reconciliation_status = 'suggested') AS bank_suggested,
+                (SELECT count(*) FROM gba.holding_subsidiaries
+                 WHERE tenant_id = %s AND is_active) AS holding_subs,
+                (SELECT count(*) FROM gba.intercompany_transactions
+                 WHERE tenant_id = %s AND status = 'posted') AS ic_uneliminated,
+                (SELECT coalesce(sum(usd_equivalent_cents), 0)
+                 FROM gba.intercompany_transactions
+                 WHERE tenant_id = %s AND status = 'posted') AS ic_uneliminated_cents,
+                (SELECT count(*) FROM gba.marketplace_plugin_installations
+                 WHERE tenant_id = %s AND status = 'installed') AS mkt_plugins_cnt
             """,
-            (tenant_id, tenant_id, tenant_id, tenant_id, tenant_id, tenant_id),
+            (
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+                tenant_id,
+            ),
         )
         ent_row = await cur.fetchone() or {
             "mrp_shortage_runs": 0,
@@ -940,6 +1002,12 @@ async def gather_owner_copilot_context(
             "fx_open_entries": 0,
             "fx_unrealized_cents": 0,
             "draft_payroll_runs": 0,
+            "bank_unreconciled": 0,
+            "bank_suggested": 0,
+            "holding_subs": 0,
+            "ic_uneliminated": 0,
+            "ic_uneliminated_cents": 0,
+            "mkt_plugins_cnt": 0,
         }
 
     stripe_paid_cents = int(prow["paid_cents"])
@@ -977,6 +1045,12 @@ async def gather_owner_copilot_context(
         "fx_open_entries_count": int(ent_row["fx_open_entries"]),
         "fx_unrealized_gain_loss_cents": int(ent_row["fx_unrealized_cents"]),
         "draft_payroll_runs_count": int(ent_row["draft_payroll_runs"]),
+        "bank_unreconciled_count": int(ent_row["bank_unreconciled"]),
+        "bank_suggested_count": int(ent_row["bank_suggested"]),
+        "holding_subsidiaries_count": int(ent_row["holding_subs"]),
+        "intercompany_uneliminated_count": int(ent_row["ic_uneliminated"]),
+        "intercompany_uneliminated_cents": int(ent_row["ic_uneliminated_cents"]),
+        "installed_marketplace_plugins_count": int(ent_row["mkt_plugins_cnt"]),
     }
 
     insights: list[CopilotInsight] = []
