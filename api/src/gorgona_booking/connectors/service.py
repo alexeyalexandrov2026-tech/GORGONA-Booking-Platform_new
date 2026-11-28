@@ -135,15 +135,27 @@ CONNECTOR_CATALOG: tuple[ConnectorCatalogItem, ...] = (
     ),
     ConnectorCatalogItem(
         id="google_calendar",
-        name="Google Calendar & Outlook",
+        name="Google Calendar",
         category="Scheduling",
         summary=(
-            "Connect staff calendars so personal blocks and external events stay aligned with "
-            "live AMARKAL availability."
+            "Connect Google Workspace staff calendars so personal blocks and external events stay "
+            "aligned with live AMARKAL availability."
         ),
         auth_mode="oauth_ready",
         fields=("calendar_email",),
         us_highlight="Eliminates double-bookings across field & service teams",
+    ),
+    ConnectorCatalogItem(
+        id="microsoft_365",
+        name="Microsoft 365 (Outlook, Calendar & Teams)",
+        category="Productivity (Optional)",
+        summary=(
+            "Optional OAuth2 connector for organizations running Microsoft 365: sync Outlook "
+            "calendars, send quote/PO emails through Outlook Mail, and route Teams alerts."
+        ),
+        auth_mode="oauth_ready",
+        fields=("mailbox_email", "teams_channel"),
+        us_highlight="Optional customer-chosen Microsoft Graph bridge — zero core lock-in",
     ),
     ConnectorCatalogItem(
         id="reserve_with_google",

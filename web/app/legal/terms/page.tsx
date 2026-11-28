@@ -46,7 +46,7 @@ export default function TermsOfServicePage() {
         </p>
         <h1>AMARKAL Platform Terms of Service (United States)</h1>
         <p>
-          <strong>Effective date:</strong> November 26, 2026
+          <strong>Effective date:</strong> November 27, 2026
           <br />
           <strong>Operator:</strong> Alexey AAA Logistics LLC (doing business as{" "}
           <strong>AMARKAL Platform</strong>)
@@ -112,14 +112,30 @@ export default function TermsOfServicePage() {
           </li>
         </ul>
 
-        <h2>4. Acceptable Use, Security, and Account Responsibility</h2>
+        <h2>
+          4. Optional Third-Party Connectors &amp; Bring-Your-Own-Key (BYOK) AI
+        </h2>
+        <p>
+          Tenants may optionally connect third-party applications, custom HTTPS
+          or MCP plugins, OAuth2 services (such as QuickBooks Online, Xero,
+          Google Calendar, Microsoft 365, or Slack), or their own commercial AI
+          provider API keys (such as Anthropic, Google Gemini, or OpenAI) inside
+          App Hub. Any data exchanged with a tenant-selected third-party vendor
+          is governed solely by the tenant&apos;s direct agreement and Data
+          Processing Addendum (DPA) with that vendor. AMARKAL Platform does not
+          control third-party pricing, usage quotas, uptime, or vendor-side data
+          policies, and regulated-industry restrictions (including the HIPAA/PHI
+          prohibition in Section 3) continue to apply.
+        </p>
+
+        <h2>5. Acceptable Use, Security, and Account Responsibility</h2>
         <p>
           Tenants must maintain accurate staff access grants, promptly revoke
           departed staff memberships, and refrain from attempting cross-tenant
           access, automated abuse, or unlawful data processing.
         </p>
 
-        <h2>5. Governing Law</h2>
+        <h2>6. Governing Law</h2>
         <p>
           These Terms are governed by applicable United States federal law and
           the laws of the State of Delaware, without regard to conflict-of-laws

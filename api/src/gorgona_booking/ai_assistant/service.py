@@ -28,6 +28,11 @@ from zoneinfo import ZoneInfo
 from psycopg import AsyncConnection
 from psycopg.rows import dict_row
 
+from gorgona_booking.ai_assistant.byok import (
+    TenantByokAiConfig,
+    call_byok_llm_sync,
+    load_active_tenant_byok_ai,
+)
 from gorgona_booking.customer import queries as customer_queries
 from gorgona_booking.customer.contracts import AvailabilityQuery, BootstrapView, VariantView
 from gorgona_booking.db.pool import RuntimeConnection
@@ -98,9 +103,19 @@ class RecommendedSlot:
     duration_minutes: int
 
 
+AiEngine = Literal[
+    "cloudflare",
+    "gemini",
+    "byok_anthropic",
+    "byok_gemini",
+    "byok_openai",
+    "grounded",
+]
+
+
 @dataclass(frozen=True)
 class AssistantResult:
-    engine: Literal["cloudflare", "gemini", "grounded"]
+    engine: AiEngine
     business_name: str
     reply: str
     recommended_slots: list[RecommendedSlot]
@@ -119,7 +134,7 @@ class CopilotInsight:
 
 @dataclass(frozen=True)
 class CopilotResult:
-    engine: Literal["cloudflare", "gemini", "grounded"]
+    engine: AiEngine
     business_name: str
     reply: str
     metrics: dict[str, Any]
@@ -389,8 +404,19 @@ def _call_gemini_sync(system_prompt: str, user_payload: dict[str, Any]) -> str |
 def _synthesize_reply_sync(
     system_prompt: str,
     user_payload: dict[str, Any],
-) -> tuple[Literal["cloudflare", "gemini"], str] | None:
-    """Select the configured LLM provider (Cloudflare Workers AI -> Gemini) with safe fallback."""
+    byok_config: TenantByokAiConfig | None = None,
+) -> (
+    tuple[
+        Literal["cloudflare", "gemini", "byok_anthropic", "byok_gemini", "byok_openai"],
+        str,
+    ]
+    | None
+):
+    """Select tenant BYOK LLM first (if enabled), then platform LLM with safe fallback."""
+    if byok_config is not None and byok_config.enabled:
+        byok_reply = call_byok_llm_sync(byok_config, system_prompt, user_payload)
+        if byok_reply:
+            return byok_reply
     provider = os.environ.get("GBA_AI_PROVIDER", "auto").strip().lower() or "auto"
     if provider == "grounded":
         return None
@@ -470,6 +496,7 @@ class CustomerAssistantContext:
     recommended_slots: list[RecommendedSlot]
     waitlist_suggested: bool
     early_result: AssistantResult | None = None
+    byok_config: TenantByokAiConfig | None = None
 
 
 async def gather_customer_assistant_context(
@@ -479,6 +506,7 @@ async def gather_customer_assistant_context(
     message: str,
     location_id: UUID | None = None,
     preferred_day: date | None = None,
+    environment: str = "local",
 ) -> CustomerAssistantContext:
     """Gather verified live catalog and slot availability inside a short DB transaction."""
     settings = await get_growth_settings(conn, tenant_id=tenant_id)
@@ -577,6 +605,9 @@ async def gather_customer_assistant_context(
                     break
 
     waitlist_suggested = len(recommended) == 0 and settings.waitlist_auto_offer
+    byok_config = await load_active_tenant_byok_ai(
+        conn, tenant_id=tenant_id, environment=environment
+    )
     return CustomerAssistantContext(
         boot=boot,
         ai_assistant_tone=settings.ai_assistant_tone,
@@ -585,6 +616,7 @@ async def gather_customer_assistant_context(
         ranked_variants=ranked_variants,
         recommended_slots=recommended,
         waitlist_suggested=waitlist_suggested,
+        byok_config=byok_config,
     )
 
 
@@ -631,6 +663,7 @@ async def synthesize_customer_assistant(ctx: CustomerAssistantContext) -> Assist
             ],
             "waitlist_suggested": ctx.waitlist_suggested,
         },
+        ctx.byok_config,
     )
 
     if synthesized:
@@ -682,12 +715,14 @@ class CopilotContext:
     business_name: str
     metrics: dict[str, Any]
     insights: list[CopilotInsight]
+    byok_config: TenantByokAiConfig | None = None
 
 
 async def gather_owner_copilot_context(
     conn: AsyncConnection[Any],
     *,
     tenant_id: UUID,
+    environment: str = "local",
 ) -> CopilotContext:
     """Gather cross-domain live PostgreSQL 18 facts inside a short read-only transaction."""
     growth = await get_growth_settings(conn, tenant_id=tenant_id)
@@ -925,7 +960,15 @@ async def gather_owner_copilot_context(
             action_path="/prepaid/",
         )
     )
-    return CopilotContext(business_name=business_name, metrics=metrics, insights=insights)
+    byok_config = await load_active_tenant_byok_ai(
+        conn, tenant_id=tenant_id, environment=environment
+    )
+    return CopilotContext(
+        business_name=business_name,
+        metrics=metrics,
+        insights=insights,
+        byok_config=byok_config,
+    )
 
 
 async def synthesize_owner_copilot(
@@ -954,6 +997,7 @@ async def synthesize_owner_copilot(
                 {"priority": i.priority, "title": i.title, "detail": i.detail} for i in ctx.insights
             ],
         },
+        ctx.byok_config,
     )
 
     if synthesized:

@@ -168,7 +168,7 @@ async function getJson<T>(path: string, schema: z.ZodType<T>): Promise<T> {
 
 async function sendJson<T>(
   path: string,
-  method: "POST" | "PUT",
+  method: "POST" | "PUT" | "PATCH",
   body: unknown,
   schema: z.ZodType<T>,
 ): Promise<T> {
@@ -304,6 +304,200 @@ export function startConnectorOAuth(
     "POST",
     undefined,
     oauthStartSchema,
+  );
+}
+
+export const byokProviderIdSchema = z.enum([
+  "anthropic",
+  "google_gemini",
+  "openai",
+]);
+export type ByokProviderId = z.infer<typeof byokProviderIdSchema>;
+
+export const byokProviderCatalogEntrySchema = z.object({
+  id: byokProviderIdSchema,
+  display_name: z.string(),
+  default_model: z.string(),
+  suggested_models: z.array(z.string()),
+  key_prefix_hint: z.string(),
+});
+export type ByokProviderCatalogEntry = z.infer<
+  typeof byokProviderCatalogEntrySchema
+>;
+
+export const byokAiConfigSchema = z.object({
+  configured: z.boolean(),
+  enabled: z.boolean(),
+  provider: byokProviderIdSchema.nullable().optional(),
+  model: z.string().nullable().optional(),
+  key_hint: z.string().nullable().optional(),
+  updated_at: z.string().nullable().optional(),
+  supported_providers: z.array(byokProviderCatalogEntrySchema),
+});
+export type ByokAiConfig = z.infer<typeof byokAiConfigSchema>;
+
+export const byokAiProbeSchema = z.object({
+  ok: z.boolean(),
+  provider: byokProviderIdSchema,
+  model: z.string(),
+  http_status: z.number().int().nullable().optional(),
+  latency_ms: z.number().int(),
+  message: z.string(),
+});
+export type ByokAiProbeResult = z.infer<typeof byokAiProbeSchema>;
+
+export const customPluginProtocolSchema = z.enum([
+  "https_api",
+  "mcp_remote",
+  "webhook_bridge",
+  "oauth2_custom",
+]);
+export type CustomPluginProtocol = z.infer<typeof customPluginProtocolSchema>;
+
+export const customPluginAuthSchemeSchema = z.enum([
+  "Bearer",
+  "ApiKey",
+  "None",
+]);
+export type CustomPluginAuthScheme = z.infer<
+  typeof customPluginAuthSchemeSchema
+>;
+
+export const customPluginSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  display_name: z.string(),
+  category: z.string(),
+  protocol: customPluginProtocolSchema,
+  endpoint_url: z.string(),
+  auth_header_name: z.string(),
+  auth_scheme: customPluginAuthSchemeSchema,
+  scopes: z.array(z.string()),
+  subscribed_events: z.array(z.string()),
+  description: z.string(),
+  has_secret: z.boolean(),
+  secret_hint: z.string().nullable().optional(),
+  status: z.enum(["active", "paused"]),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type CustomPlugin = z.infer<typeof customPluginSchema>;
+
+export const customPluginProbeSchema = z.object({
+  ok: z.boolean(),
+  status: z.enum(["reachable", "unreachable", "local_validated"]),
+  http_status: z.number().int().nullable().optional(),
+  latency_ms: z.number().int(),
+  message: z.string(),
+});
+export type CustomPluginProbeResult = z.infer<typeof customPluginProbeSchema>;
+
+export function fetchByokAiConfig(businessId: string): Promise<ByokAiConfig> {
+  return getJson(`${base(businessId)}/ai-provider`, byokAiConfigSchema);
+}
+
+export function saveByokAiConfig(
+  businessId: string,
+  input: {
+    provider: ByokProviderId;
+    model?: string;
+    api_key?: string;
+    enabled: boolean;
+  },
+): Promise<ByokAiConfig> {
+  return sendJson(
+    `${base(businessId)}/ai-provider`,
+    "PUT",
+    input,
+    byokAiConfigSchema,
+  );
+}
+
+export function testByokAiConfig(
+  businessId: string,
+): Promise<ByokAiProbeResult> {
+  return sendJson(
+    `${base(businessId)}/ai-provider/test`,
+    "POST",
+    undefined,
+    byokAiProbeSchema,
+  );
+}
+
+export function deleteByokAiConfig(businessId: string): Promise<void> {
+  return remove(`${base(businessId)}/ai-provider`);
+}
+
+export function fetchCustomPlugins(
+  businessId: string,
+): Promise<CustomPlugin[]> {
+  return getJson(
+    `${base(businessId)}/custom-plugins`,
+    z.array(customPluginSchema),
+  );
+}
+
+export function createCustomPlugin(
+  businessId: string,
+  input: {
+    slug: string;
+    display_name: string;
+    category: string;
+    protocol: CustomPluginProtocol;
+    endpoint_url: string;
+    auth_header_name: string;
+    auth_scheme: CustomPluginAuthScheme;
+    auth_credential?: string;
+    scopes: string[];
+    subscribed_events: string[];
+    description: string;
+  },
+): Promise<CustomPlugin> {
+  return sendJson(
+    `${base(businessId)}/custom-plugins`,
+    "POST",
+    input,
+    customPluginSchema,
+  );
+}
+
+export function updateCustomPlugin(
+  businessId: string,
+  pluginId: string,
+  input: {
+    status?: "active" | "paused";
+    endpoint_url?: string;
+    description?: string;
+    auth_credential?: string;
+    clear_secret?: boolean;
+  },
+): Promise<CustomPlugin> {
+  return sendJson(
+    `${base(businessId)}/custom-plugins/${encodeURIComponent(pluginId)}`,
+    "PATCH",
+    input,
+    customPluginSchema,
+  );
+}
+
+export function deleteCustomPlugin(
+  businessId: string,
+  pluginId: string,
+): Promise<void> {
+  return remove(
+    `${base(businessId)}/custom-plugins/${encodeURIComponent(pluginId)}`,
+  );
+}
+
+export function probeCustomPlugin(
+  businessId: string,
+  pluginId: string,
+): Promise<CustomPluginProbeResult> {
+  return sendJson(
+    `${base(businessId)}/custom-plugins/${encodeURIComponent(pluginId)}/probe`,
+    "POST",
+    undefined,
+    customPluginProbeSchema,
   );
 }
 
