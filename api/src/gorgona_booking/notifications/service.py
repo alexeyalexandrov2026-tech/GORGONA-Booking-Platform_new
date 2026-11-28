@@ -72,6 +72,10 @@ TEMPLATES: dict[str, tuple[str, str]] = {
         "Your scheduled billing statement {reference} for {amount} from {business_name} is ready. "
         "View details and complete settlement here: {action_url}",
     ),
+    "predictive_weekly_brief": (
+        "AMARKAL Weekly Predictive Brief — {business_name} ({reference})",
+        "{amount}\n\nOpen live executive overview: {action_url}",
+    ),
 }
 
 

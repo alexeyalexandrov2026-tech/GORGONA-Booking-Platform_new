@@ -5,6 +5,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { BusinessLaunchpadCard } from "../../components/business-launchpad-card";
 import { ManagementLayout } from "../../components/management-layout";
 import { OwnerCopilotPanel } from "../../components/owner-copilot-panel";
+import { SmartAutonomyPanel } from "../../components/smart-autonomy-panel";
 import { UnitEconomicsCard } from "../../components/unit-economics-card";
 import {
   businessDateTime,
@@ -280,6 +281,8 @@ function OverviewContent({
       <UnitEconomicsCard businessId={salonId} />
 
       <OwnerCopilotPanel salonId={salonId} />
+
+      <SmartAutonomyPanel businessId={salonId} />
 
       <div className="mgmt-section-header">
         <h2>Today’s Schedule</h2>
