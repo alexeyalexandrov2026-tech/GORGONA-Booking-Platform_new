@@ -118,6 +118,11 @@ const NAV_ITEMS: readonly NavItem[] = [
     group: "Finance",
   },
   {
+    href: "/holding/",
+    label: "Holding & Multi-Entity",
+    group: "Finance",
+  },
+  {
     href: "/materials/",
     label: "Materials",
     group: "Finance",

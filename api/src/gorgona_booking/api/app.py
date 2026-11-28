@@ -32,6 +32,7 @@ from gorgona_booking.api import (
     groups,
     growth,
     health,
+    holding_consolidation,
     holds,
     industrial_mrp_eam,
     inventory,
@@ -242,6 +243,7 @@ def create_app(
     app.include_router(migration_sandbox.router)
     app.include_router(analytics_bi.router)
     app.include_router(bank_feeds.router)
+    app.include_router(holding_consolidation.router)
     app.include_router(connectors.router)
     app.include_router(media.router)
     app.include_router(payments.router)

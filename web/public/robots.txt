@@ -9,6 +9,7 @@ Disallow: /v1/
 Disallow: /overview/
 Disallow: /analytics/
 Disallow: /banking/
+Disallow: /holding/
 Disallow: /onboarding/
 Disallow: /integrations/
 Disallow: /settings/
