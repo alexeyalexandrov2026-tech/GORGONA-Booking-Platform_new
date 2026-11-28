@@ -83,6 +83,7 @@ from gorgona_booking.api import (
     timesheets,
     transport,
     visits,
+    workflow_bpmn,
     workforce,
     workforce_desk,
     workspace_studio,
@@ -250,6 +251,7 @@ def create_app(
     app.include_router(plugin_marketplace.router)
     app.include_router(partner_network.router)
     app.include_router(abac_policies.router)
+    app.include_router(workflow_bpmn.router)
     app.include_router(connectors.router)
     app.include_router(media.router)
     app.include_router(payments.router)
