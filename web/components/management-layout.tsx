@@ -253,6 +253,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: "/migrate/", label: "Migrate & Sandbox", group: "Platform" },
   { href: "/integrations/", label: "App Hub", group: "Platform" },
   { href: "/app-marketplace/", label: "Plugin Marketplace", group: "Platform" },
+  { href: "/partners/", label: "Partner Network", group: "Platform" },
   { href: "/settings/", label: "Settings", group: "Platform" },
 ];
 
