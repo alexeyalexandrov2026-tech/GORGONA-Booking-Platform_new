@@ -570,8 +570,8 @@ export function SupplyScreen({
         setWoOwnerId(created.goods_owner_id);
         setOrdOwnerId(created.goods_owner_id);
       }
-      setNotice(`Saved goods owner ${created.code}`);
       await reloadAll();
+      setNotice(`Saved goods owner ${created.code}`);
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -602,8 +602,8 @@ export function SupplyScreen({
       setOutBinId(created.bin_id);
       setShpBinId(created.bin_id);
       setCRetBinId(created.bin_id);
-      setNotice(`Saved warehouse bin ${created.bin_code}`);
       await reloadAll();
+      setNotice(`Saved warehouse bin ${created.bin_code}`);
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -632,8 +632,8 @@ export function SupplyScreen({
       setInLotId(created.lot_id);
       setIssLotId(created.lot_id);
       setShpLotId(created.lot_id);
-      setNotice(`Saved lot ${created.lot_code}`);
       await reloadAll();
+      setNotice(`Saved lot ${created.lot_code}`);
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -662,8 +662,8 @@ export function SupplyScreen({
         auto_stock_receipt_reason: "purchase",
         auto_stock_receipt_amount: isCompany ? inAmount : null,
       });
-      setNotice(`Recorded inbound putaway (${mov.quantity} units)`);
       await reloadAll();
+      setNotice(`Recorded inbound putaway (${mov.quantity} units)`);
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -705,8 +705,8 @@ export function SupplyScreen({
       setBomCode("");
       setBomTitle("");
       setWoBomId(created.bom_id);
-      setNotice(`Saved BOM ${created.code}`);
       await reloadAll();
+      setNotice(`Saved BOM ${created.code}`);
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -735,8 +735,8 @@ export function SupplyScreen({
       });
       setWoCode("");
       setSelectedWoId(created.work_order_id);
-      setNotice(`Created work order ${created.code}`);
       await reloadAll({ woId: created.work_order_id });
+      setNotice(`Created work order ${created.code}`);
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -761,10 +761,10 @@ export function SupplyScreen({
       });
       setRetIssueId(iss.issue_id);
       setRetBinId(iss.bin_id);
+      await reloadAll();
       setNotice(
         `Issued ${iss.quantity} component units (STOCK-01 cost ${formatSupplyMinor(iss.cost_minor)})`,
       );
-      await reloadAll();
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -785,10 +785,10 @@ export function SupplyScreen({
         quantity: Number(retQty) || 1,
         document_date: retDate,
       });
+      await reloadAll();
       setNotice(
         `Returned ${ret.quantity} unused component units (cost restored ${formatSupplyMinor(ret.cost_returned_minor)})`,
       );
-      await reloadAll();
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -808,8 +808,8 @@ export function SupplyScreen({
         scrap_quantity: Number(qcScrapQty) || 0,
         notes: "QC passed in UI",
       });
-      setNotice(`Recorded QC inspection (${qc.passed_quantity} passed)`);
       await reloadAll();
+      setNotice(`Recorded QC inspection (${qc.passed_quantity} passed)`);
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -831,10 +831,10 @@ export function SupplyScreen({
       });
       setShpLotId(out.output_lot_id);
       setShpBinId(out.bin_id);
+      await reloadAll();
       setNotice(
         `Posted finished output lot (${out.quantity} units, total cost ${formatSupplyMinor(out.total_cost_minor)})`,
       );
-      await reloadAll();
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -868,8 +868,8 @@ export function SupplyScreen({
       setPlCode("");
       setPlTitle("");
       setOrdPriceListId(created.price_list_id);
-      setNotice(`Saved price list ${created.code}`);
       await reloadAll();
+      setNotice(`Saved price list ${created.code}`);
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -919,8 +919,8 @@ export function SupplyScreen({
       if (created.lines[0]) {
         setShpLineId(created.lines[0].order_line_id);
       }
-      setNotice(`Created trade order ${created.code}`);
       await reloadAll({ orderId: created.order_id });
+      setNotice(`Created trade order ${created.code}`);
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -950,10 +950,10 @@ export function SupplyScreen({
       );
       setCRetShipmentId(shp.shipment_id);
       setCRetBinId(shp.bin_id);
+      await reloadAll();
       setNotice(
         `Shipped ${shp.quantity} units (revenue ${formatSupplyMinor(shp.revenue_minor)}, COGS ${formatSupplyMinor(shp.cogs_minor)})`,
       );
-      await reloadAll();
     } catch (err) {
       setError(supplyError(err));
     } finally {
@@ -982,10 +982,10 @@ export function SupplyScreen({
         document_date: cRetDate,
         reason: cRetReason.trim(),
       });
+      await reloadAll();
       setNotice(
         `Processed customer return (${ret.quantity} units, refund ${formatSupplyMinor(ret.refund_minor)}, COGS restored ${formatSupplyMinor(ret.cogs_restored_minor)})`,
       );
-      await reloadAll();
     } catch (err) {
       setError(supplyError(err));
     } finally {

@@ -15,10 +15,16 @@ Invariants:
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
+import http.client
+import json
 import re
+import ssl
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
+from urllib.parse import urlparse
 from uuid import UUID
 
 from psycopg import AsyncConnection
@@ -28,6 +34,10 @@ from psycopg.types.json import Jsonb
 from gorgona_booking.ai_assistant.byok import TenantByokAiConfig, load_active_tenant_byok_ai
 from gorgona_booking.ai_assistant.service import AiEngine, _synthesize_reply_sync
 from gorgona_booking.business.recurring_aging import build_tenant_aging_report
+from gorgona_booking.connectors.service import (
+    WebhookProbeOutcome,
+    validate_public_webhook_url,
+)
 from gorgona_booking.db.pool import RuntimeConnection
 from gorgona_booking.notifications.service import EMAIL_RE, validate_and_mask_recipient
 
@@ -526,6 +536,12 @@ def compute_predictive_health_and_signals(
     waitlist_count: int,
     waitlist_value_cents: int,
     failed_notifications_count: int,
+    mrp_shortage_runs_count: int = 0,
+    eam_open_work_orders_count: int = 0,
+    inbox_unread_threads_count: int = 0,
+    draft_payroll_runs_count: int = 0,
+    fx_open_entries_count: int = 0,
+    fx_unrealized_gain_loss_cents: int = 0,
 ) -> tuple[int, str, list[PredictiveSignal]]:
     """Pure deterministic CFO predictive scoring & anomaly extraction (zero hallucinations)."""
     score = 92
@@ -663,6 +679,102 @@ def compute_predictive_health_and_signals(
             )
         )
 
+    if mrp_shortage_runs_count > 0:
+        score -= 10
+        signals.append(
+            PredictiveSignal(
+                severity="high",
+                category="mrp_supply_chain",
+                title=f"MRP II Raw-Material Shortages on {mrp_shortage_runs_count} Run(s)",
+                metric_label=f"{mrp_shortage_runs_count} blocked run(s)",
+                recommendation=(
+                    "Open Industrial ERP -> Production Runs to generate 1-click Draft POs "
+                    "for missing raw materials before shop-floor schedules slip."
+                ),
+                action_path="/industrial/",
+            )
+        )
+
+    if eam_open_work_orders_count > 0:
+        score -= 10
+        signals.append(
+            PredictiveSignal(
+                severity="high",
+                category="predictive_eam",
+                title=f"{eam_open_work_orders_count} Predictive IoT Work Order(s) Open",
+                metric_label=f"{eam_open_work_orders_count} open WO(s)",
+                recommendation=(
+                    "Industrial sensor telemetry triggered pre-failure alerts. Schedule "
+                    "preventive service in Industrial ERP -> Predictive Work Orders."
+                ),
+                action_path="/industrial/",
+            )
+        )
+
+    if inbox_unread_threads_count > 0:
+        score -= 6
+        signals.append(
+            PredictiveSignal(
+                severity="medium",
+                category="omnichannel_crm",
+                title=f"{inbox_unread_threads_count} Unread Client Inbox Conversation(s)",
+                metric_label=f"{inbox_unread_threads_count} unread",
+                recommendation=(
+                    "Reply to waiting Email, Virtual PBX, SMS, or WhatsApp clients from "
+                    "one unified timeline in Client Inbox to protect SLA conversion."
+                ),
+                action_path="/inbox/",
+            )
+        )
+
+    if draft_payroll_runs_count > 0:
+        score -= 4
+        signals.append(
+            PredictiveSignal(
+                severity="medium",
+                category="us_payroll",
+                title=f"{draft_payroll_runs_count} Draft US Payroll Run(s) Awaiting Approval",
+                metric_label=f"{draft_payroll_runs_count} draft run(s)",
+                recommendation=(
+                    "Review FLSA/CA overtime and Union CBA calculations in Global Finance, "
+                    "approve as owner, and download the Gusto/ADP CSV batch."
+                ),
+                action_path="/global-finance/",
+            )
+        )
+
+    if fx_open_entries_count > 0 and fx_unrealized_gain_loss_cents != 0:
+        fx_usd = fx_unrealized_gain_loss_cents / 100
+        if fx_unrealized_gain_loss_cents < 0:
+            score -= 8 if fx_unrealized_gain_loss_cents <= -50_000 else 4
+            fx_sev: SignalSeverity = (
+                "high" if fx_unrealized_gain_loss_cents <= -50_000 else "medium"
+            )
+            fx_title = (
+                f"Unrealized FX Loss Exposure: ${fx_usd:+,.2f} ({fx_open_entries_count} open)"
+            )
+            fx_rec = (
+                "Review live Mark-to-Market FX rates in Global Finance -> FX Ledger and "
+                "settle or hedge open foreign-currency balances to protect USD margin."
+            )
+        else:
+            fx_sev = "positive"
+            fx_title = f"Unrealized FX Gain: ${fx_usd:+,.2f} ({fx_open_entries_count} open)"
+            fx_rec = (
+                "Favorable multi-currency movement detected. Consider settling open "
+                "receivables in Global Finance -> FX Ledger to lock in realized USD gains."
+            )
+        signals.append(
+            PredictiveSignal(
+                severity=fx_sev,
+                category="fx_treasury",
+                title=fx_title,
+                metric_label=f"${fx_usd:+,.2f} FX P&L",
+                recommendation=fx_rec,
+                action_path="/global-finance/",
+            )
+        )
+
     if not signals:
         signals.append(
             PredictiveSignal(
@@ -793,6 +905,38 @@ async def gather_predictive_context(
         )
         nrow = await cur.fetchone() or {"fail_cnt": 0}
 
+        await cur.execute(
+            """
+            SELECT
+                (SELECT count(*) FROM gba.mrp_production_runs
+                 WHERE tenant_id = %s
+                   AND shortage_count > 0
+                   AND status NOT IN ('completed', 'cancelled')) AS mrp_shortage_runs,
+                (SELECT count(*) FROM gba.eam_predictive_work_orders
+                 WHERE tenant_id = %s
+                   AND status IN ('open', 'in_progress')) AS eam_open_wos,
+                (SELECT count(*) FROM gba.omnichannel_threads
+                 WHERE tenant_id = %s
+                   AND status = 'open'
+                   AND unread_count > 0) AS inbox_unread_threads,
+                (SELECT count(*) FROM gba.payroll_runs
+                 WHERE tenant_id = %s AND status = 'draft') AS draft_payroll_runs,
+                (SELECT count(*) FROM gba.fx_ledger_entries
+                 WHERE tenant_id = %s AND status = 'open') AS fx_open_entries,
+                (SELECT coalesce(sum(fx_gain_loss_cents), 0) FROM gba.fx_ledger_entries
+                 WHERE tenant_id = %s AND status = 'open') AS fx_unrealized_cents
+            """,
+            (tenant_id, tenant_id, tenant_id, tenant_id, tenant_id, tenant_id),
+        )
+        entrow = await cur.fetchone() or {
+            "mrp_shortage_runs": 0,
+            "eam_open_wos": 0,
+            "inbox_unread_threads": 0,
+            "draft_payroll_runs": 0,
+            "fx_open_entries": 0,
+            "fx_unrealized_cents": 0,
+        }
+
     health_score, headline, signals = compute_predictive_health_and_signals(
         business_name=business_name,
         period_days=period_days,
@@ -813,6 +957,12 @@ async def gather_predictive_context(
         waitlist_count=int(wrow["w_cnt"]),
         waitlist_value_cents=int(wrow["w_cents"]),
         failed_notifications_count=int(nrow["fail_cnt"]),
+        mrp_shortage_runs_count=int(entrow["mrp_shortage_runs"]),
+        eam_open_work_orders_count=int(entrow["eam_open_wos"]),
+        inbox_unread_threads_count=int(entrow["inbox_unread_threads"]),
+        draft_payroll_runs_count=int(entrow["draft_payroll_runs"]),
+        fx_open_entries_count=int(entrow["fx_open_entries"]),
+        fx_unrealized_gain_loss_cents=int(entrow["fx_unrealized_cents"]),
     )
 
     snapshot: dict[str, Any] = {
@@ -831,6 +981,12 @@ async def gather_predictive_context(
         "bookings_cancelled_count": int(brow["canc_cnt"]),
         "waitlist_count": int(wrow["w_cnt"]),
         "waitlist_value_cents": int(wrow["w_cents"]),
+        "mrp_shortage_runs_count": int(entrow["mrp_shortage_runs"]),
+        "eam_open_work_orders_count": int(entrow["eam_open_wos"]),
+        "inbox_unread_threads_count": int(entrow["inbox_unread_threads"]),
+        "draft_payroll_runs_count": int(entrow["draft_payroll_runs"]),
+        "fx_open_entries_count": int(entrow["fx_open_entries"]),
+        "fx_unrealized_gain_loss_cents": int(entrow["fx_unrealized_cents"]),
     }
 
     byok_cfg = await load_active_tenant_byok_ai(conn, tenant_id=tenant_id, environment=environment)
@@ -985,3 +1141,159 @@ async def list_predictive_reports(
         )
         rows = await cur.fetchall()
     return [_row_to_report(dict(r)) for r in rows]
+
+
+def build_predictive_webhook_payload(
+    *,
+    ctx: PredictiveContext,
+    engine: AiEngine,
+    executive_summary: str,
+    action_url: str,
+) -> dict[str, Any]:
+    """Build universal Slack Block Kit / Microsoft Teams / Zapier / n8n webhook payload."""
+    top_lines = [
+        f"• [{s.severity.upper()}] {s.title} ({s.metric_label}) — {s.recommendation}"
+        for s in ctx.signals[:5]
+    ]
+    plain_text = (
+        f"AMARKAL Proactive Brief — {ctx.headline}\n\n"
+        f"{executive_summary}\n\n" + "\n".join(top_lines) + f"\n\nOpen Overview: {action_url}"
+    )
+    return {
+        "event": "ai.predictive_brief.generated",
+        "platform": "AMARKAL Platform",
+        "tenant_id": str(ctx.tenant_id),
+        "business_name": ctx.business_name,
+        "period_days": ctx.period_days,
+        "health_score": ctx.health_score,
+        "engine": engine,
+        "headline": ctx.headline,
+        "executive_summary": executive_summary,
+        "action_url": action_url,
+        "signals": [
+            {
+                "severity": s.severity,
+                "category": s.category,
+                "title": s.title,
+                "metric_label": s.metric_label,
+                "recommendation": s.recommendation,
+                "action_path": s.action_path,
+            }
+            for s in ctx.signals
+        ],
+        "metrics": ctx.metrics_snapshot,
+        "text": plain_text,
+        "blocks": [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"AMARKAL AI Brief ({ctx.health_score}/100) — {ctx.business_name}"[
+                        :150
+                    ],
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*{ctx.headline}*\n{executive_summary}"[:2900],
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": ("\n".join(top_lines) or "All operational metrics healthy.")[:2900],
+                },
+            },
+        ],
+    }
+
+
+def _post_digest_webhook_sync(
+    safe_url: str, body: bytes, signature_header: str | None
+) -> WebhookProbeOutcome:
+    parsed = urlparse(safe_url)
+    host = parsed.hostname or ""
+    port = parsed.port or 443
+    target = parsed.path or "/"
+    if parsed.query:
+        target = f"{target}?{parsed.query}"
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "AMARKAL-Webhooks/1.0",
+        "X-AMARKAL-Event": "ai.predictive_brief.generated",
+    }
+    if signature_header:
+        headers["X-AMARKAL-Signature"] = signature_header
+    conn = http.client.HTTPSConnection(
+        host,
+        port,
+        timeout=6.0,
+        context=ssl.create_default_context(),
+    )
+    try:
+        conn.request("POST", target, body=body, headers=headers)
+        resp = conn.getresponse()
+        resp.read(1024)
+        code = int(resp.status)
+    except (OSError, http.client.HTTPException) as exc:
+        return WebhookProbeOutcome(
+            status="failed",
+            http_status=None,
+            last_error=f"Outbound delivery error: {type(exc).__name__}",
+        )
+    finally:
+        conn.close()
+    if 200 <= code < 300:
+        return WebhookProbeOutcome(status="delivered", http_status=code, last_error=None)
+    return WebhookProbeOutcome(
+        status="failed",
+        http_status=code,
+        last_error=f"Endpoint responded with HTTP {code}",
+    )
+
+
+async def dispatch_predictive_webhook(
+    url: str,
+    payload: dict[str, Any],
+    *,
+    signing_secret_hash: str | None = None,
+) -> tuple[WebhookProbeOutcome, str | None]:
+    """Send predictive digest to a public HTTPS webhook with SSRF protection (outside DB TX)."""
+    try:
+        safe_url = await asyncio.to_thread(validate_public_webhook_url, url, resolve_dns=True)
+    except ValueError as exc:
+        return WebhookProbeOutcome(status="failed", http_status=None, last_error=str(exc)), None
+
+    body = json.dumps(payload, sort_keys=True).encode("utf-8")
+    sig_header: str | None = None
+    if signing_secret_hash:
+        sig = hmac.new(
+            signing_secret_hash.encode("utf-8"),
+            body,
+            hashlib.sha256,
+        ).hexdigest()
+        sig_header = f"v1={sig}"
+    outcome = await asyncio.to_thread(_post_digest_webhook_sync, safe_url, body, sig_header)
+    return outcome, sig_header
+
+
+async def list_active_tenant_webhooks(
+    conn: RuntimeConnection, *, tenant_id: UUID
+) -> list[tuple[UUID, str, str]]:
+    """Fetch active outbound webhook endpoints for optional brief broadcast."""
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            """
+            SELECT id, url, signing_secret_hash
+            FROM gba.webhook_endpoints
+            WHERE tenant_id = %s AND is_active = true
+            ORDER BY created_at DESC
+            LIMIT 10
+            """,
+            (tenant_id,),
+        )
+        rows = await cur.fetchall()
+    return [(UUID(str(r["id"])), str(r["url"]), str(r["signing_secret_hash"])) for r in rows]
