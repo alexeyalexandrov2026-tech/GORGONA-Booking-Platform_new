@@ -1357,7 +1357,9 @@ async def post_native_mcp(
                         {
                             "name": "ask_business_copilot",
                             "description": (
-                                "Ask the read-only grounded AMARKAL AI Business Copilot."
+                                "Ask the read-only grounded AMARKAL AI Business Copilot across "
+                                "bookings, Stripe payments, MRP II shortages, IoT Work Orders, "
+                                "Client Inbox, US Payroll drafts, and Multi-Currency FX."
                             ),
                             "inputSchema": {
                                 "type": "object",
@@ -1408,8 +1410,10 @@ async def post_native_mcp(
                         {
                             "name": "search_business_records",
                             "description": (
-                                "Search tenant counterparties, documents, FIN-03 invoices, "
-                                "catalog items, and Stripe payment sessions under FORCE RLS."
+                                "Search 12 tenant record types under FORCE RLS: counterparties, "
+                                "documents, FIN-03 invoices, catalog services, Stripe payments, "
+                                "commercial quotes, purchase orders, MRP II materials, IoT EAM "
+                                "assets, Client Inbox threads, US Payroll profiles, and FX entries."
                             ),
                             "inputSchema": {
                                 "type": "object",
