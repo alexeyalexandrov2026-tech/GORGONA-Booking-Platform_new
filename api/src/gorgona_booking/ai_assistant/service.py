@@ -718,6 +718,87 @@ class CopilotContext:
     byok_config: TenantByokAiConfig | None = None
 
 
+def build_enterprise_copilot_insights(metrics: dict[str, Any]) -> list[CopilotInsight]:
+    """Build deterministic high-signal insights from MRP II, EAM/IoT, Inbox, Payroll & FX."""
+    out: list[CopilotInsight] = []
+    mrp_shortages = int(metrics.get("mrp_shortage_runs_count", 0) or 0)
+    if mrp_shortages > 0:
+        out.append(
+            CopilotInsight(
+                priority="high",
+                category="mrp_supply_chain",
+                title=(f"Resolve raw-material shortages on {mrp_shortages} MRP production run(s)"),
+                detail=(
+                    "Open Industrial ERP -> Production Runs to generate a 1-click Draft PO "
+                    "for missing raw materials before manufacturing starts."
+                ),
+                action_path="/industrial/",
+            )
+        )
+    eam_wos = int(metrics.get("eam_open_work_orders_count", 0) or 0)
+    if eam_wos > 0:
+        out.append(
+            CopilotInsight(
+                priority="high",
+                category="predictive_eam",
+                title=f"Schedule {eam_wos} predictive IoT maintenance work order(s)",
+                detail=(
+                    "Equipment telemetry triggered pre-failure maintenance alerts. Dispatch a "
+                    "technician in Industrial ERP -> Predictive Work Orders to avoid downtime."
+                ),
+                action_path="/industrial/",
+            )
+        )
+    unread_threads = int(metrics.get("inbox_unread_threads_count", 0) or 0)
+    if unread_threads > 0:
+        out.append(
+            CopilotInsight(
+                priority="high",
+                category="omnichannel_crm",
+                title=f"Reply to {unread_threads} unread client conversation(s)",
+                detail=(
+                    "Clients are waiting in your Omnichannel Inbox across Email, Virtual PBX, "
+                    "SMS, or WhatsApp. Reply directly from one unified timeline."
+                ),
+                action_path="/inbox/",
+            )
+        )
+    draft_payroll = int(metrics.get("draft_payroll_runs_count", 0) or 0)
+    if draft_payroll > 0:
+        out.append(
+            CopilotInsight(
+                priority="medium",
+                category="us_payroll",
+                title=f"Review and approve {draft_payroll} draft US Payroll run(s)",
+                detail=(
+                    "Human owner approval is required before exporting Gusto/ADP/Check payroll "
+                    "files in Global Finance & US Payroll."
+                ),
+                action_path="/global-finance/",
+            )
+        )
+    fx_open = int(metrics.get("fx_open_entries_count", 0) or 0)
+    fx_pnl_cents = int(metrics.get("fx_unrealized_gain_loss_cents", 0) or 0)
+    if fx_open > 0 and fx_pnl_cents != 0:
+        direction = "gain" if fx_pnl_cents > 0 else "loss"
+        out.append(
+            CopilotInsight(
+                priority="medium",
+                category="fx_treasury",
+                title=(
+                    f"Unrealized FX {direction} of ${fx_pnl_cents / 100:+,.2f} across "
+                    f"{fx_open} open multi-currency entry(ies)"
+                ),
+                detail=(
+                    "Review live Mark-to-Market FX rates or settle open receivables/payables in "
+                    "Global Finance -> Multi-Currency FX Ledger to lock in realized USD value."
+                ),
+                action_path="/global-finance/",
+            )
+        )
+    return out
+
+
 async def gather_owner_copilot_context(
     conn: AsyncConnection[Any],
     *,
@@ -829,6 +910,38 @@ async def gather_owner_copilot_context(
         )
         erow = await cur.fetchone() or {"connectors_cnt": 0, "mcp_keys_cnt": 0, "media_cnt": 0}
 
+        await cur.execute(
+            """
+            SELECT
+                (SELECT count(*) FROM gba.mrp_production_runs
+                 WHERE tenant_id = %s
+                   AND shortage_count > 0
+                   AND status NOT IN ('completed', 'cancelled')) AS mrp_shortage_runs,
+                (SELECT count(*) FROM gba.eam_predictive_work_orders
+                 WHERE tenant_id = %s
+                   AND status IN ('open', 'in_progress')) AS eam_open_wos,
+                (SELECT count(*) FROM gba.omnichannel_threads
+                 WHERE tenant_id = %s
+                   AND status = 'open'
+                   AND unread_count > 0) AS inbox_unread_threads,
+                (SELECT count(*) FROM gba.fx_ledger_entries
+                 WHERE tenant_id = %s AND status = 'open') AS fx_open_entries,
+                (SELECT coalesce(sum(fx_gain_loss_cents), 0) FROM gba.fx_ledger_entries
+                 WHERE tenant_id = %s AND status = 'open') AS fx_unrealized_cents,
+                (SELECT count(*) FROM gba.payroll_runs
+                 WHERE tenant_id = %s AND status = 'draft') AS draft_payroll_runs
+            """,
+            (tenant_id, tenant_id, tenant_id, tenant_id, tenant_id, tenant_id),
+        )
+        ent_row = await cur.fetchone() or {
+            "mrp_shortage_runs": 0,
+            "eam_open_wos": 0,
+            "inbox_unread_threads": 0,
+            "fx_open_entries": 0,
+            "fx_unrealized_cents": 0,
+            "draft_payroll_runs": 0,
+        }
+
     stripe_paid_cents = int(prow["paid_cents"])
     stripe_open_cents = int(prow["open_cents"])
     upcoming_cents = int(brow["upcoming_cents"])
@@ -858,9 +971,16 @@ async def gather_owner_copilot_context(
         "ai_assistant_enabled": growth.ai_assistant_enabled,
         "reminder_hours_before": growth.reminder_hours_before,
         "rebooking_days_after": growth.rebooking_days_after,
+        "mrp_shortage_runs_count": int(ent_row["mrp_shortage_runs"]),
+        "eam_open_work_orders_count": int(ent_row["eam_open_wos"]),
+        "inbox_unread_threads_count": int(ent_row["inbox_unread_threads"]),
+        "fx_open_entries_count": int(ent_row["fx_open_entries"]),
+        "fx_unrealized_gain_loss_cents": int(ent_row["fx_unrealized_cents"]),
+        "draft_payroll_runs_count": int(ent_row["draft_payroll_runs"]),
     }
 
     insights: list[CopilotInsight] = []
+    insights.extend(build_enterprise_copilot_insights(metrics))
     if metrics["waiting_waitlist_count"] > 0:
         rec_usd = metrics["waitlist_recoverable_value_cents"] / 100
         wait_cnt = metrics["waiting_waitlist_count"]

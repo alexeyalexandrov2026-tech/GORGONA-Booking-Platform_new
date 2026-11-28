@@ -131,6 +131,9 @@ export function IndustrialErpHub({ businessId }: { businessId: string }) {
     tag: string;
     token: string;
   } | null>(null);
+  const [copiedIotKind, setCopiedIotKind] = useState<"token" | "curl" | null>(
+    null,
+  );
   const [savingAsset, setSavingAsset] = useState(false);
 
   // EAM Rule form state
@@ -447,6 +450,7 @@ export function IndustrialErpHub({ businessId }: { businessId: string }) {
       setRuleAssetId(res.asset.id);
       setTelAssetId(res.asset.id);
       setLatestToken({ tag: res.asset.asset_tag, token: res.iot_ingest_token });
+      setCopiedIotKind(null);
       setAssetTag("");
       setAssetName("");
       setAssetSerial("");
@@ -470,11 +474,35 @@ export function IndustrialErpHub({ businessId }: { businessId: string }) {
         prev.map((a) => (a.id === res.asset.id ? res.asset : a)),
       );
       setLatestToken({ tag: res.asset.asset_tag, token: res.iot_ingest_token });
+      setCopiedIotKind(null);
       setNotice(
         `Rotated IoT telemetry token for ${res.asset.asset_tag}. Copy it now — shown once.`,
       );
     } catch (err) {
       setError(errText(err));
+    }
+  }
+
+  async function onCopyIotSnippet(kind: "token" | "curl") {
+    if (!latestToken) return;
+    const origin =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://www.amarkal-platform.com";
+    const text =
+      kind === "token"
+        ? latestToken.token
+        : `curl -X POST "${origin}/v1/public/iot/telemetry" -H "Content-Type: application/json" -H "X-AMARKAL-IoT-Token: ${latestToken.token}" -d '{"metric_key":"engine_hours","value_milli":1460000,"notes":"PLC gateway heartbeat"}'`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIotKind(kind);
+      setNotice(
+        kind === "token"
+          ? `Copied IoT token for ${latestToken.tag} to clipboard.`
+          : `Copied ready-to-run IoT telemetry cURL command for ${latestToken.tag}.`,
+      );
+    } catch {
+      setError("Clipboard access was blocked by the browser.");
     }
   }
 
@@ -1357,6 +1385,24 @@ export function IndustrialErpHub({ businessId }: { businessId: string }) {
               >
                 {latestToken.token}
               </code>
+              <div className="usr-inline" style={{ marginTop: 10, gap: 8 }}>
+                <button
+                  type="button"
+                  className="secondary usr-small-btn"
+                  onClick={() => void onCopyIotSnippet("token")}
+                >
+                  {copiedIotKind === "token" ? "Token Copied ✓" : "Copy Token"}
+                </button>
+                <button
+                  type="button"
+                  className="usr-small-btn"
+                  onClick={() => void onCopyIotSnippet("curl")}
+                >
+                  {copiedIotKind === "curl"
+                    ? "cURL Copied ✓"
+                    : "Copy cURL Snippet"}
+                </button>
+              </div>
             </section>
           )}
 

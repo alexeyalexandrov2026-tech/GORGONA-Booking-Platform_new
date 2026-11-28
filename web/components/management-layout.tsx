@@ -29,7 +29,12 @@ interface GlobalSearchHit {
     | "service"
     | "payment"
     | "quote"
-    | "purchase_order";
+    | "purchase_order"
+    | "mrp_material"
+    | "eam_asset"
+    | "inbox_thread"
+    | "payroll_profile"
+    | "fx_entry";
   id: string;
   title: string;
   subtitle: string;
@@ -45,6 +50,11 @@ const SEARCH_KIND_LABEL: Record<GlobalSearchHit["kind"], string> = {
   payment: "Stripe Payment",
   quote: "Commercial Quote",
   purchase_order: "Purchase Order",
+  mrp_material: "MRP Material",
+  eam_asset: "IoT Asset",
+  inbox_thread: "Client Inbox",
+  payroll_profile: "US Payroll",
+  fx_entry: "FX Ledger",
 };
 
 interface ManagementLayoutProps {
