@@ -150,12 +150,85 @@ export const dueToDueFromPairSchema = z.object({
   tx_count: z.number().int(),
 });
 
+export const tradeOrderKindSchema = z.enum([
+  "raw_materials",
+  "finished_goods",
+  "intercompany_service",
+  "equipment_transfer",
+]);
+export type TradeOrderKind = z.infer<typeof tradeOrderKindSchema>;
+
+export const transferPricingMethodSchema = z.enum([
+  "cup_market",
+  "cost_plus",
+  "resale_minus",
+  "agreed_contract",
+]);
+export type TransferPricingMethod = z.infer<typeof transferPricingMethodSchema>;
+
+export const tradeOrderStatusSchema = z.enum([
+  "mirrored_open",
+  "shipped_received",
+  "invoiced_eliminated",
+  "void",
+]);
+export type TradeOrderStatus = z.infer<typeof tradeOrderStatusSchema>;
+
+export const tradeOrderActionSchema = z.enum([
+  "ship_receive",
+  "invoice_eliminate",
+  "update_unsold",
+  "void",
+]);
+export type TradeOrderAction = z.infer<typeof tradeOrderActionSchema>;
+
+export const intercompanyTradeOrderViewSchema = z.object({
+  id: z.string(),
+  sales_order_number: z.string(),
+  mirror_po_number: z.string(),
+  period_key: z.string(),
+  order_date: z.string(),
+  seller_subsidiary_id: z.string(),
+  seller_code: z.string(),
+  seller_name: z.string(),
+  buyer_subsidiary_id: z.string(),
+  buyer_code: z.string(),
+  buyer_name: z.string(),
+  trade_kind: tradeOrderKindSchema,
+  transfer_pricing_method: transferPricingMethodSchema,
+  item_sku: z.string(),
+  item_description: z.string(),
+  quantity_milli: z.number().int(),
+  currency: currencyCodeSchema,
+  unit_transfer_price_minor: z.number().int(),
+  seller_unit_cost_minor: z.number().int(),
+  total_transfer_minor: z.number().int(),
+  total_seller_cost_minor: z.number().int(),
+  intercompany_profit_minor: z.number().int(),
+  buyer_unsold_inventory_bps: z.number().int(),
+  fx_rate_micros: z.number().int(),
+  transfer_usd_cents: z.number().int(),
+  upii_usd_cents: z.number().int(),
+  status: tradeOrderStatusSchema,
+  linked_intercompany_tx_id: z.string().nullable(),
+  notes: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type IntercompanyTradeOrderView = z.infer<
+  typeof intercompanyTradeOrderViewSchema
+>;
+
 export const holdingOverviewResponseSchema = z.object({
   period_key: z.string(),
   reporting_currency: z.literal("USD"),
   subsidiaries: z.array(subsidiaryViewSchema),
   snapshots: z.array(entitySnapshotViewSchema),
   intercompany_transactions: z.array(intercompanyTxViewSchema),
+  intercompany_trade_orders: z
+    .array(intercompanyTradeOrderViewSchema)
+    .default([]),
+  total_upii_eliminated_usd_cents: z.number().int().default(0),
   per_entity_usd: z.array(entityConsolidatedRowSchema),
   pre_elimination: consolidatedStatementColumnSchema,
   eliminations: consolidatedStatementColumnSchema,
@@ -312,6 +385,55 @@ export async function updateIntercompanyStatus(
     },
   );
   return readJson(res, intercompanyTxViewSchema);
+}
+
+export async function createIntercompanyTradeOrder(
+  businessId: string,
+  input: {
+    period_key: string;
+    seller_subsidiary_id: string;
+    buyer_subsidiary_id: string;
+    trade_kind: TradeOrderKind;
+    transfer_pricing_method: TransferPricingMethod;
+    item_sku: string;
+    item_description: string;
+    quantity_milli: number;
+    currency: CurrencyCode;
+    unit_transfer_price_minor: number;
+    seller_unit_cost_minor: number;
+    buyer_unsold_inventory_bps: number;
+    auto_invoice_and_eliminate: boolean;
+    notes?: string;
+  },
+): Promise<IntercompanyTradeOrderView> {
+  const res = await authorizedResponse(`${base(businessId)}/trade-orders`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  return readJson(res, intercompanyTradeOrderViewSchema);
+}
+
+export async function transitionIntercompanyTradeOrder(
+  businessId: string,
+  orderId: string,
+  input: {
+    action: TradeOrderAction;
+    buyer_unsold_inventory_bps?: number;
+  },
+): Promise<IntercompanyTradeOrderView> {
+  const res = await authorizedResponse(
+    `${base(businessId)}/trade-orders/${encodeURIComponent(orderId)}/transition`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+  return readJson(res, intercompanyTradeOrderViewSchema);
 }
 
 export async function seedSampleHoldingGroup(

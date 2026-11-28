@@ -5,6 +5,7 @@ import { triggerCsvDownload } from "../lib/csv-export";
 import {
   buildConsolidatedHoldingCsv,
   ConsolidatedStatementColumn,
+  createIntercompanyTradeOrder,
   createIntercompanyTx,
   createSubsidiary,
   CurrencyCode,
@@ -14,12 +15,16 @@ import {
   IntercompanyStatus,
   IntercompanyTxKind,
   seedSampleHoldingGroup,
+  TradeOrderAction,
+  TradeOrderKind,
+  TransferPricingMethod,
+  transitionIntercompanyTradeOrder,
   updateIntercompanyStatus,
   upsertEntitySnapshot,
 } from "../lib/holding-consolidation-api";
 import { ManagementApiError } from "../lib/management-api";
 
-type HoldingTab = "consolidated" | "intercompany" | "entities";
+type HoldingTab = "consolidated" | "trade" | "intercompany" | "entities";
 
 function currentMonthKey(): string {
   const d = new Date();
@@ -79,7 +84,7 @@ const STATEMENT_ROWS: readonly {
     key: "ar_cents",
     section: "bs",
   },
-  { label: "Inventory", key: "inventory_cents", section: "bs" },
+  { label: "Inventory (Net of UPII)", key: "inventory_cents", section: "bs" },
   { label: "Fixed Assets", key: "fixed_assets_cents", section: "bs" },
   {
     label: "Total Consolidated Assets",
@@ -141,6 +146,22 @@ export function HoldingConsolidationHub({
   );
   const [icAutoElim, setIcAutoElim] = useState(true);
 
+  // Mirror Intercompany Trade (SO <-> PO) form
+  const [trSellerId, setTrSellerId] = useState("");
+  const [trBuyerId, setTrBuyerId] = useState("");
+  const [trKind, setTrKind] = useState<TradeOrderKind>("raw_materials");
+  const [trMethod, setTrMethod] = useState<TransferPricingMethod>("cost_plus");
+  const [trSku, setTrSku] = useState("RAW-STEEL-400");
+  const [trDesc, setTrDesc] = useState(
+    "Cold-Rolled Logistics Pallets & Thermal Kits",
+  );
+  const [trQty, setTrQty] = useState("100");
+  const [trCurrency, setTrCurrency] = useState<CurrencyCode>("USD");
+  const [trUnitPrice, setTrUnitPrice] = useState("800.00");
+  const [trUnitCost, setTrUnitCost] = useState("550.00");
+  const [trUnsoldPct, setTrUnsoldPct] = useState("40");
+  const [trAutoElim, setTrAutoElim] = useState(true);
+
   // Period Trial Balance Snapshot form
   const [snapSubId, setSnapSubId] = useState("");
   const [snapRev, setSnapRev] = useState("350000.00");
@@ -162,9 +183,11 @@ export function HoldingConsolidationHub({
     if (first) {
       setSnapSubId((p) => p || first.id);
       setIcSrcId((p) => p || first.id);
+      setTrSellerId((p) => p || first.id);
     }
     if (second) {
       setIcTgtId((p) => p || second.id);
+      setTrBuyerId((p) => p || second.id);
     }
   };
 
@@ -179,9 +202,11 @@ export function HoldingConsolidationHub({
         if (first) {
           setSnapSubId((p) => p || first.id);
           setIcSrcId((p) => p || first.id);
+          setTrSellerId((p) => p || first.id);
         }
         if (second) {
           setIcTgtId((p) => p || second.id);
+          setTrBuyerId((p) => p || second.id);
         }
         setError(null);
         setLoading(false);
@@ -349,6 +374,86 @@ export function HoldingConsolidationHub({
     }
   };
 
+  const handleCreateMirrorTrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trSellerId || !trBuyerId) {
+      setError("Select both Seller and Buyer subsidiaries.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const qtyNum = Math.max(0.001, Number.parseFloat(trQty) || 1);
+      const unsoldNum = Math.max(
+        0,
+        Math.min(100, Number.parseFloat(trUnsoldPct) || 0),
+      );
+      const created = await createIntercompanyTradeOrder(businessId, {
+        period_key: periodKey,
+        seller_subsidiary_id: trSellerId,
+        buyer_subsidiary_id: trBuyerId,
+        trade_kind: trKind,
+        transfer_pricing_method: trMethod,
+        item_sku: trSku.trim().toUpperCase(),
+        item_description: trDesc.trim(),
+        quantity_milli: Math.max(1, Math.round(qtyNum * 1000)),
+        currency: trCurrency,
+        unit_transfer_price_minor: Math.max(
+          1,
+          parseDollarsToMinor(trUnitPrice),
+        ),
+        seller_unit_cost_minor: Math.max(0, parseDollarsToMinor(trUnitCost)),
+        buyer_unsold_inventory_bps: Math.round(unsoldNum * 100),
+        auto_invoice_and_eliminate: trAutoElim,
+      });
+      await reload(periodKey);
+      setNotice(
+        `Auto-generated mirrored pair ${created.sales_order_number} ↔ ${created.mirror_po_number} (${created.seller_code} → ${created.buyer_code}, ${formatUsd(created.transfer_usd_cents)} · UPII ${formatUsd(created.upii_usd_cents)}).`,
+      );
+    } catch (err) {
+      setError(
+        err instanceof ManagementApiError
+          ? err.message
+          : "Unable to create intercompany mirror trade order.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleTransitionTrade = async (
+    orderId: string,
+    action: TradeOrderAction,
+    buyerUnsoldBps?: number,
+  ) => {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const updated = await transitionIntercompanyTradeOrder(
+        businessId,
+        orderId,
+        {
+          action,
+          buyer_unsold_inventory_bps: buyerUnsoldBps,
+        },
+      );
+      await reload(periodKey);
+      setNotice(
+        `Updated ${updated.sales_order_number} ↔ ${updated.mirror_po_number} to "${updated.status}" (UPII ${formatUsd(updated.upii_usd_cents)}).`,
+      );
+    } catch (err) {
+      setError(
+        err instanceof ManagementApiError
+          ? err.message
+          : "Unable to update mirror trade order.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleExportCsv = () => {
     if (!data) return;
     triggerCsvDownload(
@@ -429,6 +534,18 @@ export function HoldingConsolidationHub({
             onClick={() => setActiveTab("consolidated")}
           >
             Consolidated P&amp;L &amp; Balance Sheet
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="tab-holding-trade"
+            aria-selected={activeTab === "trade"}
+            aria-controls="panel-holding-trade"
+            className="usr-tab"
+            onClick={() => setActiveTab("trade")}
+          >
+            Mirror Trade (SO ↔ PO ·{" "}
+            {data?.intercompany_trade_orders.length ?? 0})
           </button>
           <button
             type="button"
@@ -1395,6 +1512,514 @@ export function HoldingConsolidationHub({
                 </button>
               </div>
             </form>
+          </div>
+        </section>
+      ) : null}
+
+      {data && activeTab === "trade" && data.subsidiaries.length > 0 ? (
+        <section
+          id="panel-holding-trade"
+          role="tabpanel"
+          aria-labelledby="tab-holding-trade"
+          className="usr-stack"
+        >
+          {/* KPI Summary */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: "16px",
+            }}
+          >
+            <div className="usr-card">
+              <div
+                className="usr-muted"
+                style={{ fontSize: "0.8rem", fontWeight: 600 }}
+              >
+                Active Mirror SO ↔ PO Pairs
+              </div>
+              <div
+                style={{
+                  fontSize: "1.55rem",
+                  fontWeight: 700,
+                  margin: "6px 0 4px",
+                }}
+              >
+                {
+                  data.intercompany_trade_orders.filter(
+                    (o) => o.status !== "void",
+                  ).length
+                }
+              </div>
+              <div className="usr-muted" style={{ fontSize: "0.82rem" }}>
+                Atomic Seller SO + Buyer Mirror PO generation
+              </div>
+            </div>
+            <div className="usr-card">
+              <div
+                className="usr-muted"
+                style={{ fontSize: "0.8rem", fontWeight: 600 }}
+              >
+                Gross Intercompany Trade (USD)
+              </div>
+              <div
+                style={{
+                  fontSize: "1.55rem",
+                  fontWeight: 700,
+                  margin: "6px 0 4px",
+                }}
+              >
+                {formatUsd(
+                  data.intercompany_trade_orders
+                    .filter((o) => o.status !== "void")
+                    .reduce((acc, o) => acc + o.transfer_usd_cents, 0),
+                )}
+              </div>
+              <div className="usr-muted" style={{ fontSize: "0.82rem" }}>
+                Auto-eliminated from group revenue &amp; COGS
+              </div>
+            </div>
+            <div className="usr-card">
+              <div
+                className="usr-muted"
+                style={{ fontSize: "0.8rem", fontWeight: 600 }}
+              >
+                Deferred Inventory Profit (UPII)
+              </div>
+              <div
+                style={{
+                  fontSize: "1.55rem",
+                  fontWeight: 700,
+                  margin: "6px 0 4px",
+                  color: "#165430",
+                }}
+              >
+                {formatUsd(data.total_upii_eliminated_usd_cents)}
+              </div>
+              <div className="usr-muted" style={{ fontSize: "0.82rem" }}>
+                ASC 810 / IFRS 10 ending inventory elimination
+              </div>
+            </div>
+          </div>
+
+          {/* Create Mirror Trade Form */}
+          <div className="usr-card">
+            <h2 style={{ margin: "0 0 6px", fontSize: "1.18rem" }}>
+              Create Intercompany Sales Order → Auto-Generate Mirror Purchase
+              Order
+            </h2>
+            <p
+              className="usr-muted"
+              style={{ margin: "0 0 16px", fontSize: "0.88rem" }}
+            >
+              When one subsidiary sells raw materials, finished goods, or
+              services to another subsidiary, AMARKAL atomically creates the
+              Seller Sales Order (<code>IC-SO</code>), the Buyer Mirror Purchase
+              Order (<code>IC-PO</code>), computes OECD transfer margin &amp;
+              ending-inventory UPII, and eliminates intra-group turnover on
+              consolidation.
+            </p>
+            <form onSubmit={handleCreateMirrorTrade} className="usr-stack">
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+                  gap: "14px",
+                }}
+              >
+                <label>
+                  Seller Subsidiary (Issues SO)
+                  <select
+                    value={trSellerId}
+                    onChange={(e) => setTrSellerId(e.target.value)}
+                  >
+                    {data.subsidiaries.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.entity_code} — {s.legal_name} (
+                        {s.functional_currency})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Buyer Subsidiary (Auto Mirror PO)
+                  <select
+                    value={trBuyerId}
+                    onChange={(e) => setTrBuyerId(e.target.value)}
+                  >
+                    {data.subsidiaries.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.entity_code} — {s.legal_name} (
+                        {s.functional_currency})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Trade Kind
+                  <select
+                    value={trKind}
+                    onChange={(e) =>
+                      setTrKind(e.target.value as TradeOrderKind)
+                    }
+                  >
+                    <option value="raw_materials">
+                      Raw Materials (UPII Applies)
+                    </option>
+                    <option value="finished_goods">
+                      Finished Goods (UPII Applies)
+                    </option>
+                    <option value="equipment_transfer">
+                      Equipment / Parts Transfer
+                    </option>
+                    <option value="intercompany_service">
+                      Intercompany Service (0 UPII)
+                    </option>
+                  </select>
+                </label>
+                <label>
+                  OECD Transfer Pricing Method
+                  <select
+                    value={trMethod}
+                    onChange={(e) =>
+                      setTrMethod(e.target.value as TransferPricingMethod)
+                    }
+                  >
+                    <option value="cost_plus">Cost-Plus Method</option>
+                    <option value="cup_market">
+                      Comparable Uncontrolled Price (CUP)
+                    </option>
+                    <option value="resale_minus">Resale Price Minus</option>
+                    <option value="agreed_contract">
+                      Master Intercompany Agreement
+                    </option>
+                  </select>
+                </label>
+                <label>
+                  Item / Service SKU
+                  <input
+                    type="text"
+                    value={trSku}
+                    onChange={(e) => setTrSku(e.target.value)}
+                    placeholder="RAW-STEEL-400"
+                  />
+                </label>
+                <label>
+                  Item / Supply Description
+                  <input
+                    type="text"
+                    required
+                    value={trDesc}
+                    onChange={(e) => setTrDesc(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Quantity (Units)
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    value={trQty}
+                    onChange={(e) => setTrQty(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Settlement Currency
+                  <select
+                    value={trCurrency}
+                    onChange={(e) =>
+                      setTrCurrency(e.target.value as CurrencyCode)
+                    }
+                  >
+                    {(
+                      [
+                        "USD",
+                        "EUR",
+                        "GBP",
+                        "CAD",
+                        "MXN",
+                        "CHF",
+                        "AUD",
+                        "JPY",
+                      ] as const
+                    ).map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Unit Transfer Price ({trCurrency})
+                  <input
+                    type="text"
+                    required
+                    value={trUnitPrice}
+                    onChange={(e) => setTrUnitPrice(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Seller Internal Unit Cost ({trCurrency})
+                  <input
+                    type="text"
+                    required
+                    value={trUnitCost}
+                    onChange={(e) => setTrUnitCost(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Buyer Ending Unsold Inventory (%)
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={trUnsoldPct}
+                    onChange={(e) => setTrUnsoldPct(e.target.value)}
+                  />
+                </label>
+              </div>
+              <label
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontWeight: 500,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={trAutoElim}
+                  onChange={(e) => setTrAutoElim(e.target.checked)}
+                />
+                Auto-invoice &amp; post linked Due To / Due From + UPII
+                elimination immediately
+              </label>
+              <div>
+                <button
+                  type="submit"
+                  className="button usr-small-btn"
+                  disabled={busy}
+                >
+                  Generate Mirror SO ↔ PO Pair
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Mirror Trade Orders Registry */}
+          <div className="usr-card">
+            <h2 style={{ margin: "0 0 12px", fontSize: "1.15rem" }}>
+              Intercompany Mirror Document Registry ({data.period_key})
+            </h2>
+            {data.intercompany_trade_orders.length === 0 ? (
+              <p className="usr-muted" style={{ margin: 0 }}>
+                No intercompany mirror trade orders in {data.period_key} yet.
+                Create a paired Sales Order above to auto-generate the matching
+                Purchase Order.
+              </p>
+            ) : (
+              <div
+                tabIndex={0}
+                role="region"
+                aria-label="Intercompany mirror sales and purchase orders"
+                style={{ overflowX: "auto" }}
+              >
+                <table
+                  style={{
+                    width: "100%",
+                    minWidth: "840px",
+                    borderCollapse: "collapse",
+                    fontSize: "0.84rem",
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        borderBottom: "1px solid var(--border, #d8dee6)",
+                        textAlign: "left",
+                      }}
+                    >
+                      <th style={{ padding: "10px 8px", whiteSpace: "nowrap" }}>
+                        Mirror SO ↔ PO
+                      </th>
+                      <th style={{ padding: "10px 8px", whiteSpace: "nowrap" }}>
+                        Seller → Buyer
+                      </th>
+                      <th style={{ padding: "10px 8px", whiteSpace: "nowrap" }}>
+                        Goods / Pricing
+                      </th>
+                      <th style={{ padding: "10px 8px", whiteSpace: "nowrap" }}>
+                        Transfer USD
+                      </th>
+                      <th style={{ padding: "10px 8px", whiteSpace: "nowrap" }}>
+                        IC Margin &amp; Unsold
+                      </th>
+                      <th style={{ padding: "10px 8px", whiteSpace: "nowrap" }}>
+                        UPII Eliminated
+                      </th>
+                      <th style={{ padding: "10px 8px", whiteSpace: "nowrap" }}>
+                        Status
+                      </th>
+                      <th style={{ padding: "10px 8px", whiteSpace: "nowrap" }}>
+                        Lifecycle
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.intercompany_trade_orders.map((order) => (
+                      <tr
+                        key={order.id}
+                        style={{
+                          borderBottom: "1px solid #eef2f6",
+                        }}
+                      >
+                        <td
+                          style={{ padding: "10px 8px", whiteSpace: "nowrap" }}
+                        >
+                          <div>
+                            <strong>{order.sales_order_number}</strong>
+                          </div>
+                          <div
+                            className="usr-muted"
+                            style={{ fontSize: "0.78rem" }}
+                          >
+                            ↔ {order.mirror_po_number}
+                          </div>
+                        </td>
+                        <td
+                          style={{ padding: "10px 8px", whiteSpace: "nowrap" }}
+                        >
+                          <strong>{order.seller_code}</strong> →{" "}
+                          <strong>{order.buyer_code}</strong>
+                        </td>
+                        <td style={{ padding: "10px 8px" }}>
+                          <div>{order.item_description}</div>
+                          <div
+                            className="usr-muted"
+                            style={{ fontSize: "0.78rem" }}
+                          >
+                            {order.item_sku ? `${order.item_sku} · ` : ""}Qty{" "}
+                            {(order.quantity_milli / 1000).toLocaleString(
+                              "en-US",
+                            )}{" "}
+                            · {order.transfer_pricing_method}
+                          </div>
+                        </td>
+                        <td
+                          style={{ padding: "10px 8px", whiteSpace: "nowrap" }}
+                        >
+                          <strong>{formatUsd(order.transfer_usd_cents)}</strong>
+                          <div
+                            className="usr-muted"
+                            style={{ fontSize: "0.76rem" }}
+                          >
+                            {order.currency}
+                          </div>
+                        </td>
+                        <td
+                          style={{ padding: "10px 8px", whiteSpace: "nowrap" }}
+                        >
+                          <div>
+                            Margin: {formatUsd(order.intercompany_profit_minor)}
+                          </div>
+                          <div
+                            className="usr-muted"
+                            style={{ fontSize: "0.76rem" }}
+                          >
+                            Unsold:{" "}
+                            {(order.buyer_unsold_inventory_bps / 100).toFixed(
+                              0,
+                            )}
+                            %
+                          </div>
+                        </td>
+                        <td
+                          style={{ padding: "10px 8px", whiteSpace: "nowrap" }}
+                        >
+                          <strong>{formatUsd(order.upii_usd_cents)}</strong>
+                        </td>
+                        <td
+                          style={{ padding: "10px 8px", whiteSpace: "nowrap" }}
+                        >
+                          <span className="usr-badge">{order.status}</span>
+                        </td>
+                        <td style={{ padding: "10px 8px" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: "6px",
+                            }}
+                          >
+                            {order.status === "mirrored_open" && (
+                              <button
+                                type="button"
+                                className="button secondary usr-small-btn"
+                                disabled={busy}
+                                onClick={() =>
+                                  handleTransitionTrade(
+                                    order.id,
+                                    "ship_receive",
+                                  )
+                                }
+                              >
+                                Ship/Recv
+                              </button>
+                            )}
+                            {(order.status === "mirrored_open" ||
+                              order.status === "shipped_received") && (
+                              <button
+                                type="button"
+                                className="button usr-small-btn"
+                                disabled={busy}
+                                onClick={() =>
+                                  handleTransitionTrade(
+                                    order.id,
+                                    "invoice_eliminate",
+                                  )
+                                }
+                              >
+                                Invoice &amp; Eliminate
+                              </button>
+                            )}
+                            {order.status === "invoiced_eliminated" &&
+                              order.buyer_unsold_inventory_bps > 0 && (
+                                <button
+                                  type="button"
+                                  className="button secondary usr-small-btn"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    handleTransitionTrade(
+                                      order.id,
+                                      "update_unsold",
+                                      0,
+                                    )
+                                  }
+                                >
+                                  Mark 100% Sold
+                                </button>
+                              )}
+                            {order.status !== "void" && (
+                              <button
+                                type="button"
+                                className="button secondary usr-small-btn"
+                                disabled={busy}
+                                onClick={() =>
+                                  handleTransitionTrade(order.id, "void")
+                                }
+                              >
+                                Void
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </section>
       ) : null}
