@@ -262,6 +262,11 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: "/integrations/", label: "App Hub", group: "Platform" },
   { href: "/app-marketplace/", label: "Plugin Marketplace", group: "Platform" },
   { href: "/partners/", label: "Partner Network", group: "Platform" },
+  {
+    href: "/access-control/",
+    label: "Access Matrix (ABAC)",
+    group: "Platform",
+  },
   { href: "/settings/", label: "Settings", group: "Platform" },
 ];
 
