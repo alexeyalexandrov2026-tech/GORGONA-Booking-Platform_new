@@ -108,6 +108,11 @@ const NAV_ITEMS: readonly NavItem[] = [
     moduleIds: ["workforce"],
   },
   {
+    href: "/analytics/",
+    label: "BI & Analytics",
+    group: "Finance",
+  },
+  {
     href: "/materials/",
     label: "Materials",
     group: "Finance",
