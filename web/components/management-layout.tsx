@@ -267,6 +267,11 @@ const NAV_ITEMS: readonly NavItem[] = [
     label: "Access Matrix (ABAC)",
     group: "Platform",
   },
+  {
+    href: "/workflows/",
+    label: "Workflows (BPMN)",
+    group: "Platform",
+  },
   { href: "/settings/", label: "Settings", group: "Platform" },
 ];
 
