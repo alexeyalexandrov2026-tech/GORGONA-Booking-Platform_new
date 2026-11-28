@@ -550,6 +550,9 @@ export default function HomePage() {
                 <Link href="/security/">Trust &amp; Security</Link>
               </li>
               <li>
+                <Link href="/partners/">Partner Network</Link>
+              </li>
+              <li>
                 <Link href="/compare/zoho-one/">vs Zoho One</Link>
               </li>
               <li>

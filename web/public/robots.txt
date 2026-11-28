@@ -3,6 +3,7 @@ Allow: /
 Allow: /legal/
 Allow: /shop/
 Allow: /security/
+Allow: /partners/
 Allow: /compare/
 Disallow: /auth/
 Disallow: /v1/
