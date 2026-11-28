@@ -235,6 +235,7 @@ const NAV_ITEMS: readonly NavItem[] = [
     group: "Platform",
   },
   { href: "/workspace/", label: "Workspace Studio", group: "Platform" },
+  { href: "/migrate/", label: "Migrate & Sandbox", group: "Platform" },
   { href: "/integrations/", label: "App Hub", group: "Platform" },
   { href: "/settings/", label: "Settings", group: "Platform" },
 ];

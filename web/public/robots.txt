@@ -2,6 +2,8 @@ User-agent: *
 Allow: /
 Allow: /legal/
 Allow: /shop/
+Allow: /security/
+Allow: /compare/
 Disallow: /auth/
 Disallow: /v1/
 Disallow: /overview/
@@ -15,6 +17,7 @@ Disallow: /services/
 Disallow: /clients/
 Disallow: /inbox/
 Disallow: /workspace/
+Disallow: /migrate/
 Disallow: /industrial/
 Disallow: /global-finance/
 Disallow: /commercial/

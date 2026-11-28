@@ -547,6 +547,21 @@ export default function HomePage() {
                 <Link href="/shop/?demo=1">B2C Shop demo</Link>
               </li>
               <li>
+                <Link href="/security/">Trust &amp; Security</Link>
+              </li>
+              <li>
+                <Link href="/compare/zoho-one/">vs Zoho One</Link>
+              </li>
+              <li>
+                <Link href="/compare/odoo/">vs Odoo</Link>
+              </li>
+              <li>
+                <Link href="/compare/monday/">vs Monday</Link>
+              </li>
+              <li>
+                <Link href="/compare/netsuite/">vs NetSuite</Link>
+              </li>
+              <li>
                 <Link href="/auth/signin/">Sign in</Link>
               </li>
               <li>
