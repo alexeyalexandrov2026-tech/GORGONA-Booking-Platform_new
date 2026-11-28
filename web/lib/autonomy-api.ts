@@ -198,6 +198,8 @@ export async function generatePredictiveReport(
     period_days?: number;
     send_email?: boolean;
     recipient_email?: string;
+    webhook_url?: string;
+    broadcast_to_webhooks?: boolean;
   } = {},
 ): Promise<PredictiveReport> {
   const res = await authorizedResponse(
@@ -212,6 +214,8 @@ export async function generatePredictiveReport(
         period_days: input.period_days ?? 30,
         send_email: input.send_email ?? false,
         recipient_email: input.recipient_email || undefined,
+        webhook_url: input.webhook_url || undefined,
+        broadcast_to_webhooks: input.broadcast_to_webhooks ?? false,
       }),
     },
   );

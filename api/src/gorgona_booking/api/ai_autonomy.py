@@ -20,9 +20,12 @@ from gorgona_booking.ai_assistant.autonomy import (
     ExecutionStatus,
     PredictiveReportView,
     SignalSeverity,
+    build_predictive_webhook_payload,
     decide_autonomy_execution,
+    dispatch_predictive_webhook,
     gather_predictive_context,
     get_autonomy_policy,
+    list_active_tenant_webhooks,
     list_autonomy_executions,
     list_predictive_reports,
     persist_predictive_report,
@@ -35,6 +38,12 @@ from gorgona_booking.api.businesses import CurrentPrincipal
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
 from gorgona_booking.auth.permissions import Permission
+from gorgona_booking.connectors.service import (
+    PreparedWebhookTest,
+    WebhookProbeOutcome,
+    record_webhook_test_delivery,
+    validate_public_webhook_url,
+)
 from gorgona_booking.notifications.service import EMAIL_RE, render_template
 from gorgona_booking.notifications.transports import resolve_notification_transports
 from gorgona_booking.tenancy.authorization import authorized_tenant
@@ -113,6 +122,8 @@ class GeneratePredictiveReportRequest(BaseModel):
     period_days: int = Field(default=30, ge=7, le=90)
     send_email: bool = False
     recipient_email: str | None = Field(default=None, max_length=160)
+    webhook_url: str | None = Field(default=None, max_length=500)
+    broadcast_to_webhooks: bool = False
 
 
 def _env_name(request: Request) -> str:
@@ -342,6 +353,18 @@ async def post_generate_predictive_report_route(
     principal: CurrentPrincipal,
 ) -> PredictiveReportResponse:
     env_name = _env_name(request)
+    clean_webhook_url: str | None = None
+    if body.webhook_url and body.webhook_url.strip():
+        try:
+            clean_webhook_url = validate_public_webhook_url(
+                body.webhook_url.strip(), resolve_dns=False
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            ) from exc
+
+    tenant_webhooks: list[tuple[UUID, str, str]] = []
     async with authorized_tenant(
         runtime_pool(request),
         principal,
@@ -355,9 +378,12 @@ async def post_generate_predictive_report_route(
             period_days=body.period_days,
             environment=env_name,
         )
+        if body.broadcast_to_webhooks:
+            tenant_webhooks = await list_active_tenant_webhooks(session.conn, tenant_id=business_id)
 
-    # Strictly OUTSIDE any DB transaction: run optional LLM synthesis and optional SMTP delivery.
+    # Strictly OUTSIDE any DB transaction: run optional LLM synthesis, SMTP, and HTTPS webhooks.
     engine, narrative = await synthesize_predictive_narrative(ctx)
+    action_url = f"{_base_url(request)}/overview/"
     emailed_to: str | None = None
     target_email = (body.recipient_email or ctx.recipient_email or "").strip()
     if body.send_email and target_email:
@@ -372,7 +398,7 @@ async def post_generate_predictive_report_route(
                 "business_name": ctx.business_name,
                 "reference": f"Health {ctx.health_score}/100",
                 "amount": narrative,
-                "action_url": f"{_base_url(request)}/overview/",
+                "action_url": action_url,
             },
         )
         transports, _ = resolve_notification_transports()
@@ -391,6 +417,43 @@ async def post_generate_predictive_report_route(
             except Exception:
                 emailed_to = None
 
+    webhook_attempted = 0
+    webhook_delivered = 0
+    recorded_deliveries: list[tuple[UUID, PreparedWebhookTest, WebhookProbeOutcome]] = []
+    if clean_webhook_url or tenant_webhooks:
+        wh_payload = build_predictive_webhook_payload(
+            ctx=ctx,
+            engine=engine,
+            executive_summary=narrative,
+            action_url=action_url,
+        )
+        if clean_webhook_url:
+            webhook_attempted += 1
+            outcome, _ = await dispatch_predictive_webhook(clean_webhook_url, wh_payload)
+            if outcome.status == "delivered":
+                webhook_delivered += 1
+        for ep_id, ep_url, ep_secret in tenant_webhooks:
+            webhook_attempted += 1
+            outcome, sig_hdr = await dispatch_predictive_webhook(
+                ep_url, wh_payload, signing_secret_hash=ep_secret
+            )
+            if outcome.status == "delivered":
+                webhook_delivered += 1
+            recorded_deliveries.append(
+                (
+                    ep_id,
+                    PreparedWebhookTest(
+                        url=ep_url,
+                        payload=wh_payload,
+                        signature_header=sig_hdr or "v1=unsigned",
+                    ),
+                    outcome,
+                )
+            )
+    if webhook_attempted > 0:
+        ctx.metrics_snapshot["webhook_attempted_count"] = webhook_attempted
+        ctx.metrics_snapshot["webhook_delivered_count"] = webhook_delivered
+
     async with authorized_tenant(
         runtime_pool(request),
         principal,
@@ -398,6 +461,15 @@ async def post_generate_predictive_report_route(
         Permission.BUSINESS_MANAGE,
         request_id=get_request_id(request),
     ) as session:
+        for ep_id, prepared, outcome in recorded_deliveries:
+            await record_webhook_test_delivery(
+                session.conn,
+                tenant_id=business_id,
+                endpoint_id=ep_id,
+                prepared=prepared,
+                outcome=outcome,
+                event_type="ai.predictive_brief.generated",
+            )
         report = await persist_predictive_report(
             session.conn,
             ctx=ctx,

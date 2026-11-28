@@ -276,7 +276,7 @@ export function PublicB2CShop() {
 
   return (
     <div className="management-shell">
-      <header className="mgmt-header">
+      <header className="mgmt-header" style={{ background: "#ffffff" }}>
         <div className="mgmt-brand-area">
           <Link href="/" className="mgmt-brand">
             <AmarkalLogo variant="light" height={20} />

@@ -60,11 +60,14 @@ export function SmartAutonomyPanel({ businessId }: { businessId: string }) {
   const [briefDay, setBriefDay] = useState<BriefWeekday>("monday");
   const [briefEmail, setBriefEmail] = useState("");
   const [periodDays, setPeriodDays] = useState(30);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [broadcastWebhooks, setBroadcastWebhooks] = useState(false);
 
   const levelId = useId();
   const dayId = useId();
   const emailId = useId();
   const periodId = useId();
+  const webhookId = useId();
 
   useEffect(() => {
     let active = true;
@@ -170,22 +173,40 @@ export function SmartAutonomyPanel({ businessId }: { businessId: string }) {
     }
   }
 
-  async function onGenerateReport(sendEmail: boolean) {
+  async function onGenerateReport(options: {
+    sendEmail?: boolean;
+    sendWebhook?: boolean;
+  }) {
     setGenerating(true);
     setError(null);
     setNotice(null);
     try {
       const report = await generatePredictiveReport(businessId, {
         period_days: periodDays,
-        send_email: sendEmail,
+        send_email: options.sendEmail ?? false,
         recipient_email: briefEmail.trim() || undefined,
+        webhook_url: options.sendWebhook
+          ? webhookUrl.trim() || undefined
+          : undefined,
+        broadcast_to_webhooks: options.sendWebhook ? broadcastWebhooks : false,
       });
       setReports((prev) => [report, ...prev.slice(0, 9)]);
-      setNotice(
-        report.emailed_to_masked
-          ? `Predictive executive brief generated (Health ${report.health_score}/100) and emailed to ${report.emailed_to_masked}.`
-          : `Predictive executive brief generated (Health ${report.health_score}/100).`,
+      const whDelivered = Number(
+        report.metrics_snapshot["webhook_delivered_count"] ?? 0,
       );
+      const whAttempted = Number(
+        report.metrics_snapshot["webhook_attempted_count"] ?? 0,
+      );
+      const parts = [
+        `Predictive executive brief generated (Health ${report.health_score}/100)`,
+      ];
+      if (report.emailed_to_masked) {
+        parts.push(`emailed to ${report.emailed_to_masked}`);
+      }
+      if (whAttempted > 0) {
+        parts.push(`delivered to ${whDelivered}/${whAttempted} webhook(s)`);
+      }
+      setNotice(`${parts.join(" · ")}.`);
     } catch (err) {
       setError(errText(err));
     } finally {
@@ -440,9 +461,10 @@ export function SmartAutonomyPanel({ businessId }: { businessId: string }) {
               Proactive Predictive Insights (AI CFO Brief)
             </h3>
             <p className="usr-muted" style={{ margin: "4px 0 0" }}>
-              Automated anomaly detection across AR overdue aging, vendor PO
-              3-way match variances, uncollected Stripe links, quote velocity,
-              and capacity churn.
+              Automated anomaly detection across AR/AP aging, vendor PO 3-way
+              variances, MRP II raw-material shortages, Predictive IoT Work
+              Orders, Client Inbox backlog, US Payroll drafts, and
+              Multi-Currency FX exposure.
             </p>
           </div>
           {latestReport && (
@@ -459,7 +481,32 @@ export function SmartAutonomyPanel({ businessId }: { businessId: string }) {
           )}
         </div>
 
-        <div className="usr-inline" style={{ margin: "12px 0" }}>
+        <div className="usr-grid" style={{ margin: "12px 0 8px" }}>
+          <label htmlFor={webhookId}>
+            Slack / Microsoft Teams / Zapier / n8n Webhook URL (optional)
+            <input
+              id={webhookId}
+              type="url"
+              maxLength={500}
+              value={webhookUrl}
+              placeholder="https://hooks.slack.com/services/..."
+              onChange={(e) => setWebhookUrl(e.target.value)}
+            />
+          </label>
+          <label
+            className="usr-check"
+            style={{ alignSelf: "end", paddingBottom: 8 }}
+          >
+            <input
+              type="checkbox"
+              checked={broadcastWebhooks}
+              onChange={(e) => setBroadcastWebhooks(e.target.checked)}
+            />
+            <span>Also broadcast to active App Hub webhooks</span>
+          </label>
+        </div>
+
+        <div className="usr-inline" style={{ margin: "8px 0 12px" }}>
           <label
             htmlFor={periodId}
             style={{
@@ -485,7 +532,7 @@ export function SmartAutonomyPanel({ businessId }: { businessId: string }) {
           <button
             type="button"
             disabled={generating}
-            onClick={() => void onGenerateReport(false)}
+            onClick={() => void onGenerateReport({ sendEmail: false })}
           >
             {generating ? "Analyzing PG18 data…" : "Generate Predictive Brief"}
           </button>
@@ -493,9 +540,19 @@ export function SmartAutonomyPanel({ businessId }: { businessId: string }) {
             type="button"
             className="secondary usr-small-btn"
             disabled={generating || !briefEmail.trim()}
-            onClick={() => void onGenerateReport(true)}
+            onClick={() => void onGenerateReport({ sendEmail: true })}
           >
             Generate &amp; Email Brief
+          </button>
+          <button
+            type="button"
+            className="secondary usr-small-btn"
+            disabled={generating || (!webhookUrl.trim() && !broadcastWebhooks)}
+            onClick={() =>
+              void onGenerateReport({ sendEmail: false, sendWebhook: true })
+            }
+          >
+            Send to Slack / Webhook
           </button>
         </div>
 
@@ -511,6 +568,11 @@ export function SmartAutonomyPanel({ businessId }: { businessId: string }) {
                 {formatTime(latestReport.created_at)}
                 {latestReport.emailed_to_masked
                   ? ` · Emailed to ${latestReport.emailed_to_masked}`
+                  : ""}
+                {Number(
+                  latestReport.metrics_snapshot["webhook_attempted_count"] ?? 0,
+                ) > 0
+                  ? ` · Webhooks ${String(latestReport.metrics_snapshot["webhook_delivered_count"] ?? 0)}/${String(latestReport.metrics_snapshot["webhook_attempted_count"])} delivered`
                   : ""}
               </small>
             </div>
