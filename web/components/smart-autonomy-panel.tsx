@@ -481,6 +481,17 @@ export function SmartAutonomyPanel({ businessId }: { businessId: string }) {
           )}
         </div>
 
+        {policy && (
+          <p
+            className="usr-muted"
+            style={{ margin: "10px 0 0", fontSize: "0.86rem" }}
+          >
+            {policy.auto_send_weekly_brief
+              ? `Automated Weekly Schedule: Active — runs every ${policy.weekly_brief_day.charAt(0).toUpperCase()}${policy.weekly_brief_day.slice(1)}${policy.weekly_brief_email ? ` (${policy.weekly_brief_email})` : ""} + active App Hub webhooks.`
+              : "Automated Weekly Schedule: Paused — enable the weekly brief checkbox above to receive automatic executive digests."}
+          </p>
+        )}
+
         <div className="usr-grid" style={{ margin: "12px 0 8px" }}>
           <label htmlFor={webhookId}>
             Slack / Microsoft Teams / Zapier / n8n Webhook URL (optional)

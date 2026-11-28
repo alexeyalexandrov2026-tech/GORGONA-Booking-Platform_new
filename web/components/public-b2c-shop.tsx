@@ -188,14 +188,17 @@ export function PublicB2CShop() {
   const effectiveDiscount = quote?.discount_cents ?? 0;
   const effectiveTotal = quote?.total_cents ?? localSubtotal;
 
-  async function onApplyPromo() {
+  async function onApplyPromo(overrideCode?: string) {
     setPromoErr(null);
     if (!cartEntries.length) {
       setPromoErr("Add at least one item to your cart first.");
       return;
     }
-    const clean = promoInput.trim().toUpperCase();
+    const clean = (overrideCode ?? promoInput).trim().toUpperCase();
     if (!clean) return;
+    if (overrideCode) {
+      setPromoInput(clean);
+    }
     if (isDemo) {
       if (clean === "WELCOME15") {
         const disc = Math.floor((localSubtotal * 15) / 100);
@@ -382,15 +385,41 @@ export function PublicB2CShop() {
                 ) : (
                   visibleItems.map((it) => {
                     const inCart = cart[it.id] ?? 0;
+                    const savePct =
+                      it.compare_at_cents &&
+                      it.compare_at_cents > it.price_cents
+                        ? Math.round(
+                            ((it.compare_at_cents - it.price_cents) * 100) /
+                              it.compare_at_cents,
+                          )
+                        : 0;
+                    const kindLabel =
+                      it.item_kind === "service"
+                        ? "Service"
+                        : it.item_kind === "package"
+                          ? "Package"
+                          : it.stock_qty !== null
+                            ? `In Stock · ${it.stock_qty} left`
+                            : "Product";
                     return (
                       <article key={it.id} className="usr-card">
                         <div
                           className="usr-inline"
                           style={{ justifyContent: "space-between" }}
                         >
-                          <span className="usr-badge usr-badge-off">
-                            {it.category}
-                          </span>
+                          <div className="usr-inline" style={{ gap: 6 }}>
+                            <span className="usr-badge usr-badge-off">
+                              {it.category}
+                            </span>
+                            <span className="usr-badge usr-badge-fallback">
+                              {kindLabel}
+                            </span>
+                            {savePct > 0 && (
+                              <span className="usr-badge usr-badge-ai">
+                                Save {savePct}%
+                              </span>
+                            )}
+                          </div>
                           <code className="usr-muted">{it.sku}</code>
                         </div>
                         <h2
@@ -461,14 +490,39 @@ export function PublicB2CShop() {
                 )}
               </section>
 
-              <aside className="usr-card" aria-labelledby="shop-cart-heading">
-                <h2
-                  id="shop-cart-heading"
-                  style={{ marginTop: 0, fontSize: "1.2rem" }}
+              <aside
+                className="usr-card"
+                aria-labelledby="shop-cart-heading"
+                style={{ position: "sticky", top: 76 }}
+              >
+                <div
+                  className="usr-inline"
+                  style={{
+                    justifyContent: "space-between",
+                    marginBottom: 10,
+                  }}
                 >
-                  Shopping Cart (
-                  {cartEntries.reduce((s, x) => s + x.quantity, 0)})
-                </h2>
+                  <h2
+                    id="shop-cart-heading"
+                    style={{ margin: 0, fontSize: "1.2rem" }}
+                  >
+                    Shopping Cart (
+                    {cartEntries.reduce((s, x) => s + x.quantity, 0)})
+                  </h2>
+                  {cartEntries.length > 0 && (
+                    <button
+                      type="button"
+                      className="secondary usr-small-btn"
+                      onClick={() => {
+                        setCart({});
+                        setQuote(null);
+                        setPromoErr(null);
+                      }}
+                    >
+                      Clear cart
+                    </button>
+                  )}
+                </div>
                 {cartEntries.length === 0 ? (
                   <p className="usr-muted">
                     Your cart is empty. Add products or services to check out
@@ -493,12 +547,25 @@ export function PublicB2CShop() {
                             justifyContent: "space-between",
                             borderBottom: "1px solid var(--line)",
                             paddingBottom: 6,
+                            gap: 8,
                           }}
                         >
                           <span>
                             {quantity}× {item.title}
                           </span>
-                          <strong>{fmtUsd(item.price_cents * quantity)}</strong>
+                          <span className="usr-inline" style={{ gap: 8 }}>
+                            <strong>
+                              {fmtUsd(item.price_cents * quantity)}
+                            </strong>
+                            <button
+                              type="button"
+                              className="secondary usr-small-btn"
+                              aria-label={`Remove ${item.title} from cart`}
+                              onClick={() => updateQty(item, -quantity)}
+                            >
+                              ×
+                            </button>
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -516,6 +583,12 @@ export function PublicB2CShop() {
                             value={promoInput}
                             placeholder="WELCOME15"
                             onChange={(e) => setPromoInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                void onApplyPromo();
+                              }
+                            }}
                           />
                           <button
                             type="button"
@@ -525,6 +598,17 @@ export function PublicB2CShop() {
                             Apply
                           </button>
                         </div>
+                        {isDemo &&
+                          quote?.applied_promo_code !== "WELCOME15" && (
+                            <button
+                              type="button"
+                              className="secondary usr-small-btn"
+                              style={{ marginTop: 8 }}
+                              onClick={() => void onApplyPromo("WELCOME15")}
+                            >
+                              Apply demo code WELCOME15 (15% off)
+                            </button>
+                          )}
                         {quote?.promo_message && (
                           <p className="usr-muted" role="status">
                             {quote.promo_message}
@@ -613,6 +697,15 @@ export function PublicB2CShop() {
                           ? "Creating secure checkout…"
                           : `Pay ${fmtUsd(effectiveTotal)} USD`}
                       </button>
+                      {checkoutMsg && (
+                        <p
+                          role="status"
+                          className="hold-note"
+                          style={{ margin: 0 }}
+                        >
+                          {checkoutMsg}
+                        </p>
+                      )}
                     </form>
                   </div>
                 )}
