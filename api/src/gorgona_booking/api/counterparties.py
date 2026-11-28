@@ -10,6 +10,7 @@ from fastapi import APIRouter, Query, Request
 from gorgona_booking.api.businesses import CurrentPrincipal, MutationKey
 from gorgona_booking.api.deps import runtime_pool
 from gorgona_booking.api.request_id import get_request_id
+from gorgona_booking.auth.abac import mask_field_value
 from gorgona_booking.auth.permissions import Permission
 from gorgona_booking.business import counterparties as service
 from gorgona_booking.business.counterparty_contracts import (
@@ -132,6 +133,38 @@ async def post_import_counterparties(
         )
 
 
+def _apply_counterparty_abac_masking(
+    view: CounterpartyView, access: TenantAccess
+) -> CounterpartyView:
+    """Redact phone/email/tax_id on outgoing counterparty cards when ABAC masking is active."""
+    if access.abac is None or not access.abac.masked_fields:
+        return view
+    masked = access.abac.masked_fields
+    contacts = tuple(
+        contact.model_copy(
+            update={
+                "phone": (
+                    mask_field_value("phone", contact.phone) if "phone" in masked else contact.phone
+                ),
+                "email": (
+                    mask_field_value("email", contact.email) if "email" in masked else contact.email
+                ),
+            }
+        )
+        for contact in view.contacts
+    )
+    return view.model_copy(
+        update={
+            "phone": mask_field_value("phone", view.phone) if "phone" in masked else view.phone,
+            "email": mask_field_value("email", view.email) if "email" in masked else view.email,
+            "tax_id": mask_field_value("tax_id", view.tax_id)
+            if "tax_id" in masked
+            else view.tax_id,
+            "contacts": contacts,
+        }
+    )
+
+
 @router.get("/{business_id}/counterparties/{counterparty_id}")
 async def get_counterparty(
     business_id: UUID,
@@ -149,7 +182,7 @@ async def get_counterparty(
         )
         if result is None:
             raise NotFoundError("Counterparty version not found")
-        return result
+        return _apply_counterparty_abac_masking(result, access)
 
 
 @router.put("/{business_id}/counterparties/{counterparty_id}")

@@ -8,11 +8,17 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from psycopg.types.json import Jsonb
 
+from gorgona_booking.auth.abac import (
+    EffectiveAbacOverlay,
+    apply_abac_field_masking,
+    evaluate_abac_access,
+    load_effective_abac_overlay,
+)
 from gorgona_booking.auth.permissions import (
     DELEGABLE_PERMISSIONS,
     PLATFORM_ADMIN_PERMISSIONS,
@@ -49,6 +55,15 @@ class DelegationScope:
     expires_at: datetime
 
 
+_OWNER_RECOVERY_PERMISSIONS = frozenset(
+    {
+        Permission.SETTINGS_MANAGE,
+        Permission.MEMBERS_MANAGE,
+        Permission.MEMBERS_MANAGE_ADMINS,
+    }
+)
+
+
 @dataclass(frozen=True, slots=True)
 class TenantAccess:
     conn: RuntimeConnection
@@ -58,11 +73,37 @@ class TenantAccess:
     via: Literal["membership", "platform", "delegation"]
     location_id: UUID | None = None
     delegation: DelegationScope | None = None
+    abac: EffectiveAbacOverlay | None = None
 
     def require_location(self, location_id: UUID) -> None:
         """Validate explicit references and receipts before exposing their contents."""
         if self.location_id is not None and location_id != self.location_id:
             raise PermissionDeniedError("This action is outside your location access")
+
+    def require_abac_context(
+        self,
+        permission: Permission | str,
+        *,
+        record_region: str | None = None,
+        amount_cents: int | None = None,
+    ) -> None:
+        """Enforce contextual ABAC checks (regional scope, financial limit, write window)."""
+        if self.abac is None:
+            return
+        decision = evaluate_abac_access(
+            self.abac,
+            permission,
+            record_region=record_region,
+            amount_cents=amount_cents,
+        )
+        if not decision.allowed:
+            raise PermissionDeniedError(decision.reason)
+
+    def mask_response(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Redact sensitive fields on an outgoing API payload when ABAC masking is active."""
+        if self.abac is None or not self.abac.masked_fields:
+            return payload
+        return apply_abac_field_masking(payload, self.abac.masked_fields)
 
 
 @asynccontextmanager
@@ -156,7 +197,22 @@ async def _authorize(
             and permission in ROLE_PERMISSIONS[role]
             and tenant[0] == "active"
         ):
-            return TenantAccess(conn, salon_id, principal, role, "membership", membership[1])
+            abac_overlay = await load_effective_abac_overlay(conn, salon_id, principal.user_id)
+            if abac_overlay is not None and not (
+                role == "owner" and permission in _OWNER_RECOVERY_PERMISSIONS
+            ):
+                abac_decision = evaluate_abac_access(abac_overlay, permission)
+                if not abac_decision.allowed:
+                    raise PermissionDeniedError(abac_decision.reason)
+            return TenantAccess(
+                conn,
+                salon_id,
+                principal,
+                role,
+                "membership",
+                membership[1],
+                abac=abac_overlay,
+            )
         if not platform_may:
             raise PermissionDeniedError("Your role does not allow this action")
     elif (

@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from gorgona_booking.api import (
+    abac_policies,
     agreements,
     ai_assistant,
     ai_autonomy,
@@ -248,6 +249,7 @@ def create_app(
     app.include_router(holding_consolidation.router)
     app.include_router(plugin_marketplace.router)
     app.include_router(partner_network.router)
+    app.include_router(abac_policies.router)
     app.include_router(connectors.router)
     app.include_router(media.router)
     app.include_router(payments.router)
