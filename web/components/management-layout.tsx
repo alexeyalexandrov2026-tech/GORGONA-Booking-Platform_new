@@ -213,6 +213,7 @@ const NAV_ITEMS: readonly NavItem[] = [
     label: "Provider admission",
     group: "Platform",
   },
+  { href: "/workspace/", label: "Workspace Studio", group: "Platform" },
   { href: "/integrations/", label: "App Hub", group: "Platform" },
   { href: "/settings/", label: "Settings", group: "Platform" },
 ];

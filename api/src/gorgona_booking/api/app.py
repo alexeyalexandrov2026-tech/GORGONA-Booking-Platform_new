@@ -74,6 +74,7 @@ from gorgona_booking.api import (
     visits,
     workforce,
     workforce_desk,
+    workspace_studio,
 )
 from gorgona_booking.api.errors import install_error_handlers
 from gorgona_booking.api.framing import FramingPolicyMiddleware
@@ -226,6 +227,7 @@ def create_app(
     app.include_router(growth.router)
     app.include_router(ai_assistant.router)
     app.include_router(ai_autonomy.router)
+    app.include_router(workspace_studio.router)
     app.include_router(connectors.router)
     app.include_router(media.router)
     app.include_router(payments.router)
