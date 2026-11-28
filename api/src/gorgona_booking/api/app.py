@@ -14,6 +14,7 @@ from gorgona_booking.api import (
     ai_autonomy,
     analytics_bi,
     b2c_storefront,
+    bank_feeds,
     businesses,
     commercial,
     configurations,
@@ -240,6 +241,7 @@ def create_app(
     app.include_router(global_payroll_fx.router)
     app.include_router(migration_sandbox.router)
     app.include_router(analytics_bi.router)
+    app.include_router(bank_feeds.router)
     app.include_router(connectors.router)
     app.include_router(media.router)
     app.include_router(payments.router)

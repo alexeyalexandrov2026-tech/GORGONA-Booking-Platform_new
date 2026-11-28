@@ -113,6 +113,11 @@ const NAV_ITEMS: readonly NavItem[] = [
     group: "Finance",
   },
   {
+    href: "/banking/",
+    label: "US Bank Feeds",
+    group: "Finance",
+  },
+  {
     href: "/materials/",
     label: "Materials",
     group: "Finance",
