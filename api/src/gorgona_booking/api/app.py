@@ -39,6 +39,7 @@ from gorgona_booking.api import (
     market_storefronts,
     media,
     members,
+    migration_sandbox,
     notifications,
     omnichannel_inbox,
     payments,
@@ -236,6 +237,7 @@ def create_app(
     app.include_router(industrial_mrp_eam.router)
     app.include_router(omnichannel_inbox.router)
     app.include_router(global_payroll_fx.router)
+    app.include_router(migration_sandbox.router)
     app.include_router(connectors.router)
     app.include_router(media.router)
     app.include_router(payments.router)
